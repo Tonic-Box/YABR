@@ -12,30 +12,33 @@ import static com.tonic.parser.constpool.structure.InvokeParameterUtil.*;
 /**
  * Represents a CONSTANT_InvokeDynamic entry in the constant pool.
  */
-public class InvokeDynamicItem extends Item<InvokeDynamic> {
+public class InvokeDynamicItem extends Item<InvokeDynamic>
+{
     private ConstPool constPool;
     private InvokeDynamic value;
 
     /**
      * Default constructor for parsing.
      */
-    public InvokeDynamicItem() {
+    public InvokeDynamicItem()
+    {
     }
 
     /**
      * Constructor for programmatic creation.
-     *
      * @param constPool               The constant pool this item belongs to.
      * @param bootstrapMethodAttrIndex The bootstrap method attribute index.
      * @param nameAndTypeIndex        The name and type index.
      */
-    public InvokeDynamicItem(ConstPool constPool, int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
+    public InvokeDynamicItem(ConstPool constPool, int bootstrapMethodAttrIndex, int nameAndTypeIndex)
+    {
         this.constPool = constPool;
         this.value = new InvokeDynamic(bootstrapMethodAttrIndex, nameAndTypeIndex);
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.constPool = classFile.getConstPool();
         int bootstrapMethodAttrIndex = classFile.readUnsignedShort();
         int nameAndTypeIndex = classFile.readUnsignedShort();
@@ -43,33 +46,38 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(value.getBootstrapMethodAttrIndex());
         dos.writeShort(value.getNameAndTypeIndex());
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_INVOKEDYNAMIC;
     }
 
     @Override
-    public InvokeDynamic getValue() {
+    public InvokeDynamic getValue()
+    {
         return value;
     }
 
     /**
      * Returns the number of parameters for the dynamic call site.
-     *
      * @return The number of parameters.
      */
-    public int getParameterCount() {
-        if (constPool == null) {
+    public int getParameterCount()
+    {
+        if (constPool == null)
+        {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
-        if (nameAndType == null) {
+        if (nameAndType == null)
+        {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
@@ -79,16 +87,18 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
 
     /**
      * Returns the number of slots for the return type.
-     *
      * @return The number of return type slots.
      */
-    public int getReturnTypeSlots() {
-        if (constPool == null) {
+    public int getReturnTypeSlots()
+    {
+        if (constPool == null)
+        {
             throw new IllegalStateException("ConstPool not set. Ensure read(ClassFile) has been called.");
         }
 
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
-        if (nameAndType == null) {
+        if (nameAndType == null)
+        {
             throw new IllegalStateException("Invalid NameAndType index: " + value.getNameAndTypeIndex());
         }
 
@@ -99,10 +109,10 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
 
     /**
      * Retrieves the method name from the constant pool.
-     *
      * @return The method name.
      */
-    public String getName() {
+    public String getName()
+    {
         if (constPool == null)
             return null;
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());
@@ -112,10 +122,10 @@ public class InvokeDynamicItem extends Item<InvokeDynamic> {
 
     /**
      * Retrieves the method descriptor from the constant pool.
-     *
      * @return The method descriptor.
      */
-    public String getDescriptor() {
+    public String getDescriptor()
+    {
         if (constPool == null)
             return null;
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(value.getNameAndTypeIndex());

@@ -1,110 +1,138 @@
 package com.tonic.analysis.source.decompile;
 
 import com.tonic.analysis.source.emit.SourceEmitterConfig;
+import com.tonic.analysis.source.recovery.NameRecoveryStrategy;
 import com.tonic.analysis.ssa.transform.IRTransform;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * Configuration for the ClassDecompiler.
- * Combines source emission settings with transform pipeline configuration.
+ * Configuration for the ClassDecompiler: source emission settings, the additional
+ * transform pipeline, and the name recovery strategy.
  */
-public class DecompilerConfig {
+public class DecompilerConfig
+{
 
-    /**
-     * -- GETTER --
-     *  Returns the source emitter configuration.
-     */
     private final SourceEmitterConfig emitterConfig;
-    /**
-     * -- GETTER --
-     *  Returns the list of additional transforms to apply after baseline transforms.
-     *  The returned list is unmodifiable.
-     */
     private final List<IRTransform> additionalTransforms;
+    /**
+     * How variable names are recovered: from debug info where present, or synthetic regardless.
+     */
+    private final NameRecoveryStrategy nameRecoveryStrategy;
 
-    private DecompilerConfig(Builder builder) {
+    private DecompilerConfig(Builder builder)
+    {
         this.emitterConfig = builder.emitterConfig;
-        this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
+        this.additionalTransforms = List.copyOf(builder.transforms);
+        this.nameRecoveryStrategy = builder.nameRecoveryStrategy;
     }
 
-    public SourceEmitterConfig getEmitterConfig() {
+    /**
+     * @return the emitter config
+     */
+    public SourceEmitterConfig getEmitterConfig()
+    {
         return emitterConfig;
     }
 
-    public List<IRTransform> getAdditionalTransforms() {
+    /**
+     * @return the unmodifiable list of transforms applied after the baseline transforms
+     */
+    public List<IRTransform> getAdditionalTransforms()
+    {
         return additionalTransforms;
     }
 
     /**
-     * Creates a new builder for DecompilerConfig.
+     * @return how variable names are recovered; the default prefers a name recorded in the
+     *         {@code LocalVariableTable}, the other modes name identically with or without
+     *         debug info, which output compared across obfuscated builds needs
      */
-    public static Builder builder() {
+    public NameRecoveryStrategy getNameRecoveryStrategy()
+    {
+        return nameRecoveryStrategy;
+    }
+
+    /**
+     * @return a new builder with default settings
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
     /**
-     * Returns a default configuration with no additional transforms.
+     * @return a default configuration with no additional transforms
      */
-    public static DecompilerConfig defaults() {
+    public static DecompilerConfig defaults()
+    {
         return builder().build();
     }
 
     /**
      * Builder for DecompilerConfig.
      */
-    public static class Builder {
+    public static class Builder
+    {
         private SourceEmitterConfig emitterConfig = SourceEmitterConfig.defaults();
         private final List<IRTransform> transforms = new ArrayList<>();
+        private NameRecoveryStrategy nameRecoveryStrategy =
+                NameRecoveryStrategy.PREFER_DEBUG_INFO;
 
         private Builder() {}
 
         /**
          * Sets the source emitter configuration.
+         * @param config the emitter configuration; defaults are used when null
+         * @return this builder
          */
-        public Builder emitterConfig(SourceEmitterConfig config) {
+        public Builder emitterConfig(SourceEmitterConfig config)
+        {
             this.emitterConfig = config != null ? config : SourceEmitterConfig.defaults();
             return this;
         }
 
         /**
-         * Applies a preset, adding all transforms from the preset to the pipeline.
-         * Can be called multiple times to combine presets, or combined with addTransform().
-         *
-         * @param preset the transform preset to apply
+         * Adds all transforms from a preset to the pipeline; presets combine across calls.
+         * @param preset the transform preset to apply; ignored when null
+         * @return this builder
          */
-        public Builder preset(TransformPreset preset) {
-            if (preset != null) {
+        public Builder preset(TransformPreset preset)
+        {
+            if (preset != null)
+            {
                 transforms.addAll(preset.getTransforms());
             }
             return this;
         }
 
         /**
-         * Adds a single transform to the pipeline.
-         * Transforms are applied in the order they are added.
-         *
-         * @param transform the transform to add
+         * Adds a single transform to the pipeline; transforms apply in insertion order.
+         * @param transform the transform to add; ignored when null
+         * @return this builder
          */
-        public Builder addTransform(IRTransform transform) {
-            if (transform != null) {
+        public Builder addTransform(IRTransform transform)
+        {
+            if (transform != null)
+            {
                 transforms.add(transform);
             }
             return this;
         }
 
         /**
-         * Adds multiple transforms to the pipeline.
-         * Transforms are applied in the order they appear in the list.
-         *
-         * @param transforms the transforms to add
+         * Adds multiple transforms to the pipeline in list order.
+         * @param transforms the transforms to add; null entries and a null list are ignored
+         * @return this builder
          */
-        public Builder addTransforms(List<IRTransform> transforms) {
-            if (transforms != null) {
-                for (IRTransform t : transforms) {
-                    if (t != null) {
+        public Builder addTransforms(List<IRTransform> transforms)
+        {
+            if (transforms != null)
+            {
+                for (IRTransform t : transforms)
+                {
+                    if (t != null)
+                    {
                         this.transforms.add(t);
                     }
                 }
@@ -113,18 +141,34 @@ public class DecompilerConfig {
         }
 
         /**
-         * Clears all transforms from the pipeline.
-         * Useful if you want to reset after applying a preset.
+         * Clears all transforms from the pipeline, for example to reset after a preset.
+         * @return this builder
          */
-        public Builder clearTransforms() {
+        public Builder clearTransforms()
+        {
             transforms.clear();
             return this;
         }
 
         /**
-         * Builds the DecompilerConfig.
+         * Sets how variable names are recovered.
+         * @param strategy the strategy; PREFER_DEBUG_INFO is used when null
+         * @return this builder
          */
-        public DecompilerConfig build() {
+        public Builder nameRecoveryStrategy(NameRecoveryStrategy strategy)
+        {
+            this.nameRecoveryStrategy = strategy == null
+                    ? NameRecoveryStrategy.PREFER_DEBUG_INFO
+                    : strategy;
+            return this;
+        }
+
+        /**
+         * Builds the immutable configuration.
+         * @return the built configuration
+         */
+        public DecompilerConfig build()
+        {
             return new DecompilerConfig(this);
         }
     }

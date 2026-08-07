@@ -6,35 +6,39 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
+import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class LambdaRecoveryTest {
+class LambdaRecoveryTest
+{
 
     private static final AtomicInteger classCounter = new AtomicInteger(0);
 
     @BeforeEach
-    void setUp() {
-        com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-        com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
+    void setUp()
+    {
+        IRBlock.resetIdCounter();
+        SSAValue.resetIdCounter();
     }
 
-    private String uniqueClassName() {
+    private String uniqueClassName()
+    {
         return "com/test/LambdaTest" + classCounter.incrementAndGet();
     }
 
-    private Expression recoverInvokeDynamic(ClassFile cf, String methodName) throws IOException {
+    private Expression recoverInvokeDynamic(ClassFile cf, String methodName)
+    {
         MethodEntry method = findMethod(cf, methodName);
         IRMethod ir = TestUtils.liftMethod(method);
         DefUseChains defUse = new DefUseChains(ir);
@@ -43,11 +47,15 @@ class LambdaRecoveryTest {
         RecoveryContext ctx = new RecoveryContext(ir, method, defUse);
         ExpressionRecoverer recoverer = new ExpressionRecoverer(ctx);
 
-        for (IRBlock block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invoke = (InvokeInstruction) instr;
-                    if (invoke.isDynamic()) {
+                    if (invoke.isDynamic())
+                    {
                         return recoverer.recover(instr);
                     }
                 }
@@ -57,39 +65,34 @@ class LambdaRecoveryTest {
         return null;
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
-        fail("Method not found: " + name);
-        return null;
+        throw new AssertionError("Method not found: " + name);
     }
 
     @Nested
-    class BasicLambdaTests {
+    class BasicLambdaTests
+    {
 
         @Test
-        void testSimpleLambdaNoParameters() throws IOException {
+        void testSimpleLambdaNoParameters() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "()I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "()I")
                 .iconst(42)
                 .ireturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "()I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "()I");
 
             bb.publicStaticMethod("test", "()Ljava/util/function/Supplier;")
                 .invokedynamic("get", "()Ljava/util/function/Supplier;", bootstrapIdx)
@@ -105,15 +108,12 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaWithSingleParameter() throws IOException {
+        void testLambdaWithSingleParameter() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(I)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(I)I")
                 .iload(0)
                 .iconst(2)
                 .imul()
@@ -140,15 +140,12 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaWithMultipleParameters() throws IOException {
+        void testLambdaWithMultipleParameters() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(II)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(II)I")
                 .iload(0)
                 .iload(1)
                 .iadd()
@@ -175,7 +172,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaReturningVoid() throws IOException {
+        void testLambdaReturningVoid() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -207,7 +205,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaWithBlockBody() throws IOException {
+        void testLambdaWithBlockBody() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -251,10 +250,12 @@ class LambdaRecoveryTest {
     }
 
     @Nested
-    class FunctionalInterfaceTests {
+    class FunctionalInterfaceTests
+    {
 
         @Test
-        void testSupplierInterface() throws IOException {
+        void testSupplierInterface() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -287,7 +288,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testConsumerInterface() throws IOException {
+        void testConsumerInterface() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -318,7 +320,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testFunctionInterface() throws IOException {
+        void testFunctionInterface() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -351,7 +354,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testPredicateInterface() throws IOException {
+        void testPredicateInterface() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -393,7 +397,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testBiFunctionInterface() throws IOException {
+        void testBiFunctionInterface() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -428,28 +433,21 @@ class LambdaRecoveryTest {
     }
 
     @Nested
-    class CaptureTests {
+    class CaptureTests
+    {
 
         @Test
-        void testLambdaCapturingLocalVariable() throws IOException {
+        void testLambdaCapturingLocalVariable() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(I)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(I)I")
                 .iload(0)
                 .ireturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "(I)I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "(I)I");
 
             bb.publicStaticMethod("test", "(I)Ljava/util/function/Supplier;")
                 .iload(0)
@@ -464,27 +462,19 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaCapturingMultipleVariables() throws IOException {
+        void testLambdaCapturingMultipleVariables() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(II)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(II)I")
                 .iload(0)
                 .iload(1)
                 .iadd()
                 .ireturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "(II)I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "(II)I");
 
             bb.publicStaticMethod("test", "(II)Ljava/util/function/Supplier;")
                 .iload(0)
@@ -500,25 +490,17 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaCapturingThis() throws IOException {
+        void testLambdaCapturingThis() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setSynthetic().build(),
-                "lambda$test$0",
-                "()I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setSynthetic().build(), "lambda$test$0", "()I")
                 .iconst(42)
                 .ireturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "()I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "()I");
 
             bb.publicMethod("test", "()Ljava/util/function/Supplier;")
                 .aload(0)
@@ -533,7 +515,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaCapturingMethodParameter() throws IOException {
+        void testLambdaCapturingMethodParameter() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -567,27 +550,19 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaEffectivelyFinalCapture() throws IOException {
+        void testLambdaEffectivelyFinalCapture() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(I)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(I)I")
                 .iload(0)
                 .iconst(1)
                 .iadd()
                 .ireturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "(I)I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "(I)I");
 
             bb.publicStaticMethod("test", "()Ljava/util/function/Supplier;")
                 .iconst(5)
@@ -603,10 +578,12 @@ class LambdaRecoveryTest {
     }
 
     @Nested
-    class MethodReferenceTests {
+    class MethodReferenceTests
+    {
 
         @Test
-        void testStaticMethodReferencePattern() throws IOException {
+        void testStaticMethodReferencePattern() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -636,7 +613,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testInstanceMethodReferencePattern() throws IOException {
+        void testInstanceMethodReferencePattern() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -659,7 +637,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testConstructorReferencePattern() throws IOException {
+        void testConstructorReferencePattern() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
@@ -683,18 +662,16 @@ class LambdaRecoveryTest {
     }
 
     @Nested
-    class ComplexPatternTests {
+    class ComplexPatternTests
+    {
 
         @Test
-        void testNestedLambdas() throws IOException {
+        void testNestedLambdas() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$1",
-                "(I)I"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$1", "(I)I")
                 .iload(0)
                 .iconst(2)
                 .imul()
@@ -736,24 +713,16 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaInsideLoop() throws IOException {
+        void testLambdaInsideLoop() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            bb.method(
-                new AccessBuilder().setPrivate().setStatic().setSynthetic().build(),
-                "lambda$test$0",
-                "(I)V"
-            )
+            bb.method(new AccessBuilder().setPrivate().setStatic().setSynthetic().build(), "lambda$test$0", "(I)V")
                 .vreturn()
             .endMethod();
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "(Ljava/lang/Object;)V",
-                className,
-                "lambda$test$0",
-                "(I)V"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("(Ljava/lang/Object;)V", className, "lambda$test$0", "(I)V");
 
             BytecodeBuilder.MethodBuilder mb = bb.publicStaticMethod("test", "()V");
             BytecodeBuilder.Label loopStart = mb.newLabel();
@@ -781,19 +750,16 @@ class LambdaRecoveryTest {
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void testInvokeDynamicWithoutBootstrapInfo() throws IOException {
+        void testInvokeDynamicWithoutBootstrapInfo() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 
-            int bootstrapIdx = bb.addLambdaBootstrap(
-                "()Ljava/lang/Object;",
-                className,
-                "lambda$test$0",
-                "()I"
-            );
+            int bootstrapIdx = bb.addLambdaBootstrap("()Ljava/lang/Object;", className, "lambda$test$0", "()I");
 
             bb.publicStaticMethod("test", "()Ljava/lang/Object;")
                 .invokedynamic("get", "()Ljava/util/function/Supplier;", bootstrapIdx)
@@ -806,7 +772,8 @@ class LambdaRecoveryTest {
         }
 
         @Test
-        void testLambdaWithComplexExpressionBody() throws IOException {
+        void testLambdaWithComplexExpressionBody() throws IOException
+        {
             String className = uniqueClassName();
             BytecodeBuilder bb = BytecodeBuilder.forClass(className);
 

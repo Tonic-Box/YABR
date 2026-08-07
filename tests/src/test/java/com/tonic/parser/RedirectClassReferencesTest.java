@@ -15,14 +15,16 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies {@code redirectClassReferences}/{@code redirectOwner} rewrites <i>every</i> reference to a
- * class — not just member-ref owners — so no live constant names the old class: bare
+ * Verifies {@code redirectClassReferences}/{@code redirectOwner} rewrites every reference to a
+ * class - not just member-ref owners - so no live constant names the old class: bare
  * {@code CONSTANT_Class} (operands/catch_type), array class refs, and descriptors.
  */
-class RedirectClassReferencesTest {
+class RedirectClassReferencesTest
+{
 
     @Test
-    void rewritesEveryReferenceKind() throws Exception {
+    void rewritesEveryReferenceKind() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         ClassFile cf = pool.createNewClass("U", new AccessBuilder().setPublic().build());
         ConstPool cp = cf.getConstPool();
@@ -36,11 +38,14 @@ class RedirectClassReferencesTest {
         int rewritten = cf.redirectClassReferences("pkg/B", "pkg/A");
         assertTrue(rewritten >= 4, "expected every B reference rewritten, got " + rewritten);
 
-        for (Item<?> item : cp.getItems()) {
-            if (item instanceof ClassRefItem) {
-                assertNotEquals("pkg/B", ((ClassRefItem) item).getClassName(),
-                        "a class ref still resolves to pkg/B");
-            } else if (item instanceof Utf8Item) {
+        for (Item<?> item : cp.getItems())
+        {
+            if (item instanceof ClassRefItem)
+            {
+                assertNotEquals("pkg/B", ((ClassRefItem) item).getClassName(), "a class ref still resolves to pkg/B");
+            }
+            else if (item instanceof Utf8Item)
+            {
                 String v = ((Utf8Item) item).getValue();
                 assertFalse(v != null && v.contains("Lpkg/B;"), "a descriptor still names B: " + v);
             }
@@ -48,7 +53,8 @@ class RedirectClassReferencesTest {
     }
 
     @Test
-    void newAndInvokespecialOperandsRedirectedAtRuntime() throws Exception {
+    void newAndInvokespecialOperandsRedirectedAtRuntime() throws Exception
+    {
         // make(): new StringBuilder() returned as Object. After redirecting StringBuilder -> StringBuffer,
         // BOTH the `new` operand (a bare CONSTANT_Class) and the <init> member-ref owner must move, or
         // the verifier rejects `new StringBuilder; invokespecial StringBuffer.<init>`. The old

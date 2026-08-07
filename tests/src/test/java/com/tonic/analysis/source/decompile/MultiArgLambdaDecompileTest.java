@@ -12,11 +12,15 @@ import java.nio.file.Paths;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug 4: a multi-argument lambda keeps both parameters (not 1 param + a garbage capture). */
-public class MultiArgLambdaDecompileTest {
+/**
+ * Regression for bug 4: a multi-argument lambda keeps both parameters (not 1 param + a garbage capture).
+ */
+public class MultiArgLambdaDecompileTest
+{
 
     @Test
-    public void biFunctionLambdaHasTwoParameters() throws Exception {
+    public void biFunctionLambdaHasTwoParameters() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S07_Lambdas.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

@@ -1,12 +1,27 @@
 package com.tonic.analysis.execution.resolve;
 
-public class ResolutionException extends RuntimeException {
+/**
+ * Unchecked exception raised when a class, method, or field cannot be resolved.
+ */
+public class ResolutionException extends RuntimeException
+{
 
-    public ResolutionException(String message) {
+    /**
+     * Creates the exception with a message.
+     * @param message description of the failed resolution
+     */
+    public ResolutionException(String message)
+    {
         super(message);
     }
 
-    public ResolutionException(String message, Throwable cause) {
+    /**
+     * Creates the exception with a message and cause.
+     * @param message description of the failed resolution
+     * @param cause underlying failure
+     */
+    public ResolutionException(String message, Throwable cause)
+    {
         super(message, cause);
     }
 }

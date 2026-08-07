@@ -14,10 +14,11 @@ import java.util.*;
 import java.util.function.Function;
 
 /**
- * Shared context for rename operations.
- * Contains the ClassPool, mappings, hierarchy, and utility methods.
+ * Shared state for a rename run - the class pool, the mapping store, and a class hierarchy and
+ * descriptor/signature remappers derived from them.
  */
-public class RenamerContext {
+public class RenamerContext
+{
 
     private final ClassPool classPool;
     private final MappingStore mappings;
@@ -25,66 +26,90 @@ public class RenamerContext {
     private DescriptorRemapper descriptorRemapper;
     private SignatureRemapper signatureRemapper;
 
-    public RenamerContext(ClassPool classPool, MappingStore mappings) {
+    /**
+     * Creates a context and builds the class hierarchy and remappers from the given pool and mappings.
+     * @param classPool the classes being renamed
+     * @param mappings the old-to-new name mappings
+     */
+    public RenamerContext(ClassPool classPool, MappingStore mappings)
+    {
         this.classPool = classPool;
         this.mappings = mappings;
         this.hierarchy = ClassHierarchyBuilder.build(classPool);
         initializeRemappers();
     }
 
-    private void initializeRemappers() {
+    private void initializeRemappers()
+    {
         Function<String, String> classMapper = mappings::getClassMapping;
         this.descriptorRemapper = new DescriptorRemapper(classMapper);
         this.signatureRemapper = new SignatureRemapper(classMapper);
     }
 
-    /** Returns the ClassPool used for rename operations. */
-    public ClassPool getClassPool() {
+    /**
+     * @return the class pool being renamed
+     */
+    public ClassPool getClassPool()
+    {
         return classPool;
     }
 
-    /** Returns the MappingStore containing all rename mappings. */
-    public MappingStore getMappings() {
+    /**
+     * @return the store holding the old-to-new name mappings
+     */
+    public MappingStore getMappings()
+    {
         return mappings;
     }
 
-    /** Returns the class hierarchy for the pool. */
-    public ClassHierarchy getHierarchy() {
+    /**
+     * @return the class hierarchy built for the pool
+     */
+    public ClassHierarchy getHierarchy()
+    {
         return hierarchy;
     }
 
-    /** Returns the descriptor remapper for updating type descriptors. */
-    public DescriptorRemapper getDescriptorRemapper() {
+    /**
+     * @return the remapper that rewrites type descriptors
+     */
+    public DescriptorRemapper getDescriptorRemapper()
+    {
         return descriptorRemapper;
     }
 
-    /** Returns the signature remapper for updating generic signatures. */
-    public SignatureRemapper getSignatureRemapper() {
+    /**
+     * @return the remapper that rewrites generic signatures
+     */
+    public SignatureRemapper getSignatureRemapper()
+    {
         return signatureRemapper;
     }
 
     /**
-     * Gets all classes from the ClassPool.
+     * @return every class in the pool
      */
-    public List<ClassFile> getAllClasses() {
+    public List<ClassFile> getAllClasses()
+    {
         return classPool.getClasses();
     }
 
     /**
      * Gets a class from the ClassPool by name.
-     * If the class was renamed, also tries looking up by the new name.
-     *
      * @param internalName the internal class name (could be old or new name)
      * @return the ClassFile, or null if not found
      */
-    public ClassFile getClass(String internalName) {
+    public ClassFile getClass(String internalName)
+    {
         ClassFile cf = classPool.get(internalName);
-        if (cf != null) {
+        if (cf != null)
+        {
             return cf;
         }
         // If not found, check if this is an old name that was renamed
         String newName = mappings.getClassMapping(internalName);
-        if (newName != null) {
+        if (newName != null)
+        {
             return classPool.get(newName);
         }
         return null;
@@ -93,34 +118,43 @@ public class RenamerContext {
     /**
      * Rebuilds the class hierarchy after class renames.
      */
-    public void rebuildHierarchy() {
+    public void rebuildHierarchy()
+    {
         this.hierarchy = ClassHierarchyBuilder.build(classPool);
     }
 
     /**
      * Counts how many items reference a NameAndType entry.
-     * Used to determine if it's safe to modify in place.
-     *
      * @param cp       The constant pool
      * @param natIndex The index of the NameAndType entry
      * @return The number of items referencing this NameAndType
      */
-    public int countNameAndTypeReferences(ConstPool cp, int natIndex) {
+    public int countNameAndTypeReferences(ConstPool cp, int natIndex)
+    {
         int count = 0;
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        for (int i = 1; i < cp.getItems().size(); i++)
+        {
             Item<?> item = cp.getItems().get(i);
             if (item == null) continue;
 
-            if (item instanceof MethodRefItem) {
-                if (((MethodRefItem) item).getValue().getNameAndTypeIndex() == natIndex) {
+            if (item instanceof MethodRefItem)
+            {
+                if (((MethodRefItem) item).getValue().getNameAndTypeIndex() == natIndex)
+                {
                     count++;
                 }
-            } else if (item instanceof FieldRefItem) {
-                if (((FieldRefItem) item).getValue().getNameAndTypeIndex() == natIndex) {
+            }
+            else if (item instanceof FieldRefItem)
+            {
+                if (((FieldRefItem) item).getValue().getNameAndTypeIndex() == natIndex)
+                {
                     count++;
                 }
-            } else if (item instanceof InterfaceRefItem) {
-                if (((InterfaceRefItem) item).getValue().getNameAndTypeIndex() == natIndex) {
+            }
+            else if (item instanceof InterfaceRefItem)
+            {
+                if (((InterfaceRefItem) item).getValue().getNameAndTypeIndex() == natIndex)
+                {
                     count++;
                 }
             }
@@ -130,37 +164,47 @@ public class RenamerContext {
 
     /**
      * Checks if a NameAndType entry is shared by multiple references.
+     * @param cp the constant pool to scan
+     * @param natIndex the index of the NameAndType entry
+     * @return true when more than one member reference points at it
      */
-    public boolean isSharedNameAndType(ConstPool cp, int natIndex) {
+    public boolean isSharedNameAndType(ConstPool cp, int natIndex)
+    {
         return countNameAndTypeReferences(cp, natIndex) > 1;
     }
 
     /**
      * Gets the index of an item in a constant pool.
+     * @param cp the constant pool to search
+     * @param item the item to locate
+     * @return the pool index of the item
      */
-    public int getIndexOf(ConstPool cp, Item<?> item) {
+    public int getIndexOf(ConstPool cp, Item<?> item)
+    {
         return cp.getIndexOf(item);
     }
 
     /**
      * Collects all NameAndType indices that are used for a specific method signature.
-     * This is used to find all call sites that need updating.
-     *
      * @param cf         The ClassFile containing the constant pool
      * @param methodName The method name to find
      * @param descriptor The method descriptor
      * @return Set of NAT indices matching this signature
      */
-    public Set<Integer> findMatchingNameAndTypes(ClassFile cf, String methodName, String descriptor) {
+    public Set<Integer> findMatchingNameAndTypes(ClassFile cf, String methodName, String descriptor)
+    {
         Set<Integer> matches = new HashSet<>();
         ConstPool cp = cf.getConstPool();
 
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        for (int i = 1; i < cp.getItems().size(); i++)
+        {
             Item<?> item = cp.getItems().get(i);
-            if (item instanceof NameAndTypeRefItem) {
+            if (item instanceof NameAndTypeRefItem)
+            {
                 NameAndTypeRefItem nat = (NameAndTypeRefItem) item;
                 nat.setConstPool(cp);
-                if (nat.getName().equals(methodName) && nat.getDescriptor().equals(descriptor)) {
+                if (nat.getName().equals(methodName) && nat.getDescriptor().equals(descriptor))
+                {
                     matches.add(i);
                 }
             }
@@ -170,23 +214,26 @@ public class RenamerContext {
 
     /**
      * Updates all Utf8 items that contain class references in descriptors.
-     * This is called after class renames to fix all descriptors.
-     *
      * @param cf The ClassFile to update
      */
-    public void remapDescriptorsInClass(ClassFile cf) {
+    public void remapDescriptorsInClass(ClassFile cf)
+    {
         ConstPool cp = cf.getConstPool();
 
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        for (int i = 1; i < cp.getItems().size(); i++)
+        {
             Item<?> item = cp.getItems().get(i);
-            if (item instanceof Utf8Item) {
+            if (item instanceof Utf8Item)
+            {
                 Utf8Item utf8 = (Utf8Item) item;
                 String value = utf8.getValue();
 
                 // Check if it looks like a descriptor
-                if (value.contains("L") && value.contains(";")) {
+                if (value.contains("L") && value.contains(";"))
+                {
                     String remapped = descriptorRemapper.remapMethodDescriptor(value);
-                    if (!remapped.equals(value)) {
+                    if (!remapped.equals(value))
+                    {
                         utf8.setValue(remapped);
                     }
                 }
@@ -196,14 +243,13 @@ public class RenamerContext {
 
     /**
      * Updates a specific NameAndType to use a new name.
-     * Creates a new NAT if the existing one is shared.
-     *
      * @param cp         The constant pool
      * @param natIndex   The index of the NameAndType
      * @param newName    The new name to use
      * @return The index of the (possibly new) NameAndType entry
      */
-    public int updateNameAndTypeName(ConstPool cp, int natIndex, String newName) {
+    public int updateNameAndTypeName(ConstPool cp, int natIndex, String newName)
+    {
         NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(natIndex);
         nat.setConstPool(cp);
         int descIndex = nat.getValue().getDescriptorIndex();

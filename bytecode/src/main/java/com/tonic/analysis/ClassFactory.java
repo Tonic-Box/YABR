@@ -18,23 +18,25 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * Generates bytecode-backed members on a structural {@link ClassFile}: default
- * constructors/initializers, accessor methods, field initial values, method
- * bodies, and StackMapTable frames.
- *
- * This logic lives in the bytecode layer (rather than on {@code ClassFile}
- * itself) so that {@code com.tonic.parser} stays a pure structural model with
- * no dependency on the bytecode-emission API.
+ * Generator of bytecode-backed members on a structural {@link ClassFile} - constructors,
+ * initializers, accessors, field initial values, method bodies, and StackMapTable frames.
  */
-public final class ClassFactory {
+public final class ClassFactory
+{
 
-    private ClassFactory() {
+    private ClassFactory()
+    {
     }
 
     /**
-     * Creates a new class from scratch with a default constructor and class initializer.
+     * Creates a detached class carrying a default constructor and class initializer.
+     *
+     * @param className binary name of the new class
+     * @param accessFlags class access flags
+     * @return the new class file
      */
-    public static ClassFile createClass(String className, int accessFlags) {
+    public static ClassFile createClass(String className, int accessFlags)
+    {
         ClassFile cf = new ClassFile(className, accessFlags);
         addDefaultConstructor(cf);
         addDefaultClassInitializer(cf);
@@ -42,9 +44,17 @@ public final class ClassFactory {
     }
 
     /**
-     * Creates a new class in the given pool with a default constructor and class initializer.
+     * Creates a class registered in a pool, adds a default constructor and class initializer,
+     * then rebuilds it.
+     *
+     * @param pool pool that owns the new class
+     * @param className binary name of the new class
+     * @param accessFlags class access flags
+     * @return the new class file
+     * @throws IOException if the pool cannot create the class or the rebuild fails
      */
-    public static ClassFile createClass(ClassPool pool, String className, int accessFlags) throws IOException {
+    public static ClassFile createClass(ClassPool pool, String className, int accessFlags) throws IOException
+    {
         ClassFile cf = pool.createNewClass(className, accessFlags);
         addDefaultConstructor(cf);
         addDefaultClassInitializer(cf);
@@ -53,9 +63,13 @@ public final class ClassFactory {
     }
 
     /**
-     * Adds a default no-argument constructor that invokes the superclass constructor.
+     * Adds a no-argument constructor whose body only invokes the superclass constructor.
+     *
+     * @param cf class to receive the constructor
+     * @return the added constructor
      */
-    public static MethodEntry addDefaultConstructor(ClassFile cf) {
+    public static MethodEntry addDefaultConstructor(ClassFile cf)
+    {
         String name = "<init>";
         String desc = "()V";
         int nameIndex = cf.getConstPool().utf8Index(name);
@@ -85,9 +99,13 @@ public final class ClassFactory {
     }
 
     /**
-     * Adds a default empty static class initializer.
+     * Adds an empty static class initializer.
+     *
+     * @param cf class to receive the initializer
+     * @return the added initializer
      */
-    public static MethodEntry addDefaultClassInitializer(ClassFile cf) {
+    public static MethodEntry addDefaultClassInitializer(ClassFile cf)
+    {
         String name = "<clinit>";
         String desc = "()V";
         int accessFlags = new AccessBuilder().setPublic().setStatic().build();
@@ -113,17 +131,27 @@ public final class ClassFactory {
     }
 
     /**
-     * Creates a method with a generated default body (returns a zero/null value of the return type).
+     * Creates a method whose generated body immediately returns a zero or null value
+     * of the declared return type.
+     *
+     * @param cf class to receive the method
+     * @param accessFlags method access flags
+     * @param methodName method name
+     * @param methodDescriptor method descriptor
+     * @return the added method
      */
-    public static MethodEntry createMethodWithBody(ClassFile cf, int accessFlags, String methodName, String methodDescriptor) {
+    public static MethodEntry createMethodWithBody(ClassFile cf, int accessFlags, String methodName, String methodDescriptor)
+    {
         MethodEntry method = cf.createNewMethodWithDescriptor(accessFlags, methodName, methodDescriptor);
 
         Bytecode bytecode = new Bytecode(method);
-        if (!Modifiers.isStatic(accessFlags)) {
+        if (!Modifiers.isStatic(accessFlags))
+        {
             bytecode.addALoad(0);
         }
         String returnType = methodDescriptor.split("\\)")[1];
-        switch (returnType) {
+        switch (returnType)
+        {
             case "V":
                 bytecode.addReturn(ReturnType.RETURN.getOpcode());
                 break;
@@ -158,17 +186,32 @@ public final class ClassFactory {
     }
 
     /**
-     * Generates a getter method named {@code get<Field>} for the given field.
+     * Generates a getter named {@code get<Field>} for a field.
+     *
+     * @param cf class to receive the getter
+     * @param entry field to read
+     * @param isStatic true to emit a static getter reading a static field
+     * @return the generated getter
+     * @throws IOException if the method body cannot be finalized
      */
-    public static MethodEntry generateGetter(ClassFile cf, FieldEntry entry, boolean isStatic) throws IOException {
+    public static MethodEntry generateGetter(ClassFile cf, FieldEntry entry, boolean isStatic) throws IOException
+    {
         String name = "get" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
         return generateGetter(cf, entry, name, isStatic);
     }
 
     /**
-     * Generates a getter method with the given name for the given field.
+     * Generates a getter under a caller-chosen name for a field.
+     *
+     * @param cf class to receive the getter
+     * @param entry field to read
+     * @param name name of the generated method
+     * @param isStatic true to emit a static getter reading a static field
+     * @return the generated getter
+     * @throws IOException if the method body cannot be finalized
      */
-    public static MethodEntry generateGetter(ClassFile cf, FieldEntry entry, String name, boolean isStatic) throws IOException {
+    public static MethodEntry generateGetter(ClassFile cf, FieldEntry entry, String name, boolean isStatic) throws IOException
+    {
         int access = isStatic
                 ? new AccessBuilder().setPublic().setStatic().build()
                 : new AccessBuilder().setPublic().build();
@@ -178,10 +221,13 @@ public final class ClassFactory {
         Bytecode bytecode = new Bytecode(method);
         int fieldRefIndex = cf.getConstPool().getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             bytecode.addALoad(0);
             bytecode.addGetField(fieldRefIndex);
-        } else {
+        }
+        else
+        {
             bytecode.addGetStatic(fieldRefIndex);
         }
 
@@ -191,17 +237,32 @@ public final class ClassFactory {
     }
 
     /**
-     * Generates a setter method named {@code set<Field>} for the given field.
+     * Generates a setter named {@code set<Field>} for a field.
+     *
+     * @param cf class to receive the setter
+     * @param entry field to write
+     * @param isStatic true to emit a static setter writing a static field
+     * @return the generated setter
+     * @throws IOException if the method body cannot be finalized
      */
-    public static MethodEntry generateSetter(ClassFile cf, FieldEntry entry, boolean isStatic) throws IOException {
+    public static MethodEntry generateSetter(ClassFile cf, FieldEntry entry, boolean isStatic) throws IOException
+    {
         String name = "set" + entry.getName().substring(0, 1).toUpperCase() + entry.getName().substring(1);
         return generateSetter(cf, entry, name, isStatic);
     }
 
     /**
-     * Generates a setter method with the given name for the given field.
+     * Generates a setter under a caller-chosen name for a field.
+     *
+     * @param cf class to receive the setter
+     * @param entry field to write
+     * @param name name of the generated method
+     * @param isStatic true to emit a static setter writing a static field
+     * @return the generated setter
+     * @throws IOException if the method body cannot be finalized
      */
-    public static MethodEntry generateSetter(ClassFile cf, FieldEntry entry, String name, boolean isStatic) throws IOException {
+    public static MethodEntry generateSetter(ClassFile cf, FieldEntry entry, String name, boolean isStatic) throws IOException
+    {
         int access = isStatic
                 ? new AccessBuilder().setPublic().setStatic().build()
                 : new AccessBuilder().setPublic().build();
@@ -211,11 +272,14 @@ public final class ClassFactory {
         Bytecode bytecode = new Bytecode(method);
         int fieldRefIndex = cf.getConstPool().getIndexOf(bytecode.getConstPool().findOrAddField(entry.getOwnerName(), entry.getName(), entry.getDesc()));
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             bytecode.addALoad(0);
             bytecode.addLoad(1, entry.getDesc());
             bytecode.addPutField(fieldRefIndex);
-        } else {
+        }
+        else
+        {
             bytecode.addLoad(0, entry.getDesc());
             bytecode.addPutStatic(fieldRefIndex);
         }
@@ -226,9 +290,17 @@ public final class ClassFactory {
     }
 
     /**
-     * Sets the initial value of a field in either the class initializer (static) or constructor (instance).
+     * Prepends a store of a constant to a field at the top of the class initializer for a static
+     * field, or the no-argument constructor for an instance field, creating that method if absent.
+     *
+     * @param cf class owning the field
+     * @param field field to initialize
+     * @param value Integer, Long, Float, Double, or String constant to store
+     * @throws IOException if the method body cannot be finalized
+     * @throws IllegalArgumentException if the value is not one of the supported constant types
      */
-    public static void setFieldInitialValue(ClassFile cf, FieldEntry field, Object value) throws IOException {
+    public static void setFieldInitialValue(ClassFile cf, FieldEntry field, Object value) throws IOException
+    {
         boolean isStatic = Modifiers.isStatic(field.getAccess());
 
         MethodEntry method = isStatic
@@ -242,7 +314,8 @@ public final class ClassFactory {
                 .orElseGet(() -> addDefaultConstructor(cf));
 
         CodeAttribute codeAttr = method.getCodeAttribute();
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             codeAttr = newCodeAttribute(cf, method, 10, isStatic ? 0 : 1);
             method.getAttributes().add(codeAttr);
             codeAttr.setCode(new byte[0]);
@@ -251,29 +324,44 @@ public final class ClassFactory {
         Bytecode bytecode = new Bytecode(method);
         bytecode.setInsertBefore(true);
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             bytecode.addALoad(0);
         }
 
-        if (value instanceof Integer) {
+        if (value instanceof Integer)
+        {
             bytecode.addIConst((int) value);
-        } else if (value instanceof Long) {
+        }
+        else if (value instanceof Long)
+        {
             bytecode.addLConst((long) value);
-        } else if (value instanceof Float) {
+        }
+        else if (value instanceof Float)
+        {
             bytecode.addIConst(Float.floatToRawIntBits((float) value));
-        } else if (value instanceof Double) {
+        }
+        else if (value instanceof Double)
+        {
             bytecode.addLConst(Double.doubleToRawLongBits((double) value));
-        } else if (value instanceof String) {
+        }
+        else if (value instanceof String)
+        {
             Item<?> stringItem = cf.getConstPool().findOrAddString((String) value);
             bytecode.addIConst(cf.getConstPool().getIndexOf(stringItem));
-        } else {
+        }
+        else
+        {
             throw new IllegalArgumentException("Unsupported value type: " + value.getClass().getName());
         }
 
         int fieldRefIndex = cf.getConstPool().getIndexOf(cf.getConstPool().findOrAddField(field.getOwnerName(), field.getName(), field.getDesc()));
-        if (isStatic) {
+        if (isStatic)
+        {
             bytecode.addPutStatic(fieldRefIndex);
-        } else {
+        }
+        else
+        {
             bytecode.addPutField(fieldRefIndex);
         }
 
@@ -281,15 +369,19 @@ public final class ClassFactory {
     }
 
     /**
-     * Computes StackMapTable frames for all methods in the class.
+     * Computes StackMapTable frames for every method in a class that carries code.
      *
+     * @param cf class to process
      * @return the number of methods that had frames computed
      */
-    public static int computeFrames(ClassFile cf) {
+    public static int computeFrames(ClassFile cf)
+    {
         FrameGenerator generator = new FrameGenerator(cf.getConstPool());
         int count = 0;
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getCodeAttribute() != null) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getCodeAttribute() != null)
+            {
                 generator.updateStackMapTable(method);
                 count++;
             }
@@ -299,14 +391,21 @@ public final class ClassFactory {
     }
 
     /**
-     * Computes StackMapTable frames for a specific method by name and descriptor.
+     * Computes StackMapTable frames for one method looked up by name and descriptor.
      *
+     * @param cf class to search
+     * @param methodName method name
+     * @param descriptor method descriptor
      * @return true if the method was found and frames were computed
      */
-    public static boolean computeFrames(ClassFile cf, String methodName, String descriptor) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName) && method.getDesc().equals(descriptor)) {
-                if (method.getCodeAttribute() != null) {
+    public static boolean computeFrames(ClassFile cf, String methodName, String descriptor)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName) && method.getDesc().equals(descriptor))
+            {
+                if (method.getCodeAttribute() != null)
+                {
                     new FrameGenerator(cf.getConstPool()).updateStackMapTable(method);
                     Logger.info("Computed StackMapTable frames for " + methodName + descriptor);
                     return true;
@@ -317,27 +416,36 @@ public final class ClassFactory {
     }
 
     /**
-     * Computes StackMapTable frames for a specific method.
+     * Computes StackMapTable frames for one method, doing nothing if it carries no code.
+     *
+     * @param cf class supplying the constant pool
+     * @param method method to process
      */
-    public static void computeFrames(ClassFile cf, MethodEntry method) {
-        if (method.getCodeAttribute() != null) {
+    public static void computeFrames(ClassFile cf, MethodEntry method)
+    {
+        if (method.getCodeAttribute() != null)
+        {
             new FrameGenerator(cf.getConstPool()).updateStackMapTable(method);
             Logger.info("Computed StackMapTable frames for " + method.getName() + method.getDesc());
         }
     }
 
-    private static CodeAttribute newCodeAttribute(ClassFile cf, MethodEntry owner, int maxStack, int maxLocals) {
-        CodeAttribute codeAttr = new CodeAttribute("Code", owner,
-                cf.getConstPool().utf8Index("Code"), 0);
+    private static CodeAttribute newCodeAttribute(ClassFile cf, MethodEntry owner, int maxStack, int maxLocals)
+    {
+        CodeAttribute codeAttr = new CodeAttribute("Code", owner, cf.getConstPool().utf8Index("Code"), 0);
         codeAttr.setMaxStack(maxStack);
         codeAttr.setMaxLocals(maxLocals);
         return codeAttr;
     }
 
-    private static void finalizeBody(Bytecode bytecode, String what) {
-        try {
+    private static void finalizeBody(Bytecode bytecode, String what)
+    {
+        try
+        {
             bytecode.finalizeBytecode();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             Logger.error("Failed to finalize bytecode for " + what + ": " + e.getMessage());
         }
     }

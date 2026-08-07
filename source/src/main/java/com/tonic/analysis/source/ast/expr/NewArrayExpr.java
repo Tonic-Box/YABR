@@ -11,16 +11,18 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a new array expression: new int[size] or new int[]{1,2,3}
+ * An array allocation - either sized by dimension expressions or by an
+ * initializer.
  */
-public final class NewArrayExpr implements Expression {
+public final class NewArrayExpr implements Expression
+{
 
     /**
      * The element type of the array.
      */
     private final SourceType elementType;
     /**
-     * Dimension expressions (for new int[x][y]).
+     * Dimension expressions, as in new int[x][y].
      */
     private final List<Expression> dimensions;
     /**
@@ -31,131 +33,213 @@ public final class NewArrayExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public NewArrayExpr(SourceType elementType, List<Expression> dimensions,
-                        ArrayInitExpr initializer, SourceType type, SourceLocation location) {
+    /**
+     * Creates an array allocation and adopts the dimensions and initializer as
+     * children.
+     * @param elementType the element type
+     * @param dimensions the length expressions, may be null
+     * @param initializer the initializer, may be null
+     * @param type the expression type; null derives an array type from the
+     *        element type and dimension count
+     * @param location the source location, null becomes UNKNOWN
+     * @throws NullPointerException if the element type is null
+     */
+    public NewArrayExpr(SourceType elementType, List<Expression> dimensions, ArrayInitExpr initializer, SourceType type, SourceLocation location)
+    {
         this.elementType = Objects.requireNonNull(elementType, "elementType cannot be null");
         this.dimensions = new ArrayList<>(dimensions != null ? dimensions : List.of());
         this.initializer = initializer;
-        this.type = type != null ? type : new ArraySourceType(elementType,
-                Math.max(1, this.dimensions.size()));
+        this.type = type != null ? type : new ArraySourceType(elementType, Math.max(1, this.dimensions.size()));
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        for (Expression dim : this.dimensions) {
+        for (Expression dim : this.dimensions)
+        {
             dim.setParent(this);
         }
-        if (initializer != null) {
+        if (initializer != null)
+        {
             initializer.setParent(this);
         }
     }
 
-    public NewArrayExpr(SourceType elementType, List<Expression> dimensions) {
+    /**
+     * Creates an allocation with explicit dimensions and no initializer.
+     * @param elementType the element type
+     * @param dimensions the length expressions, may be null
+     */
+    public NewArrayExpr(SourceType elementType, List<Expression> dimensions)
+    {
         this(elementType, dimensions, null, null, SourceLocation.UNKNOWN);
     }
 
-    public NewArrayExpr(SourceType elementType, ArrayInitExpr initializer) {
+    /**
+     * Creates an allocation with no explicit dimensions, sized by its
+     * initializer.
+     * @param elementType the element type
+     * @param initializer the initializer
+     */
+    public NewArrayExpr(SourceType elementType, ArrayInitExpr initializer)
+    {
         this(elementType, List.of(), initializer, null, SourceLocation.UNKNOWN);
     }
 
-    public SourceType getElementType() {
+    /**
+     * @return the element type
+     */
+    public SourceType getElementType()
+    {
         return elementType;
     }
 
-    public List<Expression> getDimensions() {
+    /**
+     * @return the dimensions
+     */
+    public List<Expression> getDimensions()
+    {
         return dimensions;
     }
 
-    public ArrayInitExpr getInitializer() {
+    /**
+     * @return the initializer
+     */
+    public ArrayInitExpr getInitializer()
+    {
         return initializer;
     }
 
-    public void setInitializer(ArrayInitExpr initializer) {
-        this.initializer = initializer;
+    /**
+     * @param initializer the new initializer, may be null
+     */
+    public void setInitializer(ArrayInitExpr initializer)
+    {
+        withInitializer(initializer);
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Creates a new array with a single dimension.
+     * Creates a one-dimensional allocation with an explicit length.
+     * @param elementType the element type
+     * @param size the length expression
+     * @return the expression
      */
-    public static NewArrayExpr withSize(SourceType elementType, Expression size) {
+    public static NewArrayExpr withSize(SourceType elementType, Expression size)
+    {
         return new NewArrayExpr(elementType, List.of(size));
     }
 
     /**
-     * Creates a new array with an initializer.
+     * Creates an allocation whose length comes from an initializer.
+     * @param elementType the element type
+     * @param init the initializer
+     * @return the expression
      */
-    public static NewArrayExpr withInit(SourceType elementType, ArrayInitExpr init) {
+    public static NewArrayExpr withInit(SourceType elementType, ArrayInitExpr init)
+    {
         return new NewArrayExpr(elementType, init);
     }
 
     /**
-     * Adds a dimension expression.
+     * Appends a dimension expression and adopts it as a child.
+     * @param dim the dimension expression
      */
-    public void addDimension(Expression dim) {
+    public void addDimension(Expression dim)
+    {
         dim.setParent(this);
         dimensions.add(dim);
     }
 
     /**
-     * Gets the number of dimensions.
+     * @return the number of dimension expressions
      */
-    public int getDimensionCount() {
+    public int getDimensionCount()
+    {
         return dimensions.size();
     }
 
     /**
-     * Checks if this array has an initializer.
+     * @return true if an initializer is attached
      */
-    public boolean hasInitializer() {
+    public boolean hasInitializer()
+    {
         return initializer != null;
     }
 
-    public NewArrayExpr withInitializer(ArrayInitExpr initializer) {
-        if (this.initializer != null) {
-            this.initializer.setParent(null);
-        }
+    /**
+     * Replaces the initializer in place, reparenting the new one and releasing
+     * the old one.
+     * @param initializer the new initializer, may be null
+     * @return this expression
+     */
+    public NewArrayExpr withInitializer(ArrayInitExpr initializer)
+    {
+        ASTNode previous = this.initializer;
         this.initializer = initializer;
-        if (initializer != null) {
+        if (initializer != null)
+        {
             initializer.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
-        java.util.List<ASTNode> children = new java.util.ArrayList<>();
-        children.addAll(dimensions);
+    public java.util.List<ASTNode> getChildren()
+    {
+        List<ASTNode> children = new ArrayList<>(dimensions);
         if (initializer != null) children.add(initializer);
         return children;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitNewArray(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("new ").append(elementType.toJavaSource());
-        if (hasInitializer()) {
+        if (hasInitializer())
+        {
             sb.append("[] ").append(initializer);
-        } else {
-            for (Expression dim : dimensions) {
+        }
+        else
+        {
+            for (Expression dim : dimensions)
+            {
                 sb.append("[").append(dim).append("]");
             }
         }

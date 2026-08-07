@@ -17,11 +17,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherBranchTest {
+class OpcodeDispatcherBranchTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -29,13 +31,17 @@ class OpcodeDispatcherBranchTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -43,10 +49,12 @@ class OpcodeDispatcherBranchTest {
     }
 
     @Nested
-    class UnaryBranchTests {
+    class UnaryBranchTests
+    {
 
         @Test
-        void testIfeqTaken() throws IOException {
+        void testIfeqTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -68,7 +76,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfeqNotTaken() throws IOException {
+        void testIfeqNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -90,7 +99,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfneTaken() throws IOException {
+        void testIfneTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -112,7 +122,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfneNotTaken() throws IOException {
+        void testIfneNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -134,7 +145,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfltTaken() throws IOException {
+        void testIfltTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -156,7 +168,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfltNotTaken() throws IOException {
+        void testIfltNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -178,7 +191,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfgeTaken() throws IOException {
+        void testIfgeTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -200,7 +214,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfgeNotTaken() throws IOException {
+        void testIfgeNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -222,7 +237,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfgtTaken() throws IOException {
+        void testIfgtTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -244,7 +260,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfgtNotTaken() throws IOException {
+        void testIfgtNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -266,7 +283,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfleTaken() throws IOException {
+        void testIfleTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -288,7 +306,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfleNotTaken() throws IOException {
+        void testIfleNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label taken = mb.newLabel();
@@ -311,10 +330,12 @@ class OpcodeDispatcherBranchTest {
     }
 
     @Nested
-    class BinaryIntBranchTests {
+    class BinaryIntBranchTests
+    {
 
         @Test
-        void testIfIcmpeqTrue() throws IOException {
+        void testIfIcmpeqTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label equal = mb.newLabel();
@@ -337,7 +358,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpeqFalse() throws IOException {
+        void testIfIcmpeqFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label equal = mb.newLabel();
@@ -360,7 +382,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpneTrue() throws IOException {
+        void testIfIcmpneTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label notEqual = mb.newLabel();
@@ -383,7 +406,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpneFalse() throws IOException {
+        void testIfIcmpneFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label notEqual = mb.newLabel();
@@ -406,7 +430,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpltTrue() throws IOException {
+        void testIfIcmpltTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label lessThan = mb.newLabel();
@@ -429,7 +454,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpltFalse() throws IOException {
+        void testIfIcmpltFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label lessThan = mb.newLabel();
@@ -452,7 +478,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpgeTrue() throws IOException {
+        void testIfIcmpgeTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label greaterOrEqual = mb.newLabel();
@@ -475,7 +502,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpgeFalse() throws IOException {
+        void testIfIcmpgeFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label greaterOrEqual = mb.newLabel();
@@ -498,7 +526,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpgtTrue() throws IOException {
+        void testIfIcmpgtTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label greaterThan = mb.newLabel();
@@ -521,7 +550,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpgtFalse() throws IOException {
+        void testIfIcmpgtFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label greaterThan = mb.newLabel();
@@ -544,7 +574,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpleTrue() throws IOException {
+        void testIfIcmpleTrue() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label lessOrEqual = mb.newLabel();
@@ -567,7 +598,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfIcmpleFalse() throws IOException {
+        void testIfIcmpleFalse() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I");
             Label lessOrEqual = mb.newLabel();
@@ -591,10 +623,12 @@ class OpcodeDispatcherBranchTest {
     }
 
     @Nested
-    class ReferenceBranchTests {
+    class ReferenceBranchTests
+    {
 
         @Test
-        void testIfnullTaken() throws IOException {
+        void testIfnullTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)I");
             Label isNull = mb.newLabel();
@@ -616,7 +650,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfnullNotTaken() throws IOException {
+        void testIfnullNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)I");
             Label isNull = mb.newLabel();
@@ -639,7 +674,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfnonnullTaken() throws IOException {
+        void testIfnonnullTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)I");
             Label notNull = mb.newLabel();
@@ -662,7 +698,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testIfnonnullNotTaken() throws IOException {
+        void testIfnonnullNotTaken() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)I");
             Label notNull = mb.newLabel();
@@ -685,10 +722,12 @@ class OpcodeDispatcherBranchTest {
     }
 
     @Nested
-    class UnconditionalBranchTests {
+    class UnconditionalBranchTests
+    {
 
         @Test
-        void testGotoForward() throws IOException {
+        void testGotoForward() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I");
             Label target = mb.newLabel();
@@ -709,7 +748,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testGotoBackward() throws IOException {
+        void testGotoBackward() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I");
             Label loopStart = mb.newLabel();
@@ -740,10 +780,12 @@ class OpcodeDispatcherBranchTest {
     }
 
     @Nested
-    class ComplexControlFlowTests {
+    class ComplexControlFlowTests
+    {
 
         @Test
-        void testSimpleLoop() throws IOException {
+        void testSimpleLoop() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I");
             Label loopStart = mb.newLabel();
@@ -779,7 +821,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testNestedBranches() throws IOException {
+        void testNestedBranches() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label checkTen = mb.newLabel();
@@ -824,7 +867,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testWhileLoop() throws IOException {
+        void testWhileLoop() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label loopStart = mb.newLabel();
@@ -854,7 +898,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testCountdown() throws IOException {
+        void testCountdown() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label loopStart = mb.newLabel();
@@ -889,7 +934,8 @@ class OpcodeDispatcherBranchTest {
         }
 
         @Test
-        void testConditionalAccumulation() throws IOException {
+        void testConditionalAccumulation() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I");
             Label loopStart = mb.newLabel();

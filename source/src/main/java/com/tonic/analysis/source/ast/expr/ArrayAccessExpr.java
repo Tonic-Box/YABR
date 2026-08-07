@@ -8,9 +8,10 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.Objects;
 
 /**
- * Represents an array access expression: array[index]
+ * An array access expression: array[index].
  */
-public final class ArrayAccessExpr implements Expression {
+public final class ArrayAccessExpr implements Expression
+{
 
     private Expression array;
     private Expression index;
@@ -18,7 +19,16 @@ public final class ArrayAccessExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public ArrayAccessExpr(Expression array, Expression index, SourceType type, SourceLocation location) {
+    /**
+     * Creates an array access over the given array and index and reparents both operands.
+     * @param array the array operand
+     * @param index the index operand
+     * @param type the element type produced by the access
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if array, index, or type is null
+     */
+    public ArrayAccessExpr(Expression array, Expression index, SourceType type, SourceLocation location)
+    {
         this.array = Objects.requireNonNull(array, "array cannot be null");
         this.index = Objects.requireNonNull(index, "index cannot be null");
         this.type = Objects.requireNonNull(type, "type cannot be null");
@@ -28,58 +38,121 @@ public final class ArrayAccessExpr implements Expression {
         index.setParent(this);
     }
 
-    public ArrayAccessExpr(Expression array, Expression index, SourceType type) {
+    /**
+     * Creates an array access with an unknown source location.
+     * @param array the array operand
+     * @param index the index operand
+     * @param type the element type produced by the access
+     * @throws NullPointerException if array, index, or type is null
+     */
+    public ArrayAccessExpr(Expression array, Expression index, SourceType type)
+    {
         this(array, index, type, SourceLocation.UNKNOWN);
     }
 
-    public Expression getArray() {
+    /**
+     * @return the array
+     */
+    public Expression getArray()
+    {
         return array;
     }
 
-    public void setArray(Expression array) {
-        this.array = array;
+    /**
+     * Replaces the array operand, reparenting the new child.
+     * @param array the new array operand
+     */
+    public void setArray(Expression array)
+    {
+        withArray(array);
     }
 
-    public Expression getIndex() {
+    /**
+     * @return the index
+     */
+    public Expression getIndex()
+    {
         return index;
     }
 
-    public void setIndex(Expression index) {
-        this.index = index;
+      /**
+       * Replaces the index operand, reparenting the new child.
+       * @param index the new index operand
+       */
+      public void setIndex(Expression index)
+      {
+        withIndex(index);
     }
 
-    public SourceType getType() {
+    /**
+     * @return the static type of this expression
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public ArrayAccessExpr withArray(Expression array) {
-        if (this.array != null) this.array.setParent(null);
+    /**
+     * Replaces the array operand, reparenting the new child and releasing the former one.
+     * @param array the new array operand
+     * @return this expression
+     */
+    public ArrayAccessExpr withArray(Expression array)
+    {
+        ASTNode previous = this.array;
         this.array = array;
-        if (array != null) array.setParent(this);
+        if (array != null)
+        {
+            array.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public ArrayAccessExpr withIndex(Expression index) {
-        if (this.index != null) this.index.setParent(null);
+    /**
+     * Replaces the index operand, reparenting the new child and releasing the former one.
+     * @param index the new index operand
+     * @return this expression
+     */
+    public ArrayAccessExpr withIndex(Expression index)
+    {
+        ASTNode previous = this.index;
         this.index = index;
-        if (index != null) index.setParent(this);
+        if (index != null)
+        {
+            index.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (array != null) children.add(array);
         if (index != null) children.add(index);
@@ -87,12 +160,14 @@ public final class ArrayAccessExpr implements Expression {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitArrayAccess(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return array + "[" + index + "]";
     }
 }

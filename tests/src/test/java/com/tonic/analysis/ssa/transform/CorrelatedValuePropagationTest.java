@@ -14,22 +14,26 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for CorrelatedValuePropagation optimization transform.
  * Tests propagation of value ranges through conditional branches.
  */
-class CorrelatedValuePropagationTest {
+class CorrelatedValuePropagationTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void getName_ReturnsCorrelatedValuePropagation() {
+    void getName_ReturnsCorrelatedValuePropagation()
+    {
         CorrelatedValuePropagation cvp = new CorrelatedValuePropagation();
         assertEquals("CorrelatedValuePropagation", cvp.getName());
     }
 
     @Test
-    void run_WithEmptyMethod_ReturnsFalse() {
+    void run_WithEmptyMethod_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         CorrelatedValuePropagation cvp = new CorrelatedValuePropagation();
 
@@ -37,7 +41,8 @@ class CorrelatedValuePropagationTest {
     }
 
     @Test
-    void run_WithNullEntry_ReturnsFalse() {
+    void run_WithNullEntry_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         CorrelatedValuePropagation cvp = new CorrelatedValuePropagation();
 
@@ -45,7 +50,8 @@ class CorrelatedValuePropagationTest {
     }
 
     @Test
-    void run_PropagatesCorrelatedValues() {
+    void run_PropagatesCorrelatedValues()
+    {
         // Create method: if (x < 10) { goto alwaysTrue } else { goto maybeFalse }
         // In the true branch, we know x is in range [MIN, 9]
         // If we have another check "if (x < 5)" in true branch, CVP can optimize
@@ -85,7 +91,6 @@ class CorrelatedValuePropagationTest {
         secondBranch.setBlock(trueBlock);
         trueBlock.addInstruction(secondBranch);
 
-        // Add returns to prevent issues
         falseBlock.addInstruction(new ReturnInstruction());
         innerTrue.addInstruction(new ReturnInstruction());
         innerFalse.addInstruction(new ReturnInstruction());
@@ -102,8 +107,8 @@ class CorrelatedValuePropagationTest {
     }
 
     @Test
-    void run_WithNoCorrelations_ReturnsFalse() {
-        // Create method with unrelated comparisons
+    void run_WithNoCorrelations_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "noCorrelation", "(II)V", true);
 
         SSAValue param1 = new SSAValue(PrimitiveType.INT, "x");
@@ -140,7 +145,8 @@ class CorrelatedValuePropagationTest {
     }
 
     @Test
-    void run_OptimizesAlwaysTrueBranch() {
+    void run_OptimizesAlwaysTrueBranch()
+    {
         // Create method where branch condition is always true due to correlation
         IRMethod method = new IRMethod("Test", "alwaysTrue", "(I)V", true);
 

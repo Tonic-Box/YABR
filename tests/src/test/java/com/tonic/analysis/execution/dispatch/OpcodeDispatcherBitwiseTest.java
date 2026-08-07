@@ -16,11 +16,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherBitwiseTest {
+class OpcodeDispatcherBitwiseTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -28,13 +30,17 @@ class OpcodeDispatcherBitwiseTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -42,9 +48,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerBitwiseAndTests {
+    class IntegerBitwiseAndTests
+    {
         @Test
-        void testIAnd() throws IOException {
+        void testIAnd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIAnd")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -58,7 +66,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIAndWithZero() throws IOException {
+        void testIAndWithZero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIAndZero")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -73,9 +82,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerBitwiseOrTests {
+    class IntegerBitwiseOrTests
+    {
         @Test
-        void testIOr() throws IOException {
+        void testIOr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIOr")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -89,7 +100,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIOrWithAll() throws IOException {
+        void testIOrWithAll() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIOrAll")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -104,9 +116,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerBitwiseXorTests {
+    class IntegerBitwiseXorTests
+    {
         @Test
-        void testIXor() throws IOException {
+        void testIXor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIXor")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -120,7 +134,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIXorSameValue() throws IOException {
+        void testIXorSameValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIXorSame")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -135,9 +150,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerShiftLeftTests {
+    class IntegerShiftLeftTests
+    {
         @Test
-        void testIShl() throws IOException {
+        void testIShl() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIShl")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -151,7 +168,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIShlByZero() throws IOException {
+        void testIShlByZero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIShlZero")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -166,9 +184,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerShiftRightTests {
+    class IntegerShiftRightTests
+    {
         @Test
-        void testIShr() throws IOException {
+        void testIShr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIShr")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -182,7 +202,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIShrNegative() throws IOException {
+        void testIShrNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIShrNeg")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -197,9 +218,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IntegerUnsignedShiftRightTests {
+    class IntegerUnsignedShiftRightTests
+    {
         @Test
-        void testIUShr() throws IOException {
+        void testIUShr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIUShr")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -213,7 +236,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIUShrNegative() throws IOException {
+        void testIUShrNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIUShrNeg")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -228,9 +252,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class LongBitwiseAndTests {
+    class LongBitwiseAndTests
+    {
         @Test
-        void testLAnd() throws IOException {
+        void testLAnd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLAnd")
                     .publicStaticMethod("test", "(JJ)J")
                         .lload(0)
@@ -245,9 +271,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class LongBitwiseOrTests {
+    class LongBitwiseOrTests
+    {
         @Test
-        void testLOr() throws IOException {
+        void testLOr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLOr")
                     .publicStaticMethod("test", "(JJ)J")
                         .lload(0)
@@ -262,9 +290,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class LongBitwiseXorTests {
+    class LongBitwiseXorTests
+    {
         @Test
-        void testLXor() throws IOException {
+        void testLXor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLXor")
                     .publicStaticMethod("test", "(JJ)J")
                         .lload(0)
@@ -279,9 +309,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class LongShiftTests {
+    class LongShiftTests
+    {
         @Test
-        void testLShl() throws IOException {
+        void testLShl() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLShl")
                     .publicStaticMethod("test", "(JI)J")
                         .lload(0)
@@ -295,7 +327,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testLShr() throws IOException {
+        void testLShr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLShr")
                     .publicStaticMethod("test", "(JI)J")
                         .lload(0)
@@ -309,7 +342,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testLShrNegative() throws IOException {
+        void testLShrNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLShrNeg")
                     .publicStaticMethod("test", "(JI)J")
                         .lload(0)
@@ -323,7 +357,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testLUShr() throws IOException {
+        void testLUShr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLUShr")
                     .publicStaticMethod("test", "(JI)J")
                         .lload(0)
@@ -338,9 +373,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class IIncTests {
+    class IIncTests
+    {
         @Test
-        void testIIncPositive() throws IOException {
+        void testIIncPositive() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIIncPos")
                     .publicStaticMethod("test", "(I)I")
                         .iinc(0, 5)
@@ -353,7 +390,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIIncNegative() throws IOException {
+        void testIIncNegative() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIIncNeg")
                     .publicStaticMethod("test", "(I)I")
                         .iinc(0, -3)
@@ -366,7 +404,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIIncZero() throws IOException {
+        void testIIncZero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIIncZero")
                     .publicStaticMethod("test", "(I)I")
                         .iinc(0, 0)
@@ -379,7 +418,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testIIncOnDifferentLocal() throws IOException {
+        void testIIncOnDifferentLocal() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestIIncLocal")
                     .publicStaticMethod("test", "(III)I")
                         .iinc(2, 100)
@@ -393,9 +433,11 @@ class OpcodeDispatcherBitwiseTest {
     }
 
     @Nested
-    class CombinedBitwiseTests {
+    class CombinedBitwiseTests
+    {
         @Test
-        void testBitmaskExtraction() throws IOException {
+        void testBitmaskExtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestBitmask")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)
@@ -411,7 +453,8 @@ class OpcodeDispatcherBitwiseTest {
         }
 
         @Test
-        void testSetBit() throws IOException {
+        void testSetBit() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestSetBit")
                     .publicStaticMethod("test", "(II)I")
                         .iload(0)

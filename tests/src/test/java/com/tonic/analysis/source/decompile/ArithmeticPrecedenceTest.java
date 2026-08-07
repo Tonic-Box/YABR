@@ -13,21 +13,28 @@ import java.io.FileInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ArithmeticPrecedenceTest {
+public class ArithmeticPrecedenceTest
+{
 
     @Test
-    public void testTimingMathPrecedence() throws Exception {
+    public void testTimingMathPrecedence() throws Exception
+    {
         ClassFile cf = new ClassFile(new FileInputStream("C:/test/obber/extracted/osrs/dev/Main.class"));
 
         System.out.println("=== IR DUMP for runBenchmarkTest B178 ===");
-        for (MethodEntry me : cf.getMethods()) {
-            if (me.getName().equals("runBenchmarkTest")) {
+        for (MethodEntry me : cf.getMethods())
+        {
+            if (me.getName().equals("runBenchmarkTest"))
+            {
                 SSA ssa = new SSA(cf.getConstPool());
                 IRMethod irMethod = ssa.lift(me);
-                for (IRBlock block : irMethod.getBlocks()) {
-                    if (block.getName().equals("B178")) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
+                    if (block.getName().equals("B178"))
+                    {
                         System.out.println("Block B178 instructions:");
-                        for (IRInstruction instr : block.getInstructions()) {
+                        for (IRInstruction instr : block.getInstructions())
+                        {
                             System.out.println("  " + IRPrinter.format(instr));
                         }
                     }
@@ -45,15 +52,19 @@ public class ArithmeticPrecedenceTest {
         String[] lines = source.split("\n");
         boolean inMethod = false;
         int braceCount = 0;
-        for (String line : lines) {
-            if (line.contains("public static void runBenchmarkTest")) {
+        for (String line : lines)
+        {
+            if (line.contains("public static void runBenchmarkTest"))
+            {
                 inMethod = true;
             }
-            if (inMethod) {
+            if (inMethod)
+            {
                 System.out.println(line);
                 braceCount += (int) line.chars().filter(c -> c == '{').count();
                 braceCount -= (int) line.chars().filter(c -> c == '}').count();
-                if (braceCount <= 0 && line.contains("}")) {
+                if (braceCount <= 0 && line.contains("}"))
+                {
                     break;
                 }
             }

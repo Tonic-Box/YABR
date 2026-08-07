@@ -24,23 +24,29 @@ import static org.junit.jupiter.api.Assertions.*;
  * Per-construct unit tests: lift bytecode to SSA, lower to LLVM text, lift back to SSA, assert
  * structural properties.
  */
-class LlvmLifterTest {
+class LlvmLifterTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    private IRMethod lowerAndLift(ClassFile cf, String name) {
+    private IRMethod lowerAndLift(ClassFile cf, String name)
+    {
         MethodEntry method = find(cf, name);
         IRMethod ir = TestUtils.liftMethod(method);
         String ll = new LlvmLowering().lower(ir);
         return new LlvmLifter().lift(ll);
     }
 
-    private MethodEntry find(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry find(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -48,7 +54,8 @@ class LlvmLifterTest {
     }
 
     @Test
-    void intAddLiftsToMethod() throws IOException {
+    void intAddLiftsToMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("add", "(II)I")
             .iload(0).iload(1).iadd().ireturn().build();
         IRMethod lifted = lowerAndLift(cf, "add");
@@ -59,10 +66,12 @@ class LlvmLifterTest {
         List<IRBlock> blocks = lifted.getBlocksInOrder();
         assertFalse(blocks.isEmpty());
         boolean hasAdd = false;
-        for (IRBlock b : blocks) {
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof BinaryOpInstruction
-                        && ((BinaryOpInstruction) instr).getOp() == BinaryOp.ADD) {
+        for (IRBlock b : blocks)
+        {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction && ((BinaryOpInstruction) instr).getOp() == BinaryOp.ADD)
+                {
                     hasAdd = true;
                     break;
                 }
@@ -72,7 +81,8 @@ class LlvmLifterTest {
     }
 
     @Test
-    void longAddLifts() throws IOException {
+    void longAddLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("la", "(JJ)J")
             .lload(0).lload(2).ladd().lreturn().build();
         IRMethod lifted = lowerAndLift(cf, "la");
@@ -80,42 +90,48 @@ class LlvmLifterTest {
     }
 
     @Test
-    void signedDivLifts() throws IOException {
+    void signedDivLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("d", "(II)I")
             .iload(0).iload(1).idiv().ireturn().build();
         assertHasOp(lowerAndLift(cf, "d"), BinaryOp.DIV);
     }
 
     @Test
-    void signedRemLifts() throws IOException {
+    void signedRemLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("r", "(II)I")
             .iload(0).iload(1).irem().ireturn().build();
         assertHasOp(lowerAndLift(cf, "r"), BinaryOp.REM);
     }
 
     @Test
-    void shiftLeftLifts() throws IOException {
+    void shiftLeftLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("s", "(II)I")
             .iload(0).iload(1).ishl().ireturn().build();
         assertHasOp(lowerAndLift(cf, "s"), BinaryOp.SHL);
     }
 
     @Test
-    void logicalShiftRightLifts() throws IOException {
+    void logicalShiftRightLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("u", "(II)I")
             .iload(0).iload(1).iushr().ireturn().build();
         assertHasOp(lowerAndLift(cf, "u"), BinaryOp.USHR);
     }
 
     @Test
-    void arithmeticShiftRightLifts() throws IOException {
+    void arithmeticShiftRightLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("s", "(II)I")
             .iload(0).iload(1).ishr().ireturn().build();
         assertHasOp(lowerAndLift(cf, "s"), BinaryOp.SHR);
     }
 
     @Test
-    void loopWithPhiAndBranchLifts() throws IOException {
+    void loopWithPhiAndBranchLifts() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sum", "(I)I");
         Label head = mb.newLabel();
         Label end = mb.newLabel();
@@ -131,12 +147,16 @@ class LlvmLifterTest {
         // Should have phi instructions and a branch
         boolean hasPhi = false;
         boolean hasBranch = false;
-        for (IRBlock b : lifted.getBlocksInOrder()) {
-            if (!b.getPhiInstructions().isEmpty()) {
+        for (IRBlock b : lifted.getBlocksInOrder())
+        {
+            if (!b.getPhiInstructions().isEmpty())
+            {
                 hasPhi = true;
             }
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof BranchInstruction) {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof BranchInstruction)
+                {
                     hasBranch = true;
                     break;
                 }
@@ -147,7 +167,8 @@ class LlvmLifterTest {
     }
 
     @Test
-    void switchLifts() throws IOException {
+    void switchLifts() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sw", "(I)I");
         Label c0 = mb.newLabel();
         Label c1 = mb.newLabel();
@@ -163,9 +184,12 @@ class LlvmLifterTest {
             .build();
         IRMethod lifted = lowerAndLift(cf, "sw");
         boolean hasSw = false;
-        for (IRBlock b : lifted.getBlocksInOrder()) {
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof SwitchInstruction) {
+        for (IRBlock b : lifted.getBlocksInOrder())
+        {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof SwitchInstruction)
+                {
                     SwitchInstruction si = (SwitchInstruction) instr;
                     assertEquals(2, si.getCases().size());
                     hasSw = true;
@@ -176,14 +200,18 @@ class LlvmLifterTest {
     }
 
     @Test
-    void staticCallLifts() throws IOException {
+    void staticCallLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("c", "(I)I")
             .iload(0).invokestatic("Other", "helper", "(I)I").ireturn().build();
         IRMethod lifted = lowerAndLift(cf, "c");
         boolean hasInvoke = false;
-        for (IRBlock b : lifted.getBlocksInOrder()) {
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+        for (IRBlock b : lifted.getBlocksInOrder())
+        {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction inv = (InvokeInstruction) instr;
                     assertEquals(InvokeType.STATIC, inv.getInvokeType());
                     assertEquals("Other", inv.getOwner());
@@ -196,14 +224,18 @@ class LlvmLifterTest {
     }
 
     @Test
-    void returnVoidLifts() throws IOException {
+    void returnVoidLifts() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("v", "()V")
             .vreturn().build();
         IRMethod lifted = lowerAndLift(cf, "v");
         boolean hasReturn = false;
-        for (IRBlock b : lifted.getBlocksInOrder()) {
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof ReturnInstruction && ((ReturnInstruction) instr).isVoidReturn()) {
+        for (IRBlock b : lifted.getBlocksInOrder())
+        {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof ReturnInstruction && ((ReturnInstruction) instr).isVoidReturn())
+                {
                     hasReturn = true;
                 }
             }
@@ -212,7 +244,8 @@ class LlvmLifterTest {
     }
 
     @Test
-    void methodHasCorrectBlockCount() throws IOException {
+    void methodHasCorrectBlockCount() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("sum", "(I)I");
         Label head = mb.newLabel();
         Label end = mb.newLabel();
@@ -232,11 +265,14 @@ class LlvmLifterTest {
         assertEquals(original.getBlocksInOrder().size(), lifted.getBlocksInOrder().size());
     }
 
-    private static void assertHasOp(IRMethod method, BinaryOp expected) {
-        for (IRBlock b : method.getBlocksInOrder()) {
-            for (IRInstruction instr : b.getInstructions()) {
-                if (instr instanceof BinaryOpInstruction
-                    && ((BinaryOpInstruction) instr).getOp() == expected) {
+    private static void assertHasOp(IRMethod method, BinaryOp expected)
+    {
+        for (IRBlock b : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : b.getInstructions())
+            {
+                if (instr instanceof BinaryOpInstruction && ((BinaryOpInstruction) instr).getOp() == expected)
+                {
                     return;
                 }
             }

@@ -2,7 +2,8 @@ package com.tonic.fixtures;
 
 import java.util.Set;
 
-public class OrConditionBodyTail {
+public class OrConditionBodyTail
+{
     Set<String> caps;
 
     /**
@@ -11,9 +12,11 @@ public class OrConditionBodyTail {
      * tail once - not inverted into `if (!a && !b) { c; ...body.. }` (which drops a term, negates the
      * guard, and misplaces the tail).
      */
-    void g(boolean a, boolean b, boolean c, StringBuilder sb) {
+    void g(boolean a, boolean b, boolean c, StringBuilder sb)
+    {
         sb.append("x");
-        if (a || b || c) {
+        if (a || b || c)
+        {
             caps.add("FB");
             sb.append("Y");
         }

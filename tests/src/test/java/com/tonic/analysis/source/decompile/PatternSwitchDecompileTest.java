@@ -11,11 +11,15 @@ import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug 8: an exhaustive sealed pattern switch reconstructs (MatchException default dropped). */
-public class PatternSwitchDecompileTest {
+/**
+ * Regression for bug 8: an exhaustive sealed pattern switch reconstructs (MatchException default dropped).
+ */
+public class PatternSwitchDecompileTest
+{
 
     @Test
-    public void exhaustiveSealedSwitchReconstructs() throws Exception {
+    public void exhaustiveSealedSwitchReconstructs() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S11_PatternSwitch.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

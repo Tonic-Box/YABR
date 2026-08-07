@@ -11,93 +11,142 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents an array initializer expression: {elem1, elem2, ...}
+ * An array initializer expression: {elem1, elem2, ...}.
  */
-public final class ArrayInitExpr implements Expression {
+public final class ArrayInitExpr implements Expression
+{
 
     private final List<Expression> elements;
     private final SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
 
-    public ArrayInitExpr(List<Expression> elements, SourceType type, SourceLocation location) {
+    /**
+     * Creates an initializer over a defensive copy of the elements and reparents each one.
+     * @param elements the element expressions, or null for none
+     * @param type the array type of the initializer
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if type is null
+     */
+    public ArrayInitExpr(List<Expression> elements, SourceType type, SourceLocation location)
+    {
         this.elements = new ArrayList<>(elements != null ? elements : List.of());
         this.type = Objects.requireNonNull(type, "type cannot be null");
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
-        for (Expression elem : this.elements) {
+        for (Expression elem : this.elements)
+        {
             elem.setParent(this);
         }
     }
 
-    public ArrayInitExpr(List<Expression> elements, SourceType type) {
+    /**
+     * Creates an initializer with an unknown source location.
+     * @param elements the element expressions, or null for none
+     * @param type the array type of the initializer
+     * @throws NullPointerException if type is null
+     */
+    public ArrayInitExpr(List<Expression> elements, SourceType type)
+    {
         this(elements, type, SourceLocation.UNKNOWN);
     }
 
-    public List<Expression> getElements() {
+    /**
+     * @return the elements
+     */
+    public List<Expression> getElements()
+    {
         return elements;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Creates an array initializer with the given element type.
+     * Creates an initializer typed as an array of the given element type.
+     * @param elementType the element type of the array
+     * @param elements the element expressions, or null for none
+     * @return the new initializer
      */
-    public static ArrayInitExpr of(SourceType elementType, List<Expression> elements) {
+    public static ArrayInitExpr of(SourceType elementType, List<Expression> elements)
+    {
         return new ArrayInitExpr(elements, new ArraySourceType(elementType));
     }
 
     /**
-     * Adds an element to this initializer.
+     * Appends an element and reparents it to this initializer.
+     * @param elem the element expression to add
      */
-    public void addElement(Expression elem) {
+    public void addElement(Expression elem)
+    {
         elem.setParent(this);
         elements.add(elem);
     }
 
     /**
-     * Gets the number of elements.
+     * @return the number of elements
      */
-    public int size() {
+    public int size()
+    {
         return elements.size();
     }
 
     /**
-     * Checks if this initializer is empty.
+     * @return true if there are no elements
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return elements.isEmpty();
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         return new java.util.ArrayList<>(elements);
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitArrayInit(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        for (int i = 0; i < elements.size(); i++) {
+        for (int i = 0; i < elements.size(); i++)
+        {
             if (i > 0) sb.append(", ");
             sb.append(elements.get(i));
         }

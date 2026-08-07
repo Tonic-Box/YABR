@@ -7,121 +7,197 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 
 import java.util.List;
 
-public class SimpleInstruction extends IRInstruction {
+/**
+ * A single-operand instruction identified by its {@link SimpleOp}: arraylength, monitor ops, throw, goto, or catch.
+ */
+public class SimpleInstruction extends IRInstruction
+{
 
     private final SimpleOp op;
     private Value operand;
     private IRBlock target;
 
-    public static SimpleInstruction createArrayLength(SSAValue result, Value array) {
+    /**
+     * Creates an arraylength read.
+     * @param result the SSA value receiving the length
+     * @param array the array reference
+     * @return the instruction
+     */
+    public static SimpleInstruction createArrayLength(SSAValue result, Value array)
+    {
         return new SimpleInstruction(SimpleOp.ARRAYLENGTH, result, array, null);
     }
 
-    public static SimpleInstruction createMonitorEnter(Value objectRef) {
+    /**
+     * Creates a monitorenter.
+     * @param objectRef the object whose monitor is entered
+     * @return the instruction
+     */
+    public static SimpleInstruction createMonitorEnter(Value objectRef)
+    {
         return new SimpleInstruction(SimpleOp.MONITORENTER, null, objectRef, null);
     }
 
-    public static SimpleInstruction createMonitorExit(Value objectRef) {
+    /**
+     * Creates a monitorexit.
+     * @param objectRef the object whose monitor is released
+     * @return the instruction
+     */
+    public static SimpleInstruction createMonitorExit(Value objectRef)
+    {
         return new SimpleInstruction(SimpleOp.MONITOREXIT, null, objectRef, null);
     }
 
-    public static SimpleInstruction createThrow(Value exception) {
+    /**
+     * Creates an athrow.
+     * @param exception the exception to throw
+     * @return the instruction
+     */
+    public static SimpleInstruction createThrow(Value exception)
+    {
         return new SimpleInstruction(SimpleOp.ATHROW, null, exception, null);
     }
 
-    public static SimpleInstruction createGoto(IRBlock target) {
+    /**
+     * Creates an unconditional jump.
+     * @param target the block to jump to
+     * @return the instruction
+     */
+    public static SimpleInstruction createGoto(IRBlock target)
+    {
         return new SimpleInstruction(SimpleOp.GOTO, null, null, target);
     }
 
-    /** Captures the JVM-provided caught exception (on the stack at handler entry) into {@code result}. */
-    public static SimpleInstruction createCatch(SSAValue result) {
+    /**
+     * Creates the pseudo-instruction that captures the caught exception the JVM leaves on the
+     * stack at handler entry.
+     *
+     * @param result value the caught exception is bound to
+     * @return the instruction
+     */
+    public static SimpleInstruction createCatch(SSAValue result)
+    {
         return new SimpleInstruction(SimpleOp.CATCH, result, null, null);
     }
 
-    private SimpleInstruction(SimpleOp op, SSAValue result, Value operand, IRBlock target) {
+    private SimpleInstruction(SimpleOp op, SSAValue result, Value operand, IRBlock target)
+    {
         super(result);
         this.op = op;
         this.operand = operand;
         this.target = target;
-        if (operand instanceof SSAValue) {
+        if (operand instanceof SSAValue)
+        {
             ((SSAValue) operand).addUse(this);
         }
     }
 
-    public SimpleOp getOp() {
+    /**
+     * @return the op
+     */
+    public SimpleOp getOp()
+    {
         return op;
     }
 
-    public Value getOperand() {
+    /**
+     * @return the operand
+     */
+    public Value getOperand()
+    {
         return operand;
     }
 
-    public IRBlock getTarget() {
+    /**
+     * @return the target
+     */
+    public IRBlock getTarget()
+    {
         return target;
     }
 
-    public void setTarget(IRBlock target) {
+    /**
+     * @param target the jump target block
+     */
+    public void setTarget(IRBlock target)
+    {
         this.target = target;
     }
 
     @Override
-    public List<Value> getOperands() {
-        if (operand != null) {
+    public List<Value> getOperands()
+    {
+        if (operand != null)
+        {
             return List.of(operand);
         }
         return List.of();
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (operand != null && operand.equals(oldValue)) {
-            if (operand instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (operand != null && operand.equals(oldValue))
+        {
+            if (operand instanceof SSAValue)
+            {
                 ((SSAValue) operand).removeUse(this);
             }
             operand = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitSimple(this);
     }
 
     @Override
-    public boolean isTerminator() {
+    public boolean isTerminator()
+    {
         return op == SimpleOp.ATHROW || op == SimpleOp.GOTO;
     }
 
     @Override
-    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget) {
-        if (op == SimpleOp.GOTO && target == oldTarget) {
+    public void replaceTarget(IRBlock oldTarget, IRBlock newTarget)
+    {
+        if (op == SimpleOp.GOTO && target == oldTarget)
+        {
             target = newTarget;
         }
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        switch (op) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
+        switch (op)
+        {
             case ARRAYLENGTH:
-                if (newOperands.isEmpty()) {
+                if (newOperands.isEmpty())
+                {
                     return null;
                 }
                 return createArrayLength(newResult, newOperands.get(0));
             case MONITORENTER:
-                if (newOperands.isEmpty()) {
+                if (newOperands.isEmpty())
+                {
                     return null;
                 }
                 return createMonitorEnter(newOperands.get(0));
             case MONITOREXIT:
-                if (newOperands.isEmpty()) {
+                if (newOperands.isEmpty())
+                {
                     return null;
                 }
                 return createMonitorExit(newOperands.get(0));
             case ATHROW:
-                if (newOperands.isEmpty()) {
+                if (newOperands.isEmpty())
+                {
                     return null;
                 }
                 return createThrow(newOperands.get(0));
@@ -135,8 +211,10 @@ public class SimpleInstruction extends IRInstruction {
     }
 
     @Override
-    public String toString() {
-        switch (op) {
+    public String toString()
+    {
+        switch (op)
+        {
             case ARRAYLENGTH:
                 return result + " = arraylength " + operand;
             case MONITORENTER:

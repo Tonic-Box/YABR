@@ -8,17 +8,18 @@ import java.util.List;
 
 /**
  * Preset configurations for IR transform pipelines during decompilation.
- * Each preset defines a list of additional transforms to run after the baseline
- * transforms (ControlFlowReducibility, DuplicateBlockMerging).
  */
-public enum TransformPreset {
+public enum TransformPreset
+{
 
     /**
      * No additional transforms - only baseline transforms are applied.
      */
-    NONE {
+    NONE
+    {
         @Override
-        public List<IRTransform> getTransforms() {
+        public List<IRTransform> getTransforms()
+        {
             return Collections.emptyList();
         }
     },
@@ -26,9 +27,11 @@ public enum TransformPreset {
     /**
      * Minimal cleanup - safe transforms with low risk of issues.
      */
-    MINIMAL {
+    MINIMAL
+    {
         @Override
-        public List<IRTransform> getTransforms() {
+        public List<IRTransform> getTransforms()
+        {
             List<IRTransform> transforms = new ArrayList<>();
             transforms.add(new ConstantFolding());
             transforms.add(new CopyPropagation());
@@ -39,9 +42,11 @@ public enum TransformPreset {
     /**
      * Standard optimization - balanced cleanup for better readability.
      */
-    STANDARD {
+    STANDARD
+    {
         @Override
-        public List<IRTransform> getTransforms() {
+        public List<IRTransform> getTransforms()
+        {
             List<IRTransform> transforms = new ArrayList<>();
             transforms.add(new ConstantFolding());
             transforms.add(new AlgebraicSimplification());
@@ -55,9 +60,11 @@ public enum TransformPreset {
     /**
      * Aggressive optimization - maximum simplification for cleanest output.
      */
-    AGGRESSIVE {
+    AGGRESSIVE
+    {
         @Override
-        public List<IRTransform> getTransforms() {
+        public List<IRTransform> getTransforms()
+        {
             List<IRTransform> transforms = new ArrayList<>();
             transforms.add(new ConstantFolding());
             transforms.add(new AlgebraicSimplification());
@@ -74,8 +81,6 @@ public enum TransformPreset {
 
     /**
      * Returns the list of transforms for this preset.
-     * Each call returns a new list instance that can be safely modified.
-     *
      * @return list of IR transforms for this preset
      */
     public abstract List<IRTransform> getTransforms();

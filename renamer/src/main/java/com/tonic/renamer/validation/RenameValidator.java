@@ -15,22 +15,29 @@ import java.util.Set;
 /**
  * Validates rename mappings before application.
  */
-public class RenameValidator {
+public class RenameValidator
+{
 
     private final ClassPool classPool;
     private final MappingStore mappings;
 
-    public RenameValidator(ClassPool classPool, MappingStore mappings) {
+    /**
+     * Creates a validator for one mapping store.
+     * @param classPool the classes the mappings are checked against
+     * @param mappings the mappings to validate
+     */
+    public RenameValidator(ClassPool classPool, MappingStore mappings)
+    {
         this.classPool = classPool;
         this.mappings = mappings;
     }
 
     /**
      * Validates all mappings in the store.
-     *
      * @return ValidationResult containing any errors or warnings
      */
-    public ValidationResult validate() {
+    public ValidationResult validate()
+    {
         ValidationResult result = new ValidationResult();
 
         validateClassMappings(result);
@@ -41,63 +48,79 @@ public class RenameValidator {
         return result;
     }
 
-    private void validateClassMappings(ValidationResult result) {
+    private void validateClassMappings(ValidationResult result)
+    {
         Set<String> newNames = new HashSet<>();
 
-        for (ClassMapping mapping : mappings.getClassMappings()) {
-            if (classPool.get(mapping.getOldName()) == null) {
+        for (ClassMapping mapping : mappings.getClassMappings())
+        {
+            if (classPool.get(mapping.getOldName()) == null)
+            {
                 result.addError("Class not found: " + mapping.getOldName());
             }
 
             String newName = mapping.getNewName();
-            if (!isValidClassName(newName)) {
+            if (!isValidClassName(newName))
+            {
                 result.addError("Invalid class name: " + newName);
             }
 
-            if (!newNames.add(newName)) {
+            if (!newNames.add(newName))
+            {
                 result.addError("Duplicate target class name: " + newName);
             }
 
             // Not a conflict if the existing class is also being renamed
             ClassFile existing = classPool.get(newName);
-            if (existing != null && !mappings.hasClassMapping(newName)) {
+            if (existing != null && !mappings.hasClassMapping(newName))
+            {
                 result.addError("Class name conflict: " + newName + " already exists");
             }
         }
     }
 
-    private void validateMethodMappings(ValidationResult result) {
-        for (MethodMapping mapping : mappings.getMethodMappings()) {
+    private void validateMethodMappings(ValidationResult result)
+    {
+        for (MethodMapping mapping : mappings.getMethodMappings())
+        {
             String owner = mapping.getOwner();
             String oldName = mapping.getOldName();
             String descriptor = mapping.getDescriptor();
             String newName = mapping.getNewName();
 
             ClassFile cf = classPool.get(owner);
-            if (cf == null) {
+            if (cf == null)
+            {
                 result.addError("Class not found for method: " + owner);
                 continue;
             }
 
             boolean found = false;
-            for (MethodEntry method : cf.getMethods()) {
-                if (method.getName().equals(oldName) && method.getDesc().equals(descriptor)) {
+            for (MethodEntry method : cf.getMethods())
+            {
+                if (method.getName().equals(oldName) && method.getDesc().equals(descriptor))
+                {
                     found = true;
                     break;
                 }
             }
-            if (!found) {
+            if (!found)
+            {
                 result.addError("Method not found: " + owner + "." + oldName + descriptor);
             }
 
-            if (!isValidMethodName(newName)) {
+            if (!isValidMethodName(newName))
+            {
                 result.addError("Invalid method name: " + newName);
             }
 
-            for (MethodEntry method : cf.getMethods()) {
-                if (method.getName().equals(newName) && method.getDesc().equals(descriptor)) {
+            for (MethodEntry method : cf.getMethods())
+            {
+                if (method.getName().equals(newName) && method.getDesc().equals(descriptor))
+                {
                     // Only a conflict if not the same method being renamed
-                    if (!method.getName().equals(oldName)) {
+                    if (!method.getName().equals(oldName))
+                    {
                         result.addError("Method name conflict: " + owner + "." + newName + descriptor + " already exists");
                     }
                 }
@@ -105,36 +128,46 @@ public class RenameValidator {
         }
     }
 
-    private void validateFieldMappings(ValidationResult result) {
-        for (FieldMapping mapping : mappings.getFieldMappings()) {
+    private void validateFieldMappings(ValidationResult result)
+    {
+        for (FieldMapping mapping : mappings.getFieldMappings())
+        {
             String owner = mapping.getOwner();
             String oldName = mapping.getOldName();
             String newName = mapping.getNewName();
 
             ClassFile cf = classPool.get(owner);
-            if (cf == null) {
+            if (cf == null)
+            {
                 result.addError("Class not found for field: " + owner);
                 continue;
             }
 
             boolean found = false;
-            for (FieldEntry field : cf.getFields()) {
-                if (field.getName().equals(oldName)) {
+            for (FieldEntry field : cf.getFields())
+            {
+                if (field.getName().equals(oldName))
+                {
                     found = true;
                     break;
                 }
             }
-            if (!found) {
+            if (!found)
+            {
                 result.addError("Field not found: " + owner + "." + oldName);
             }
 
-            if (!isValidFieldName(newName)) {
+            if (!isValidFieldName(newName))
+            {
                 result.addError("Invalid field name: " + newName);
             }
 
-            for (FieldEntry field : cf.getFields()) {
-                if (field.getName().equals(newName)) {
-                    if (!field.getName().equals(oldName)) {
+            for (FieldEntry field : cf.getFields())
+            {
+                if (field.getName().equals(newName))
+                {
+                    if (!field.getName().equals(oldName))
+                    {
                         result.addError("Field name conflict: " + owner + "." + newName + " already exists");
                     }
                 }
@@ -142,61 +175,79 @@ public class RenameValidator {
         }
     }
 
-    private void checkForCircularRenames(ValidationResult result) {
-        // Check for A->B, B->A patterns
-        for (ClassMapping mapping : mappings.getClassMappings()) {
+    private void checkForCircularRenames(ValidationResult result)
+    {
+        for (ClassMapping mapping : mappings.getClassMappings())
+        {
             String oldName = mapping.getOldName();
             String newName = mapping.getNewName();
 
             String nextTarget = mappings.getClassMapping(newName);
-            if (nextTarget != null) {
-                if (nextTarget.equals(oldName)) {
+            if (nextTarget != null)
+            {
+                if (nextTarget.equals(oldName))
+                {
                     result.addWarning("Circular class rename detected: " + oldName + " <-> " + newName);
-                } else {
+                }
+                else
+                {
                     result.addWarning("Chained class rename: " + oldName + " -> " + newName + " -> " + nextTarget);
                 }
             }
         }
     }
 
-    private boolean isValidClassName(String name) {
-        if (name == null || name.isEmpty()) {
+    private boolean isValidClassName(String name)
+    {
+        if (name == null || name.isEmpty())
+        {
             return false;
         }
         // Internal names use / as separator
         String[] parts = name.split("/");
-        for (String part : parts) {
-            if (!isValidIdentifier(part)) {
+        for (String part : parts)
+        {
+            if (!isValidIdentifier(part))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    private boolean isValidMethodName(String name) {
-        if (name == null || name.isEmpty()) {
+    private boolean isValidMethodName(String name)
+    {
+        if (name == null || name.isEmpty())
+        {
             return false;
         }
         // Special method names
-        if (name.equals("<init>") || name.equals("<clinit>")) {
+        if (name.equals("<init>") || name.equals("<clinit>"))
+        {
             return true;
         }
         return isValidIdentifier(name);
     }
 
-    private boolean isValidFieldName(String name) {
+    private boolean isValidFieldName(String name)
+    {
         return isValidIdentifier(name);
     }
 
-    private boolean isValidIdentifier(String name) {
-        if (name == null || name.isEmpty()) {
+    private boolean isValidIdentifier(String name)
+    {
+        if (name == null || name.isEmpty())
+        {
             return false;
         }
-        if (!Character.isJavaIdentifierStart(name.charAt(0))) {
+        if (!Character.isJavaIdentifierStart(name.charAt(0)))
+        {
             return false;
         }
-        for (int i = 1; i < name.length(); i++) {
-            if (!Character.isJavaIdentifierPart(name.charAt(i))) {
+        for (int i = 1; i < name.length(); i++)
+        {
+            if (!Character.isJavaIdentifierPart(name.charAt(i)))
+            {
                 return false;
             }
         }

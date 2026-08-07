@@ -6,16 +6,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import java.util.*;
 
 /**
- * Contains the results of a simulation run.
- *
- * <p>SimulationResult provides access to:
- * <ul>
- *   <li>State snapshots at various points during execution</li>
- *   <li>Summary metrics (instruction count, max stack depth, etc.)</li>
- *   <li>Block-level state information</li>
- * </ul>
+ * Immutable result of a simulation run.
  */
-public final class SimulationResult {
+public final class SimulationResult
+{
 
     private final IRMethod method;
     private final Map<IRBlock, List<StateSnapshot>> blockStates;
@@ -24,115 +18,139 @@ public final class SimulationResult {
     private final int maxStackDepth;
     private final long simulationTimeNanos;
 
-    private SimulationResult(Builder builder) {
+    private SimulationResult(Builder builder)
+    {
         this.method = builder.method;
-        this.blockStates = Collections.unmodifiableMap(new HashMap<>(builder.blockStates));
-        this.allStates = Collections.unmodifiableList(new ArrayList<>(builder.allStates));
+        this.blockStates = Map.copyOf(builder.blockStates);
+        this.allStates = List.copyOf(builder.allStates);
         this.totalInstructions = builder.totalInstructions;
         this.maxStackDepth = builder.maxStackDepth;
         this.simulationTimeNanos = builder.simulationTimeNanos;
     }
 
     /**
-     * Gets the method that was simulated.
+     * @return the method that was simulated
      */
-    public IRMethod getMethod() {
+    public IRMethod getMethod()
+    {
         return method;
     }
 
     /**
-     * Gets all state snapshots recorded during simulation.
+     * @return all state snapshots recorded during simulation, in order
      */
-    public List<StateSnapshot> getAllStates() {
+    public List<StateSnapshot> getAllStates()
+    {
         return allStates;
     }
 
     /**
-     * Gets state snapshots for a specific block.
+     * Gets the state snapshots recorded for a block.
+     * @param block the block to look up
+     * @return the block's snapshots, or an empty list when none were recorded
      */
-    public List<StateSnapshot> getStatesAt(IRBlock block) {
+    public List<StateSnapshot> getStatesAt(IRBlock block)
+    {
         return blockStates.getOrDefault(block, Collections.emptyList());
     }
 
     /**
-     * Gets the state snapshot at a specific index.
+     * Gets the state snapshot at an index into the overall recording order.
+     * @param index the snapshot index
+     * @return the snapshot, or null when the index is out of range
      */
-    public StateSnapshot getStateAt(int index) {
-        if (index < 0 || index >= allStates.size()) {
+    public StateSnapshot getStateAt(int index)
+    {
+        if (index < 0 || index >= allStates.size())
+        {
             return null;
         }
         return allStates.get(index);
     }
 
     /**
-     * Gets the first state snapshot for a block.
+     * Gets the first state snapshot recorded for a block.
+     * @param block the block to look up
+     * @return the block's entry snapshot, or null when none were recorded
      */
-    public StateSnapshot getEntryStateFor(IRBlock block) {
+    public StateSnapshot getEntryStateFor(IRBlock block)
+    {
         List<StateSnapshot> states = blockStates.get(block);
         if (states == null || states.isEmpty()) return null;
         return states.get(0);
     }
 
     /**
-     * Gets the last state snapshot for a block.
+     * Gets the last state snapshot recorded for a block.
+     * @param block the block to look up
+     * @return the block's exit snapshot, or null when none were recorded
      */
-    public StateSnapshot getExitStateFor(IRBlock block) {
+    public StateSnapshot getExitStateFor(IRBlock block)
+    {
         List<StateSnapshot> states = blockStates.get(block);
         if (states == null || states.isEmpty()) return null;
         return states.get(states.size() - 1);
     }
 
     /**
-     * Gets the total number of instructions simulated.
+     * @return the total number of instructions simulated
      */
-    public int getTotalInstructions() {
+    public int getTotalInstructions()
+    {
         return totalInstructions;
     }
 
     /**
-     * Gets the maximum stack depth observed during simulation.
+     * @return the maximum stack depth observed during simulation
      */
-    public int getMaxStackDepth() {
+    public int getMaxStackDepth()
+    {
         return maxStackDepth;
     }
 
     /**
-     * Gets the simulation execution time in nanoseconds.
+     * @return the simulation wall time in nanoseconds
      */
-    public long getSimulationTimeNanos() {
+    public long getSimulationTimeNanos()
+    {
         return simulationTimeNanos;
     }
 
     /**
-     * Gets the simulation execution time in milliseconds.
+     * @return the simulation wall time in milliseconds
      */
-    public double getSimulationTimeMillis() {
+    public double getSimulationTimeMillis()
+    {
         return simulationTimeNanos / 1_000_000.0;
     }
 
     /**
-     * Gets the number of blocks with recorded states.
+     * @return the number of blocks with recorded states
      */
-    public int getBlockCount() {
+    public int getBlockCount()
+    {
         return blockStates.size();
     }
 
     /**
-     * Gets the total number of state snapshots recorded.
+     * @return the total number of state snapshots recorded
      */
-    public int getStateCount() {
+    public int getStateCount()
+    {
         return allStates.size();
     }
 
     /**
-     * Checks if any states were recorded.
+     * @return whether any state snapshots were recorded
      */
-    public boolean hasStates() {
+    public boolean hasStates()
+    {
         return !allStates.isEmpty();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "SimulationResult[" +
             "method=" + (method != null ? method.getName() : "null") +
             ", instructions=" + totalInstructions +
@@ -144,16 +162,19 @@ public final class SimulationResult {
     }
 
     /**
-     * Creates a new builder for SimulationResult.
+     * Creates a new builder.
+     * @return an empty builder
      */
-    public static Builder builder() {
+    public static Builder builder()
+    {
         return new Builder();
     }
 
     /**
-     * Builder for SimulationResult.
+     * Mutable builder for SimulationResult instances.
      */
-    public static class Builder {
+    public static class Builder
+    {
         private IRMethod method;
         private final Map<IRBlock, List<StateSnapshot>> blockStates = new HashMap<>();
         private final List<StateSnapshot> allStates = new ArrayList<>();
@@ -161,40 +182,79 @@ public final class SimulationResult {
         private int maxStackDepth;
         private long simulationTimeNanos;
 
-        public Builder method(IRMethod method) {
+        /**
+         * Sets the method the result describes.
+         * @param method the simulated method
+         * @return this builder
+         */
+        public Builder method(IRMethod method)
+        {
             this.method = method;
             return this;
         }
 
-        public Builder addState(StateSnapshot state) {
+        /**
+         * Records a state snapshot, indexing it by block and folding its max stack depth
+         * into the running maximum.
+         * @param state the snapshot to record
+         * @return this builder
+         */
+        public Builder addState(StateSnapshot state)
+        {
             allStates.add(state);
-            if (state.getBlock() != null) {
+            if (state.getBlock() != null)
+            {
                 blockStates.computeIfAbsent(state.getBlock(), k -> new ArrayList<>()).add(state);
             }
-            if (state.getMaxStackDepth() > maxStackDepth) {
+            if (state.getMaxStackDepth() > maxStackDepth)
+            {
                 maxStackDepth = state.getMaxStackDepth();
             }
             return this;
         }
 
-        public Builder totalInstructions(int count) {
+        /**
+         * Sets the total number of instructions simulated.
+         * @param count the instruction count
+         * @return this builder
+         */
+        public Builder totalInstructions(int count)
+        {
             this.totalInstructions = count;
             return this;
         }
 
-        public Builder maxStackDepth(int depth) {
-            if (depth > this.maxStackDepth) {
+        /**
+         * Raises the recorded maximum stack depth; a value below the current maximum is ignored.
+         * @param depth the observed stack depth
+         * @return this builder
+         */
+        public Builder maxStackDepth(int depth)
+        {
+            if (depth > this.maxStackDepth)
+            {
                 this.maxStackDepth = depth;
             }
             return this;
         }
 
-        public Builder simulationTime(long nanos) {
+        /**
+         * Sets the simulation wall time.
+         * @param nanos the elapsed time in nanoseconds
+         * @return this builder
+         */
+        public Builder simulationTime(long nanos)
+        {
             this.simulationTimeNanos = nanos;
             return this;
         }
 
-        public SimulationResult build() {
+        /**
+         * Builds the immutable result from the recorded data.
+         * @return a new SimulationResult
+         */
+        public SimulationResult build()
+        {
             return new SimulationResult(this);
         }
     }

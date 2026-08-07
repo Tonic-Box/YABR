@@ -2,7 +2,8 @@ package com.tonic.fixtures;
 
 import java.util.Deque;
 
-public class EntryWhileLoop {
+public class EntryWhileLoop
+{
     Deque<Object> queue;
 
     /**
@@ -10,13 +11,16 @@ public class EntryWhileLoop {
      * entry block whose only predecessor is the back-edge. It must still recover as a pre-tested
      * while: an empty queue skips the body rather than popping first.
      */
-    public void drain() {
-        while (!queue.isEmpty()) {
+    public void drain()
+    {
+        while (!queue.isEmpty())
+        {
             Object item = queue.pop();
             consume(item);
         }
     }
 
-    void consume(Object o) {
+    void consume(Object o)
+    {
     }
 }

@@ -10,47 +10,61 @@ import java.util.Map;
 import static com.tonic.util.Opcode.*;
 
 /**
- * Pure layout and classification facts about individual instructions: branch/switch tests,
- * encoded lengths, switch alignment padding, local-variable slot indices and sizes, and conditional
- * opcode inversion. Stateless; used while laying out and rewriting a method's bytecode.
+ * Pure layout and classification facts about individual instructions.
  */
-final class InstructionLayout {
+final class InstructionLayout
+{
 
-    private InstructionLayout() {
+    private InstructionLayout()
+    {
     }
 
-    static boolean isBranch(Instruction i) {
+    static boolean isBranch(Instruction i)
+    {
         return i instanceof GotoInstruction || i instanceof ConditionalBranchInstruction
                 || i instanceof JsrInstruction;
     }
 
-    static boolean isSwitch(Instruction i) {
+    static boolean isSwitch(Instruction i)
+    {
         return i instanceof TableSwitchInstruction || i instanceof LookupSwitchInstruction;
     }
 
-    /** Assigns sequential offsets to {@code order}, recomputing switch padding from each offset. */
-    static Map<Instruction, Integer> layout(List<Instruction> order) {
+    /**
+     * Assigns sequential offsets to {@code order}, recomputing switch padding from each offset.
+     */
+    static Map<Instruction, Integer> layout(List<Instruction> order)
+    {
         Map<Instruction, Integer> off = new IdentityHashMap<>();
         int run = 0;
-        for (Instruction i : order) {
+        for (Instruction i : order)
+        {
             off.put(i, run);
             run += instructionLength(i, run);
         }
         return off;
     }
 
-    static int instructionLength(Instruction i, int offset) {
+    static int instructionLength(Instruction i, int offset)
+    {
         return isSwitch(i) ? switchBaseLength(i) + paddingAfterOpcode(offset) : i.getLength();
     }
 
-    /** Padding bytes after a switch opcode so its operands align to a 4-byte boundary from method start. */
-    static int paddingAfterOpcode(int offset) {
+    /**
+     * Padding bytes after a switch opcode so its operands align to a 4-byte boundary from method start.
+     */
+    static int paddingAfterOpcode(int offset)
+    {
         return (4 - ((offset + 1) % 4)) % 4;
     }
 
-    /** A switch instruction's length excluding alignment padding. */
-    static int switchBaseLength(Instruction i) {
-        if (i instanceof TableSwitchInstruction) {
+    /**
+     * A switch instruction's length excluding alignment padding.
+     */
+    static int switchBaseLength(Instruction i)
+    {
+        if (i instanceof TableSwitchInstruction)
+        {
             TableSwitchInstruction t = (TableSwitchInstruction) i;
             return 13 + (t.getHigh() - t.getLow() + 1) * 4;
         }
@@ -58,28 +72,37 @@ final class InstructionLayout {
         return 9 + l.getNpairs() * 8;
     }
 
-    /** The local-variable slot a load/store/iinc/ret (compact, general, or wide) references, or -1. */
-    static int localVarIndex(Instruction i) {
+    /**
+     * The local-variable slot a load/store/iinc/ret (compact, general, or wide) references, or -1.
+     */
+    static int localVarIndex(Instruction i)
+    {
         return i instanceof LocalVarInstruction ? ((LocalVarInstruction) i).getVarIndex() : -1;
     }
 
-    static int localSlotSize(Instruction i) {
+    static int localSlotSize(Instruction i)
+    {
         if (i instanceof LLoadInstruction || i instanceof LStoreInstruction
-                || i instanceof DLoadInstruction || i instanceof DStoreInstruction) {
+                || i instanceof DLoadInstruction || i instanceof DStoreInstruction)
+        {
             return 2;
         }
-        if (i instanceof WideInstruction) {
+        if (i instanceof WideInstruction)
+        {
             Opcode m = ((WideInstruction) i).getModifiedOpcode();
-            if (m == LLOAD || m == LSTORE || m == DLOAD || m == DSTORE) {
+            if (m == LLOAD || m == LSTORE || m == DLOAD || m == DSTORE)
+            {
                 return 2;
             }
         }
         return 1;
     }
 
-    static int invertConditionalOpcode(ConditionalBranchInstruction.BranchType t) {
+    static int invertConditionalOpcode(ConditionalBranchInstruction.BranchType t)
+    {
         ConditionalBranchInstruction.BranchType inverse;
-        switch (t) {
+        switch (t)
+        {
             case IFEQ: inverse = ConditionalBranchInstruction.BranchType.IFNE; break;
             case IFNE: inverse = ConditionalBranchInstruction.BranchType.IFEQ; break;
             case IFLT: inverse = ConditionalBranchInstruction.BranchType.IFGE; break;

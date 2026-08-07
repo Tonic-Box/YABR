@@ -5,10 +5,15 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class TimeHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for java.time factories, backing clocks and instants with the host system time.
+ */
+public final class TimeHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registry.register("java/time/LocalDateTime", "now", "()Ljava/time/LocalDateTime;",
             (receiver, args, ctx) -> {
                 ObjectInstance ldt = ctx.getHeapManager().newObject("java/time/LocalDateTime");
@@ -25,10 +30,12 @@ public final class TimeHandlers implements NativeHandlerProvider {
         registry.register("java/time/format/DateTimeFormatter", "ofPattern", "(Ljava/lang/String;)Ljava/time/format/DateTimeFormatter;",
             (receiver, args, ctx) -> {
                 ObjectInstance formatter = ctx.getHeapManager().newObject("java/time/format/DateTimeFormatter");
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     ObjectInstance patternObj = args[0].asReference();
                     String pattern = ctx.getHeapManager().extractString(patternObj);
-                    if (pattern != null) {
+                    if (pattern != null)
+                    {
                         formatter.setField("java/time/format/DateTimeFormatter", "pattern", "Ljava/lang/String;", patternObj);
                     }
                 }

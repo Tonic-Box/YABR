@@ -3,15 +3,18 @@ package com.tonic.analysis.execution.listener;
 import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
+import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
-public final class StatisticsListener extends AbstractBytecodeListener {
+/**
+ * Listener that aggregates execution counters such as opcode frequency, call depth, allocations, and branch outcomes.
+ */
+public final class StatisticsListener extends AbstractBytecodeListener
+{
 
     private long totalInstructions;
     private final Map<Integer, Long> opcodeCount;
@@ -24,7 +27,11 @@ public final class StatisticsListener extends AbstractBytecodeListener {
     private long branchesTotal;
     private long branchesTaken;
 
-    public StatisticsListener() {
+    /**
+     * Creates a listener with all counters at zero.
+     */
+    public StatisticsListener()
+    {
         this.opcodeCount = new HashMap<>();
         this.methodCallCount = new HashMap<>();
         this.totalInstructions = 0;
@@ -38,19 +45,22 @@ public final class StatisticsListener extends AbstractBytecodeListener {
     }
 
     @Override
-    public void onFramePush(StackFrame frame) {
+    public void onFramePush(StackFrame frame)
+    {
         super.onFramePush(frame);
         currentCallDepth++;
         maxCallDepth = Math.max(maxCallDepth, currentCallDepth);
     }
 
     @Override
-    public void onFramePop(StackFrame frame, com.tonic.analysis.execution.state.ConcreteValue returnValue) {
+    public void onFramePop(StackFrame frame, ConcreteValue returnValue)
+    {
         currentCallDepth--;
     }
 
     @Override
-    public void afterInstruction(StackFrame frame, Instruction instruction) {
+    public void afterInstruction(StackFrame frame, Instruction instruction)
+    {
         super.afterInstruction(frame, instruction);
         totalInstructions++;
         opcodeCount.merge(instruction.getOpcode(), 1L, Long::sum);
@@ -58,74 +68,122 @@ public final class StatisticsListener extends AbstractBytecodeListener {
     }
 
     @Override
-    public void onObjectAllocation(ObjectInstance instance) {
+    public void onObjectAllocation(ObjectInstance instance)
+    {
         objectAllocations++;
     }
 
     @Override
-    public void onArrayAllocation(ArrayInstance array) {
+    public void onArrayAllocation(ArrayInstance array)
+    {
         arrayAllocations++;
     }
 
     @Override
-    public void onMethodCall(StackFrame caller, MethodEntry target, com.tonic.analysis.execution.state.ConcreteValue[] args) {
+    public void onMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args)
+    {
         String methodSig = target.getOwnerName() + "." + target.getName() + target.getDesc();
         methodCallCount.merge(methodSig, 1L, Long::sum);
     }
 
     @Override
-    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken) {
+    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken)
+    {
         branchesTotal++;
-        if (taken) {
+        if (taken)
+        {
             branchesTaken++;
         }
     }
 
-    public long getTotalInstructions() {
+    /**
+     * @return the total instructions
+     */
+    public long getTotalInstructions()
+    {
         return totalInstructions;
     }
 
-    public Map<Integer, Long> getOpcodeCount() {
+    /**
+     * @return an unmodifiable map from opcode to execution count
+     */
+    public Map<Integer, Long> getOpcodeCount()
+    {
         return Collections.unmodifiableMap(opcodeCount);
     }
 
-    public Map<String, Long> getMethodCallCount() {
+    /**
+     * @return an unmodifiable map from method signature to call count
+     */
+    public Map<String, Long> getMethodCallCount()
+    {
         return Collections.unmodifiableMap(methodCallCount);
     }
 
-    public long getObjectAllocations() {
+    /**
+     * @return the object allocations
+     */
+    public long getObjectAllocations()
+    {
         return objectAllocations;
     }
 
-    public long getArrayAllocations() {
+    /**
+     * @return the array allocations
+     */
+    public long getArrayAllocations()
+    {
         return arrayAllocations;
     }
 
-    public int getMaxStackDepth() {
+    /**
+     * @return the max stack depth
+     */
+    public int getMaxStackDepth()
+    {
         return maxStackDepth;
     }
 
-    public int getMaxCallDepth() {
+    /**
+     * @return the max call depth
+     */
+    public int getMaxCallDepth()
+    {
         return maxCallDepth;
     }
 
-    public long getBranchesTotal() {
+    /**
+     * @return the branches total
+     */
+    public long getBranchesTotal()
+    {
         return branchesTotal;
     }
 
-    public long getBranchesTaken() {
+    /**
+     * @return the branches taken
+     */
+    public long getBranchesTaken()
+    {
         return branchesTaken;
     }
 
-    public double getBranchTakenRatio() {
-        if (branchesTotal == 0) {
+    /**
+     * Computes the fraction of observed branches that were taken.
+     * @return the taken ratio, or 0.0 when no branches were observed
+     */
+    public double getBranchTakenRatio()
+    {
+        if (branchesTotal == 0)
+        {
             return 0.0;
         }
         return (double) branchesTaken / branchesTotal;
     }
 
     @Override
-    public void reset() {
+    public void reset()
+    {
         super.reset();
         totalInstructions = 0;
         opcodeCount.clear();
@@ -139,7 +197,12 @@ public final class StatisticsListener extends AbstractBytecodeListener {
         branchesTaken = 0;
     }
 
-    public String formatReport() {
+    /**
+     * Renders a human-readable summary of the collected statistics, including top opcodes and method calls.
+     * @return the formatted report
+     */
+    public String formatReport()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("Execution Statistics:\n");
         sb.append("===================\n\n");
@@ -166,7 +229,8 @@ public final class StatisticsListener extends AbstractBytecodeListener {
         sb.append("  Taken:     ").append(branchesTaken).append("\n");
         sb.append("  Ratio:     ").append(String.format("%.2f%%", getBranchTakenRatio() * 100)).append("\n\n");
 
-        if (!opcodeCount.isEmpty()) {
+        if (!opcodeCount.isEmpty())
+        {
             sb.append("Top Opcodes:\n");
             opcodeCount.entrySet().stream()
                 .sorted(Map.Entry.<Integer, Long>comparingByValue().reversed())
@@ -175,7 +239,8 @@ public final class StatisticsListener extends AbstractBytecodeListener {
             sb.append("\n");
         }
 
-        if (!methodCallCount.isEmpty()) {
+        if (!methodCallCount.isEmpty())
+        {
             sb.append("Top Method Calls:\n");
             methodCallCount.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())

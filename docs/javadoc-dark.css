@@ -1,0 +1,364 @@
+:root {
+  --bg: #0b0e14;
+  --panel: #10141f;
+  --panel-hover: #141a2b;
+  --panel-border: #1c2333;
+  --heading: #e6ebff;
+  --text: #a9b1d6;
+  --bright: #c0caf5;
+  --muted: #565f89;
+  --green: #9ece6a;
+  --blue: #7aa2f7;
+  --purple: #bb9af7;
+  --cyan: #7dcfff;
+  --yellow: #e0af68;
+  --orange: #ff9e64;
+  --red: #f7768e;
+}
+
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse at 50% -20%, #131a2a 0%, var(--bg) 60%);
+  color: var(--text);
+}
+
+a:link, a:visited {
+  color: var(--blue);
+}
+
+a[href]:hover, a[href]:focus {
+  color: var(--orange);
+}
+
+a[name] {
+  color: var(--text);
+}
+
+pre, code, tt {
+  color: var(--bright);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--heading);
+}
+
+.title {
+  color: var(--heading);
+}
+
+.bar {
+  background-color: var(--panel);
+  color: var(--text);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.bar a, .bar a:link, .bar a:visited, .bar a:active {
+  color: var(--text);
+}
+
+.bar a:hover, .bar a:focus {
+  color: var(--orange);
+}
+
+.tab {
+  background-color: var(--blue);
+  color: var(--bg);
+}
+
+.fixedNav {
+  background-color: var(--bg);
+}
+
+.topNav, .bottomNav {
+  background-color: var(--panel);
+  color: var(--text);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.topNav a:link, .topNav a:active, .topNav a:visited,
+.bottomNav a:link, .bottomNav a:active, .bottomNav a:visited {
+  color: var(--text);
+}
+
+.topNav a:hover, .bottomNav a:hover {
+  color: var(--orange);
+}
+
+.navBarCell1Rev {
+  background-color: var(--blue);
+  color: var(--bg);
+}
+
+.subNav {
+  background-color: #0d111a;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.indexNav {
+  background-color: #0d111a;
+}
+
+div.details ul.blockList ul.blockList ul.blockList li.blockList h4,
+div.details ul.blockList ul.blockList ul.blockListLast li.blockList h4,
+ul.blockList ul.blockList ul.blockList li.blockList h3 {
+  background-color: var(--panel-hover);
+  border: 1px solid var(--panel-border);
+  color: var(--heading);
+}
+
+.contentContainer .description dl dt, .contentContainer .details dl dt, .serializedFormContainer dl dt {
+  color: var(--green);
+}
+
+ul.blockList ul.blockList li.blockList, ul.blockList ul.blockListLast li.blockList {
+  border: 1px solid var(--panel-border);
+  background-color: var(--panel);
+}
+
+ul.blockList ul.blockList ul.blockList li.blockList, ul.blockList ul.blockList ul.blockListLast li.blockList {
+  background-color: var(--panel);
+}
+
+.overviewSummary, .memberSummary, .typeSummary, .useSummary, .constantsSummary, .deprecatedSummary,
+.requiresSummary, .packagesSummary, .providesSummary, .usesSummary {
+  border-left: 1px solid var(--panel-border);
+  border-right: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.overviewSummary caption, .memberSummary caption, .typeSummary caption,
+.useSummary caption, .constantsSummary caption, .deprecatedSummary caption,
+.requiresSummary caption, .packagesSummary caption, .providesSummary caption, .usesSummary caption {
+  color: var(--bg);
+}
+
+.constantsSummary caption a:link, .constantsSummary caption a:visited,
+.useSummary caption a:link, .useSummary caption a:visited {
+  color: var(--bg);
+}
+
+.overviewSummary caption a:link, .memberSummary caption a:link, .typeSummary caption a:link,
+.deprecatedSummary caption a:link,
+.requiresSummary caption a:link, .packagesSummary caption a:link, .providesSummary caption a:link,
+.usesSummary caption a:link,
+.overviewSummary caption a:hover, .memberSummary caption a:hover, .typeSummary caption a:hover,
+.useSummary caption a:hover, .constantsSummary caption a:hover, .deprecatedSummary caption a:hover,
+.requiresSummary caption a:hover, .packagesSummary caption a:hover, .providesSummary caption a:hover,
+.usesSummary caption a:hover,
+.overviewSummary caption a:active, .memberSummary caption a:active, .typeSummary caption a:active,
+.useSummary caption a:active, .constantsSummary caption a:active, .deprecatedSummary caption a:active,
+.requiresSummary caption a:active, .packagesSummary caption a:active, .providesSummary caption a:active,
+.usesSummary caption a:active,
+.overviewSummary caption a:visited, .memberSummary caption a:visited, .typeSummary caption a:visited,
+.deprecatedSummary caption a:visited,
+.requiresSummary caption a:visited, .packagesSummary caption a:visited, .providesSummary caption a:visited,
+.usesSummary caption a:visited {
+  color: var(--bg);
+}
+
+.overviewSummary caption span, .memberSummary caption span, .typeSummary caption span,
+.useSummary caption span, .constantsSummary caption span, .deprecatedSummary caption span,
+.requiresSummary caption span, .packagesSummary caption span, .providesSummary caption span,
+.usesSummary caption span {
+  background-color: var(--blue);
+}
+
+.memberSummary caption span.activeTableTab span, .packagesSummary caption span.activeTableTab span,
+.overviewSummary caption span.activeTableTab span, .typeSummary caption span.activeTableTab span {
+  background-color: var(--blue);
+}
+
+.memberSummary caption span.tableTab span, .packagesSummary caption span.tableTab span,
+.overviewSummary caption span.tableTab span, .typeSummary caption span.tableTab span {
+  background-color: var(--panel-border);
+}
+
+.memberSummary caption span.tableTab span a:link, .memberSummary caption span.tableTab span a:visited,
+.overviewSummary caption span.tableTab span a:link, .overviewSummary caption span.tableTab span a:visited,
+.typeSummary caption span.tableTab span a:link, .typeSummary caption span.tableTab span a:visited,
+.packagesSummary caption span.tableTab span a:link, .packagesSummary caption span.tableTab span a:visited {
+  color: var(--text);
+}
+
+.overviewSummary .tabEnd, .memberSummary .tabEnd, .typeSummary .tabEnd,
+.useSummary .tabEnd, .constantsSummary .tabEnd, .deprecatedSummary .tabEnd,
+.requiresSummary .tabEnd, .packagesSummary .tabEnd, .providesSummary .tabEnd, .usesSummary .tabEnd,
+.memberSummary .activeTableTab .tabEnd, .packagesSummary .activeTableTab .tabEnd,
+.overviewSummary .activeTableTab .tabEnd, .typeSummary .activeTableTab .tabEnd {
+  background-color: var(--blue);
+}
+
+.memberSummary .tableTab .tabEnd, .packagesSummary .tableTab .tabEnd,
+.overviewSummary .tableTab .tabEnd, .typeSummary .tableTab .tabEnd {
+  background-color: var(--panel-border);
+}
+
+th.colFirst, th.colSecond, th.colLast, th.colConstructorName, th.colDeprecatedItemName, .constantsSummary th,
+.packagesSummary th {
+  background: var(--panel-hover);
+  color: var(--heading);
+}
+
+.tableSubHeadingColor {
+  background-color: var(--panel-hover);
+}
+
+.altColor, .altColor th {
+  background-color: var(--panel);
+}
+
+.rowColor, .rowColor th {
+  background-color: #0d111a;
+}
+
+.block {
+  color: var(--text);
+}
+
+.deprecationBlock {
+  border-color: var(--red);
+  background-color: var(--panel);
+}
+
+.deprecatedLabel, .deprecationComment {
+  color: var(--red);
+}
+
+.sourceLineNo {
+  color: var(--green);
+}
+
+.leftTop, .leftBottom {
+  border-color: var(--panel-border);
+}
+
+.rightContainer {
+  border-left: 1px solid var(--panel-border);
+}
+
+.leftBottom {
+  border-top: 1px solid var(--panel-border);
+}
+
+.ui-autocomplete-category {
+  background-color: var(--panel-hover);
+  color: var(--heading);
+}
+
+ul.ui-autocomplete {
+  background-color: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.ui-widget-content {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+.ui-widget-content a {
+  color: var(--blue);
+}
+
+.ui-menu .ui-menu-item {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.ui-state-active, .ui-widget-content .ui-state-active,
+.ui-state-focus, .ui-widget-content .ui-state-focus {
+  background: var(--panel-hover);
+  color: var(--bright);
+  border: 1px solid var(--panel-border);
+}
+
+#search {
+  background-color: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+}
+
+#reset {
+  background-color: var(--panel);
+}
+
+.watermark {
+  color: var(--muted);
+}
+
+table.plain, table.striped,
+table.plain > thead > tr > th, table.plain > tbody > tr > th, table.plain > tr > th,
+table.plain > thead > tr > td, table.plain > tbody > tr > td, table.plain > tr > td,
+table.striped > thead > tr > th, table.striped > thead > tr > td,
+table.striped > tbody > tr > th, table.striped > tbody > tr > td {
+  border-color: var(--panel-border);
+}
+
+table.striped > thead {
+  background-color: var(--panel-hover);
+}
+
+table.striped > tbody > tr:nth-child(even) {
+  background-color: #0d111a;
+}
+
+table.striped > tbody > tr:nth-child(odd) {
+  background-color: var(--panel);
+}
+
+.siteBar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 37px;
+  box-sizing: border-box;
+  background: #0d111a;
+  border-bottom: 1px solid var(--panel-border);
+  padding: 9px 18px;
+  font-family: "Cascadia Code", "JetBrains Mono", "Fira Code", Consolas, "SF Mono", monospace;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.withSiteBar .siteBar {
+  display: block;
+}
+
+.withSiteBar .fixedNav {
+  top: 37px;
+}
+
+.withSiteBar .navPadding {
+  margin-top: 37px;
+}
+
+.withSiteBar .mainContainer {
+  top: 37px;
+  height: calc(100% - 37px);
+}
+
+.withSiteBar a[name]:before, .withSiteBar a[name]:target,
+.withSiteBar a[id]:before, .withSiteBar a[id]:target {
+  padding-top: 166px;
+  margin-top: -166px;
+}
+
+.siteBarPrompt {
+  color: var(--green);
+  margin-right: 1.5em;
+}
+
+.siteBar a.siteBarLink {
+  color: var(--purple);
+  margin-right: 1.5em;
+  text-decoration: none;
+}
+
+.siteBar a.siteBarLink:hover {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

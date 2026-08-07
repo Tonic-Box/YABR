@@ -11,13 +11,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests edge creation, properties, edge types, equality, and display methods.
  * Organized using @Nested classes for clarity.
  */
-class DataFlowEdgeTest {
+class DataFlowEdgeTest
+{
 
     private DataFlowNode sourceNode;
     private DataFlowNode targetNode;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         sourceNode = DataFlowNode.builder()
             .id(1)
             .type(DataFlowNodeType.CONSTANT)
@@ -33,13 +35,15 @@ class DataFlowEdgeTest {
             .build();
     }
 
-    // ==================== Constructor Tests ====================
+    // Constructor Tests
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorWithThreeArgsSetsSourceTargetType() {
+        void constructorWithThreeArgsSetsSourceTargetType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertEquals(sourceNode, edge.getSource());
@@ -48,16 +52,17 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void constructorWithThreeArgsSetsNullLabel() {
+        void constructorWithThreeArgsSetsNullLabel()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertNull(edge.getLabel());
         }
 
         @Test
-        void constructorWithFourArgsSetsSourceTargetTypeLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "arg0");
+        void constructorWithFourArgsSetsSourceTargetTypeLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "arg0");
 
             assertEquals(sourceNode, edge.getSource());
             assertEquals(targetNode, edge.getTarget());
@@ -66,178 +71,197 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void constructorWithNullLabelAccepted() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.DEF_USE, null);
+        void constructorWithNullLabelAccepted()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE, null);
 
             assertNull(edge.getLabel());
         }
 
         @Test
-        void constructorWithEmptyLabelAccepted() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.DEF_USE, "");
+        void constructorWithEmptyLabelAccepted()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE, "");
 
             assertEquals("", edge.getLabel());
         }
     }
 
-    // ==================== Getter Tests ====================
+    // Getter Tests
 
     @Nested
-    class GetterTests {
+    class GetterTests
+    {
 
         @Test
-        void getSourceReturnsCorrectNode() {
+        void getSourceReturnsCorrectNode()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertSame(sourceNode, edge.getSource());
         }
 
         @Test
-        void getTargetReturnsCorrectNode() {
+        void getTargetReturnsCorrectNode()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertSame(targetNode, edge.getTarget());
         }
 
         @Test
-        void getTypeReturnsCorrectType() {
+        void getTypeReturnsCorrectType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT);
 
             assertEquals(DataFlowEdgeType.PHI_INPUT, edge.getType());
         }
 
         @Test
-        void getLabelReturnsNullWhenNotSet() {
+        void getLabelReturnsNullWhenNotSet()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertNull(edge.getLabel());
         }
 
         @Test
-        void getLabelReturnsCorrectLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.FIELD_STORE, "myField");
+        void getLabelReturnsCorrectLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_STORE, "myField");
 
             assertEquals("myField", edge.getLabel());
         }
     }
 
-    // ==================== Edge Type Tests ====================
+    // Edge Type Tests
 
     @Nested
-    class EdgeTypeTests {
+    class EdgeTypeTests
+    {
 
         @Test
-        void defUseEdgeType() {
+        void defUseEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertEquals(DataFlowEdgeType.DEF_USE, edge.getType());
         }
 
         @Test
-        void phiInputEdgeType() {
+        void phiInputEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT);
 
             assertEquals(DataFlowEdgeType.PHI_INPUT, edge.getType());
         }
 
         @Test
-        void callArgEdgeType() {
+        void callArgEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG);
 
             assertEquals(DataFlowEdgeType.CALL_ARG, edge.getType());
         }
 
         @Test
-        void callReturnEdgeType() {
+        void callReturnEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_RETURN);
 
             assertEquals(DataFlowEdgeType.CALL_RETURN, edge.getType());
         }
 
         @Test
-        void fieldStoreEdgeType() {
+        void fieldStoreEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_STORE);
 
             assertEquals(DataFlowEdgeType.FIELD_STORE, edge.getType());
         }
 
         @Test
-        void fieldLoadEdgeType() {
+        void fieldLoadEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_LOAD);
 
             assertEquals(DataFlowEdgeType.FIELD_LOAD, edge.getType());
         }
 
         @Test
-        void arrayStoreEdgeType() {
+        void arrayStoreEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.ARRAY_STORE);
 
             assertEquals(DataFlowEdgeType.ARRAY_STORE, edge.getType());
         }
 
         @Test
-        void arrayLoadEdgeType() {
+        void arrayLoadEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.ARRAY_LOAD);
 
             assertEquals(DataFlowEdgeType.ARRAY_LOAD, edge.getType());
         }
 
         @Test
-        void operandEdgeType() {
+        void operandEdgeType()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.OPERAND);
 
             assertEquals(DataFlowEdgeType.OPERAND, edge.getType());
         }
     }
 
-    // ==================== Display Label Tests ====================
+    // Display Label Tests
 
     @Nested
-    class DisplayLabelTests {
+    class DisplayLabelTests
+    {
 
         @Test
-        void getDisplayLabelReturnsCustomLabelWhenSet() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "parameter1");
+        void getDisplayLabelReturnsCustomLabelWhenSet()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "parameter1");
 
             assertEquals("parameter1", edge.getDisplayLabel());
         }
 
         @Test
-        void getDisplayLabelReturnsTypeDisplayNameWhenLabelNull() {
+        void getDisplayLabelReturnsTypeDisplayNameWhenLabelNull()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertEquals(DataFlowEdgeType.DEF_USE.getDisplayName(), edge.getDisplayLabel());
         }
 
         @Test
-        void getDisplayLabelReturnsTypeDisplayNameWhenLabelEmpty() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.DEF_USE, "");
+        void getDisplayLabelReturnsTypeDisplayNameWhenLabelEmpty()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE, "");
 
             assertEquals(DataFlowEdgeType.DEF_USE.getDisplayName(), edge.getDisplayLabel());
         }
 
         @Test
-        void getDisplayLabelHandlesWhitespaceOnlyLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.FIELD_LOAD, "   ");
+        void getDisplayLabelHandlesWhitespaceOnlyLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_LOAD, "   ");
 
             // Whitespace is not considered empty by isEmpty()
             assertEquals("   ", edge.getDisplayLabel());
         }
     }
 
-    // ==================== Tooltip Tests ====================
+    // Tooltip Tests
 
     @Nested
-    class TooltipTests {
+    class TooltipTests
+    {
 
         @Test
-        void getTooltipIncludesTypeDisplayName() {
+        void getTooltipIncludesTypeDisplayName()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String tooltip = edge.getTooltip();
 
@@ -245,7 +269,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void getTooltipIncludesSourceLabel() {
+        void getTooltipIncludesSourceLabel()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String tooltip = edge.getTooltip();
 
@@ -253,7 +278,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void getTooltipIncludesTargetLabel() {
+        void getTooltipIncludesTargetLabel()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String tooltip = edge.getTooltip();
 
@@ -261,7 +287,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void getTooltipIncludesArrowSymbol() {
+        void getTooltipIncludesArrowSymbol()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String tooltip = edge.getTooltip();
 
@@ -269,75 +296,84 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void getTooltipIncludesLabelWhenSet() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "myLabel");
+        void getTooltipIncludesLabelWhenSet()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "myLabel");
             String tooltip = edge.getTooltip();
 
             assertTrue(tooltip.contains("myLabel"));
         }
 
         @Test
-        void getTooltipExcludesLabelWhenNull() {
+        void getTooltipExcludesLabelWhenNull()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String tooltip = edge.getTooltip();
 
             // Should only contain type and nodes, not additional label line
             long newlineCount = tooltip.chars().filter(ch -> ch == '\n').count();
-            assertEquals(1, newlineCount); // Only one newline for "type\nsource → target"
+            assertEquals(1, newlineCount); // Only one newline for "type\nsource -> target"
         }
     }
 
-    // ==================== Taint Propagation Tests ====================
+    // Taint Propagation Tests
 
     @Nested
-    class TaintPropagationTests {
+    class TaintPropagationTests
+    {
 
         @Test
-        void propagatesTaintForDefUse() {
+        void propagatesTaintForDefUse()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertTrue(edge.propagatesTaint());
         }
 
         @Test
-        void propagatesTaintForPhiInput() {
+        void propagatesTaintForPhiInput()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT);
 
             assertTrue(edge.propagatesTaint());
         }
 
         @Test
-        void propagatesTaintForCallArg() {
+        void propagatesTaintForCallArg()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG);
 
             assertTrue(edge.propagatesTaint());
         }
 
         @Test
-        void propagatesTaintForAllEdgeTypes() {
-            for (DataFlowEdgeType type : DataFlowEdgeType.values()) {
+        void propagatesTaintForAllEdgeTypes()
+        {
+            for (DataFlowEdgeType type : DataFlowEdgeType.values())
+            {
                 DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, type);
-                assertTrue(edge.propagatesTaint(),
-                    "Edge type " + type + " should propagate taint");
+                assertTrue(edge.propagatesTaint(), "Edge type " + type + " should propagate taint");
             }
         }
     }
 
-    // ==================== Equality Tests ====================
+    // Equality Tests
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalsReturnsTrueForSameObject() {
+        void equalsReturnsTrueForSameObject()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertEquals(edge, edge);
         }
 
         @Test
-        void equalsReturnsTrueForSameSourceTargetType() {
+        void equalsReturnsTrueForSameSourceTargetType()
+        {
             DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
@@ -345,7 +381,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentSource() {
+        void equalsReturnsFalseForDifferentSource()
+        {
             DataFlowNode differentSource = DataFlowNode.builder()
                 .id(99)
                 .type(DataFlowNodeType.PARAM)
@@ -360,7 +397,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentTarget() {
+        void equalsReturnsFalseForDifferentTarget()
+        {
             DataFlowNode differentTarget = DataFlowNode.builder()
                 .id(99)
                 .type(DataFlowNodeType.PARAM)
@@ -375,7 +413,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentType() {
+        void equalsReturnsFalseForDifferentType()
+        {
             DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT);
 
@@ -383,44 +422,48 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void equalsIgnoresLabel() {
-            DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "label1");
-            DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "label2");
+        void equalsIgnoresLabel()
+        {
+            DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "label1");
+            DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "label2");
 
             assertEquals(edge1, edge2);
         }
 
         @Test
-        void equalsReturnsFalseForNull() {
+        void equalsReturnsFalseForNull()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertNotEquals(edge, null);
         }
 
         @Test
-        void equalsReturnsFalseForDifferentClass() {
+        void equalsReturnsFalseForDifferentClass()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertNotEquals(edge, "not an edge");
         }
     }
 
-    // ==================== Hash Code Tests ====================
+    // Hash Code Tests
 
     @Nested
-    class HashCodeTests {
+    class HashCodeTests
+    {
 
         @Test
-        void hashCodeConsistentForSameObject() {
+        void hashCodeConsistentForSameObject()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertEquals(edge.hashCode(), edge.hashCode());
         }
 
         @Test
-        void hashCodeEqualForEqualEdges() {
+        void hashCodeEqualForEqualEdges()
+        {
             DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
@@ -428,7 +471,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void hashCodeDifferentForDifferentTypes() {
+        void hashCodeDifferentForDifferentTypes()
+        {
             DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT);
 
@@ -436,23 +480,24 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void hashCodeIgnoresLabel() {
-            DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "label1");
-            DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "label2");
+        void hashCodeIgnoresLabel()
+        {
+            DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "label1");
+            DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "label2");
 
             assertEquals(edge1.hashCode(), edge2.hashCode());
         }
     }
 
-    // ==================== ToString Tests ====================
+    // ToString Tests
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringIncludesSourceLabel() {
+        void toStringIncludesSourceLabel()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String str = edge.toString();
 
@@ -460,7 +505,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void toStringIncludesTargetLabel() {
+        void toStringIncludesTargetLabel()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String str = edge.toString();
 
@@ -468,7 +514,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void toStringIncludesTypeName() {
+        void toStringIncludesTypeName()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG);
             String str = edge.toString();
 
@@ -476,7 +523,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void toStringHasArrowFormat() {
+        void toStringHasArrowFormat()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             String str = edge.toString();
 
@@ -485,9 +533,9 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void toStringDoesNotIncludeLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.FIELD_LOAD, "customLabel");
+        void toStringDoesNotIncludeLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_LOAD, "customLabel");
             String str = edge.toString();
 
             // toString uses type name, not custom label
@@ -495,13 +543,15 @@ class DataFlowEdgeTest {
         }
     }
 
-    // ==================== Edge Connection Tests ====================
+    // Edge Connection Tests
 
     @Nested
-    class EdgeConnectionTests {
+    class EdgeConnectionTests
+    {
 
         @Test
-        void edgeConnectsSourceToTarget() {
+        void edgeConnectsSourceToTarget()
+        {
             DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
 
             assertSame(sourceNode, edge.getSource());
@@ -509,7 +559,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void edgeCanConnectNodeToItself() {
+        void edgeCanConnectNodeToItself()
+        {
             DataFlowEdge selfEdge = new DataFlowEdge(sourceNode, sourceNode, DataFlowEdgeType.DEF_USE);
 
             assertSame(sourceNode, selfEdge.getSource());
@@ -517,7 +568,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void multipleEdgesBetweenSameNodesWithDifferentTypes() {
+        void multipleEdgesBetweenSameNodesWithDifferentTypes()
+        {
             DataFlowEdge edge1 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE);
             DataFlowEdge edge2 = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.OPERAND);
 
@@ -529,7 +581,8 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void edgesBetweenDifferentNodeTypes() {
+        void edgesBetweenDifferentNodeTypes()
+        {
             DataFlowNode paramNode = DataFlowNode.builder()
                 .id(10)
                 .type(DataFlowNodeType.PARAM)
@@ -551,53 +604,56 @@ class DataFlowEdgeTest {
         }
     }
 
-    // ==================== Edge Label Scenarios ====================
+    // Edge Label Scenarios
 
     @Nested
-    class EdgeLabelScenarios {
+    class EdgeLabelScenarios
+    {
 
         @Test
-        void callArgEdgeWithParameterLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, "arg0");
+        void callArgEdgeWithParameterLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, "arg0");
 
             assertEquals("arg0", edge.getLabel());
             assertEquals("arg0", edge.getDisplayLabel());
         }
 
         @Test
-        void fieldStoreEdgeWithFieldNameLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.FIELD_STORE, "myField");
+        void fieldStoreEdgeWithFieldNameLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_STORE, "myField");
 
             assertEquals("myField", edge.getLabel());
             assertTrue(edge.getTooltip().contains("myField"));
         }
 
         @Test
-        void arrayStoreEdgeWithIndexLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.ARRAY_STORE, "[5]");
+        void arrayStoreEdgeWithIndexLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.ARRAY_STORE, "[5]");
 
             assertEquals("[5]", edge.getLabel());
         }
 
         @Test
-        void phiInputEdgeWithBlockLabel() {
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.PHI_INPUT, "block2");
+        void phiInputEdgeWithBlockLabel()
+        {
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.PHI_INPUT, "block2");
 
             assertEquals("block2", edge.getLabel());
         }
     }
 
-    // ==================== Edge Cases and Null Handling ====================
+    // Edge Cases and Null Handling
 
     @Nested
-    class EdgeCasesAndNullHandling {
+    class EdgeCasesAndNullHandling
+    {
 
         @Test
-        void edgeWithNullSourceAndTarget() {
+        void edgeWithNullSourceAndTarget()
+        {
             // While not recommended, the implementation doesn't prevent this
             DataFlowEdge edge = new DataFlowEdge(null, null, DataFlowEdgeType.DEF_USE);
 
@@ -606,29 +662,29 @@ class DataFlowEdgeTest {
         }
 
         @Test
-        void edgeWithVeryLongLabel() {
+        void edgeWithVeryLongLabel()
+        {
             String longLabel = "a".repeat(1000);
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.CALL_ARG, longLabel);
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.CALL_ARG, longLabel);
 
             assertEquals(longLabel, edge.getLabel());
             assertEquals(longLabel, edge.getDisplayLabel());
         }
 
         @Test
-        void edgeWithSpecialCharactersInLabel() {
+        void edgeWithSpecialCharactersInLabel()
+        {
             String specialLabel = "field$name_123<generic>";
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.FIELD_LOAD, specialLabel);
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.FIELD_LOAD, specialLabel);
 
             assertEquals(specialLabel, edge.getLabel());
         }
 
         @Test
-        void edgeWithUnicodeLabel() {
+        void edgeWithUnicodeLabel()
+        {
             String unicodeLabel = "\u5909\u6570\u540D"; // Japanese: "variable name"
-            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode,
-                DataFlowEdgeType.DEF_USE, unicodeLabel);
+            DataFlowEdge edge = new DataFlowEdge(sourceNode, targetNode, DataFlowEdgeType.DEF_USE, unicodeLabel);
 
             assertEquals(unicodeLabel, edge.getLabel());
         }

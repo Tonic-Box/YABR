@@ -19,8 +19,11 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-/** Verifies {@code ORDER BY <col> [ASC|DESC]} sorts and {@code LIMIT n} truncates the result set. */
-class LimitOrderQueryTest {
+/**
+ * Verifies {@code ORDER BY <col> [ASC|DESC]} sorts and {@code LIMIT n} truncates the result set.
+ */
+class LimitOrderQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -33,7 +36,8 @@ class LimitOrderQueryTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null);
         Path dir = Files.createTempDirectory("query-ord");
@@ -44,8 +48,11 @@ class LimitOrderQueryTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Ord.class")));
     }
 
-    /** Order-preserving (no .sorted()) so the query's own ordering is what's asserted. */
-    private List<String> methodsInOrder(String query) throws Exception {
+    /**
+     * Order-preserving (no .sorted()) so the query's own ordering is what's asserted.
+     */
+    private List<String> methodsInOrder(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         return new QueryBatchRunner(pool).run(plan, null).matches().stream()
@@ -56,22 +63,26 @@ class LimitOrderQueryTest {
     private static final String LOWER = "FIND methods WHERE method.name matches /^[a-z]/";
 
     @Test
-    void orderByAscending() throws Exception {
+    void orderByAscending() throws Exception
+    {
         assertEquals(List.of("alpha", "bravo", "charlie"), methodsInOrder(LOWER + " ORDER BY method"));
     }
 
     @Test
-    void orderByDescending() throws Exception {
+    void orderByDescending() throws Exception
+    {
         assertEquals(List.of("charlie", "bravo", "alpha"), methodsInOrder(LOWER + " ORDER BY method DESC"));
     }
 
     @Test
-    void orderByThenLimit() throws Exception {
+    void orderByThenLimit() throws Exception
+    {
         assertEquals(List.of("alpha", "bravo"), methodsInOrder(LOWER + " ORDER BY method LIMIT 2"));
     }
 
     @Test
-    void limitTruncates() throws Exception {
+    void limitTruncates() throws Exception
+    {
         assertEquals(1, methodsInOrder(LOWER + " LIMIT 1").size());
     }
 }

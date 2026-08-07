@@ -16,21 +16,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers {@link TypeResolver#resolveSamMethod}, which underpins lambda return-type and
  * descriptor inference (target typing).
  */
-class SamResolverTest {
+class SamResolverTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
-    private TypeResolver resolver() {
+    private TypeResolver resolver()
+    {
         return new TypeResolver(pool, "com/test/Owner");
     }
 
     @Test
-    void resolvesRunnableToVoidNoArgs() {
+    void resolvesRunnableToVoidNoArgs()
+    {
         String[] sam = resolver().resolveSamMethod("java/lang/Runnable");
         assertNotNull(sam);
         assertEquals("run", sam[0]);
@@ -38,7 +42,8 @@ class SamResolverTest {
     }
 
     @Test
-    void resolvesFunctionToObjectObject() {
+    void resolvesFunctionToObjectObject()
+    {
         String[] sam = resolver().resolveSamMethod("java/util/function/Function");
         assertNotNull(sam);
         assertEquals("apply", sam[0]);
@@ -46,7 +51,8 @@ class SamResolverTest {
     }
 
     @Test
-    void resolvesPredicateToBoolean() {
+    void resolvesPredicateToBoolean()
+    {
         String[] sam = resolver().resolveSamMethod("java/util/function/Predicate");
         assertNotNull(sam);
         assertEquals("test", sam[0]);
@@ -54,7 +60,8 @@ class SamResolverTest {
     }
 
     @Test
-    void resolvesCustomInterfaceFromClassPool() throws Exception {
+    void resolvesCustomInterfaceFromClassPool() throws Exception
+    {
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().setAbstract().build();
         ClassFile iface = pool.createNewClass("com/test/MyFn", ifaceAccess);
         int methodAccess = new AccessBuilder().setPublic().setAbstract().build();
@@ -67,12 +74,14 @@ class SamResolverTest {
     }
 
     @Test
-    void unknownInterfaceReturnsNull() {
+    void unknownInterfaceReturnsNull()
+    {
         assertNull(resolver().resolveSamMethod("com/test/NotInPoolAndNotJdk"));
     }
 
     @Test
-    void resolveClassNameFindsSamePackageType() throws Exception {
+    void resolveClassNameFindsSamePackageType() throws Exception
+    {
         pool.createNewClass("pkg/Helper", new AccessBuilder().setPublic().build());
         TypeResolver r = new TypeResolver(pool, "pkg/Owner");
         assertEquals("pkg/Helper", r.resolveClassName("Helper"),
@@ -80,7 +89,8 @@ class SamResolverTest {
     }
 
     @Test
-    void returnTypeFromDescriptorParsesVoidAndPrimitives() {
+    void returnTypeFromDescriptorParsesVoidAndPrimitives()
+    {
         TypeResolver r = resolver();
         assertTrue(r.returnTypeFromDescriptor("()V") instanceof VoidSourceType);
         assertEquals(PrimitiveSourceType.BOOLEAN, r.returnTypeFromDescriptor("(Ljava/lang/Object;)Z"));
@@ -88,7 +98,8 @@ class SamResolverTest {
     }
 
     @Test
-    void paramTypesFromDescriptorParsesAll() {
+    void paramTypesFromDescriptorParsesAll()
+    {
         java.util.List<SourceType> params = resolver().paramTypesFromDescriptor("(IJLjava/lang/String;)V");
         assertEquals(3, params.size());
         assertEquals(PrimitiveSourceType.INT, params.get(0));

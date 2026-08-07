@@ -21,12 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * a field-load multiplied by a constant. The engine must link the {@code imul}'s popped operands back to the
  * {@code getfield} and the constant push.
  */
-class ExecutionTest {
+class ExecutionTest
+{
 
     private static final int IMUL = 0x68;
 
     @Test
-    void buildsDefUseForFieldTimesConstant() {
+    void buildsDefUseForFieldTimesConstant()
+    {
         int accStatic = AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC;
         ClassFile cf = ClassBuilder.create("a")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -48,9 +50,11 @@ class ExecutionTest {
 
         boolean sawField = false;
         boolean sawConst = false;
-        for (StackCtx pop : mul.getPops()) {
+        for (StackCtx pop : mul.getPops())
+        {
             Instruction pusher = pop.getPushed().getInstruction();
-            if (pusher instanceof GetFieldInstruction) {
+            if (pusher instanceof GetFieldInstruction)
+            {
                 sawField = true;
             } else if (pusher.getOpcode() == 0x06) { // iconst_3
                 sawConst = true;
@@ -61,8 +65,9 @@ class ExecutionTest {
     }
 
     @Test
-    void exploresBranchesWithoutHangingAndReachesBothArms() {
-        // if (p) return f; else return f2;  — both returns must be marked executed, loop guard must terminate.
+    void exploresBranchesWithoutHangingAndReachesBothArms()
+    {
+        // if (p) return f; else return f2;  - both returns must be marked executed, loop guard must terminate.
         int accStatic = AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC;
         ClassFile cf = ClassBuilder.create("b")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
@@ -91,7 +96,8 @@ class ExecutionTest {
         assertEquals(2, returns, "both branch arms' ireturn should be reached");
     }
 
-    private static MethodEntry methodNamed(ClassFile cf, String name) {
+    private static MethodEntry methodNamed(ClassFile cf, String name)
+    {
         return cf.getMethods().stream().filter(m -> m.getName().equals(name)).findFirst().orElseThrow();
     }
 }

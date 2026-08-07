@@ -9,7 +9,8 @@ import java.io.IOException;
 /**
  * Represents a CONSTANT_MethodHandle entry in the constant pool.
  */
-public class MethodHandleItem extends Item<MethodHandle> {
+public class MethodHandleItem extends Item<MethodHandle>
+{
 
     private MethodHandle value;
 
@@ -17,30 +18,35 @@ public class MethodHandleItem extends Item<MethodHandle> {
      * Sets the method handle value.
      * @param methodHandle the method handle to set
      */
-    public void setMethodHandle(MethodHandle methodHandle) {
+    public void setMethodHandle(MethodHandle methodHandle)
+    {
         this.value = methodHandle;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         int referenceKind = classFile.readUnsignedByte();
         int referenceIndex = classFile.readUnsignedShort();
         this.value = new MethodHandle(referenceKind, referenceIndex);
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(value.getReferenceKind());
         dos.writeShort(value.getReferenceIndex());
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_METHOD_HANDLE;
     }
 
     @Override
-    public MethodHandle getValue() {
+    public MethodHandle getValue()
+    {
         return value;
     }
 }

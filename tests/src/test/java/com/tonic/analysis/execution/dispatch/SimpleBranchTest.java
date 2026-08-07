@@ -15,11 +15,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SimpleBranchTest {
+public class SimpleBranchTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -27,13 +29,17 @@ public class SimpleBranchTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -41,7 +47,8 @@ public class SimpleBranchTest {
     }
 
     @Test
-    void testSimpleReturn() throws IOException {
+    void testSimpleReturn() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(42)

@@ -2,75 +2,109 @@ package com.tonic.analysis.execution.dispatch;
 
 import com.tonic.util.DescriptorUtil;
 
-public final class InvokeDynamicInfo {
+/**
+ * An invokedynamic call site: bootstrap method index plus the invoked name and descriptor.
+ */
+public final class InvokeDynamicInfo
+{
 
     private final int bootstrapMethodIndex;
     private final String methodName;
     private final String descriptor;
     private final int constantPoolIndex;
 
-    public InvokeDynamicInfo(int bootstrapMethodIndex, String methodName, String descriptor, int constantPoolIndex) {
+    /**
+     * Creates an invokedynamic call site descriptor.
+     * @param bootstrapMethodIndex index into the BootstrapMethods attribute
+     * @param methodName the invoked name of the call site
+     * @param descriptor the call site's method descriptor
+     * @param constantPoolIndex index of the entry in the constant pool
+     */
+    public InvokeDynamicInfo(int bootstrapMethodIndex, String methodName, String descriptor, int constantPoolIndex)
+    {
         this.bootstrapMethodIndex = bootstrapMethodIndex;
         this.methodName = methodName;
         this.descriptor = descriptor;
         this.constantPoolIndex = constantPoolIndex;
     }
 
-    public int getBootstrapMethodIndex() {
+    /**
+     * @return the bootstrap method index
+     */
+    public int getBootstrapMethodIndex()
+    {
         return bootstrapMethodIndex;
     }
 
-    public String getMethodName() {
+    /**
+     * @return the method name
+     */
+    public String getMethodName()
+    {
         return methodName;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public int getConstantPoolIndex() {
+    /**
+     * @return the constant pool index
+     */
+    public int getConstantPoolIndex()
+    {
         return constantPoolIndex;
     }
 
-    public int getParameterSlots() {
+    /**
+     * Counts the local-variable slots consumed by the parameters.
+     * @return the total slot count, with long and double counting as two
+     */
+    public int getParameterSlots()
+    {
         return DescriptorUtil.countParameterSlots(descriptor);
     }
 
-    public int getParameterCount() {
-        if (descriptor == null || !descriptor.startsWith("(")) {
+    /**
+     * Counts the parameters declared in the descriptor.
+     * @return the number of parameters, or 0 for a missing or malformed descriptor
+     */
+    public int getParameterCount()
+    {
+        if (descriptor == null || !descriptor.startsWith("("))
+        {
             return 0;
         }
 
         int count = 0;
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            switch (c) {
-                case 'J':
-                case 'D':
-                case 'I':
-                case 'F':
-                case 'B':
-                case 'C':
-                case 'S':
-                case 'Z':
-                    count++;
-                    i++;
-                    break;
+            switch (c)
+            {
                 case 'L':
                     count++;
-                    while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                    while (i < descriptor.length() && descriptor.charAt(i) != ';')
+                    {
                         i++;
                     }
                     i++;
                     break;
                 case '[':
                     count++;
-                    while (i < descriptor.length() && descriptor.charAt(i) == '[') {
+                    while (i < descriptor.length() && descriptor.charAt(i) == '[')
+                    {
                         i++;
                     }
-                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
-                        while (i < descriptor.length() && descriptor.charAt(i) != ';') {
+                    if (i < descriptor.length() && descriptor.charAt(i) == 'L')
+                    {
+                        while (i < descriptor.length() && descriptor.charAt(i) != ';')
+                        {
                             i++;
                         }
                     }
@@ -85,34 +119,58 @@ public final class InvokeDynamicInfo {
         return count;
     }
 
-    public String getReturnType() {
-        if (descriptor == null) {
+    /**
+     * Extracts the return type from the descriptor.
+     * @return the return type descriptor, or "V" if it cannot be parsed
+     */
+    public String getReturnType()
+    {
+        if (descriptor == null)
+        {
             return "V";
         }
         int parenIndex = descriptor.indexOf(')');
-        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1) {
+        if (parenIndex >= 0 && parenIndex < descriptor.length() - 1)
+        {
             return descriptor.substring(parenIndex + 1);
         }
         return "V";
     }
 
-    public boolean isVoidReturn() {
+    /**
+     * Checks whether the call site returns void.
+     * @return true if the return type is "V"
+     */
+    public boolean isVoidReturn()
+    {
         return "V".equals(getReturnType());
     }
 
-    public boolean isLambdaMetafactory() {
+    /**
+     * Checks whether the invoked name matches a common functional-interface method,
+     * indicating a LambdaMetafactory call site.
+     * @return true if the name is a known functional-interface method name
+     */
+    public boolean isLambdaMetafactory()
+    {
         return "run".equals(methodName) || "apply".equals(methodName) ||
                "accept".equals(methodName) || "test".equals(methodName) ||
                "get".equals(methodName) || "getAsInt".equals(methodName) ||
                "getAsLong".equals(methodName) || "getAsDouble".equals(methodName);
     }
 
-    public boolean isStringConcat() {
+    /**
+     * Checks whether this is a StringConcatFactory call site.
+     * @return true if the invoked name is makeConcat or makeConcatWithConstants
+     */
+    public boolean isStringConcat()
+    {
         return "makeConcatWithConstants".equals(methodName) || "makeConcat".equals(methodName);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "InvokeDynamicInfo{" +
             "bsm=" + bootstrapMethodIndex +
             ", name='" + methodName + '\'' +

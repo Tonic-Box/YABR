@@ -4,9 +4,10 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Result of comparing two methods for similarity.
+ * The scored outcome of comparing two methods, ordered by descending overall score.
  */
-public class SimilarityResult implements Comparable<SimilarityResult> {
+public class SimilarityResult implements Comparable<SimilarityResult>
+{
 
     private final MethodSignature method1;
     private final MethodSignature method2;
@@ -14,8 +15,16 @@ public class SimilarityResult implements Comparable<SimilarityResult> {
     private final double overallScore;
     private final SimilarityMetric primaryMetric;
 
-    public SimilarityResult(MethodSignature method1, MethodSignature method2,
-                           Map<SimilarityMetric, Double> scores, SimilarityMetric primaryMetric) {
+    /**
+     * Creates a result and derives the overall score from the primary metric, or a weighted
+     * average when the primary metric is COMBINED.
+     * @param method1 the first compared method
+     * @param method2 the second compared method
+     * @param scores the per-metric scores, copied
+     * @param primaryMetric the metric that determines the overall score
+     */
+    public SimilarityResult(MethodSignature method1, MethodSignature method2, Map<SimilarityMetric, Double> scores, SimilarityMetric primaryMetric)
+    {
         this.method1 = method1;
         this.method2 = method2;
         this.scores = new EnumMap<>(scores);
@@ -23,8 +32,10 @@ public class SimilarityResult implements Comparable<SimilarityResult> {
         this.overallScore = calculateOverallScore();
     }
 
-    private double calculateOverallScore() {
-        if (primaryMetric != SimilarityMetric.COMBINED) {
+    private double calculateOverallScore()
+    {
+        if (primaryMetric != SimilarityMetric.COMBINED)
+        {
             Double score = scores.get(primaryMetric);
             return score != null ? score : 0.0;
         }
@@ -32,8 +43,10 @@ public class SimilarityResult implements Comparable<SimilarityResult> {
         // Combined score: weighted average
         double sum = 0.0;
         double weightSum = 0.0;
-        for (Map.Entry<SimilarityMetric, Double> entry : scores.entrySet()) {
-            if (entry.getKey() != SimilarityMetric.COMBINED && entry.getValue() != null) {
+        for (Map.Entry<SimilarityMetric, Double> entry : scores.entrySet())
+        {
+            if (entry.getKey() != SimilarityMetric.COMBINED && entry.getValue() != null)
+            {
                 double weight = entry.getKey().getDefaultWeight();
                 sum += entry.getValue() * weight;
                 weightSum += weight;
@@ -42,81 +55,113 @@ public class SimilarityResult implements Comparable<SimilarityResult> {
         return weightSum > 0 ? sum / weightSum : 0.0;
     }
 
-    public MethodSignature getMethod1() {
+    /**
+     * @return the method1
+     */
+    public MethodSignature getMethod1()
+    {
         return method1;
     }
 
-    public MethodSignature getMethod2() {
+    /**
+     * @return the method2
+     */
+    public MethodSignature getMethod2()
+    {
         return method2;
     }
 
-    public double getOverallScore() {
+    /**
+     * @return the overall score
+     */
+    public double getOverallScore()
+    {
         return overallScore;
     }
 
     /**
-     * Get score as percentage (0-100).
+     * @return the overall score rounded to a 0-100 percentage
      */
-    public int getScorePercent() {
+    public int getScorePercent()
+    {
         return (int) Math.round(overallScore * 100);
     }
 
-    public SimilarityMetric getPrimaryMetric() {
+    /**
+     * @return the primary metric
+     */
+    public SimilarityMetric getPrimaryMetric()
+    {
         return primaryMetric;
     }
 
     /**
-     * Get score for a specific metric.
+     * @param metric the metric to read
+     * @return the score for that metric, or 0.0 if absent
      */
-    public double getScore(SimilarityMetric metric) {
+    public double getScore(SimilarityMetric metric)
+    {
         Double score = scores.get(metric);
         return score != null ? score : 0.0;
     }
 
     /**
-     * Get all metric scores.
+     * @return a copy of the per-metric scores
      */
-    public Map<SimilarityMetric, Double> getAllScores() {
+    public Map<SimilarityMetric, Double> getAllScores()
+    {
         return new EnumMap<>(scores);
     }
 
     /**
-     * Check if this is a potential duplicate (high similarity).
+     * @return true if the overall score is at least 0.95
      */
-    public boolean isPotentialDuplicate() {
+    public boolean isPotentialDuplicate()
+    {
         return overallScore >= 0.95;
     }
 
     /**
-     * Check if methods are highly similar.
+     * @return true if the overall score is at least 0.80
      */
-    public boolean isHighlySimilar() {
+    public boolean isHighlySimilar()
+    {
         return overallScore >= 0.80;
     }
 
     /**
-     * Get a summary description of the similarity.
+     * @return a short human-readable label of the similarity band with the percentage
      */
-    public String getSummary() {
-        if (isPotentialDuplicate()) {
+    public String getSummary()
+    {
+        if (isPotentialDuplicate())
+        {
             return "Exact/Near duplicate (" + getScorePercent() + "%)";
-        } else if (isHighlySimilar()) {
+        }
+        else if (isHighlySimilar())
+        {
             return "Highly similar (" + getScorePercent() + "%)";
-        } else if (overallScore >= 0.5) {
+        }
+        else if (overallScore >= 0.5)
+        {
             return "Moderately similar (" + getScorePercent() + "%)";
-        } else {
+        }
+        else
+        {
             return "Low similarity (" + getScorePercent() + "%)";
         }
     }
 
     @Override
-    public int compareTo(SimilarityResult other) {
+    public int compareTo(SimilarityResult other)
+    {
         // Sort by descending score
         return Double.compare(other.overallScore, this.overallScore);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("%s <-> %s: %.1f%% (%s)",
             method1.getDisplayName(), method2.getDisplayName(),
             overallScore * 100, primaryMetric.getDisplayName());

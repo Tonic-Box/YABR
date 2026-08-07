@@ -13,12 +13,14 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for various Hook implementations.
  * Verifies hook configuration and registration behavior.
  */
-class HookTests {
+class HookTests
+{
 
-    // ========== MethodEntryHook Tests ==========
+    // MethodEntryHook Tests
 
     @Test
-    void methodEntryHookDefaultValues() {
+    void methodEntryHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
@@ -35,9 +37,9 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithPassThis() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry",
-                "(Ljava/lang/Object;)V");
+    void methodEntryHookWithPassThis()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "(Ljava/lang/Object;)V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
                 .passThis(true)
@@ -47,9 +49,9 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithPassMethodName() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry",
-                "(Ljava/lang/String;)V");
+    void methodEntryHookWithPassMethodName()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "(Ljava/lang/String;)V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
                 .passMethodName(true)
@@ -59,9 +61,9 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithPassClassName() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry",
-                "(Ljava/lang/String;)V");
+    void methodEntryHookWithPassClassName()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "(Ljava/lang/String;)V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
                 .passClassName(true)
@@ -71,9 +73,9 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithAllParameters() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry",
-                "([Ljava/lang/Object;)V");
+    void methodEntryHookWithAllParameters()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "([Ljava/lang/Object;)V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
                 .passAllParameters(true)
@@ -83,7 +85,8 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithFilters() {
+    void methodEntryHookWithFilters()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         List<InstrumentationFilter> filters = List.of(
                 ClassFilter.exact("com/test/Target"),
@@ -99,7 +102,8 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookWithPriority() {
+    void methodEntryHookWithPriority()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
@@ -110,7 +114,8 @@ class HookTests {
     }
 
     @Test
-    void methodEntryHookSimpleFactory() {
+    void methodEntryHookSimpleFactory()
+    {
         MethodEntryHook hook = MethodEntryHook.simple("com/test/Hooks", "onEntry", "()V");
 
         assertNotNull(hook);
@@ -118,10 +123,11 @@ class HookTests {
         assertTrue(hook.isEnabled());
     }
 
-    // ========== MethodExitHook Tests ==========
+    // MethodExitHook Tests
 
     @Test
-    void methodExitHookDefaultValues() {
+    void methodExitHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onExit", "()V");
         MethodExitHook hook = MethodExitHook.builder()
                 .hookDescriptor(descriptor)
@@ -139,7 +145,8 @@ class HookTests {
     }
 
     @Test
-    void methodExitHookWithReturnValue() {
+    void methodExitHookWithReturnValue()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onExit", "(I)V");
         MethodExitHook hook = MethodExitHook.builder()
                 .hookDescriptor(descriptor)
@@ -150,7 +157,8 @@ class HookTests {
     }
 
     @Test
-    void methodExitHookCanModifyReturn() {
+    void methodExitHookCanModifyReturn()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onExit", "(I)I");
         MethodExitHook hook = MethodExitHook.builder()
                 .hookDescriptor(descriptor)
@@ -161,10 +169,11 @@ class HookTests {
         assertTrue(hook.isCanModifyReturn());
     }
 
-    // ========== FieldWriteHook Tests ==========
+    // FieldWriteHook Tests
 
     @Test
-    void fieldWriteHookDefaultValues() {
+    void fieldWriteHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "()V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -182,7 +191,8 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookStaticOnly() {
+    void fieldWriteHookStaticOnly()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "()V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -195,7 +205,8 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookInstanceOnly() {
+    void fieldWriteHookInstanceOnly()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "()V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -208,7 +219,8 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookWithNewValue() {
+    void fieldWriteHookWithNewValue()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "(I)V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -219,7 +231,8 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookWithOldValue() {
+    void fieldWriteHookWithOldValue()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "(I)V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -230,7 +243,8 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookCanModifyValue() {
+    void fieldWriteHookCanModifyValue()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "(I)I");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
@@ -242,9 +256,9 @@ class HookTests {
     }
 
     @Test
-    void fieldWriteHookWithFieldName() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite",
-                "(Ljava/lang/String;)V");
+    void fieldWriteHookWithFieldName()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onWrite", "(Ljava/lang/String;)V");
         FieldWriteHook hook = FieldWriteHook.builder()
                 .hookDescriptor(descriptor)
                 .passFieldName(true)
@@ -253,10 +267,11 @@ class HookTests {
         assertTrue(hook.isPassFieldName());
     }
 
-    // ========== FieldReadHook Tests ==========
+    // FieldReadHook Tests
 
     @Test
-    void fieldReadHookDefaultValues() {
+    void fieldReadHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onRead", "()V");
         FieldReadHook hook = FieldReadHook.builder()
                 .hookDescriptor(descriptor)
@@ -272,7 +287,8 @@ class HookTests {
     }
 
     @Test
-    void fieldReadHookWithReadValue() {
+    void fieldReadHookWithReadValue()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onRead", "(I)V");
         FieldReadHook hook = FieldReadHook.builder()
                 .hookDescriptor(descriptor)
@@ -282,10 +298,11 @@ class HookTests {
         assertTrue(hook.isPassReadValue());
     }
 
-    // ========== ArrayStoreHook Tests ==========
+    // ArrayStoreHook Tests
 
     @Test
-    void arrayStoreHookDefaultValues() {
+    void arrayStoreHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore", "()V");
         ArrayStoreHook hook = ArrayStoreHook.builder()
                 .hookDescriptor(descriptor)
@@ -301,7 +318,8 @@ class HookTests {
     }
 
     @Test
-    void arrayStoreHookWithArrayTypeFilter() {
+    void arrayStoreHookWithArrayTypeFilter()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore", "()V");
         ArrayStoreHook hook = ArrayStoreHook.builder()
                 .hookDescriptor(descriptor)
@@ -312,9 +330,9 @@ class HookTests {
     }
 
     @Test
-    void arrayStoreHookWithAllParameters() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore",
-                "([III)V");
+    void arrayStoreHookWithAllParameters()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore", "([III)V");
         ArrayStoreHook hook = ArrayStoreHook.builder()
                 .hookDescriptor(descriptor)
                 .passArray(true)
@@ -328,9 +346,9 @@ class HookTests {
     }
 
     @Test
-    void arrayStoreHookCanModifyValue() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore",
-                "(I)I");
+    void arrayStoreHookCanModifyValue()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayStore", "(I)I");
         ArrayStoreHook hook = ArrayStoreHook.builder()
                 .hookDescriptor(descriptor)
                 .passValue(true)
@@ -340,10 +358,11 @@ class HookTests {
         assertTrue(hook.isCanModifyValue());
     }
 
-    // ========== ArrayLoadHook Tests ==========
+    // ArrayLoadHook Tests
 
     @Test
-    void arrayLoadHookDefaultValues() {
+    void arrayLoadHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayLoad", "()V");
         ArrayLoadHook hook = ArrayLoadHook.builder()
                 .hookDescriptor(descriptor)
@@ -358,9 +377,9 @@ class HookTests {
     }
 
     @Test
-    void arrayLoadHookWithParameters() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayLoad",
-                "([II)V");
+    void arrayLoadHookWithParameters()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onArrayLoad", "([II)V");
         ArrayLoadHook hook = ArrayLoadHook.builder()
                 .hookDescriptor(descriptor)
                 .passArray(true)
@@ -371,10 +390,11 @@ class HookTests {
         assertTrue(hook.isPassIndex());
     }
 
-    // ========== MethodCallHook Tests ==========
+    // MethodCallHook Tests
 
     @Test
-    void methodCallHookDefaultValues() {
+    void methodCallHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall", "()V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
@@ -394,7 +414,8 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookWithTarget() {
+    void methodCallHookWithTarget()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall", "()V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
@@ -409,7 +430,8 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookBefore() {
+    void methodCallHookBefore()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "beforeCall", "()V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
@@ -422,7 +444,8 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookAfter() {
+    void methodCallHookAfter()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "afterCall", "()V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
@@ -435,9 +458,9 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookWithReceiver() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall",
-                "(Ljava/lang/Object;)V");
+    void methodCallHookWithReceiver()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall", "(Ljava/lang/Object;)V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
                 .passReceiver(true)
@@ -447,9 +470,9 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookWithArguments() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall",
-                "([Ljava/lang/Object;)V");
+    void methodCallHookWithArguments()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onCall", "([Ljava/lang/Object;)V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
                 .passArguments(true)
@@ -459,9 +482,9 @@ class HookTests {
     }
 
     @Test
-    void methodCallHookWithResult() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "afterCall",
-                "(Ljava/lang/Object;)V");
+    void methodCallHookWithResult()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "afterCall", "(Ljava/lang/Object;)V");
         MethodCallHook hook = MethodCallHook.builder()
                 .hookDescriptor(descriptor)
                 .after(true)
@@ -471,10 +494,11 @@ class HookTests {
         assertTrue(hook.isPassResult());
     }
 
-    // ========== ExceptionHook Tests ==========
+    // ExceptionHook Tests
 
     @Test
-    void exceptionHookDefaultValues() {
+    void exceptionHookDefaultValues()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException", "()V");
         ExceptionHook hook = ExceptionHook.builder()
                 .hookDescriptor(descriptor)
@@ -490,7 +514,8 @@ class HookTests {
     }
 
     @Test
-    void exceptionHookWithExceptionType() {
+    void exceptionHookWithExceptionType()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException", "()V");
         ExceptionHook hook = ExceptionHook.builder()
                 .hookDescriptor(descriptor)
@@ -501,7 +526,8 @@ class HookTests {
     }
 
     @Test
-    void exceptionHookWithException() {
+    void exceptionHookWithException()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException",
                 "(Ljava/lang/Throwable;)V");
         ExceptionHook hook = ExceptionHook.builder()
@@ -513,9 +539,9 @@ class HookTests {
     }
 
     @Test
-    void exceptionHookWithMethodName() {
-        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException",
-                "(Ljava/lang/String;)V");
+    void exceptionHookWithMethodName()
+    {
+        HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException", "(Ljava/lang/String;)V");
         ExceptionHook hook = ExceptionHook.builder()
                 .hookDescriptor(descriptor)
                 .passMethodName(true)
@@ -525,7 +551,8 @@ class HookTests {
     }
 
     @Test
-    void exceptionHookCanSuppress() {
+    void exceptionHookCanSuppress()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onException",
                 "(Ljava/lang/Throwable;)Z");
         ExceptionHook hook = ExceptionHook.builder()
@@ -537,10 +564,11 @@ class HookTests {
         assertTrue(hook.isCanSuppress());
     }
 
-    // ========== General Hook Interface Tests ==========
+    // General Hook Interface Tests
 
     @Test
-    void hookCanBeDisabled() {
+    void hookCanBeDisabled()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
@@ -551,7 +579,8 @@ class HookTests {
     }
 
     @Test
-    void hookPriorityDefaultsTo100() {
+    void hookPriorityDefaultsTo100()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
@@ -561,7 +590,8 @@ class HookTests {
     }
 
     @Test
-    void hookDescriptorIsAccessible() {
+    void hookDescriptorIsAccessible()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         MethodEntryHook hook = MethodEntryHook.builder()
                 .hookDescriptor(descriptor)
@@ -574,7 +604,8 @@ class HookTests {
     }
 
     @Test
-    void multipleFiltersCanBeApplied() {
+    void multipleFiltersCanBeApplied()
+    {
         HookDescriptor descriptor = HookDescriptor.staticHook("com/test/Hooks", "onEntry", "()V");
         List<InstrumentationFilter> filters = List.of(
                 ClassFilter.exact("com/test/Target"),

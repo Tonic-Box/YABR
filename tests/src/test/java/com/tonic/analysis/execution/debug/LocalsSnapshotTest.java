@@ -1,17 +1,18 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.state.ConcreteLocals;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LocalsSnapshotTest {
+class LocalsSnapshotTest
+{
 
     @Test
-    void testConstructionFromConcreteLocals() {
+    void testConstructionFromConcreteLocals()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setInt(0, 42);
         locals.setLong(1, 100L);
@@ -22,7 +23,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testSizeReflectsDefinedSlots() {
+    void testSizeReflectsDefinedSlots()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 1);
         locals.setInt(2, 2);
@@ -33,7 +35,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testGetSpecificSlot() {
+    void testGetSpecificSlot()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setInt(0, 42);
         locals.setInt(2, 100);
@@ -51,7 +54,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testUndefinedSlotsNotIncluded() {
+    void testUndefinedSlotsNotIncluded()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setInt(0, 42);
 
@@ -63,7 +67,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testGetValuesReturnsMap() {
+    void testGetValuesReturnsMap()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setInt(0, 42);
         locals.setInt(2, 100);
@@ -78,7 +83,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testEmptyLocals() {
+    void testEmptyLocals()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         LocalsSnapshot snapshot = new LocalsSnapshot(locals);
 
@@ -87,12 +93,14 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testNullLocalsThrows() {
+    void testNullLocalsThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new LocalsSnapshot(null));
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ConcreteLocals locals = new ConcreteLocals(3);
         locals.setInt(0, 42);
 
@@ -104,7 +112,8 @@ class LocalsSnapshotTest {
     }
 
     @Test
-    void testWideValue() {
+    void testWideValue()
+    {
         ConcreteLocals locals = new ConcreteLocals(5);
         locals.setLong(0, 123456789L);
 

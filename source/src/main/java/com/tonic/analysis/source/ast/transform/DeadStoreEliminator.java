@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.ast.transform;
 
+import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.Locations;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
@@ -9,33 +10,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Eliminates dead stores where a variable's initial value is never read.
- *
- * Pattern detected:
- *   int x = 0;      // declaration with initializer
- *   x = something;  // immediate reassignment (no read of x between)
- *
- * Transformed to:
- *   int x = something;  // merge into single declaration
- *
- * This improves decompile clarity by removing redundant initializations
- * that come from SSA phi node lowering.
  */
-public class DeadStoreEliminator implements ASTTransform {
+public class DeadStoreEliminator implements ASTTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "DeadStoreEliminator";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         boolean changed = false;
         boolean madeProgress;
 
         // Iterate until fixed point
-        do {
+        do
+        {
             madeProgress = false;
-            if (eliminateDeadStores(block.getStatements())) {
+            if (eliminateDeadStores(block.getStatements()))
+            {
                 madeProgress = true;
                 changed = true;
             }
@@ -48,31 +44,41 @@ public class DeadStoreEliminator implements ASTTransform {
      * Looks for patterns where a VarDeclStmt is immediately followed by
      * an assignment to the same variable, with no intervening reads.
      */
-    private boolean eliminateDeadStores(List<Statement> stmts) {
+    private boolean eliminateDeadStores(List<Statement> stmts)
+    {
         boolean changed = false;
 
-        for (int i = 0; i < stmts.size() - 1; i++) {
+        for (int i = 0; i < stmts.size() - 1; i++)
+        {
             Statement stmt = stmts.get(i);
 
-            if (stmt instanceof VarDeclStmt) {
+            if (stmt instanceof VarDeclStmt)
+            {
                 VarDeclStmt decl = (VarDeclStmt) stmt;
                 String varName = decl.getName();
                 Expression init = decl.getInitializer();
 
-                if (init != null && !hasSideEffects(init)) {
+                if (init != null && !hasSideEffects(init))
+                {
                     int reassignIndex = findImmediateReassignment(stmts, i + 1, varName);
-                    if (reassignIndex != -1) {
+                    if (reassignIndex != -1)
+                    {
                         // Found pattern: int x = val; ... x = newVal;
                         // where x is not read between declaration and reassignment
                         ExprStmt assignStmt = (ExprStmt) stmts.get(reassignIndex);
                         BinaryExpr assign = (BinaryExpr) assignStmt.getExpression();
                         Expression newValue = assign.getRight();
 
-                        VarDeclStmt newDecl = new VarDeclStmt(
-                            decl.getType(),
-                            varName,
-                            newValue
-                        );
+                        // The merge MOVES newValue's evaluation above the intervening statements. It
+                        // is unsound if any of them declares or writes a name newValue reads (the
+                        // read would see the wrong value - or no declaration at all), or can touch
+                        // heap state newValue depends on.
+                        if (!safeToHoistOver(stmts, i + 1, reassignIndex, newValue))
+                        {
+                            continue;
+                        }
+
+                        VarDeclStmt newDecl = new VarDeclStmt(decl.getType(), varName, newValue);
 
                         Locations.copy(decl, newDecl);
                         stmts.set(i, newDecl);
@@ -82,80 +88,121 @@ public class DeadStoreEliminator implements ASTTransform {
                 }
             }
 
-            if (stmt instanceof BlockStmt) {
-                if (eliminateDeadStores(((BlockStmt) stmt).getStatements())) {
+            if (stmt instanceof BlockStmt)
+            {
+                if (eliminateDeadStores(((BlockStmt) stmt).getStatements()))
+                {
                     changed = true;
                 }
-            } else if (stmt instanceof IfStmt) {
+            }
+            else if (stmt instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) stmt;
-                if (ifStmt.getThenBranch() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) ifStmt.getThenBranch()).getStatements())) {
+                if (ifStmt.getThenBranch() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) ifStmt.getThenBranch()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-                if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) ifStmt.getElseBranch()).getStatements())) {
+                if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) ifStmt.getElseBranch()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof WhileStmt) {
+            }
+            else if (stmt instanceof WhileStmt)
+            {
                 WhileStmt whileStmt = (WhileStmt) stmt;
-                if (whileStmt.getBody() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) whileStmt.getBody()).getStatements())) {
+                if (whileStmt.getBody() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) whileStmt.getBody()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof DoWhileStmt) {
+            }
+            else if (stmt instanceof DoWhileStmt)
+            {
                 DoWhileStmt doWhile = (DoWhileStmt) stmt;
-                if (doWhile.getBody() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) doWhile.getBody()).getStatements())) {
+                if (doWhile.getBody() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) doWhile.getBody()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof ForStmt) {
+            }
+            else if (stmt instanceof ForStmt)
+            {
                 ForStmt forStmt = (ForStmt) stmt;
-                if (forStmt.getBody() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) forStmt.getBody()).getStatements())) {
+                if (forStmt.getBody() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) forStmt.getBody()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof ForEachStmt) {
+            }
+            else if (stmt instanceof ForEachStmt)
+            {
                 ForEachStmt forEach = (ForEachStmt) stmt;
-                if (forEach.getBody() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) forEach.getBody()).getStatements())) {
+                if (forEach.getBody() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) forEach.getBody()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof TryCatchStmt) {
+            }
+            else if (stmt instanceof TryCatchStmt)
+            {
                 TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-                if (tryCatch.getTryBlock() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) tryCatch.getTryBlock()).getStatements())) {
+                if (tryCatch.getTryBlock() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) tryCatch.getTryBlock()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-                for (CatchClause catchClause : tryCatch.getCatches()) {
-                    if (catchClause.body() instanceof BlockStmt) {
-                        if (eliminateDeadStores(((BlockStmt) catchClause.body()).getStatements())) {
+                for (CatchClause catchClause : tryCatch.getCatches())
+                {
+                    if (catchClause.body() instanceof BlockStmt)
+                    {
+                        if (eliminateDeadStores(((BlockStmt) catchClause.body()).getStatements()))
+                        {
                             changed = true;
                         }
                     }
                 }
-                if (tryCatch.getFinallyBlock() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) tryCatch.getFinallyBlock()).getStatements())) {
+                if (tryCatch.getFinallyBlock() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) tryCatch.getFinallyBlock()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof SynchronizedStmt) {
+            }
+            else if (stmt instanceof SynchronizedStmt)
+            {
                 SynchronizedStmt syncStmt = (SynchronizedStmt) stmt;
-                if (syncStmt.getBody() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) syncStmt.getBody()).getStatements())) {
+                if (syncStmt.getBody() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) syncStmt.getBody()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
-            } else if (stmt instanceof LabeledStmt) {
+            }
+            else if (stmt instanceof LabeledStmt)
+            {
                 LabeledStmt labeled = (LabeledStmt) stmt;
-                if (labeled.getStatement() instanceof BlockStmt) {
-                    if (eliminateDeadStores(((BlockStmt) labeled.getStatement()).getStatements())) {
+                if (labeled.getStatement() instanceof BlockStmt)
+                {
+                    if (eliminateDeadStores(((BlockStmt) labeled.getStatement()).getStatements()))
+                    {
                         changed = true;
                     }
                 }
@@ -166,25 +213,137 @@ public class DeadStoreEliminator implements ASTTransform {
     }
 
     /**
-     * Finds an immediate reassignment to the given variable.
-     * Returns the index of the assignment statement, or -1 if not found.
-     *
-     * "Immediate" means no intervening reads of the variable.
+     * Whether {@code newValue} may be evaluated before statements {@code [from, to)}.
      */
-    private int findImmediateReassignment(List<Statement> stmts, int startIndex, String varName) {
-        for (int i = startIndex; i < stmts.size(); i++) {
+    private boolean safeToHoistOver(List<Statement> stmts, int from, int to, Expression newValue)
+    {
+        java.util.Set<String> reads = new java.util.HashSet<>();
+        collectVarReads(newValue, reads);
+        boolean readsHeap = readsHeap(newValue);
+        for (int j = from; j < to; j++)
+        {
+            Statement s = stmts.get(j);
+            if (s instanceof VarDeclStmt && reads.contains(((VarDeclStmt) s).getName()))
+            {
+                return false;
+            }
+            if (writesAnyOf(s, reads))
+            {
+                return false;
+            }
+            if (readsHeap && stmtHasSideEffects(s))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void collectVarReads(Expression expr, java.util.Set<String> out)
+    {
+        if (expr == null)
+        {
+            return;
+        }
+        if (expr instanceof VarRefExpr)
+        {
+            out.add(((VarRefExpr) expr).getName());
+        }
+        for (ASTNode child : expr.getChildren())
+        {
+            if (child instanceof Expression)
+            {
+                collectVarReads((Expression) child, out);
+            }
+        }
+    }
+
+    private boolean readsHeap(Expression expr)
+    {
+        if (expr == null)
+        {
+            return false;
+        }
+        if (expr instanceof FieldAccessExpr || expr instanceof ArrayAccessExpr
+                || expr instanceof MethodCallExpr || expr instanceof NewExpr)
+        {
+            return true;
+        }
+        for (ASTNode child : expr.getChildren())
+        {
+            if (child instanceof Expression && readsHeap((Expression) child))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean writesAnyOf(Statement s, java.util.Set<String> names)
+    {
+        if (s instanceof VarDeclStmt)
+        {
+            return false;
+        }
+        if (!(s instanceof ExprStmt))
+        {
+            return false;
+        }
+        Expression e = ((ExprStmt) s).getExpression();
+        if (e instanceof BinaryExpr && ((BinaryExpr) e).getOperator().isAssignment()
+                && ((BinaryExpr) e).getLeft() instanceof VarRefExpr)
+        {
+            return names.contains(((VarRefExpr) ((BinaryExpr) e).getLeft()).getName());
+        }
+        if (e instanceof UnaryExpr)
+        {
+            UnaryOperator op = ((UnaryExpr) e).getOperator();
+            if ((op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC
+                    || op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+                    && ((UnaryExpr) e).getOperand() instanceof VarRefExpr)
+            {
+                return names.contains(((VarRefExpr) ((UnaryExpr) e).getOperand()).getName());
+            }
+        }
+        return false;
+    }
+
+    private boolean stmtHasSideEffects(Statement s)
+    {
+        if (s instanceof VarDeclStmt)
+        {
+            Expression init = ((VarDeclStmt) s).getInitializer();
+            return init != null && hasSideEffects(init);
+        }
+        if (s instanceof ExprStmt)
+        {
+            return hasSideEffects(((ExprStmt) s).getExpression());
+        }
+        return true;
+    }
+
+    private int findImmediateReassignment(List<Statement> stmts, int startIndex, String varName)
+    {
+        for (int i = startIndex; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
 
             // Check if this is an assignment to our variable
-            if (stmt instanceof ExprStmt) {
+            if (stmt instanceof ExprStmt)
+            {
                 Expression expr = ((ExprStmt) stmt).getExpression();
-                if (expr instanceof BinaryExpr) {
+                if (expr instanceof BinaryExpr)
+                {
                     BinaryExpr binary = (BinaryExpr) expr;
-                    if (binary.getOperator() == BinaryOperator.ASSIGN) {
-                        if (binary.getLeft() instanceof VarRefExpr) {
+                    if (binary.getOperator() == BinaryOperator.ASSIGN)
+                    {
+                        if (binary.getLeft() instanceof VarRefExpr)
+                        {
                             String assignTarget = ((VarRefExpr) binary.getLeft()).getName();
-                            if (assignTarget.equals(varName)) {
-                                if (!readsVariable(binary.getRight(), varName)) {
+                            if (assignTarget.equals(varName))
+                            {
+                                if (!readsVariable(binary.getRight(), varName))
+                                {
                                     return i;
                                 }
                                 // RHS reads the variable, so initial value is used
@@ -195,7 +354,8 @@ public class DeadStoreEliminator implements ASTTransform {
                 }
             }
 
-            if (readsVariable(stmt, varName)) {
+            if (readsVariable(stmt, varName))
+            {
                 return -1;
             }
 
@@ -205,7 +365,8 @@ public class DeadStoreEliminator implements ASTTransform {
                 stmt instanceof ForEachStmt || stmt instanceof SwitchStmt ||
                 stmt instanceof TryCatchStmt || stmt instanceof ReturnStmt ||
                 stmt instanceof ThrowStmt || stmt instanceof BreakStmt ||
-                stmt instanceof ContinueStmt) {
+                stmt instanceof ContinueStmt)
+                {
                 return -1;
             }
         }
@@ -216,18 +377,26 @@ public class DeadStoreEliminator implements ASTTransform {
     /**
      * Checks if a statement reads the given variable.
      */
-    private boolean readsVariable(Statement stmt, String varName) {
-        if (stmt instanceof VarDeclStmt) {
+    private boolean readsVariable(Statement stmt, String varName)
+    {
+        if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt decl = (VarDeclStmt) stmt;
-            if (decl.getInitializer() != null) {
+            if (decl.getInitializer() != null)
+            {
                 return readsVariable(decl.getInitializer(), varName);
             }
             return false;
-        } else if (stmt instanceof ExprStmt) {
+        }
+        else if (stmt instanceof ExprStmt)
+        {
             return readsVariable(((ExprStmt) stmt).getExpression(), varName);
-        } else if (stmt instanceof ReturnStmt) {
+        }
+        else if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt ret = (ReturnStmt) stmt;
-            if (ret.getValue() != null) {
+            if (ret.getValue() != null)
+            {
                 return readsVariable(ret.getValue(), varName);
             }
             return false;
@@ -239,7 +408,8 @@ public class DeadStoreEliminator implements ASTTransform {
     /**
      * Checks if an expression reads the given variable.
      */
-    private boolean readsVariable(Expression expr, String varName) {
+    private boolean readsVariable(Expression expr, String varName)
+    {
         AtomicBoolean found = new AtomicBoolean(false);
         expr.accept(new VariableReadChecker(varName, found));
         return found.get();
@@ -247,31 +417,36 @@ public class DeadStoreEliminator implements ASTTransform {
 
     /**
      * Visitor that checks if a specific variable is read in an expression.
-     * Handles the special case where assignment LHS is a write, not a read.
      */
-    private static class VariableReadChecker extends AbstractSourceVisitor<Void> {
+    private static class VariableReadChecker extends AbstractSourceVisitor<Void>
+    {
         private final String varName;
         private final AtomicBoolean found;
 
-        VariableReadChecker(String varName, AtomicBoolean found) {
+        VariableReadChecker(String varName, AtomicBoolean found)
+        {
             this.varName = varName;
             this.found = found;
         }
 
         @Override
-        public Void visitVarRef(VarRefExpr expr) {
-            if (expr.getName().equals(varName)) {
+        public Void visitVarRef(VarRefExpr expr)
+        {
+            if (expr.getName().equals(varName))
+            {
                 found.set(true);
             }
             return null;
         }
 
         @Override
-        public Void visitBinary(BinaryExpr expr) {
+        public Void visitBinary(BinaryExpr expr)
+        {
             if (found.get()) return null;  // Short-circuit if already found
 
             // For simple assignment, LHS is a write not a read
-            if (expr.getOperator() == BinaryOperator.ASSIGN && expr.getLeft() instanceof VarRefExpr) {
+            if (expr.getOperator() == BinaryOperator.ASSIGN && expr.getLeft() instanceof VarRefExpr)
+            {
                 expr.getRight().accept(this);
                 return null;
             }
@@ -282,7 +457,8 @@ public class DeadStoreEliminator implements ASTTransform {
     /**
      * Determines if an expression has side effects that must be preserved.
      */
-    private boolean hasSideEffects(Expression expr) {
+    private boolean hasSideEffects(Expression expr)
+    {
         return expr.accept(SideEffectDetector.INSTANCE);
     }
 

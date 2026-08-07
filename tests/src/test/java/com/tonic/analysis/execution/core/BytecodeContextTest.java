@@ -7,10 +7,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-class BytecodeContextTest {
+class BytecodeContextTest
+{
 
     @Test
-    void testBuilderDefaults() {
+    void testBuilderDefaults()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -28,7 +30,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderSetMode() {
+    void testBuilderSetMode()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -42,7 +45,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderSetMaxCallDepth() {
+    void testBuilderSetMaxCallDepth()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -56,7 +60,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderSetMaxInstructions() {
+    void testBuilderSetMaxInstructions()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -70,7 +75,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderSetTrackStatistics() {
+    void testBuilderSetTrackStatistics()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -84,7 +90,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderAllOptions() {
+    void testBuilderAllOptions()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -106,64 +113,58 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderRequiresHeapManager() {
+    void testBuilderRequiresHeapManager()
+    {
         ClassResolver resolver = mock(ClassResolver.class);
 
-        assertThrows(IllegalStateException.class, () -> {
-            new BytecodeContext.Builder()
-                .classResolver(resolver)
-                .build();
-        });
+        assertThrows(IllegalStateException.class, () -> new BytecodeContext.Builder()
+            .classResolver(resolver)
+            .build());
     }
 
     @Test
-    void testBuilderRequiresClassResolver() {
+    void testBuilderRequiresClassResolver()
+    {
         HeapManager heap = mock(HeapManager.class);
 
-        assertThrows(IllegalStateException.class, () -> {
-            new BytecodeContext.Builder()
-                .heapManager(heap)
-                .build();
-        });
+        assertThrows(IllegalStateException.class, () -> new BytecodeContext.Builder()
+            .heapManager(heap)
+            .build());
     }
 
     @Test
-    void testBuilderRejectsNullMode() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().mode(null);
-        });
+    void testBuilderRejectsNullMode()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().mode(null));
     }
 
     @Test
-    void testBuilderRejectsNegativeMaxCallDepth() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxCallDepth(-1);
-        });
+    void testBuilderRejectsNegativeMaxCallDepth()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxCallDepth(-1));
     }
 
     @Test
-    void testBuilderRejectsZeroMaxCallDepth() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxCallDepth(0);
-        });
+    void testBuilderRejectsZeroMaxCallDepth()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxCallDepth(0));
     }
 
     @Test
-    void testBuilderRejectsNegativeMaxInstructions() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxInstructions(-1);
-        });
+    void testBuilderRejectsNegativeMaxInstructions()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxInstructions(-1));
     }
 
     @Test
-    void testBuilderRejectsZeroMaxInstructions() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxInstructions(0);
-        });
+    void testBuilderRejectsZeroMaxInstructions()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxInstructions(0));
     }
 
     @Test
-    void testBuilderChaining() {
+    void testBuilderChaining()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -177,7 +178,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testContextIsImmutable() {
+    void testContextIsImmutable()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -192,7 +194,8 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testMultipleBuildsSameBuilder() {
+    void testMultipleBuildsSameBuilder()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 
@@ -208,19 +211,26 @@ class BytecodeContextTest {
     }
 
     @Test
-    void testBuilderAcceptsNullHeapManagerBeforeBuild() {
+    void testBuilderAcceptsNullHeapManagerBeforeBuild()
+    {
         BytecodeContext.Builder builder = new BytecodeContext.Builder();
-        builder.heapManager(null);
+
+        assertDoesNotThrow(() -> builder.heapManager(null),
+            "the builder must defer null rejection to build(), not reject on the setter");
     }
 
     @Test
-    void testBuilderAcceptsNullClassResolverBeforeBuild() {
+    void testBuilderAcceptsNullClassResolverBeforeBuild()
+    {
         BytecodeContext.Builder builder = new BytecodeContext.Builder();
-        builder.classResolver(null);
+
+        assertDoesNotThrow(() -> builder.classResolver(null),
+            "the builder must defer null rejection to build(), not reject on the setter");
     }
 
     @Test
-    void testMinimalValidContext() {
+    void testMinimalValidContext()
+    {
         HeapManager heap = mock(HeapManager.class);
         ClassResolver resolver = mock(ClassResolver.class);
 

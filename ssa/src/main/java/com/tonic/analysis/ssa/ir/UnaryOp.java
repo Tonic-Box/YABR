@@ -3,37 +3,70 @@ package com.tonic.analysis.ssa.ir;
 /**
  * Unary operation types.
  */
-public enum UnaryOp {
-    /** Numeric negation. */
+public enum UnaryOp
+{
+    /**
+     * Numeric negation.
+     */
     NEG,
-    /** Convert int to long. */
+    /**
+     * Convert int to long.
+     */
     I2L,
-    /** Convert int to float. */
+    /**
+     * Convert int to float.
+     */
     I2F,
-    /** Convert int to double. */
+    /**
+     * Convert int to double.
+     */
     I2D,
-    /** Convert long to int. */
+    /**
+     * Convert long to int.
+     */
     L2I,
-    /** Convert long to float. */
+    /**
+     * Convert long to float.
+     */
     L2F,
-    /** Convert long to double. */
+    /**
+     * Convert long to double.
+     */
     L2D,
-    /** Convert float to int. */
+    /**
+     * Convert float to int.
+     */
     F2I,
-    /** Convert float to long. */
+    /**
+     * Convert float to long.
+     */
     F2L,
-    /** Convert float to double. */
+    /**
+     * Convert float to double.
+     */
     F2D,
-    /** Convert double to int. */
+    /**
+     * Convert double to int.
+     */
     D2I,
-    /** Convert double to long. */
+    /**
+     * Convert double to long.
+     */
     D2L,
-    /** Convert double to float. */
+    /**
+     * Convert double to float.
+     */
     D2F,
-    /** Convert int to byte. */
+    /**
+     * Convert int to byte.
+     */
     I2B,
-    /** Convert int to char. */
+    /**
+     * Convert int to char.
+     */
     I2C,
-    /** Convert int to short. */
+    /**
+     * Convert int to short.
+     */
     I2S
 }

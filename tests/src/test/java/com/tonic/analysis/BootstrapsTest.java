@@ -18,24 +18,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * bootstrap families that the Java 11 test compiler cannot emit directly (switch/record) plus the
  * recipe formatter.
  */
-class BootstrapsTest {
+class BootstrapsTest
+{
 
-    private static ClassFile emptyClass() {
-        try {
+    private static ClassFile emptyClass()
+    {
+        try
+        {
             return TestUtils.emptyPool().createNewClass("BsmHost", new AccessBuilder().setPublic().build());
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new RuntimeException(e);
         }
     }
 
-    private static int addBootstrap(ClassFile cf, int refKind, String owner, String name, String desc, List<Integer> args) {
+    private static int addBootstrap(ClassFile cf, int refKind, String owner, String name, String desc, List<Integer> args)
+    {
         ConstPool cp = cf.getConstPool();
         int handle = cp.getIndexOf(cp.findOrAddMethodHandle(refKind, owner, name, desc));
         return cf.addBootstrapMethod(handle, args);
     }
 
     @Test
-    void resolvesSwitchBootstrap() {
+    void resolvesSwitchBootstrap()
+    {
         ClassFile cf = emptyClass();
         int idx = addBootstrap(cf, MethodHandle.H_INVOKESTATIC, "java/lang/runtime/SwitchBootstraps",
                 "typeSwitch",
@@ -50,7 +57,8 @@ class BootstrapsTest {
     }
 
     @Test
-    void resolvesRecordBootstrap() {
+    void resolvesRecordBootstrap()
+    {
         ClassFile cf = emptyClass();
         int idx = addBootstrap(cf, MethodHandle.H_INVOKESTATIC, "java/lang/runtime/ObjectMethods",
                 "bootstrap",
@@ -61,7 +69,8 @@ class BootstrapsTest {
     }
 
     @Test
-    void resolvesStringConcatAndReadsRecipe() {
+    void resolvesStringConcatAndReadsRecipe()
+    {
         ClassFile cf = emptyClass();
         ConstPool cp = cf.getConstPool();
         int recipeArg = cp.getIndexOf(cp.findOrAddString("abc"));
@@ -76,7 +85,8 @@ class BootstrapsTest {
     }
 
     @Test
-    void readableRecipeRendersMarkersAndEscapes() {
+    void readableRecipeRendersMarkersAndEscapes()
+    {
         String readable = Bootstraps.readableRecipe("ab");
         assertTrue(readable.contains("{arg}"), readable);
         assertTrue(readable.contains("{const}"), readable);
@@ -85,7 +95,8 @@ class BootstrapsTest {
     }
 
     @Test
-    void invalidIndexResolvesNull() {
+    void invalidIndexResolvesNull()
+    {
         assertNull(Bootstraps.resolve(emptyClass(), 0));
         assertNull(Bootstraps.resolve(emptyClass(), 99));
     }

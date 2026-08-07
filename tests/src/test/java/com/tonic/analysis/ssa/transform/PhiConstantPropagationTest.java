@@ -15,22 +15,26 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PhiConstantPropagation optimization transform.
  * Tests propagation of constants through phi nodes.
  */
-class PhiConstantPropagationTest {
+class PhiConstantPropagationTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void getName_ReturnsPhiConstantPropagation() {
+    void getName_ReturnsPhiConstantPropagation()
+    {
         PhiConstantPropagation pcp = new PhiConstantPropagation();
         assertEquals("PhiConstantPropagation", pcp.getName());
     }
 
     @Test
-    void run_WithEmptyMethod_ReturnsFalse() {
+    void run_WithEmptyMethod_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         PhiConstantPropagation pcp = new PhiConstantPropagation();
 
@@ -38,7 +42,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_PropagatesIdenticalConstants() {
+    void run_PropagatesIdenticalConstants()
+    {
         // Create phi with identical constants: phi(10, 10, 10) -> 10
         IRMethod method = new IRMethod("Test", "phiConstants", "()I", true);
 
@@ -53,7 +58,6 @@ class PhiConstantPropagationTest {
         method.addBlock(merge);
         method.setEntryBlock(entry);
 
-        // Setup control flow
         entry.addSuccessor(block1);
         entry.addSuccessor(block2);
         block1.addSuccessor(merge);
@@ -81,7 +85,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_PropagatesIdenticalSSAValues() {
+    void run_PropagatesIdenticalSSAValues()
+    {
         // Create phi with identical SSA values: phi(v1, v1) -> v1
         IRMethod method = new IRMethod("Test", "phiSSA", "(I)I", true);
 
@@ -125,7 +130,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_WithDifferentValues_ReturnsFalse() {
+    void run_WithDifferentValues_ReturnsFalse()
+    {
         // Create phi with different values: phi(5, 10) -> no optimization
         IRMethod method = new IRMethod("Test", "phiDifferent", "()I", true);
 
@@ -145,7 +151,6 @@ class PhiConstantPropagationTest {
         block1.addSuccessor(merge);
         block2.addSuccessor(merge);
 
-        // Create phi node with different constants
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(phiResult);
         phi.addIncoming(new IntConstant(5), block1);
@@ -163,7 +168,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_WithEmptyPhi_ReturnsFalse() {
+    void run_WithEmptyPhi_ReturnsFalse()
+    {
         // Create phi with no incoming values (edge case)
         IRMethod method = new IRMethod("Test", "emptyPhi", "()I", true);
 
@@ -184,7 +190,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_WithMultiplePhis_OptimizesAll() {
+    void run_WithMultiplePhis_OptimizesAll()
+    {
         // Create multiple phi nodes that can be optimized
         IRMethod method = new IRMethod("Test", "multiPhis", "()I", true);
 
@@ -204,14 +211,12 @@ class PhiConstantPropagationTest {
         block1.addSuccessor(merge);
         block2.addSuccessor(merge);
 
-        // Create first phi: phi(10, 10)
         SSAValue phi1Result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi1 = new PhiInstruction(phi1Result);
         phi1.addIncoming(new IntConstant(10), block1);
         phi1.addIncoming(new IntConstant(10), block2);
         merge.addPhi(phi1);
 
-        // Create second phi: phi(20, 20)
         SSAValue phi2Result = new SSAValue(PrimitiveType.INT, "v1");
         PhiInstruction phi2 = new PhiInstruction(phi2Result);
         phi2.addIncoming(new IntConstant(20), block1);
@@ -229,7 +234,8 @@ class PhiConstantPropagationTest {
     }
 
     @Test
-    void run_WithThreeWayPhi_PropagatesConstant() {
+    void run_WithThreeWayPhi_PropagatesConstant()
+    {
         // Create phi with three incoming edges, all same constant
         IRMethod method = new IRMethod("Test", "threeWayPhi", "()I", true);
 

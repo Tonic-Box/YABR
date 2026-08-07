@@ -14,10 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * per iteration, and running the else even when a && b is true). It must recover as one
  * `if (a && b) { then } else { elseBody }` with the tail emitted once.
  */
-public class AndConditionElseTailDecompileTest {
+public class AndConditionElseTailDecompileTest
+{
 
     @Test
-    public void compoundAndWithElseAndSharedTail() throws Exception {
+    public void compoundAndWithElseAndSharedTail() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("AndConditionElseTail");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");
@@ -30,10 +32,12 @@ public class AndConditionElseTailDecompileTest {
                 "the shared tail must be emitted exactly once, not duplicated:\n" + src);
     }
 
-    private int countOccurrences(String text, String pattern) {
+    private int countOccurrences(String text, String pattern)
+    {
         int count = 0;
         int index = 0;
-        while ((index = text.indexOf(pattern, index)) != -1) {
+        while ((index = text.indexOf(pattern, index)) != -1)
+        {
             count++;
             index += pattern.length();
         }

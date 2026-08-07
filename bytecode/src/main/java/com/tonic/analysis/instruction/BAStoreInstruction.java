@@ -8,40 +8,46 @@ import java.io.IOException;
 /**
  * Represents the BASTORE instruction (0x54).
  */
-public class BAStoreInstruction extends Instruction {
+public class BAStoreInstruction extends Instruction
+{
 
     /**
      * Constructs a BASToreInstruction.
-     *
      * @param opcode The opcode of the instruction.
      * @param offset The bytecode offset of the instruction.
      */
-    public BAStoreInstruction(int opcode, int offset) {
+    public BAStoreInstruction(int opcode, int offset)
+    {
         super(opcode, offset, 1);
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
     }
 
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         return -3;
     }
 
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "BASTORE";
     }
 }

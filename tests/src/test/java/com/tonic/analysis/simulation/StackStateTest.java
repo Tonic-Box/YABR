@@ -8,12 +8,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for StackState.
+ * * Tests for StackState.
  */
-class StackStateTest {
+class StackStateTest
+{
 
     @Test
-    void testEmptyStack() {
+    void testEmptyStack()
+    {
         StackState stack = StackState.empty();
         assertEquals(0, stack.depth());
         assertTrue(stack.isEmpty());
@@ -22,7 +24,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPush() {
+    void testPush()
+    {
         StackState stack = StackState.empty();
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
@@ -35,7 +38,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPop() {
+    void testPop()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -48,7 +52,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPopMultiple() {
+    void testPopMultiple()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
         SimValue v3 = SimValue.constant(3, PrimitiveType.INT, null);
@@ -61,7 +66,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPeekAtDepth() {
+    void testPeekAtDepth()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
         SimValue v3 = SimValue.constant(3, PrimitiveType.INT, null);
@@ -74,7 +80,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPushWide() {
+    void testPushWide()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
 
         StackState stack = StackState.empty().pushWide(value);
@@ -87,7 +94,8 @@ class StackStateTest {
     }
 
     @Test
-    void testPopWide() {
+    void testPopWide()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
 
         StackState stack = StackState.empty().pushWide(value);
@@ -97,7 +105,8 @@ class StackStateTest {
     }
 
     @Test
-    void testDup() {
+    void testDup()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         StackState stack = StackState.empty().push(value);
@@ -109,7 +118,8 @@ class StackStateTest {
     }
 
     @Test
-    void testSwap() {
+    void testSwap()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -121,7 +131,8 @@ class StackStateTest {
     }
 
     @Test
-    void testMaxDepth() {
+    void testMaxDepth()
+    {
         StackState stack = StackState.empty();
         stack = stack.push(SimValue.unknown(null));
         stack = stack.push(SimValue.unknown(null));
@@ -133,7 +144,8 @@ class StackStateTest {
     }
 
     @Test
-    void testClear() {
+    void testClear()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -144,7 +156,8 @@ class StackStateTest {
     }
 
     @Test
-    void testMerge() {
+    void testMerge()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 
@@ -159,7 +172,8 @@ class StackStateTest {
     }
 
     @Test
-    void testGetValues() {
+    void testGetValues()
+    {
         SimValue v1 = SimValue.constant(1, PrimitiveType.INT, null);
         SimValue v2 = SimValue.constant(2, PrimitiveType.INT, null);
 

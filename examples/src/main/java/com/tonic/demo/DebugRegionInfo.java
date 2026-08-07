@@ -15,9 +15,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugRegionInfo {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
+/**
+ * Debug demo showing the structural analyzer's region information for a hard-coded method.
+ */
+public class DebugRegionInfo
+{
+    /**
+     * Lifts the method named "an" to IR and prints its structural regions.
+     * @param args class file path
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 1)
+        {
             System.out.println("Usage: DebugRegionInfo <classfile>");
             return;
         }
@@ -25,8 +36,10 @@ public class DebugRegionInfo {
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(args[0]));
         ConstPool constPool = cf.getConstPool();
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals("an")) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals("an"))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -40,7 +53,8 @@ public class DebugRegionInfo {
                 postDom.compute();
 
                 System.out.println("\n=== Post-Dominators for Key Blocks ===");
-                for (IRBlock block : irMethod.getBlocks()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
                     IRBlock ipdom = postDom.getImmediatePostDominator(block);
                     System.out.println(block.getName() + " -> ipdom: " + (ipdom != null ? ipdom.getName() : "null"));
                 }
@@ -49,23 +63,31 @@ public class DebugRegionInfo {
                 analyzer.analyze();
 
                 System.out.println("\n=== Region Info for All Blocks ===");
-                for (IRBlock block : irMethod.getBlocks()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
                     RegionInfo info = analyzer.getRegionInfo(block);
                     System.out.println("\nBlock " + block.getName() + ":");
-                    if (info == null) {
+                    if (info == null)
+                    {
                         System.out.println("  RegionInfo: null");
-                    } else {
+                    }
+                    else
+                    {
                         System.out.println("  Type: " + info.getType());
-                        if (info.getMergeBlock() != null) {
+                        if (info.getMergeBlock() != null)
+                        {
                             System.out.println("  Merge: " + info.getMergeBlock().getName());
                         }
-                        if (info.getThenBlock() != null) {
+                        if (info.getThenBlock() != null)
+                        {
                             System.out.println("  ThenBlock: " + info.getThenBlock().getName());
                         }
-                        if (info.getElseBlock() != null) {
+                        if (info.getElseBlock() != null)
+                        {
                             System.out.println("  ElseBlock: " + info.getElseBlock().getName());
                         }
-                        if (info.getLoopExit() != null) {
+                        if (info.getLoopExit() != null)
+                        {
                             System.out.println("  LoopExit: " + info.getLoopExit().getName());
                         }
                     }

@@ -1,91 +1,106 @@
 package com.tonic.analysis.execution.dispatch;
 
-import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
 import com.tonic.analysis.instruction.*;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherPart5Test {
+class OpcodeDispatcherPart5Test
+{
 
     private OpcodeDispatcher dispatcher;
     private ConcreteStack stack;
     private ConcreteLocals locals;
     private StubDispatchContext context;
 
-    private static class SimpleInstruction extends Instruction {
-        public SimpleInstruction(int opcode, int offset, int length) {
+    private static class SimpleInstruction extends Instruction
+    {
+        public SimpleInstruction(int opcode, int offset, int length)
+        {
             super(opcode, offset, length);
         }
 
         @Override
-        public void accept(com.tonic.analysis.visitor.AbstractBytecodeVisitor visitor) {}
+        public void accept(AbstractBytecodeVisitor visitor) {}
 
         @Override
         public void write(java.io.DataOutputStream dos) {}
 
         @Override
-        public int getStackChange() {
+        public int getStackChange()
+        {
             return 0;
         }
 
         @Override
-        public int getLocalChange() {
+        public int getLocalChange()
+        {
             return 0;
         }
     }
 
-    private static class SimpleStackFrame {
+    private static class SimpleStackFrame
+    {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
-        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals) {
+        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals)
+        {
             this.stack = stack;
             this.locals = locals;
             this.pc = 0;
         }
 
-        public void setCurrentInstruction(Instruction instr) {
+        public void setCurrentInstruction(Instruction instr)
+        {
             this.currentInstruction = instr;
         }
 
-        public Instruction getCurrentInstruction() {
+        public Instruction getCurrentInstruction()
+        {
             return currentInstruction;
         }
 
-        public ConcreteStack getStack() {
+        public ConcreteStack getStack()
+        {
             return stack;
         }
 
-        public ConcreteLocals getLocals() {
+        public ConcreteLocals getLocals()
+        {
             return locals;
         }
 
-        public int getPC() {
+        public int getPC()
+        {
             return pc;
         }
 
-        public void advancePC(int delta) {
+        public void advancePC(int delta)
+        {
             pc += delta;
         }
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         dispatcher = new OpcodeDispatcher();
         stack = new ConcreteStack(100);
         locals = new ConcreteLocals(10);
         context = new StubDispatchContext();
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr) {
+    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr)
+    {
         SimpleStackFrame frame = new SimpleStackFrame(stack, locals);
         frame.setCurrentInstruction(instr);
 
@@ -93,8 +108,10 @@ class OpcodeDispatcherPart5Test {
         return dispatchByOpcode(opcode, instr, frame);
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame) {
-        switch (opcode) {
+    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame)
+    {
+        switch (opcode)
+        {
             case 0xAC:
                 stack.popInt();
                 frame.advancePC(instr.getLength());
@@ -171,70 +188,80 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testGetStatic() {
+    void testGetStatic()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB2, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.FIELD_GET, result);
     }
 
     @Test
-    void testPutStatic() {
+    void testPutStatic()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB3, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.FIELD_PUT, result);
     }
 
     @Test
-    void testGetField() {
+    void testGetField()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB4, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.FIELD_GET, result);
     }
 
     @Test
-    void testPutField() {
+    void testPutField()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB5, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.FIELD_PUT, result);
     }
 
     @Test
-    void testInvokeVirtual() {
+    void testInvokeVirtual()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB6, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE, result);
     }
 
     @Test
-    void testInvokeSpecial() {
+    void testInvokeSpecial()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB7, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE, result);
     }
 
     @Test
-    void testInvokeStatic() {
+    void testInvokeStatic()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB8, 0, 3);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE, result);
     }
 
     @Test
-    void testInvokeInterface() {
+    void testInvokeInterface()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB9, 0, 5);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE, result);
     }
 
     @Test
-    void testInvokeDynamic() {
+    void testInvokeDynamic()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xBA, 0, 5);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE_DYNAMIC, result);
     }
 
     @Test
-    void testIReturn() {
+    void testIReturn()
+    {
         stack.pushInt(42);
         SimpleInstruction instr = new SimpleInstruction(0xAC, 0, 1);
         int depthBefore = stack.depth();
@@ -244,7 +271,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testLReturn() {
+    void testLReturn()
+    {
         stack.pushLong(123456789L);
         SimpleInstruction instr = new SimpleInstruction(0xAD, 0, 1);
         int depthBefore = stack.depth();
@@ -254,7 +282,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testFReturn() {
+    void testFReturn()
+    {
         stack.pushFloat(3.14f);
         SimpleInstruction instr = new SimpleInstruction(0xAE, 0, 1);
         int depthBefore = stack.depth();
@@ -264,7 +293,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testDReturn() {
+    void testDReturn()
+    {
         stack.pushDouble(2.71828);
         SimpleInstruction instr = new SimpleInstruction(0xAF, 0, 1);
         int depthBefore = stack.depth();
@@ -274,7 +304,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testAReturn() {
+    void testAReturn()
+    {
         ObjectInstance obj = new ObjectInstance(1, "java/lang/Object");
         stack.pushReference(obj);
         SimpleInstruction instr = new SimpleInstruction(0xB0, 0, 1);
@@ -285,7 +316,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testReturn() {
+    void testReturn()
+    {
         SimpleInstruction instr = new SimpleInstruction(0xB1, 0, 1);
         int depthBefore = stack.depth();
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
@@ -294,7 +326,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testAThrow() {
+    void testAThrow()
+    {
         ObjectInstance exception = new ObjectInstance(1, "java/lang/Exception");
         stack.pushReference(exception);
         SimpleInstruction instr = new SimpleInstruction(0xBF, 0, 1);
@@ -305,7 +338,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testFieldAccessSequence() {
+    void testFieldAccessSequence()
+    {
         SimpleInstruction getStatic = new SimpleInstruction(0xB2, 0, 3);
         assertEquals(OpcodeDispatcher.DispatchResult.FIELD_GET, dispatchSimple(getStatic));
 
@@ -320,7 +354,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testInvokeSequence() {
+    void testInvokeSequence()
+    {
         SimpleInstruction invokeVirtual = new SimpleInstruction(0xB6, 0, 3);
         assertEquals(OpcodeDispatcher.DispatchResult.INVOKE, dispatchSimple(invokeVirtual));
 
@@ -338,7 +373,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testReturnSequence() {
+    void testReturnSequence()
+    {
         stack.pushInt(1);
         assertEquals(OpcodeDispatcher.DispatchResult.RETURN, dispatchSimple(new SimpleInstruction(0xAC, 0, 1)));
 
@@ -358,7 +394,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testReturnDoesNotPopStack() {
+    void testReturnDoesNotPopStack()
+    {
         stack.pushInt(100);
         stack.pushInt(200);
         SimpleInstruction instr = new SimpleInstruction(0xB1, 0, 1);
@@ -367,7 +404,8 @@ class OpcodeDispatcherPart5Test {
     }
 
     @Test
-    void testAThrowPopsException() {
+    void testAThrowPopsException()
+    {
         ObjectInstance ex1 = new ObjectInstance(1, "java/lang/RuntimeException");
         ObjectInstance ex2 = new ObjectInstance(2, "java/lang/Exception");
         stack.pushReference(ex1);

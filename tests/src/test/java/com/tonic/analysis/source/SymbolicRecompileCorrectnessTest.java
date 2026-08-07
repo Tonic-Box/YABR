@@ -29,7 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
  * (e.g. the accumulator coalesced with the loop counter) would change a result; identical results prove the
  * drift is cosmetic (naming), not a correctness bug.
  */
-class SymbolicRecompileCorrectnessTest {
+class SymbolicRecompileCorrectnessTest
+{
 
     private static final String DIR = "C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main";
     private static final int[][] INPUTS = {
@@ -41,9 +42,11 @@ class SymbolicRecompileCorrectnessTest {
     };
 
     @Test
-    void recompilePreservesSemantics() throws Exception {
+    void recompilePreservesSemantics() throws Exception
+    {
         Path p = Path.of(DIR, "osrs/dev/SymbolicExecutionTests.class");
-        if (!Files.exists(p)) {
+        if (!Files.exists(p))
+        {
             return;
         }
         byte[] origBytes = Files.readAllBytes(p);
@@ -53,7 +56,8 @@ class SymbolicRecompileCorrectnessTest {
         String[] methods = {"analyze", "safeAdd", "safeDivide", "min", "abs", "computeSum", "computeProduct",
             "computeCombined", "computeRecursive", "computeSymmetric", "transform", "triangular", "computeCell",
             "isPositive", "combineChecks", "classify"};
-        for (String only : methods) {
+        for (String only : methods)
+        {
             ClassPool pool = new ClassPool();
             ClassFile cf = pool.loadClass(new ByteArrayInputStream(origBytes));
             String owner = cf.getClassName();
@@ -76,17 +80,20 @@ class SymbolicRecompileCorrectnessTest {
         assertArrayEquals(original, afterD1, "recompile(d1) must preserve analyze() semantics");
     }
 
-    private static int[] run(byte[] bytes) throws Exception {
+    private static int[] run(byte[] bytes) throws Exception
+    {
         Class<?> c = define("osrs.dev.SymbolicExecutionTests", bytes);
         Method m = c.getMethod("analyze", int.class, int.class, int.class);
         int[] out = new int[INPUTS.length];
-        for (int i = 0; i < INPUTS.length; i++) {
+        for (int i = 0; i < INPUTS.length; i++)
+        {
             out[i] = (int) m.invoke(null, INPUTS[i][0], INPUTS[i][1], INPUTS[i][2]);
         }
         return out;
     }
 
-    private static Class<?> define(String name, byte[] bytes) throws Exception {
+    private static Class<?> define(String name, byte[] bytes) throws Exception
+    {
         Method def = ClassLoader.class.getDeclaredMethod(
             "defineClass", String.class, byte[].class, int.class, int.class);
         def.setAccessible(true);
@@ -94,9 +101,11 @@ class SymbolicRecompileCorrectnessTest {
     }
 
     private static void recompile(ClassFile cf, ClassPool pool, String source, String owner, String only)
-            throws Exception {
+            throws Exception
+            {
         CompilationUnit cu = JavaParser.create().parse(source);
-        if (!(cu.getPrimaryType() instanceof ClassDecl)) {
+        if (!(cu.getPrimaryType() instanceof ClassDecl))
+        {
             throw new IllegalStateException("recompile: source did not parse to a class");
         }
         ClassDecl decl = (ClassDecl) cu.getPrimaryType();
@@ -107,30 +116,38 @@ class SymbolicRecompileCorrectnessTest {
         lowerer.setCurrentClassDecl(decl);
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(cf.getConstPool());
-        for (MethodDecl md : decl.getMethods()) {
-            if (md.getBody() == null || (only != null && !md.getName().equals(only))) {
+        for (MethodDecl md : decl.getMethods())
+        {
+            if (md.getBody() == null || (only != null && !md.getName().equals(only)))
+            {
                 continue;
             }
             String d = desc(md.getParameters(), resolver.descriptorOf(md.getReturnType()), resolver);
             MethodEntry target = find(cf, md.getName(), d);
-            if (target != null) {
+            if (target != null)
+            {
                 ssa.lower(lowerer.lower(md, owner), target);
             }
         }
         cf.rebuild();
     }
 
-    private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver) {
+    private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver)
+    {
         StringBuilder d = new StringBuilder("(");
-        for (ParameterDecl pp : params) {
-            d.append(resolver.descriptorOf(pp.getType()));
+        for (ParameterDecl pp : params)
+        {
+            d.append(resolver.descriptorOf(pp));
         }
         return d.append(")").append(ret).toString();
     }
 
-    private static MethodEntry find(ClassFile cf, String name, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) {
+    private static MethodEntry find(ClassFile cf, String name, String desc)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name) && m.getDesc().contentEquals(desc))
+            {
                 return m;
             }
         }

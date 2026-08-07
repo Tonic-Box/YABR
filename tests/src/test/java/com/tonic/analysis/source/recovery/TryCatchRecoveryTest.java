@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
@@ -26,21 +25,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for StatementRecoverer.TryRegion exception handling recovery.
  * Tests cover basic try-catch, control flow, nested structures, and edge cases.
  */
-class TryCatchRecoveryTest {
+class TryCatchRecoveryTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Try-Catch Tests ==========
+    // Basic Try-Catch Tests
 
     @Nested
-    class BasicTryCatchTests {
+    class BasicTryCatchTests
+    {
 
         @Test
-        void simpleTryCatchWithSingleExceptionType() throws IOException {
+        void simpleTryCatchWithSingleExceptionType() throws IOException
+        {
             // try { return 1; } catch (Exception e) { return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -74,14 +77,14 @@ class TryCatchRecoveryTest {
             assertNotNull(body);
             assertFalse(body.getStatements().isEmpty());
 
-            // Should contain try-catch structure
             boolean hasTryCatch = body.getStatements().stream()
                 .anyMatch(s -> s instanceof TryCatchStmt);
             assertTrue(hasTryCatch, "Expected try-catch statement");
         }
 
         @Test
-        void tryCatchWithCatchAll() throws IOException {
+        void tryCatchWithCatchAll() throws IOException
+        {
             // try { return 1; } finally { /* cleanup */ }
             // Represented as catch-all handler
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
@@ -113,7 +116,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchWithMultipleCatchBlocks() throws IOException {
+        void tryCatchWithMultipleCatchBlocks() throws IOException
+        {
             // try { return 1; } catch (RuntimeException e) { return 2; } catch (Exception e) { return 3; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -153,14 +157,14 @@ class TryCatchRecoveryTest {
             assertNotNull(body);
             assertFalse(body.getStatements().isEmpty());
 
-            // Should contain try-catch with multiple handlers
             boolean hasTryCatch = body.getStatements().stream()
                 .anyMatch(s -> s instanceof TryCatchStmt);
             assertTrue(hasTryCatch, "Expected try-catch statement");
         }
 
         @Test
-        void tryCatchWithNoThrowInTryBlock() throws IOException {
+        void tryCatchWithNoThrowInTryBlock() throws IOException
+        {
             // try { int x = 1; return x; } catch (Exception e) { return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -198,13 +202,15 @@ class TryCatchRecoveryTest {
         }
     }
 
-    // ========== Control Flow Tests ==========
+    // Control Flow Tests
 
     @Nested
-    class ControlFlowTests {
+    class ControlFlowTests
+    {
 
         @Test
-        void tryCatchWithReturnInTryBlock() throws IOException {
+        void tryCatchWithReturnInTryBlock() throws IOException
+        {
             // try { return 42; } catch (Exception e) { return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -235,7 +241,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchWithReturnInCatchBlock() throws IOException {
+        void tryCatchWithReturnInCatchBlock() throws IOException
+        {
             // try { int x = 1; } catch (Exception e) { return -1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -271,7 +278,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchWithThrowInCatchBlock() throws IOException {
+        void tryCatchWithThrowInCatchBlock() throws IOException
+        {
             // try { return 1; } catch (Exception e) { throw e; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -302,7 +310,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchFinallyPattern() throws IOException {
+        void tryCatchFinallyPattern() throws IOException
+        {
             // try { return 1; } catch (Exception e) { return 2; } finally { /* cleanup */ }
             // Finally is represented as a catch-all handler
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
@@ -340,13 +349,15 @@ class TryCatchRecoveryTest {
         }
     }
 
-    // ========== Nested Structure Tests ==========
+    // Nested Structure Tests
 
     @Nested
-    class NestedStructureTests {
+    class NestedStructureTests
+    {
 
         @Test
-        void nestedTryCatchBlocks() throws IOException {
+        void nestedTryCatchBlocks() throws IOException
+        {
             // try { try { return 1; } catch (RuntimeException e) { return 2; } } catch (Exception e) { return 3; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -387,7 +398,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchInsideLoop() throws IOException {
+        void tryCatchInsideLoop() throws IOException
+        {
             // for (int i = 0; i < 3; i++) { try { continue; } catch (Exception e) { break; } }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()V");
@@ -431,7 +443,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void loopInsideTryBlock() throws IOException {
+        void loopInsideTryBlock() throws IOException
+        {
             // try { for (int i = 0; i < 3; i++) { } return 1; } catch (Exception e) { return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -473,7 +486,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryCatchInsideIfElse() throws IOException {
+        void tryCatchInsideIfElse() throws IOException
+        {
             // if (x > 0) { try { return 1; } catch (Exception e) { return 2; } } else { return 3; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "(I)I");
@@ -510,13 +524,15 @@ class TryCatchRecoveryTest {
         }
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void multipleExceptionHandlersForSameRange() throws IOException {
+        void multipleExceptionHandlersForSameRange() throws IOException
+        {
             // try { return 1; } catch (IOException e) { return 2; } catch (SQLException e) { return 3; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -558,7 +574,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void overlappingTryRegions() throws IOException {
+        void overlappingTryRegions() throws IOException
+        {
             // Complex case: overlapping try regions with different handlers
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -601,7 +618,8 @@ class TryCatchRecoveryTest {
         }
 
         @Test
-        void tryBlockThatAlwaysThrows() throws IOException {
+        void tryBlockThatAlwaysThrows() throws IOException
+        {
             // try { throw new Exception(); } catch (Exception e) { return 0; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryTest")
                 .publicStaticMethod("test", "()I");
@@ -633,10 +651,10 @@ class TryCatchRecoveryTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method) {
-        // Create analysis components
+    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method)
+    {
         DominatorTree domTree = new DominatorTree(ir);
         domTree.compute();
 
@@ -649,7 +667,6 @@ class TryCatchRecoveryTest {
         StructuralAnalyzer analyzer = new StructuralAnalyzer(ir, domTree, loopAnalysis);
         analyzer.analyze();
 
-        // Create recovery components
         RecoveryContext recoveryContext = new RecoveryContext(ir, method, defUse);
         ExpressionRecoverer exprRecoverer = new ExpressionRecoverer(recoveryContext);
         ControlFlowContext cfContext = new ControlFlowContext(ir, domTree, loopAnalysis, recoveryContext);
@@ -657,7 +674,8 @@ class TryCatchRecoveryTest {
         return new StatementRecoverer(cfContext, analyzer, exprRecoverer);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()

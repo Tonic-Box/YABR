@@ -8,28 +8,11 @@ import com.tonic.analysis.ssa.ir.*;
 import java.util.*;
 
 /**
- * Listener that tracks control flow during simulation.
- *
- * <p>Tracks:
- * <ul>
- *   <li>Block visit counts</li>
- *   <li>Branch counts</li>
- *   <li>Switch counts</li>
- *   <li>Return and throw counts</li>
- *   <li>Block transitions</li>
- * </ul>
- *
- * <p>Example usage:
- * <pre>
- * ControlFlowListener listener = new ControlFlowListener();
- * engine.addListener(listener);
- * engine.simulate(method);
- *
- * System.out.println("Blocks visited: " + listener.getBlocksVisited());
- * System.out.println("Branches taken: " + listener.getBranchCount());
- * </pre>
+ * A simulation listener that counts control flow instructions, block visits and block-to-block
+ * transitions, resetting its tallies at each simulation start.
  */
-public class ControlFlowListener extends AbstractListener {
+public class ControlFlowListener extends AbstractListener
+{
 
     private int branchCount;
     private int switchCount;
@@ -44,11 +27,20 @@ public class ControlFlowListener extends AbstractListener {
 
     private IRBlock currentBlock;
 
-    public ControlFlowListener() {
+    /**
+     * Creates a listener that records counts only, without the ordered block sequence.
+     */
+    public ControlFlowListener()
+    {
         this(false);
     }
 
-    public ControlFlowListener(boolean trackSequence) {
+    /**
+     * Creates a listener with optional recording of the ordered block sequence.
+     * @param trackSequence true to append every block entry to the sequence list
+     */
+    public ControlFlowListener(boolean trackSequence)
+    {
         this.trackSequence = trackSequence;
         this.blockVisitCounts = new HashMap<>();
         this.transitionCounts = new HashMap<>();
@@ -56,7 +48,8 @@ public class ControlFlowListener extends AbstractListener {
     }
 
     @Override
-    public void onSimulationStart(IRMethod method) {
+    public void onSimulationStart(IRMethod method)
+    {
         super.onSimulationStart(method);
         branchCount = 0;
         switchCount = 0;
@@ -70,15 +63,18 @@ public class ControlFlowListener extends AbstractListener {
     }
 
     @Override
-    public void onBlockEntry(IRBlock block, SimulationState state) {
-        if (currentBlock != null) {
+    public void onBlockEntry(IRBlock block, SimulationState state)
+    {
+        if (currentBlock != null)
+        {
             BlockTransition transition = new BlockTransition(currentBlock, block);
             transitionCounts.merge(transition, 1, Integer::sum);
         }
 
         blockVisitCounts.merge(block, 1, Integer::sum);
 
-        if (trackSequence) {
+        if (trackSequence)
+        {
             blockSequence.add(block);
         }
 
@@ -86,112 +82,133 @@ public class ControlFlowListener extends AbstractListener {
     }
 
     @Override
-    public void onBranch(BranchInstruction instr, boolean taken, SimulationState state) {
+    public void onBranch(BranchInstruction instr, boolean taken, SimulationState state)
+    {
         branchCount++;
     }
 
     @Override
-    public void onSwitch(SwitchInstruction instr, int targetIndex, SimulationState state) {
+    public void onSwitch(SwitchInstruction instr, int targetIndex, SimulationState state)
+    {
         switchCount++;
     }
 
     @Override
-    public void onBeforeInstruction(IRInstruction instr, SimulationState state) {
-        if (instr instanceof SimpleInstruction) {
+    public void onBeforeInstruction(IRInstruction instr, SimulationState state)
+    {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.GOTO) {
+            if (simple.getOp() == SimpleOp.GOTO)
+            {
                 gotoCount++;
             }
         }
     }
 
     @Override
-    public void onMethodReturn(ReturnInstruction instr, SimulationState state) {
+    public void onMethodReturn(ReturnInstruction instr, SimulationState state)
+    {
         returnCount++;
     }
 
     @Override
-    public void onException(SimpleInstruction instr, SimulationState state) {
+    public void onException(SimpleInstruction instr, SimulationState state)
+    {
         throwCount++;
     }
 
     /**
-     * Gets the number of branch instructions encountered.
+     * @return the number of conditional branches seen
      */
-    public int getBranchCount() {
+    public int getBranchCount()
+    {
         return branchCount;
     }
 
     /**
-     * Gets the number of switch instructions encountered.
+     * @return the number of switches seen
      */
-    public int getSwitchCount() {
+    public int getSwitchCount()
+    {
         return switchCount;
     }
 
     /**
-     * Gets the number of goto instructions encountered.
+     * @return the number of gotos seen
      */
-    public int getGotoCount() {
+    public int getGotoCount()
+    {
         return gotoCount;
     }
 
     /**
-     * Gets the number of return instructions encountered.
+     * @return the number of returns seen
      */
-    public int getReturnCount() {
+    public int getReturnCount()
+    {
         return returnCount;
     }
 
     /**
-     * Gets the number of throw instructions encountered.
+     * @return the number of throws seen
      */
-    public int getThrowCount() {
+    public int getThrowCount()
+    {
         return throwCount;
     }
 
     /**
-     * Gets the total number of control flow instructions.
+     * @return the branch, switch, goto, return, and throw counts summed
      */
-    public int getTotalControlFlowInstructions() {
+    public int getTotalControlFlowInstructions()
+    {
         return branchCount + switchCount + gotoCount + returnCount + throwCount;
     }
 
     /**
-     * Gets the number of blocks visited.
+     * @return the number of distinct blocks entered
      */
-    public int getBlocksVisited() {
+    public int getBlocksVisited()
+    {
         return blockVisitCounts.size();
     }
 
     /**
-     * Gets the total number of block entries (including revisits).
+     * @return the total number of block entries, counting revisits
      */
-    public int getTotalBlockEntries() {
+    public int getTotalBlockEntries()
+    {
         return blockVisitCounts.values().stream().mapToInt(Integer::intValue).sum();
     }
 
     /**
-     * Gets the visit count for a specific block.
+     * @param block the block to query
+     * @return how often the block was entered, 0 if never
      */
-    public int getVisitCount(IRBlock block) {
+    public int getVisitCount(IRBlock block)
+    {
         return blockVisitCounts.getOrDefault(block, 0);
     }
 
     /**
-     * Gets all block visit counts.
+     * @return an unmodifiable view of the entry count per block
      */
-    public Map<IRBlock, Integer> getBlockVisitCounts() {
+    public Map<IRBlock, Integer> getBlockVisitCounts()
+    {
         return Collections.unmodifiableMap(blockVisitCounts);
     }
 
     /**
-     * Gets blocks that were visited multiple times (potential loops).
+     * @return the blocks entered more than once, which indicate loops
      */
-    public Set<IRBlock> getRevisitedBlocks() {
+    public Set<IRBlock> getRevisitedBlocks()
+    {
         Set<IRBlock> result = new HashSet<>();
-        for (Map.Entry<IRBlock, Integer> entry : blockVisitCounts.entrySet()) {
-            if (entry.getValue() > 1) {
+        for (Map.Entry<IRBlock, Integer> entry : blockVisitCounts.entrySet())
+        {
+            if (entry.getValue() > 1)
+            {
                 result.add(entry.getKey());
             }
         }
@@ -199,55 +216,71 @@ public class ControlFlowListener extends AbstractListener {
     }
 
     /**
-     * Gets all block transitions with counts.
+     * @return an unmodifiable view of how often each block-to-block transition was taken
      */
-    public Map<BlockTransition, Integer> getTransitionCounts() {
+    public Map<BlockTransition, Integer> getTransitionCounts()
+    {
         return Collections.unmodifiableMap(transitionCounts);
     }
 
     /**
-     * Gets the number of distinct transitions.
+     * @return the number of distinct block-to-block transitions taken
      */
-    public int getDistinctTransitions() {
+    public int getDistinctTransitions()
+    {
         return transitionCounts.size();
     }
 
     /**
-     * Gets the block sequence (if tracking enabled).
+     * @return an unmodifiable view of the blocks in entry order, empty unless sequence tracking is on
      */
-    public List<IRBlock> getBlockSequence() {
+    public List<IRBlock> getBlockSequence()
+    {
         return Collections.unmodifiableList(blockSequence);
     }
 
     /**
-     * Checks if a block was visited.
+     * @param block the block to test
+     * @return true if the block was entered at least once
      */
-    public boolean wasVisited(IRBlock block) {
+    public boolean wasVisited(IRBlock block)
+    {
         return blockVisitCounts.containsKey(block);
     }
 
     /**
      * Represents a transition between two blocks.
      */
-    public static class BlockTransition {
+    public static class BlockTransition
+    {
         private final IRBlock from;
         private final IRBlock to;
 
-        public BlockTransition(IRBlock from, IRBlock to) {
+        public BlockTransition(IRBlock from, IRBlock to)
+        {
             this.from = from;
             this.to = to;
         }
 
-        public IRBlock getFrom() {
+        /**
+         * @return the from
+         */
+        public IRBlock getFrom()
+        {
             return from;
         }
 
-        public IRBlock getTo() {
+        /**
+         * @return the to
+         */
+        public IRBlock getTo()
+        {
             return to;
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(Object o)
+        {
             if (this == o) return true;
             if (!(o instanceof BlockTransition)) return false;
             BlockTransition that = (BlockTransition) o;
@@ -255,18 +288,21 @@ public class ControlFlowListener extends AbstractListener {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(from, to);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return (from != null ? from.getId() : "?") + " -> " + (to != null ? to.getId() : "?");
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ControlFlowListener[branches=" + branchCount +
             ", switches=" + switchCount +
             ", gotos=" + gotoCount +

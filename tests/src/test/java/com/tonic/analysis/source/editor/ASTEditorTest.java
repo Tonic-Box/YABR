@@ -3,7 +3,6 @@ package com.tonic.analysis.source.editor;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
-import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.editor.handler.ArrayAccessHandler;
 import com.tonic.analysis.source.editor.matcher.ExprMatcher;
 import com.tonic.analysis.source.editor.matcher.StmtMatcher;
@@ -19,40 +18,43 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for ASTEditor.
  * Covers node insertion, deletion, replacement, tree traversal, and multiple edits.
  */
-class ASTEditorTest {
+class ASTEditorTest
+{
 
     private ASTFactory factory;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         factory = new ASTFactory();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void createEditorWithFullContext() {
+    void createEditorWithFullContext()
+    {
         BlockStmt body = factory.block();
         ASTEditor editor = new ASTEditor(body, "testMethod", "()V", "com/example/Test");
         assertNotNull(editor);
     }
 
     @Test
-    void createEditorWithMinimalContext() {
+    void createEditorWithMinimalContext()
+    {
         BlockStmt body = factory.block();
         ASTEditor editor = new ASTEditor(body);
         assertNotNull(editor);
     }
 
-    // ========== Node Insertion Tests ==========
+    // Node Insertion Tests
 
     @Test
-    void insertStatementBefore() {
-        // Create method body: return 42;
+    void insertStatementBefore()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(42));
         BlockStmt body = factory.block(returnStmt);
 
-        // Insert logging before return
         ASTEditor editor = new ASTEditor(body);
         editor.onReturn((ctx, ret) -> {
             Statement logStmt = factory.methodCall("log")
@@ -69,12 +71,12 @@ class ASTEditorTest {
     }
 
     @Test
-    void insertStatementAfter() {
+    void insertStatementAfter()
+    {
         // Create method body: int x = 5;
         VarDeclStmt varDecl = factory.varDecl("int", "x", factory.intLiteral(5));
         BlockStmt body = factory.block(varDecl);
 
-        // Insert statement after variable declaration
         ASTEditor editor = new ASTEditor(body);
         editor.onStmt(StmtMatcher.varDeclStmt(), (ctx, stmt) -> {
             Statement logStmt = factory.methodCall("println")
@@ -91,7 +93,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void insertMultipleStatementsBefore() {
+    void insertMultipleStatementsBefore()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(10));
         BlockStmt body = factory.block(returnStmt);
 
@@ -107,7 +110,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void insertMultipleStatementsAfter() {
+    void insertMultipleStatementsAfter()
+    {
         VarDeclStmt varDecl = factory.varDecl("int", "x", factory.intLiteral(5));
         BlockStmt body = factory.block(varDecl);
 
@@ -123,20 +127,20 @@ class ASTEditorTest {
         assertTrue(body.getStatements().get(0) instanceof VarDeclStmt);
     }
 
-    // ========== Node Deletion Tests ==========
+    // Node Deletion Tests
 
     @Test
-    void removeStatement() {
-        // Create body with 3 statements
+    void removeStatement()
+    {
         Statement stmt1 = factory.exprStmt(factory.intLiteral(1));
         Statement stmt2 = factory.exprStmt(factory.intLiteral(2));
         Statement stmt3 = factory.exprStmt(factory.intLiteral(3));
         BlockStmt body = factory.block(stmt1, stmt2, stmt3);
 
-        // Remove middle statement
         ASTEditor editor = new ASTEditor(body);
         editor.onStmt(StmtMatcher.any(), (ctx, stmt) -> {
-            if (stmt == stmt2) {
+            if (stmt == stmt2)
+            {
                 return Replacement.remove();
             }
             return Replacement.keep();
@@ -149,7 +153,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void removeAllReturns() {
+    void removeAllReturns()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(ret1, ret2);
@@ -162,7 +167,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void removeFirstStatement() {
+    void removeFirstStatement()
+    {
         Statement stmt1 = factory.exprStmt(factory.intLiteral(1));
         Statement stmt2 = factory.exprStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(stmt1, stmt2);
@@ -170,7 +176,8 @@ class ASTEditorTest {
         ASTEditor editor = new ASTEditor(body);
         boolean[] first = {true};
         editor.onStmt(StmtMatcher.any(), (ctx, stmt) -> {
-            if (first[0]) {
+            if (first[0])
+            {
                 first[0] = false;
                 return Replacement.remove();
             }
@@ -183,14 +190,16 @@ class ASTEditorTest {
     }
 
     @Test
-    void removeLastStatement() {
+    void removeLastStatement()
+    {
         Statement stmt1 = factory.exprStmt(factory.intLiteral(1));
         Statement stmt2 = factory.exprStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(stmt1, stmt2);
 
         ASTEditor editor = new ASTEditor(body);
         editor.onStmt(StmtMatcher.any(), (ctx, stmt) -> {
-            if (ctx.getStatementIndex() == 1) {
+            if (ctx.getStatementIndex() == 1)
+            {
                 return Replacement.remove();
             }
             return Replacement.keep();
@@ -201,11 +210,11 @@ class ASTEditorTest {
         assertSame(stmt1, body.getStatements().get(0));
     }
 
-    // ========== Node Replacement Tests ==========
+    // Node Replacement Tests
 
     @Test
-    void replaceExpression() {
-        // Create: System.out.println(value);
+    void replaceExpression()
+    {
         Expression value = factory.variable("value");
         ExprStmt stmt = factory.exprStmt(value);
         BlockStmt body = factory.block(stmt);
@@ -224,14 +233,13 @@ class ASTEditorTest {
     }
 
     @Test
-    void replaceStatement() {
+    void replaceStatement()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
         ASTEditor editor = new ASTEditor(body);
-        editor.onReturn((ctx, ret) -> {
-            return Replacement.with(factory.returnStmt(factory.intLiteral(10)));
-        });
+        editor.onReturn((ctx, ret) -> Replacement.with(factory.returnStmt(factory.intLiteral(10))));
         editor.apply();
 
         ReturnStmt newReturn = (ReturnStmt) body.getStatements().get(0);
@@ -240,7 +248,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void replaceStatementWithBlock() {
+    void replaceStatementWithBlock()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(42));
         BlockStmt body = factory.block(returnStmt);
 
@@ -258,7 +267,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void replaceMethodCall() {
+    void replaceMethodCall()
+    {
         MethodCallExpr oldCall = factory.methodCall("oldMethod")
             .on("com/example/Service")
             .build();
@@ -267,12 +277,9 @@ class ASTEditorTest {
 
         ASTEditor editor = new ASTEditor(body);
         editor.onMethodCall((ctx, call) -> {
-            if (call.getMethodName().equals("oldMethod")) {
-                return Replacement.with(
-                    factory.methodCall("newMethod")
-                        .on("com/example/Service")
-                        .build()
-                );
+            if (call.getMethodName().equals("oldMethod"))
+            {
+                return Replacement.with(factory.methodCall("newMethod") .on("com/example/Service") .build());
             }
             return Replacement.keep();
         });
@@ -282,10 +289,11 @@ class ASTEditorTest {
         assertEquals("newMethod", newCall.getMethodName());
     }
 
-    // ========== Tree Traversal Tests ==========
+    // Tree Traversal Tests
 
     @Test
-    void traverseNestedBlocks() {
+    void traverseNestedBlocks()
+    {
         // Create nested structure: if (true) { if (false) { return 1; } }
         ReturnStmt innerReturn = factory.returnStmt(factory.intLiteral(1));
         IfStmt innerIf = factory.ifStmt(factory.boolLiteral(false), factory.block(innerReturn));
@@ -305,7 +313,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void traverseIfStatementBranches() {
+    void traverseIfStatementBranches()
+    {
         ReturnStmt thenReturn = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt elseReturn = factory.returnStmt(factory.intLiteral(2));
         IfStmt ifStmt = factory.ifElseStmt(
@@ -327,7 +336,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void traverseLoopBodies() {
+    void traverseLoopBodies()
+    {
         // Create: while (true) { return 5; }
         ReturnStmt returnInLoop = factory.returnStmt(factory.intLiteral(5));
         WhileStmt whileStmt = new WhileStmt(factory.boolLiteral(true), factory.block(returnInLoop));
@@ -346,8 +356,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void traverseMethodCallArguments() {
-        // Create: print(compute(5))
+    void traverseMethodCallArguments()
+    {
         MethodCallExpr innerCall = factory.methodCall("compute")
             .on("com/example/Math")
             .withArgs(factory.intLiteral(5))
@@ -370,10 +380,11 @@ class ASTEditorTest {
         assertEquals(2, callCount[0]);
     }
 
-    // ========== Multiple Edits Tests ==========
+    // Multiple Edits Tests
 
     @Test
-    void applyMultipleHandlers() {
+    void applyMultipleHandlers()
+    {
         // Create body with method call and return
         MethodCallExpr call = factory.methodCall("test").on("com/example/Test").build();
         ExprStmt callStmt = factory.exprStmt(call);
@@ -399,7 +410,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void chainedReplacements() {
+    void chainedReplacements()
+    {
         // Test multiple handlers on same node type
         MethodCallExpr call = factory.methodCall("method").on("com/example/Test").build();
         ExprStmt stmt = factory.exprStmt(call);
@@ -407,15 +419,13 @@ class ASTEditorTest {
 
         ASTEditor editor = new ASTEditor(body);
 
-        // First handler: keep
         editor.onMethodCall((ctx, c) -> Replacement.keep());
 
         // Second handler: replace (should win)
         editor.onMethodCall((ctx, c) -> {
-            if (c.getMethodName().equals("method")) {
-                return Replacement.with(
-                    factory.methodCall("replaced").on("com/example/Test").build()
-                );
+            if (c.getMethodName().equals("method"))
+            {
+                return Replacement.with(factory.methodCall("replaced").on("com/example/Test").build());
             }
             return Replacement.keep();
         });
@@ -426,7 +436,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void multipleInsertions() {
+    void multipleInsertions()
+    {
         VarDeclStmt varDecl = factory.varDecl("int", "x", factory.intLiteral(5));
         BlockStmt body = factory.block(varDecl);
 
@@ -442,16 +453,16 @@ class ASTEditorTest {
 
         editor.apply();
 
-        // Should have: inserted before + original
         assertEquals(2, body.getStatements().size());
         assertTrue(body.getStatements().get(0) instanceof ExprStmt);
         assertTrue(body.getStatements().get(1) instanceof VarDeclStmt);
     }
 
-    // ========== Handler Registration Tests ==========
+    // Handler Registration Tests
 
     @Test
-    void onFieldAccessHandler() {
+    void onFieldAccessHandler()
+    {
         FieldAccessExpr fieldAccess = factory.fieldAccess(
             factory.variable("obj"),
             "field",
@@ -474,7 +485,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onNewExprHandler() {
+    void onNewExprHandler()
+    {
         NewExpr newExpr = factory.newExpr("java/lang/String");
         ExprStmt stmt = factory.exprStmt(newExpr);
         BlockStmt body = factory.block(stmt);
@@ -492,7 +504,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onCastHandler() {
+    void onCastHandler()
+    {
         CastExpr cast = factory.cast("java/lang/String", factory.variable("obj"));
         ExprStmt stmt = factory.exprStmt(cast);
         BlockStmt body = factory.block(stmt);
@@ -509,7 +522,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onInstanceOfHandler() {
+    void onInstanceOfHandler()
+    {
         InstanceOfExpr instanceOf = factory.instanceOf(factory.variable("obj"), "java/lang/String");
         ExprStmt stmt = factory.exprStmt(instanceOf);
         BlockStmt body = factory.block(stmt);
@@ -526,7 +540,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onBinaryExprHandler() {
+    void onBinaryExprHandler()
+    {
         BinaryExpr binary = factory.add(factory.intLiteral(1), factory.intLiteral(2), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(binary);
         BlockStmt body = factory.block(stmt);
@@ -544,7 +559,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onUnaryExprHandler() {
+    void onUnaryExprHandler()
+    {
         UnaryExpr unary = factory.not(factory.boolLiteral(true));
         ExprStmt stmt = factory.exprStmt(unary);
         BlockStmt body = factory.block(stmt);
@@ -562,7 +578,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onArrayAccessHandler() {
+    void onArrayAccessHandler()
+    {
         ArrayAccessExpr arrayAccess = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -584,8 +601,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onArrayReadHandler() {
-        // Create: x = arr[0] (read)
+    void onArrayReadHandler()
+    {
         ArrayAccessExpr arrayRead = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -614,8 +631,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onArrayStoreHandler() {
-        // Create: arr[0] = 5 (store)
+    void onArrayStoreHandler()
+    {
         ArrayAccessExpr arrayStore = factory.arrayAccess(
             factory.variable("arr"),
             factory.intLiteral(0),
@@ -644,7 +661,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onThrowHandler() {
+    void onThrowHandler()
+    {
         ThrowStmt throwStmt = factory.throwStmt(factory.variable("ex"));
         BlockStmt body = factory.block(throwStmt);
 
@@ -660,7 +678,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onIfHandler() {
+    void onIfHandler()
+    {
         IfStmt ifStmt = factory.ifStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(ifStmt);
 
@@ -676,7 +695,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onLoopHandler() {
+    void onLoopHandler()
+    {
         WhileStmt whileStmt = new WhileStmt(factory.boolLiteral(true), factory.block());
         BlockStmt body = factory.block(whileStmt);
 
@@ -692,12 +712,9 @@ class ASTEditorTest {
     }
 
     @Test
-    void onAssignmentHandler() {
-        BinaryExpr assignment = factory.assign(
-            factory.variable("x"),
-            factory.intLiteral(5),
-            PrimitiveSourceType.INT
-        );
+    void onAssignmentHandler()
+    {
+        BinaryExpr assignment = factory.assign(factory.variable("x"), factory.intLiteral(5), PrimitiveSourceType.INT);
         ExprStmt stmt = factory.exprStmt(assignment);
         BlockStmt body = factory.block(stmt);
 
@@ -713,10 +730,11 @@ class ASTEditorTest {
         assertEquals(1, count[0]);
     }
 
-    // ========== Matcher-based Handler Tests ==========
+    // Matcher-based Handler Tests
 
     @Test
-    void onExprWithMatcher() {
+    void onExprWithMatcher()
+    {
         MethodCallExpr call1 = factory.methodCall("method1").on("com/example/Test").build();
         MethodCallExpr call2 = factory.methodCall("method2").on("com/example/Test").build();
         BlockStmt body = factory.block(factory.exprStmt(call1), factory.exprStmt(call2));
@@ -733,7 +751,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void onStmtWithMatcher() {
+    void onStmtWithMatcher()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnVoid();
         BlockStmt body = factory.block(ret1, ret2);
@@ -749,10 +768,11 @@ class ASTEditorTest {
         assertEquals(1, count[0]);
     }
 
-    // ========== Find Operations Tests ==========
+    // Find Operations Tests
 
     @Test
-    void findExpressions() {
+    void findExpressions()
+    {
         MethodCallExpr call1 = factory.methodCall("test1").on("com/example/Test").build();
         MethodCallExpr call2 = factory.methodCall("test2").on("com/example/Test").build();
         BlockStmt body = factory.block(factory.exprStmt(call1), factory.exprStmt(call2));
@@ -764,7 +784,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void findStatements() {
+    void findStatements()
+    {
         ReturnStmt ret1 = factory.returnStmt(factory.intLiteral(1));
         ReturnStmt ret2 = factory.returnStmt(factory.intLiteral(2));
         BlockStmt body = factory.block(ret1, ret2);
@@ -776,7 +797,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void findExpressionsInNestedStructure() {
+    void findExpressionsInNestedStructure()
+    {
         // Create: if (test()) { call1(); } else { call2(); }
         MethodCallExpr conditionCall = factory.methodCall("test").on("com/example/Test").build();
         MethodCallExpr call1 = factory.methodCall("call1").on("com/example/Test").build();
@@ -795,10 +817,11 @@ class ASTEditorTest {
         assertEquals(3, methodCalls.size());
     }
 
-    // ========== Apply and Return Tests ==========
+    // Apply and Return Tests
 
     @Test
-    void applyAndReturn() {
+    void applyAndReturn()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -811,10 +834,11 @@ class ASTEditorTest {
         assertEquals(2, result.getStatements().size());
     }
 
-    // ========== Fluent API Tests ==========
+    // Fluent API Tests
 
     @Test
-    void fluentHandlerChaining() {
+    void fluentHandlerChaining()
+    {
         MethodCallExpr call = factory.methodCall("method").on("com/example/Test").build();
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(factory.exprStmt(call), returnStmt);
@@ -838,10 +862,11 @@ class ASTEditorTest {
         assertEquals(1, returnCount[0]);
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void emptyBlockStmt() {
+    void emptyBlockStmt()
+    {
         BlockStmt body = factory.block();
         ASTEditor editor = new ASTEditor(body);
         editor.onReturn((ctx, ret) -> Replacement.keep());
@@ -851,7 +876,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void noMatchingHandlers() {
+    void noMatchingHandlers()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 
@@ -863,7 +889,8 @@ class ASTEditorTest {
     }
 
     @Test
-    void keepReplacement() {
+    void keepReplacement()
+    {
         ReturnStmt returnStmt = factory.returnStmt(factory.intLiteral(5));
         BlockStmt body = factory.block(returnStmt);
 

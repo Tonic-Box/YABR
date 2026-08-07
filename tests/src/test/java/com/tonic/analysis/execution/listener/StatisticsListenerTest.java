@@ -4,7 +4,6 @@ import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteStack;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,17 +12,20 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class StatisticsListenerTest {
+class StatisticsListenerTest
+{
 
     private StatisticsListener listener;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new StatisticsListener();
     }
 
     @Test
-    void initialStateIsZero() {
+    void initialStateIsZero()
+    {
         assertEquals(0, listener.getTotalInstructions());
         assertEquals(0, listener.getObjectAllocations());
         assertEquals(0, listener.getArrayAllocations());
@@ -34,7 +36,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void afterInstructionIncrementsCount() {
+    void afterInstructionIncrementsCount()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
         when(instr.getOpcode()).thenReturn(0x01);
@@ -46,7 +49,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void opcodeCountingWorks() {
+    void opcodeCountingWorks()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr1 = mock(Instruction.class);
         Instruction instr2 = mock(Instruction.class);
@@ -65,7 +69,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void methodCallCountingWorks() {
+    void methodCallCountingWorks()
+    {
         StackFrame caller = mock(StackFrame.class);
         MethodEntry method1 = mock(MethodEntry.class);
         MethodEntry method2 = mock(MethodEntry.class);
@@ -87,7 +92,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void objectAllocationCounting() {
+    void objectAllocationCounting()
+    {
         ObjectInstance obj1 = new ObjectInstance(1, "Test1");
         ObjectInstance obj2 = new ObjectInstance(2, "Test2");
 
@@ -98,7 +104,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void arrayAllocationCounting() {
+    void arrayAllocationCounting()
+    {
         ArrayInstance arr1 = new ArrayInstance(1, "I", 10);
         ArrayInstance arr2 = new ArrayInstance(2, "J", 20);
 
@@ -109,7 +116,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void maxStackDepthTracking() {
+    void maxStackDepthTracking()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
         ConcreteStack stack = new ConcreteStack(100);
@@ -135,7 +143,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void maxCallDepthTracking() {
+    void maxCallDepthTracking()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         StackFrame frame2 = mock(StackFrame.class);
         StackFrame frame3 = mock(StackFrame.class);
@@ -163,7 +172,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void branchCounting() {
+    void branchCounting()
+    {
         StackFrame frame = mock(StackFrame.class);
 
         listener.onBranch(frame, 0, 10, true);
@@ -175,7 +185,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void branchTakenRatioCalculation() {
+    void branchTakenRatioCalculation()
+    {
         StackFrame frame = mock(StackFrame.class);
 
         assertEquals(0.0, listener.getBranchTakenRatio(), 0.001);
@@ -187,7 +198,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void resetClearsAllStats() {
+    void resetClearsAllStats()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         Instruction instr = mock(Instruction.class);
@@ -214,7 +226,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void formatReportProducesReadableOutput() {
+    void formatReportProducesReadableOutput()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         Instruction instr = mock(Instruction.class);
@@ -244,7 +257,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void getOpcodeCountIsUnmodifiable() {
+    void getOpcodeCountIsUnmodifiable()
+    {
         StackFrame frame = mock(StackFrame.class);
         Instruction instr = mock(Instruction.class);
         when(instr.getOpcode()).thenReturn(0x01);
@@ -252,13 +266,12 @@ class StatisticsListenerTest {
 
         listener.afterInstruction(frame, instr);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listener.getOpcodeCount().put(0x99, 999L);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listener.getOpcodeCount().put(0x99, 999L));
     }
 
     @Test
-    void getMethodCallCountIsUnmodifiable() {
+    void getMethodCallCountIsUnmodifiable()
+    {
         StackFrame frame = mock(StackFrame.class);
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("Test");
@@ -267,20 +280,21 @@ class StatisticsListenerTest {
 
         listener.onMethodCall(frame, method, null);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listener.getMethodCallCount().put("Fake.method()V", 999L);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listener.getMethodCallCount().put("Fake.method()V", 999L));
     }
 
     @Test
-    void formatReportIncludesTopOpcodes() {
+    void formatReportIncludesTopOpcodes()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getStack()).thenReturn(new ConcreteStack(10));
 
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 15; i++)
+        {
             Instruction instr = mock(Instruction.class);
             when(instr.getOpcode()).thenReturn(i);
-            for (int j = 0; j < i + 1; j++) {
+            for (int j = 0; j < i + 1; j++)
+            {
                 listener.afterInstruction(frame, instr);
             }
         }
@@ -291,15 +305,18 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void formatReportIncludesTopMethods() {
+    void formatReportIncludesTopMethods()
+    {
         StackFrame frame = mock(StackFrame.class);
 
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 15; i++)
+        {
             MethodEntry method = mock(MethodEntry.class);
             when(method.getOwnerName()).thenReturn("Test");
             when(method.getName()).thenReturn("method" + i);
             when(method.getDesc()).thenReturn("()V");
-            for (int j = 0; j < i + 1; j++) {
+            for (int j = 0; j < i + 1; j++)
+            {
                 listener.onMethodCall(frame, method, null);
             }
         }
@@ -310,7 +327,8 @@ class StatisticsListenerTest {
     }
 
     @Test
-    void branchRatioFormattedAsPercentage() {
+    void branchRatioFormattedAsPercentage()
+    {
         StackFrame frame = mock(StackFrame.class);
         listener.onBranch(frame, 0, 10, true);
         listener.onBranch(frame, 10, 20, false);

@@ -7,38 +7,48 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Utility class for AST mutation operations including deep cloning,
- * node replacement, and node removal.
+ * Deep clone, replace and remove operations over AST nodes.
  */
-public final class ASTMutations {
+public final class ASTMutations
+{
 
     private ASTMutations() {}
 
     /**
-     * Creates a deep clone of an AST node and its subtree.
-     * The cloned tree has no parent (root of a new tree).
+     * Copies a node and its whole subtree, leaving the copy parentless as the root of a new tree.
+     *
+     * @param <T>  the node type
+     * @param node the subtree root to copy, or null
+     * @return the copied subtree, or null if node was null
      */
     @SuppressWarnings("unchecked")
-    public static <T extends ASTNode> T deepClone(T node) {
+    public static <T extends ASTNode> T deepClone(T node)
+    {
         if (node == null) return null;
 
         ASTNode cloned = cloneNode(node);
         return (T) cloned;
     }
 
-    private static ASTNode cloneNode(ASTNode node) {
+    private static ASTNode cloneNode(ASTNode node)
+    {
         if (node == null) return null;
 
-        if (node instanceof Expression) {
+        if (node instanceof Expression)
+        {
             return cloneExpression((Expression) node);
-        } else if (node instanceof Statement) {
+        }
+        else if (node instanceof Statement)
+        {
             return cloneStatement((Statement) node);
         }
         throw new UnsupportedOperationException("Cannot clone node of type: " + node.getClass().getName());
     }
 
-    private static Expression cloneExpression(Expression expr) {
-        if (expr instanceof BinaryExpr) {
+    private static Expression cloneExpression(Expression expr)
+    {
+        if (expr instanceof BinaryExpr)
+        {
             BinaryExpr e = (BinaryExpr) expr;
             return new BinaryExpr(
                 e.getOperator(),
@@ -47,21 +57,24 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             );
-        } else if (expr instanceof UnaryExpr) {
+        }
+        else if (expr instanceof UnaryExpr)
+        {
             UnaryExpr e = (UnaryExpr) expr;
-            return new UnaryExpr(
-                e.getOperator(),
-                deepClone(e.getOperand()),
-                e.getType(),
-                e.getLocation()
-            );
-        } else if (expr instanceof LiteralExpr) {
+            return new UnaryExpr(e.getOperator(), deepClone(e.getOperand()), e.getType(), e.getLocation());
+        }
+        else if (expr instanceof LiteralExpr)
+        {
             LiteralExpr e = (LiteralExpr) expr;
             return new LiteralExpr(e.getValue(), e.getType(), e.getLocation());
-        } else if (expr instanceof VarRefExpr) {
+        }
+        else if (expr instanceof VarRefExpr)
+        {
             VarRefExpr e = (VarRefExpr) expr;
             return new VarRefExpr(e.getName(), e.getType(), e.getSsaValue(), e.getLocation());
-        } else if (expr instanceof MethodCallExpr) {
+        }
+        else if (expr instanceof MethodCallExpr)
+        {
             MethodCallExpr e = (MethodCallExpr) expr;
             return new MethodCallExpr(
                 deepClone(e.getReceiver()),
@@ -72,7 +85,9 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             ).withDescriptor(e.getDescriptor()).withSuperCall(e.isSuperCall());
-        } else if (expr instanceof FieldAccessExpr) {
+        }
+        else if (expr instanceof FieldAccessExpr)
+        {
             FieldAccessExpr e = (FieldAccessExpr) expr;
             return new FieldAccessExpr(
                 deepClone(e.getReceiver()),
@@ -82,15 +97,14 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             ).withDescriptor(e.getDescriptor());
-        } else if (expr instanceof ArrayAccessExpr) {
+        }
+        else if (expr instanceof ArrayAccessExpr)
+        {
             ArrayAccessExpr e = (ArrayAccessExpr) expr;
-            return new ArrayAccessExpr(
-                deepClone(e.getArray()),
-                deepClone(e.getIndex()),
-                e.getType(),
-                e.getLocation()
-            );
-        } else if (expr instanceof TernaryExpr) {
+            return new ArrayAccessExpr(deepClone(e.getArray()), deepClone(e.getIndex()), e.getType(), e.getLocation());
+        }
+        else if (expr instanceof TernaryExpr)
+        {
             TernaryExpr e = (TernaryExpr) expr;
             return new TernaryExpr(
                 deepClone(e.getCondition()),
@@ -99,14 +113,14 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             );
-        } else if (expr instanceof CastExpr) {
+        }
+        else if (expr instanceof CastExpr)
+        {
             CastExpr e = (CastExpr) expr;
-            return new CastExpr(
-                e.getTargetType(),
-                deepClone(e.getExpression()),
-                e.getLocation()
-            );
-        } else if (expr instanceof InstanceOfExpr) {
+            return new CastExpr(e.getTargetType(), deepClone(e.getExpression()), e.getLocation());
+        }
+        else if (expr instanceof InstanceOfExpr)
+        {
             InstanceOfExpr e = (InstanceOfExpr) expr;
             return new InstanceOfExpr(
                 deepClone(e.getExpression()),
@@ -114,7 +128,9 @@ public final class ASTMutations {
                 e.getPatternVariable(),
                 e.getLocation()
             );
-        } else if (expr instanceof NewExpr) {
+        }
+        else if (expr instanceof NewExpr)
+        {
             NewExpr e = (NewExpr) expr;
             return new NewExpr(
                 e.getClassName(),
@@ -122,7 +138,9 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             ).withDescriptor(e.getDescriptor());
-        } else if (expr instanceof NewArrayExpr) {
+        }
+        else if (expr instanceof NewArrayExpr)
+        {
             NewArrayExpr e = (NewArrayExpr) expr;
             return new NewArrayExpr(
                 e.getElementType(),
@@ -131,14 +149,14 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             );
-        } else if (expr instanceof ArrayInitExpr) {
+        }
+        else if (expr instanceof ArrayInitExpr)
+        {
             ArrayInitExpr e = (ArrayInitExpr) expr;
-            return new ArrayInitExpr(
-                cloneExprList(e.getElements()),
-                e.getType(),
-                e.getLocation()
-            );
-        } else if (expr instanceof LambdaExpr) {
+            return new ArrayInitExpr(cloneExprList(e.getElements()), e.getType(), e.getLocation());
+        }
+        else if (expr instanceof LambdaExpr)
+        {
             LambdaExpr e = (LambdaExpr) expr;
             return new LambdaExpr(
                 e.getParameters(),
@@ -146,7 +164,9 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             ).withImplMethodKey(e.getImplMethodKey());
-        } else if (expr instanceof MethodRefExpr) {
+        }
+        else if (expr instanceof MethodRefExpr)
+        {
             MethodRefExpr e = (MethodRefExpr) expr;
             return new MethodRefExpr(
                 deepClone(e.getReceiver()),
@@ -156,10 +176,14 @@ public final class ASTMutations {
                 e.getType(),
                 e.getLocation()
             ).withDescriptor(e.getDescriptor());
-        } else if (expr instanceof ClassExpr) {
+        }
+        else if (expr instanceof ClassExpr)
+        {
             ClassExpr e = (ClassExpr) expr;
             return new ClassExpr(e.getClassType(), e.getLocation());
-        } else if (expr instanceof ThisExpr) {
+        }
+        else if (expr instanceof ThisExpr)
+        {
             ThisExpr e = (ThisExpr) expr;
             return new ThisExpr(e.getType(), e.getLocation());
         }
@@ -167,11 +191,15 @@ public final class ASTMutations {
         throw new UnsupportedOperationException("Cannot clone expression of type: " + expr.getClass().getName());
     }
 
-    private static Statement cloneStatement(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+    private static Statement cloneStatement(Statement stmt)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt s = (BlockStmt) stmt;
             return new BlockStmt(cloneStmtList(s.getStatements()), s.getLocation());
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt s = (IfStmt) stmt;
             return new IfStmt(
                 deepClone(s.getCondition()),
@@ -179,23 +207,19 @@ public final class ASTMutations {
                 deepClone(s.getElseBranch()),
                 s.getLocation()
             );
-        } else if (stmt instanceof WhileStmt) {
+        }
+        else if (stmt instanceof WhileStmt)
+        {
             WhileStmt s = (WhileStmt) stmt;
-            return new WhileStmt(
-                deepClone(s.getCondition()),
-                deepClone(s.getBody()),
-                s.getLabel(),
-                s.getLocation()
-            );
-        } else if (stmt instanceof DoWhileStmt) {
+            return new WhileStmt(deepClone(s.getCondition()), deepClone(s.getBody()), s.getLabel(), s.getLocation());
+        }
+        else if (stmt instanceof DoWhileStmt)
+        {
             DoWhileStmt s = (DoWhileStmt) stmt;
-            return new DoWhileStmt(
-                deepClone(s.getBody()),
-                deepClone(s.getCondition()),
-                s.getLabel(),
-                s.getLocation()
-            );
-        } else if (stmt instanceof ForStmt) {
+            return new DoWhileStmt(deepClone(s.getBody()), deepClone(s.getCondition()), s.getLabel(), s.getLocation());
+        }
+        else if (stmt instanceof ForStmt)
+        {
             ForStmt s = (ForStmt) stmt;
             return new ForStmt(
                 cloneStmtList(s.getInit()),
@@ -205,7 +229,9 @@ public final class ASTMutations {
                 s.getLabel(),
                 s.getLocation()
             );
-        } else if (stmt instanceof ForEachStmt) {
+        }
+        else if (stmt instanceof ForEachStmt)
+        {
             ForEachStmt s = (ForEachStmt) stmt;
             return new ForEachStmt(
                 deepClone(s.getVariable()),
@@ -214,22 +240,34 @@ public final class ASTMutations {
                 s.getLabel(),
                 s.getLocation()
             );
-        } else if (stmt instanceof ReturnStmt) {
+        }
+        else if (stmt instanceof ReturnStmt)
+        {
             ReturnStmt s = (ReturnStmt) stmt;
             return new ReturnStmt(deepClone(s.getValue()), s.getLocation());
-        } else if (stmt instanceof ThrowStmt) {
+        }
+        else if (stmt instanceof ThrowStmt)
+        {
             ThrowStmt s = (ThrowStmt) stmt;
             return new ThrowStmt(deepClone(s.getException()), s.getLocation());
-        } else if (stmt instanceof BreakStmt) {
+        }
+        else if (stmt instanceof BreakStmt)
+        {
             BreakStmt s = (BreakStmt) stmt;
             return new BreakStmt(s.getTargetLabel(), s.getLocation());
-        } else if (stmt instanceof ContinueStmt) {
+        }
+        else if (stmt instanceof ContinueStmt)
+        {
             ContinueStmt s = (ContinueStmt) stmt;
             return new ContinueStmt(s.getTargetLabel(), s.getLocation());
-        } else if (stmt instanceof ExprStmt) {
+        }
+        else if (stmt instanceof ExprStmt)
+        {
             ExprStmt s = (ExprStmt) stmt;
             return new ExprStmt(deepClone(s.getExpression()), s.getLocation());
-        } else if (stmt instanceof VarDeclStmt) {
+        }
+        else if (stmt instanceof VarDeclStmt)
+        {
             VarDeclStmt s = (VarDeclStmt) stmt;
             return new VarDeclStmt(
                 s.getType(),
@@ -239,17 +277,19 @@ public final class ASTMutations {
                 s.isFinal(),
                 s.getLocation()
             );
-        } else if (stmt instanceof LabeledStmt) {
+        }
+        else if (stmt instanceof LabeledStmt)
+        {
             LabeledStmt s = (LabeledStmt) stmt;
             return new LabeledStmt(s.getLabel(), deepClone(s.getStatement()), s.getLocation());
-        } else if (stmt instanceof SynchronizedStmt) {
+        }
+        else if (stmt instanceof SynchronizedStmt)
+        {
             SynchronizedStmt s = (SynchronizedStmt) stmt;
-            return new SynchronizedStmt(
-                deepClone(s.getLock()),
-                deepClone(s.getBody()),
-                s.getLocation()
-            );
-        } else if (stmt instanceof TryCatchStmt) {
+            return new SynchronizedStmt(deepClone(s.getLock()), deepClone(s.getBody()), s.getLocation());
+        }
+        else if (stmt instanceof TryCatchStmt)
+        {
             TryCatchStmt s = (TryCatchStmt) stmt;
             List<CatchClause> clonedCatches = s.getCatches().stream()
                 .map(c -> new CatchClause(c.exceptionTypes(), c.variableName(), deepClone(c.body())))
@@ -261,7 +301,9 @@ public final class ASTMutations {
                 cloneExprList(s.getResources()),
                 s.getLocation()
             );
-        } else if (stmt instanceof SwitchStmt) {
+        }
+        else if (stmt instanceof SwitchStmt)
+        {
             SwitchStmt s = (SwitchStmt) stmt;
             List<SwitchCase> clonedCases = s.getCases().stream()
                 .map(c -> new SwitchCase(c.labels(), cloneExprList(c.expressionLabels()), c.isDefault(), cloneStmtList(c.statements()))
@@ -273,136 +315,198 @@ public final class ASTMutations {
         throw new UnsupportedOperationException("Cannot clone statement of type: " + stmt.getClass().getName());
     }
 
-    private static List<Expression> cloneExprList(List<? extends Expression> exprs) {
+    private static List<Expression> cloneExprList(List<? extends Expression> exprs)
+    {
         return exprs.stream()
             .map(ASTMutations::deepClone)
             .collect(Collectors.toList());
     }
 
-    private static List<Statement> cloneStmtList(List<? extends Statement> stmts) {
+    private static List<Statement> cloneStmtList(List<? extends Statement> stmts)
+    {
         return stmts.stream()
             .map(ASTMutations::deepClone)
             .collect(Collectors.toList());
     }
 
     /**
-     * Replaces a node in its parent with a new node.
-     * Returns true if replacement was successful.
+     * Swaps a node for another in whichever slot of its parent holds it.
+     *
+     * @param oldNode the node to replace, which must already be attached to a parent
+     * @param newNode the replacement, which must fit the slot's kind
+     * @return true if the slot was found and updated
      */
-    public static boolean replace(ASTNode oldNode, ASTNode newNode) {
+    public static boolean replace(ASTNode oldNode, ASTNode newNode)
+    {
         if (oldNode == null || newNode == null) return false;
 
         ASTNode parent = oldNode.getParent();
         if (parent == null) return false;
 
-        if (parent instanceof BinaryExpr) {
+        if (parent instanceof BinaryExpr)
+        {
             BinaryExpr p = (BinaryExpr) parent;
-            if (p.getLeft() == oldNode && newNode instanceof Expression) {
+            if (p.getLeft() == oldNode && newNode instanceof Expression)
+            {
                 p.withLeft((Expression) newNode);
                 return true;
-            } else if (p.getRight() == oldNode && newNode instanceof Expression) {
+            }
+            else if (p.getRight() == oldNode && newNode instanceof Expression)
+            {
                 p.withRight((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof UnaryExpr) {
+        }
+        else if (parent instanceof UnaryExpr)
+        {
             UnaryExpr p = (UnaryExpr) parent;
-            if (p.getOperand() == oldNode && newNode instanceof Expression) {
+            if (p.getOperand() == oldNode && newNode instanceof Expression)
+            {
                 p.withOperand((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof IfStmt) {
+        }
+        else if (parent instanceof IfStmt)
+        {
             IfStmt p = (IfStmt) parent;
-            if (p.getCondition() == oldNode && newNode instanceof Expression) {
+            if (p.getCondition() == oldNode && newNode instanceof Expression)
+            {
                 p.withCondition((Expression) newNode);
                 return true;
-            } else if (p.getThenBranch() == oldNode && newNode instanceof Statement) {
+            }
+            else if (p.getThenBranch() == oldNode && newNode instanceof Statement)
+            {
                 p.withThenBranch((Statement) newNode);
                 return true;
-            } else if (p.getElseBranch() == oldNode && newNode instanceof Statement) {
+            }
+            else if (p.getElseBranch() == oldNode && newNode instanceof Statement)
+            {
                 p.withElseBranch((Statement) newNode);
                 return true;
             }
-        } else if (parent instanceof WhileStmt) {
+        }
+        else if (parent instanceof WhileStmt)
+        {
             WhileStmt p = (WhileStmt) parent;
-            if (p.getCondition() == oldNode && newNode instanceof Expression) {
+            if (p.getCondition() == oldNode && newNode instanceof Expression)
+            {
                 p.withCondition((Expression) newNode);
                 return true;
-            } else if (p.getBody() == oldNode && newNode instanceof Statement) {
+            }
+            else if (p.getBody() == oldNode && newNode instanceof Statement)
+            {
                 p.withBody((Statement) newNode);
                 return true;
             }
-        } else if (parent instanceof BlockStmt) {
+        }
+        else if (parent instanceof BlockStmt)
+        {
             BlockStmt p = (BlockStmt) parent;
             List<Statement> stmts = p.getStatements();
-            for (int i = 0; i < stmts.size(); i++) {
-                if (stmts.get(i) == oldNode && newNode instanceof Statement) {
+            for (int i = 0; i < stmts.size(); i++)
+            {
+                if (stmts.get(i) == oldNode && newNode instanceof Statement)
+                {
                     stmts.set(i, (Statement) newNode);
                     return true;
                 }
             }
-        } else if (parent instanceof ReturnStmt) {
+        }
+        else if (parent instanceof ReturnStmt)
+        {
             ReturnStmt p = (ReturnStmt) parent;
-            if (p.getValue() == oldNode && newNode instanceof Expression) {
+            if (p.getValue() == oldNode && newNode instanceof Expression)
+            {
                 p.withValue((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof ExprStmt) {
+        }
+        else if (parent instanceof ExprStmt)
+        {
             ExprStmt p = (ExprStmt) parent;
-            if (p.getExpression() == oldNode && newNode instanceof Expression) {
+            if (p.getExpression() == oldNode && newNode instanceof Expression)
+            {
                 p.withExpression((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof VarDeclStmt) {
+        }
+        else if (parent instanceof VarDeclStmt)
+        {
             VarDeclStmt p = (VarDeclStmt) parent;
-            if (p.getInitializer() == oldNode && newNode instanceof Expression) {
+            if (p.getInitializer() == oldNode && newNode instanceof Expression)
+            {
                 p.withInitializer((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof CastExpr) {
+        }
+        else if (parent instanceof CastExpr)
+        {
             CastExpr p = (CastExpr) parent;
-            if (p.getExpression() == oldNode && newNode instanceof Expression) {
+            if (p.getExpression() == oldNode && newNode instanceof Expression)
+            {
                 p.withExpression((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof TernaryExpr) {
+        }
+        else if (parent instanceof TernaryExpr)
+        {
             TernaryExpr p = (TernaryExpr) parent;
-            if (p.getCondition() == oldNode && newNode instanceof Expression) {
+            if (p.getCondition() == oldNode && newNode instanceof Expression)
+            {
                 p.withCondition((Expression) newNode);
                 return true;
-            } else if (p.getThenExpr() == oldNode && newNode instanceof Expression) {
+            }
+            else if (p.getThenExpr() == oldNode && newNode instanceof Expression)
+            {
                 p.withThenExpr((Expression) newNode);
                 return true;
-            } else if (p.getElseExpr() == oldNode && newNode instanceof Expression) {
+            }
+            else if (p.getElseExpr() == oldNode && newNode instanceof Expression)
+            {
                 p.withElseExpr((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof ArrayAccessExpr) {
+        }
+        else if (parent instanceof ArrayAccessExpr)
+        {
             ArrayAccessExpr p = (ArrayAccessExpr) parent;
-            if (p.getArray() == oldNode && newNode instanceof Expression) {
+            if (p.getArray() == oldNode && newNode instanceof Expression)
+            {
                 p.withArray((Expression) newNode);
                 return true;
-            } else if (p.getIndex() == oldNode && newNode instanceof Expression) {
+            }
+            else if (p.getIndex() == oldNode && newNode instanceof Expression)
+            {
                 p.withIndex((Expression) newNode);
                 return true;
             }
-        } else if (parent instanceof MethodCallExpr) {
+        }
+        else if (parent instanceof MethodCallExpr)
+        {
             MethodCallExpr p = (MethodCallExpr) parent;
-            if (p.getReceiver() == oldNode && newNode instanceof Expression) {
+            if (p.getReceiver() == oldNode && newNode instanceof Expression)
+            {
                 p.withReceiver((Expression) newNode);
                 return true;
             }
             List<Expression> args = p.getArguments();
-            for (int i = 0; i < args.size(); i++) {
-                if (args.get(i) == oldNode && newNode instanceof Expression) {
+            for (int i = 0; i < args.size(); i++)
+            {
+                if (args.get(i) == oldNode && newNode instanceof Expression)
+                {
                     args.set(i, (Expression) newNode);
                     return true;
                 }
             }
-        } else if (parent instanceof NewExpr) {
+        }
+        else if (parent instanceof NewExpr)
+        {
             NewExpr p = (NewExpr) parent;
             List<Expression> args = p.getArguments();
-            for (int i = 0; i < args.size(); i++) {
-                if (args.get(i) == oldNode && newNode instanceof Expression) {
+            for (int i = 0; i < args.size(); i++)
+            {
+                if (args.get(i) == oldNode && newNode instanceof Expression)
+                {
                     args.set(i, (Expression) newNode);
                     return true;
                 }
@@ -413,27 +517,40 @@ public final class ASTMutations {
     }
 
     /**
-     * Removes a node from its parent.
-     * Returns true if removal was successful.
-     * Only works for nodes in lists (e.g., statements in blocks, arguments in calls).
+     * Detaches a node from the list slot of its parent that holds it - block statements, call
+     * arguments, loop init and update entries and the like.
+     *
+     * @param node the node to detach
+     * @return true if the parent held it in a list slot and it was removed
      */
-    public static boolean remove(ASTNode node) {
+    public static boolean remove(ASTNode node)
+    {
         if (node == null) return false;
 
         ASTNode parent = node.getParent();
         if (parent == null) return false;
 
-        if (parent instanceof BlockStmt && node instanceof Statement) {
+        if (parent instanceof BlockStmt && node instanceof Statement)
+        {
             return ((BlockStmt) parent).removeStatement((Statement) node);
-        } else if (parent instanceof MethodCallExpr && node instanceof Expression) {
+        }
+        else if (parent instanceof MethodCallExpr && node instanceof Expression)
+        {
             return ((MethodCallExpr) parent).getArguments().remove(node);
-        } else if (parent instanceof NewExpr && node instanceof Expression) {
+        }
+        else if (parent instanceof NewExpr && node instanceof Expression)
+        {
             return ((NewExpr) parent).getArguments().remove(node);
-        } else if (parent instanceof ForStmt) {
+        }
+        else if (parent instanceof ForStmt)
+        {
             ForStmt p = (ForStmt) parent;
-            if (node instanceof Statement) {
+            if (node instanceof Statement)
+            {
                 return p.getInit().remove(node);
-            } else if (node instanceof Expression) {
+            }
+            else if (node instanceof Expression)
+            {
                 return p.getUpdate().remove(node);
             }
         }

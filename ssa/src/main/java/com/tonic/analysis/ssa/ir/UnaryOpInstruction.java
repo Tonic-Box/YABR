@@ -7,45 +7,67 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.List;
 
 /**
- * Unary operation (negation, type conversion).
+ * A unary operation such as negation or a primitive type conversion.
  */
-public class UnaryOpInstruction extends IRInstruction {
+public class UnaryOpInstruction extends IRInstruction
+{
 
     private final UnaryOp op;
     private Value operand;
 
-    public UnaryOpInstruction(SSAValue result, UnaryOp op, Value operand) {
+    /**
+     * Creates a unary operation and registers a use of an SSA operand.
+     * @param result the SSA value receiving the result
+     * @param op the operation to perform
+     * @param operand the operand
+     */
+    public UnaryOpInstruction(SSAValue result, UnaryOp op, Value operand)
+    {
         super(result);
         this.op = op;
         this.operand = operand;
-        if (operand instanceof SSAValue) {
+        if (operand instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) operand;
             ssa.addUse(this);
         }
     }
 
-    public UnaryOp getOp() {
+    /**
+     * @return the op
+     */
+    public UnaryOp getOp()
+    {
         return op;
     }
 
-    public Value getOperand() {
+    /**
+     * @return the operand
+     */
+    public Value getOperand()
+    {
         return operand;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return List.of(operand);
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (operand.equals(oldValue)) {
-            if (operand instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (operand.equals(oldValue))
+        {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) operand;
                 ssa.removeUse(this);
             }
             operand = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) newValue;
                 ssa.addUse(this);
             }
@@ -53,12 +75,14 @@ public class UnaryOpInstruction extends IRInstruction {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitUnaryOp(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return result + " = " + op.name().toLowerCase() + " " + operand;
     }
 }

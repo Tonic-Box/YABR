@@ -7,85 +7,150 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 
 import java.util.List;
 
-public final class AnnotationValue implements ASTNode {
+/**
+ * A single element-value pair inside an annotation use.
+ */
+public final class AnnotationValue implements ASTNode
+{
 
     private String name;
     private Expression value;
     private final SourceLocation location;
     private ASTNode parent;
 
-    public AnnotationValue(String name, Expression value, SourceLocation location) {
+    /**
+     * Creates an element-value pair, adopting the value expression.
+     * @param name the element name
+     * @param value the element value
+     * @param location the source location, or null for unknown
+     */
+    public AnnotationValue(String name, Expression value, SourceLocation location)
+    {
         this.name = name;
         this.value = value;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
-        if (value != null) {
+        if (value != null)
+        {
             value.setParent(this);
         }
     }
 
-    public AnnotationValue(String name, Expression value) {
+    /**
+     * Creates an element-value pair at an unknown location.
+     * @param name the element name
+     * @param value the element value
+     */
+    public AnnotationValue(String name, Expression value)
+    {
         this(name, value, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the element name.
+     * @param name the element name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public Expression getValue() {
+    /**
+     * @return the value
+     */
+    public Expression getValue()
+    {
         return value;
     }
 
-    public void setValue(Expression value) {
-        this.value = value;
+    /**
+     * Sets the element value.
+     * @param value the element value
+     */
+    public void setValue(Expression value)
+    {
+        withValue(value);
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public AnnotationValue withName(String name) {
+    /**
+     * Sets the element name.
+     * @param name the element name
+     * @return this pair
+     */
+    public AnnotationValue withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public AnnotationValue withValue(Expression value) {
-        if (this.value != null) {
-            this.value.setParent(null);
-        }
+    /**
+     * Replaces the element value, adopting the new expression and releasing the old one.
+     * @param value the element value
+     * @return this pair
+     */
+    public AnnotationValue withValue(Expression value)
+    {
+        ASTNode previous = this.value;
         this.value = value;
-        if (value != null) {
+        if (value != null)
+        {
             value.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     @Override
-    public List<ASTNode> getChildren() {
-        if (value != null) {
+    public List<ASTNode> getChildren()
+    {
+        if (value != null)
+        {
             return List.of(value);
         }
         return List.of();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return name + " = " + value;
     }
 }

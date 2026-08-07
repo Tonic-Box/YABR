@@ -5,9 +5,10 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import java.util.*;
 
 /**
- * Computes dominator tree and dominance frontiers for a CFG.
+ * Dominator tree and dominance frontiers for a method's CFG.
  */
-public class DominatorTree {
+public class DominatorTree
+{
 
     private final IRMethod method;
     private final Map<IRBlock, IRBlock> immediateDominator;
@@ -16,7 +17,12 @@ public class DominatorTree {
     private final Map<IRBlock, Integer> preorder;
     private final Map<IRBlock, Integer> postorder;
 
-    public DominatorTree(IRMethod method) {
+    /**
+     * Creates an empty tree for the given method.
+     * @param method the method to analyze
+     */
+    public DominatorTree(IRMethod method)
+    {
         this.method = method;
         this.immediateDominator = new HashMap<>();
         this.dominatorTreeChildren = new HashMap<>();
@@ -25,34 +31,59 @@ public class DominatorTree {
         this.postorder = new HashMap<>();
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public Map<IRBlock, IRBlock> getImmediateDominator() {
+    /**
+     * @return the immediate dominator
+     */
+    public Map<IRBlock, IRBlock> getImmediateDominator()
+    {
         return immediateDominator;
     }
 
-    public Map<IRBlock, Set<IRBlock>> getDominatorTreeChildren() {
+    /**
+     * @return the dominator tree children
+     */
+    public Map<IRBlock, Set<IRBlock>> getDominatorTreeChildren()
+    {
         return dominatorTreeChildren;
     }
 
-    public Map<IRBlock, Set<IRBlock>> getDominanceFrontier() {
+    /**
+     * @return the dominance frontier
+     */
+    public Map<IRBlock, Set<IRBlock>> getDominanceFrontier()
+    {
         return dominanceFrontier;
     }
 
-    public Map<IRBlock, Integer> getPreorder() {
+    /**
+     * @return the preorder
+     */
+    public Map<IRBlock, Integer> getPreorder()
+    {
         return preorder;
     }
 
-    public Map<IRBlock, Integer> getPostorder() {
+    /**
+     * @return the postorder
+     */
+    public Map<IRBlock, Integer> getPostorder()
+    {
         return postorder;
     }
 
     /**
      * Computes the dominator tree and dominance frontiers.
      */
-    public void compute() {
+    public void compute()
+    {
         if (method.getEntryBlock() == null) return;
 
         computeReversePostOrder();
@@ -61,83 +92,103 @@ public class DominatorTree {
         computeDominanceFrontiers();
     }
 
-    private void computeReversePostOrder() {
+    private void computeReversePostOrder()
+    {
         Set<IRBlock> visited = new HashSet<>();
         List<IRBlock> postorderList = new ArrayList<>();
         dfsPostorder(method.getEntryBlock(), visited, postorderList);
 
         int pre = 0;
         int post = 0;
-        for (int i = postorderList.size() - 1; i >= 0; i--) {
+        for (int i = postorderList.size() - 1; i >= 0; i--)
+        {
             preorder.put(postorderList.get(i), pre++);
         }
-        for (IRBlock block : postorderList) {
+        for (IRBlock block : postorderList)
+        {
             postorder.put(block, post++);
         }
     }
 
-    private void dfsPostorder(IRBlock startBlock, Set<IRBlock> visited, List<IRBlock> result) {
+    private void dfsPostorder(IRBlock startBlock, Set<IRBlock> visited, List<IRBlock> result)
+    {
         Deque<DfsWorkItem> stack = new ArrayDeque<>();
         stack.push(new DfsWorkItem(startBlock, false));
 
-        while (!stack.isEmpty()) {
+        while (!stack.isEmpty())
+        {
             DfsWorkItem item = stack.pop();
             IRBlock block = item.block;
 
-            if (item.childrenProcessed) {
+            if (item.childrenProcessed)
+            {
                 result.add(block);
                 continue;
             }
 
-            if (visited.contains(block)) {
+            if (visited.contains(block))
+            {
                 continue;
             }
             visited.add(block);
 
             stack.push(new DfsWorkItem(block, true));
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!visited.contains(succ)) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!visited.contains(succ))
+                {
                     stack.push(new DfsWorkItem(succ, false));
                 }
             }
         }
     }
 
-    private static class DfsWorkItem {
+    private static class DfsWorkItem
+    {
         final IRBlock block;
         final boolean childrenProcessed;
 
-        DfsWorkItem(IRBlock block, boolean childrenProcessed) {
+        DfsWorkItem(IRBlock block, boolean childrenProcessed)
+        {
             this.block = block;
             this.childrenProcessed = childrenProcessed;
         }
     }
 
-    private void computeDominators() {
+    private void computeDominators()
+    {
         IRBlock entry = method.getEntryBlock();
         immediateDominator.put(entry, entry);
 
         List<IRBlock> rpo = method.getReversePostOrder();
         boolean changed = true;
 
-        while (changed) {
+        while (changed)
+        {
             changed = false;
-            for (IRBlock block : rpo) {
+            for (IRBlock block : rpo)
+            {
                 if (block == entry) continue;
 
                 IRBlock newIdom = null;
-                for (IRBlock pred : block.getPredecessors()) {
-                    if (immediateDominator.containsKey(pred)) {
-                        if (newIdom == null) {
+                for (IRBlock pred : block.getPredecessors())
+                {
+                    if (immediateDominator.containsKey(pred))
+                    {
+                        if (newIdom == null)
+                        {
                             newIdom = pred;
-                        } else {
+                        }
+                        else
+                        {
                             newIdom = intersect(pred, newIdom);
                         }
                     }
                 }
 
-                if (newIdom != null && immediateDominator.get(block) != newIdom) {
+                if (newIdom != null && immediateDominator.get(block) != newIdom)
+                {
                     immediateDominator.put(block, newIdom);
                     changed = true;
                 }
@@ -145,33 +196,42 @@ public class DominatorTree {
         }
     }
 
-    private IRBlock intersect(IRBlock b1, IRBlock b2) {
+    private IRBlock intersect(IRBlock b1, IRBlock b2)
+    {
         IRBlock finger1 = b1;
         IRBlock finger2 = b2;
 
-        while (finger1 != finger2) {
-            while (getPostorder(finger1) < getPostorder(finger2)) {
+        while (finger1 != finger2)
+        {
+            while (getPostorder(finger1) < getPostorder(finger2))
+            {
                 finger1 = immediateDominator.get(finger1);
             }
-            while (getPostorder(finger2) < getPostorder(finger1)) {
+            while (getPostorder(finger2) < getPostorder(finger1))
+            {
                 finger2 = immediateDominator.get(finger2);
             }
         }
         return finger1;
     }
 
-    private int getPostorder(IRBlock block) {
+    private int getPostorder(IRBlock block)
+    {
         return postorder.getOrDefault(block, -1);
     }
 
-    private void buildDominatorTree() {
-        for (IRBlock block : method.getBlocks()) {
+    private void buildDominatorTree()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             dominatorTreeChildren.put(block, new HashSet<>());
         }
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = immediateDominator.get(block);
-            if (idom != null && idom != block) {
+            if (idom != null && idom != block)
+            {
                 dominatorTreeChildren.computeIfAbsent(idom, k -> new HashSet<>()).add(block);
             }
         }
@@ -179,7 +239,8 @@ public class DominatorTree {
         detectCycles();
     }
 
-    private void detectCycles() {
+    private void detectCycles()
+    {
         IRBlock entry = method.getEntryBlock();
         if (entry == null) return;
 
@@ -190,25 +251,33 @@ public class DominatorTree {
         stack.push(entry);
         parent.put(entry, null);
 
-        while (!stack.isEmpty()) {
+        while (!stack.isEmpty())
+        {
             IRBlock block = stack.pop();
 
-            if (visited.contains(block)) {
+            if (visited.contains(block))
+            {
                 continue;
             }
             visited.add(block);
 
             Set<IRBlock> children = dominatorTreeChildren.get(block);
-            if (children != null) {
-                for (IRBlock child : children) {
-                    if (visited.contains(child)) {
+            if (children != null)
+            {
+                for (IRBlock child : children)
+                {
+                    if (visited.contains(child))
+                    {
                         IRBlock runner = block;
                         int pathLen = 0;
-                        while (runner != null && pathLen < 20) {
+                        while (runner != null && pathLen < 20)
+                        {
                             runner = parent.get(runner);
                             pathLen++;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         parent.put(child, block);
                         stack.push(child);
                     }
@@ -217,16 +286,22 @@ public class DominatorTree {
         }
     }
 
-    private void computeDominanceFrontiers() {
-        for (IRBlock block : method.getBlocks()) {
+    private void computeDominanceFrontiers()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             dominanceFrontier.put(block, new HashSet<>());
         }
 
-        for (IRBlock block : method.getBlocks()) {
-            if (block.getPredecessors().size() >= 2) {
-                for (IRBlock pred : block.getPredecessors()) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (block.getPredecessors().size() >= 2)
+            {
+                for (IRBlock pred : block.getPredecessors())
+                {
                     IRBlock runner = pred;
-                    while (runner != null && runner != immediateDominator.get(block)) {
+                    while (runner != null && runner != immediateDominator.get(block))
+                    {
                         dominanceFrontier.computeIfAbsent(runner, k -> new HashSet<>()).add(block);
                         runner = immediateDominator.get(runner);
                     }
@@ -237,42 +312,43 @@ public class DominatorTree {
 
     /**
      * Gets the immediate dominator of the specified block.
-     *
      * @param block the block to query
      * @return the immediate dominator, or null if none exists
      */
-    public IRBlock getImmediateDominator(IRBlock block) {
+    public IRBlock getImmediateDominator(IRBlock block)
+    {
         return immediateDominator.get(block);
     }
 
     /**
      * Gets the children of the specified block in the dominator tree.
-     *
      * @param block the block to query
      * @return the set of dominator tree children
      */
-    public Set<IRBlock> getDominatorTreeChildren(IRBlock block) {
+    public Set<IRBlock> getDominatorTreeChildren(IRBlock block)
+    {
         return dominatorTreeChildren.getOrDefault(block, Collections.emptySet());
     }
 
     /**
      * Gets the dominance frontier of the specified block.
-     *
      * @param block the block to query
      * @return the set of blocks in the dominance frontier
      */
-    public Set<IRBlock> getDominanceFrontier(IRBlock block) {
+    public Set<IRBlock> getDominanceFrontier(IRBlock block)
+    {
         return dominanceFrontier.getOrDefault(block, Collections.emptySet());
     }
 
     /**
      * Gets all blocks that appear in any dominance frontier.
-     *
      * @return the set of all dominance frontier blocks
      */
-    public Set<IRBlock> getDominanceFrontiers() {
+    public Set<IRBlock> getDominanceFrontiers()
+    {
         Set<IRBlock> all = new HashSet<>();
-        for (Set<IRBlock> df : dominanceFrontier.values()) {
+        for (Set<IRBlock> df : dominanceFrontier.values())
+        {
             all.addAll(df);
         }
         return all;
@@ -280,15 +356,16 @@ public class DominatorTree {
 
     /**
      * Checks if block a dominates block b.
-     *
      * @param a the potential dominator
      * @param b the block to test
      * @return true if a dominates b
      */
-    public boolean dominates(IRBlock a, IRBlock b) {
+    public boolean dominates(IRBlock a, IRBlock b)
+    {
         if (a == b) return true;
         IRBlock runner = b;
-        while (runner != null) {
+        while (runner != null)
+        {
             if (runner == a) return true;
             IRBlock idom = immediateDominator.get(runner);
             if (idom == runner) break;
@@ -299,12 +376,12 @@ public class DominatorTree {
 
     /**
      * Checks if block a strictly dominates block b.
-     *
      * @param a the potential dominator
      * @param b the block to test
      * @return true if a strictly dominates b
      */
-    public boolean strictlyDominates(IRBlock a, IRBlock b) {
+    public boolean strictlyDominates(IRBlock a, IRBlock b)
+    {
         return a != b && dominates(a, b);
     }
 }

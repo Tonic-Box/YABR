@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * {@link QueryBatchRunner} over a {@link ClassPool}, asserting the flagship query selects the right
  * method through the whole stack (not just the evaluator in isolation).
  */
-class QueryPipelineTest {
+class QueryPipelineTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -39,7 +40,8 @@ class QueryPipelineTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("query-pipeline");
@@ -50,7 +52,8 @@ class QueryPipelineTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Target.class")));
     }
 
-    private List<String> runForMethods(String query) throws Exception {
+    private List<String> runForMethods(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         QueryBatchRunner.QueryBatchResult result = new QueryBatchRunner(pool).run(plan, null);
@@ -60,14 +63,16 @@ class QueryPipelineTest {
     }
 
     @Test
-    void flagshipSelectsOnlyTheMatchingMethod() throws Exception {
+    void flagshipSelectsOnlyTheMatchingMethod() throws Exception
+    {
         List<String> methods = runForMethods(
                 "FIND methods WHERE has call where (count(arg) == 1 and arg(0).type == int and arg(0).value == 999)");
         assertEquals(List.of("match"), methods);
     }
 
     @Test
-    void regexNameAndModifiersCompose() throws Exception {
+    void regexNameAndModifiersCompose() throws Exception
+    {
         List<String> methods = runForMethods("FIND methods WHERE method.name matches /^wrong/");
         assertTrue(methods.contains("wrongValue"));
         assertTrue(methods.contains("wrongArity"));
@@ -75,9 +80,9 @@ class QueryPipelineTest {
     }
 
     @Test
-    void callOwnerAndNameMatch() throws Exception {
-        List<String> methods = runForMethods(
-                "FIND methods WHERE has call where (name == \"bar\" and count(arg) == 2)");
+    void callOwnerAndNameMatch() throws Exception
+    {
+        List<String> methods = runForMethods("FIND methods WHERE has call where (name == \"bar\" and count(arg) == 2)");
         assertEquals(List.of("wrongArity"), methods);
     }
 }

@@ -13,16 +13,25 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Tests method inlining and dead method elimination.
+ * Demo showing method inlining and dead method elimination on InlineTestClass.
  */
-public class TestMethodInlining {
+public class TestMethodInlining
+{
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Loads InlineTestClass and runs the inlining test, falling back to SSAShowcase if absent.
+     * @param args unused
+     * @throws IOException if the class resource cannot be read
+     */
+    public static void main(String[] args) throws IOException
+    {
         Logger.setLog(false);
         ClassPool classPool = ClassPool.getDefault();
 
-        try (InputStream is = TestMethodInlining.class.getResourceAsStream("InlineTestClass.class")) {
-            if (is == null) {
+        try (InputStream is = TestMethodInlining.class.getResourceAsStream("InlineTestClass.class"))
+        {
+            if (is == null)
+            {
                 System.out.println("InlineTestClass.class not found - creating test manually");
                 testWithSimpleClass(classPool);
                 return;
@@ -33,10 +42,13 @@ public class TestMethodInlining {
         }
     }
 
-    private static void testWithSimpleClass(ClassPool classPool) throws IOException {
+    private static void testWithSimpleClass(ClassPool classPool) throws IOException
+    {
         // Load SSAShowcase which has some methods we can test with
-        try (InputStream is = TestMethodInlining.class.getResourceAsStream("SSAShowcase.class")) {
-            if (is == null) {
+        try (InputStream is = TestMethodInlining.class.getResourceAsStream("SSAShowcase.class"))
+        {
+            if (is == null)
+            {
                 throw new IOException("SSAShowcase.class not found");
             }
 
@@ -45,7 +57,8 @@ public class TestMethodInlining {
         }
     }
 
-    private static void testInlining(ClassFile classFile) throws IOException {
+    private static void testInlining(ClassFile classFile) throws IOException
+    {
         ConstPool constPool = classFile.getConstPool();
 
         System.out.println("=== Method Inlining Test ===");
@@ -55,7 +68,8 @@ public class TestMethodInlining {
         // Count methods before
         int methodCountBefore = classFile.getMethods().size();
         System.out.println("Methods before: " + methodCountBefore);
-        for (MethodEntry method : classFile.getMethods()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
             int codeSize = method.getCodeAttribute() != null ?
                 method.getCodeAttribute().getCode().length : 0;
             System.out.println("  - " + method.getName() + method.getDesc() +
@@ -69,7 +83,6 @@ public class TestMethodInlining {
             .withMethodInlining()
             .withDeadMethodElimination();
 
-        // Run class-level transforms
         System.out.println("Running class transforms...");
         boolean changed = ssa.runClassTransforms(classFile);
         System.out.println("Class modified: " + changed);
@@ -78,18 +91,21 @@ public class TestMethodInlining {
         // Count methods after
         int methodCountAfter = classFile.getMethods().size();
         System.out.println("Methods after: " + methodCountAfter);
-        for (MethodEntry method : classFile.getMethods()) {
+        for (MethodEntry method : classFile.getMethods())
+        {
             int codeSize = method.getCodeAttribute() != null ?
                 method.getCodeAttribute().getCode().length : 0;
-            System.out.println("  - " + method.getName() + method.getDesc() +
-                " (" + codeSize + " bytes)");
+            System.out.println("  - " + method.getName() + method.getDesc() + " (" + codeSize + " bytes)");
         }
         System.out.println();
 
         int eliminated = methodCountBefore - methodCountAfter;
-        if (eliminated > 0) {
+        if (eliminated > 0)
+        {
             System.out.println("Eliminated " + eliminated + " dead method(s)!");
-        } else {
+        }
+        else
+        {
             System.out.println("No methods eliminated (may not have private helper methods)");
         }
 

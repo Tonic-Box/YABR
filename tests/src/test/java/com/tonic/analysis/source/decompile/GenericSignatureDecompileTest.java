@@ -12,11 +12,15 @@ import java.nio.file.Paths;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Regression for bug 6: generic type variables, class/method formal type parameters and wildcards. */
-public class GenericSignatureDecompileTest {
+/**
+ * Regression for bug 6: generic type variables, class/method formal type parameters and wildcards.
+ */
+public class GenericSignatureDecompileTest
+{
 
     @Test
-    public void classMethodTypeParametersAndWildcards() throws Exception {
+    public void classMethodTypeParametersAndWildcards() throws Exception
+    {
         Path cls = Paths.get("stress-test/classes/S06_Generics.class");
         Assumptions.assumeTrue(Files.exists(cls), "stress-test class not compiled");
 

@@ -17,13 +17,15 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for PhiEliminator - verifies correct phi function elimination for bytecode lowering.
  * Tests critical edge splitting, copy insertion, terminator updates, and phi copy mapping.
  */
-class PhiEliminatorTest {
+class PhiEliminatorTest
+{
 
     private IRMethod method;
     private PhiEliminator eliminator;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         // Reset ID counters for consistent test behavior
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
@@ -32,10 +34,11 @@ class PhiEliminatorTest {
         eliminator = new PhiEliminator();
     }
 
-    // ========== Basic Phi Elimination Tests ==========
+    // Basic Phi Elimination Tests
 
     @Test
-    void eliminateSimplePhi_insertsCopies() {
+    void eliminateSimplePhi_insertsCopies()
+    {
         // Create CFG: B0 -> B1 (with phi)
         IRBlock b0 = new IRBlock("entry");
         IRBlock b1 = new IRBlock("merge");
@@ -47,7 +50,6 @@ class PhiEliminatorTest {
         b0.addSuccessor(b1);
         b0.addInstruction(SimpleInstruction.createGoto(b1));
 
-        // Add phi in B1
         SSAValue val0 = new SSAValue(PrimitiveType.INT, "x0");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_x");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -57,7 +59,6 @@ class PhiEliminatorTest {
         // Eliminate phi
         eliminator.eliminate(method);
 
-        // Verify phi is removed
         assertEquals(0, b1.getPhiInstructions().size(), "Phi should be removed");
 
         // Verify copy is inserted in B0 before terminator
@@ -73,7 +74,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void eliminatePhi_diamondCFG() {
+    void eliminatePhi_diamondCFG()
+    {
         // Create diamond CFG: entry -> left -> merge
         //                            -> right -> merge
         IRBlock entry = new IRBlock("entry");
@@ -87,7 +89,6 @@ class PhiEliminatorTest {
         method.addBlock(merge);
         method.setEntryBlock(entry);
 
-        // Build CFG with terminators
         entry.addSuccessor(left);
         entry.addSuccessor(right);
         SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
@@ -99,7 +100,6 @@ class PhiEliminatorTest {
         right.addSuccessor(merge);
         right.addInstruction(SimpleInstruction.createGoto(merge));
 
-        // Add phi with two incoming values
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left_val");
         SSAValue rightVal = new SSAValue(PrimitiveType.INT, "right_val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_result");
@@ -111,15 +111,16 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify phi is removed
         assertEquals(0, merge.getPhiInstructions().size(), "Phi should be removed");
 
-        // Verify copies inserted in both predecessors
         boolean leftHasCopy = false;
-        for (IRInstruction instr : left.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : left.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) instr;
-                if (copy.getSource().equals(leftVal)) {
+                if (copy.getSource().equals(leftVal))
+                {
                     leftHasCopy = true;
                 }
             }
@@ -127,10 +128,13 @@ class PhiEliminatorTest {
         assertTrue(leftHasCopy, "Left branch should have copy");
 
         boolean rightHasCopy = false;
-        for (IRInstruction instr : right.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : right.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) instr;
-                if (copy.getSource().equals(rightVal)) {
+                if (copy.getSource().equals(rightVal))
+                {
                     rightHasCopy = true;
                 }
             }
@@ -139,7 +143,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void noPhi_noChanges() {
+    void noPhi_noChanges()
+    {
         // CFG with no phi instructions
         IRBlock b0 = new IRBlock("entry");
         IRBlock b1 = new IRBlock("next");
@@ -157,15 +162,15 @@ class PhiEliminatorTest {
         // Eliminate (should do nothing)
         eliminator.eliminate(method);
 
-        // Verify no changes
         assertEquals(blockCountBefore, method.getBlocks().size(), "Block count unchanged");
         assertEquals(b0InstrCountBefore, b0.getInstructions().size(), "Instruction count unchanged");
     }
 
-    // ========== Critical Edge Splitting Tests ==========
+    // Critical Edge Splitting Tests
 
     @Test
-    void criticalEdge_isSplit() {
+    void criticalEdge_isSplit()
+    {
         // Critical edge: predecessor with multiple successors -> block with phi
         // entry -> left -> merge (phi)
         //       -> right ->
@@ -210,7 +215,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void criticalEdge_branchToPhiBlock_isSplit() {
+    void criticalEdge_branchToPhiBlock_isSplit()
+    {
         // True critical edge: entry (2 successors) -> merge (phi)
         //                            entry -> other
         IRBlock entry = new IRBlock("entry");
@@ -241,13 +247,14 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify: split block created
         assertEquals(blockCountBefore + 1, method.getBlocks().size(), "Should create split block");
 
         // Find split block (should be named split_entry_merge)
         IRBlock splitBlock = null;
-        for (IRBlock block : method.getBlocks()) {
-            if (block.getName().contains("split_entry_merge")) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (block.getName().contains("split_entry_merge"))
+            {
                 splitBlock = block;
                 break;
             }
@@ -267,7 +274,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void criticalEdge_phiPredecessorUpdated() {
+    void criticalEdge_phiPredecessorUpdated()
+    {
         // Verify that phi's predecessor is updated to split block
         IRBlock entry = new IRBlock("entry");
         IRBlock merge = new IRBlock("merge");
@@ -295,18 +303,21 @@ class PhiEliminatorTest {
         // After elimination, phi is removed, but we can verify via copy insertion
         // Find split block
         IRBlock splitBlock = null;
-        for (IRBlock block : method.getBlocks()) {
-            if (block.getName().contains("split")) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (block.getName().contains("split"))
+            {
                 splitBlock = block;
                 break;
             }
         }
         assertNotNull(splitBlock, "Split block should exist");
 
-        // Verify split block has copy instruction
         boolean hasCopy = false;
-        for (IRInstruction instr : splitBlock.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : splitBlock.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 hasCopy = true;
                 break;
             }
@@ -314,10 +325,11 @@ class PhiEliminatorTest {
         assertTrue(hasCopy, "Split block should contain copy instruction");
     }
 
-    // ========== Copy Insertion Tests ==========
+    // Copy Insertion Tests
 
     @Test
-    void copyInsertedBeforeTerminator() {
+    void copyInsertedBeforeTerminator()
+    {
         // Verify copy is inserted before terminator, not after
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -338,7 +350,6 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify last instruction is still terminator
         List<IRInstruction> instructions = b0.getInstructions();
         assertTrue(instructions.size() >= 2, "Should have copy + terminator");
         assertTrue(instructions.get(instructions.size() - 1).isTerminator(), "Last instruction should be terminator");
@@ -346,7 +357,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void copyWithUniqueName() {
+    void copyWithUniqueName()
+    {
         // Each phi incoming value gets a unique copy name
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -370,7 +382,6 @@ class PhiEliminatorTest {
         right.addSuccessor(merge);
         right.addInstruction(SimpleInstruction.createGoto(merge));
 
-        // Add phi
         SSAValue leftVal = new SSAValue(PrimitiveType.INT, "left");
         SSAValue rightVal = new SSAValue(PrimitiveType.INT, "right");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "result");
@@ -384,16 +395,20 @@ class PhiEliminatorTest {
 
         // Find both copy instructions
         CopyInstruction leftCopy = null;
-        for (IRInstruction instr : left.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : left.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 leftCopy = (CopyInstruction) instr;
                 break;
             }
         }
 
         CopyInstruction rightCopy = null;
-        for (IRInstruction instr : right.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : right.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 rightCopy = (CopyInstruction) instr;
                 break;
             }
@@ -402,7 +417,6 @@ class PhiEliminatorTest {
         assertNotNull(leftCopy, "Left should have copy");
         assertNotNull(rightCopy, "Right should have copy");
 
-        // Verify unique names (result_copy0, result_copy1, etc.)
         assertNotEquals(leftCopy.getResult().getName(), rightCopy.getResult().getName(),
                 "Copies should have unique names");
         assertTrue(leftCopy.getResult().getName().contains("copy"), "Left copy should have _copy suffix");
@@ -410,7 +424,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void multiplePhis_multipleCopies() {
+    void multiplePhis_multipleCopies()
+    {
         // Multiple phis in same block should all get copies
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -422,7 +437,6 @@ class PhiEliminatorTest {
         b0.addSuccessor(b1);
         b0.addInstruction(SimpleInstruction.createGoto(b1));
 
-        // Add two phis
         SSAValue val1 = new SSAValue(PrimitiveType.INT, "val1");
         SSAValue phi1Result = new SSAValue(PrimitiveType.INT, "phi1");
         PhiInstruction phi1 = new PhiInstruction(phi1Result);
@@ -438,23 +452,25 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify all phis removed
         assertEquals(0, b1.getPhiInstructions().size(), "All phis should be removed");
 
         // Count copies in b0
         int copyCount = 0;
-        for (IRInstruction instr : b0.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : b0.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 copyCount++;
             }
         }
         assertEquals(2, copyCount, "Should have two copies for two phis");
     }
 
-    // ========== Terminator Update Tests ==========
+    // Terminator Update Tests
 
     @Test
-    void gotoInstruction_targetUpdated() {
+    void gotoInstruction_targetUpdated()
+    {
         // Verify GotoInstruction target is updated during edge splitting
         IRBlock entry = new IRBlock("entry");
         IRBlock merge = new IRBlock("merge");
@@ -479,22 +495,17 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify branch instruction updated
         BranchInstruction branch = (BranchInstruction) entry.getTerminator();
         assertNotNull(branch, "Entry should have branch");
 
         // One of the targets should be the split block
-        boolean hasUpdatedTarget = false;
-        if (branch.getTrueTarget().getName().contains("split") ||
-            branch.getFalseTarget().getName().contains("split")) {
-            hasUpdatedTarget = true;
-        }
+        boolean hasUpdatedTarget = branch.getTrueTarget().getName().contains("split") || branch.getFalseTarget().getName().contains("split");
         assertTrue(hasUpdatedTarget, "Branch should target split block");
     }
 
     @Test
-    void branchInstruction_trueTargetUpdated() {
-        // Test BranchInstruction true target update
+    void branchInstruction_trueTargetUpdated()
+    {
         IRBlock entry = new IRBlock("entry");
         IRBlock trueBlock = new IRBlock("true");
         IRBlock falseBlock = new IRBlock("false");
@@ -510,7 +521,6 @@ class PhiEliminatorTest {
         BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, trueBlock, falseBlock);
         entry.addInstruction(branch);
 
-        // Add phi to true block
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -527,8 +537,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void branchInstruction_falseTargetUpdated() {
-        // Test BranchInstruction false target update
+    void branchInstruction_falseTargetUpdated()
+    {
         IRBlock entry = new IRBlock("entry");
         IRBlock trueBlock = new IRBlock("true");
         IRBlock falseBlock = new IRBlock("false");
@@ -544,7 +554,6 @@ class PhiEliminatorTest {
         BranchInstruction branch = new BranchInstruction(CompareOp.IFNE, cond, trueBlock, falseBlock);
         entry.addInstruction(branch);
 
-        // Add phi to false block
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -561,8 +570,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void switchInstruction_defaultTargetUpdated() {
-        // Test SwitchInstruction default target update
+    void switchInstruction_defaultTargetUpdated()
+    {
         IRBlock entry = new IRBlock("entry");
         IRBlock defaultBlock = new IRBlock("default");
         IRBlock case1 = new IRBlock("case1");
@@ -580,7 +589,6 @@ class PhiEliminatorTest {
         entry.addSuccessor(case1);
         entry.addInstruction(switchInstr);
 
-        // Add phi to default block
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -590,15 +598,14 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify default target updated
         SwitchInstruction updatedSwitch = (SwitchInstruction) entry.getTerminator();
         assertNotEquals(defaultBlock, updatedSwitch.getDefaultTarget(), "Default target should be updated");
         assertTrue(updatedSwitch.getDefaultTarget().getName().contains("split"), "Should target split block");
     }
 
     @Test
-    void switchInstruction_caseTargetUpdated() {
-        // Test SwitchInstruction case target update
+    void switchInstruction_caseTargetUpdated()
+    {
         IRBlock entry = new IRBlock("entry");
         IRBlock defaultBlock = new IRBlock("default");
         IRBlock case1 = new IRBlock("case1");
@@ -616,7 +623,6 @@ class PhiEliminatorTest {
         entry.addSuccessor(case1);
         entry.addInstruction(switchInstr);
 
-        // Add phi to case1 block
         SSAValue val = new SSAValue(PrimitiveType.INT, "val");
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi");
         PhiInstruction phi = new PhiInstruction(phiResult);
@@ -626,18 +632,17 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify case target updated
         SwitchInstruction updatedSwitch = (SwitchInstruction) entry.getTerminator();
         IRBlock caseTarget = updatedSwitch.getCase(1);
         assertNotEquals(case1, caseTarget, "Case target should be updated");
         assertTrue(caseTarget.getName().contains("split"), "Should target split block");
     }
 
-    // ========== Phi Copy Mapping Tests ==========
+    // Phi Copy Mapping Tests
 
     @Test
-    void phiCopyMapping_isPopulated() {
-        // Verify that method.getPhiCopyMapping() contains mapping
+    void phiCopyMapping_isPopulated()
+    {
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
 
@@ -657,7 +662,6 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify mapping exists
         Map<SSAValue, List<CopyInfo>> mapping = method.getPhiCopyMapping();
         assertNotNull(mapping, "Phi copy mapping should be set");
         assertFalse(mapping.isEmpty(), "Phi copy mapping should not be empty");
@@ -674,7 +678,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void phiCopyMapping_multipleIncoming() {
+    void phiCopyMapping_multipleIncoming()
+    {
         // Verify mapping for phi with multiple incoming values
         IRBlock entry = new IRBlock("entry");
         IRBlock left = new IRBlock("left");
@@ -709,17 +714,16 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify mapping has two copy infos
         Map<SSAValue, List<CopyInfo>> mapping = method.getPhiCopyMapping();
         assertTrue(mapping.containsKey(phiResult), "Mapping should contain phi result");
 
         List<CopyInfo> copies = mapping.get(phiResult);
         assertEquals(2, copies.size(), "Should have two copy infos for two incoming values");
 
-        // Verify both blocks are represented
         boolean hasLeftCopy = false;
         boolean hasRightCopy = false;
-        for (CopyInfo info : copies) {
+        for (CopyInfo info : copies)
+        {
             if (info.block() == left) hasLeftCopy = true;
             if (info.block() == right) hasRightCopy = true;
         }
@@ -728,7 +732,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void phiCopyMapping_usedForCoalescing() {
+    void phiCopyMapping_usedForCoalescing()
+    {
         // Verify mapping structure is suitable for RegisterAllocator
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -757,11 +762,11 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify mapping structure
         Map<SSAValue, List<CopyInfo>> mapping = method.getPhiCopyMapping();
         assertNotNull(mapping, "Mapping should exist");
 
-        for (Map.Entry<SSAValue, List<CopyInfo>> entry : mapping.entrySet()) {
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : mapping.entrySet())
+        {
             SSAValue phiVar = entry.getKey();
             List<CopyInfo> copyInfos = entry.getValue();
 
@@ -769,17 +774,19 @@ class PhiEliminatorTest {
             assertNotNull(copyInfos, "Copy info list should not be null");
             assertFalse(copyInfos.isEmpty(), "Copy info list should not be empty");
 
-            for (CopyInfo info : copyInfos) {
+            for (CopyInfo info : copyInfos)
+            {
                 assertNotNull(info.copyValue(), "Copy value should not be null");
                 assertNotNull(info.block(), "Block should not be null");
             }
         }
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void multiplePhisInSameBlock_allEliminated() {
+    void multiplePhisInSameBlock_allEliminated()
+    {
         // Multiple phis in the same block should all be eliminated
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -796,8 +803,8 @@ class PhiEliminatorTest {
         b1.addSuccessor(merge);
         b1.addInstruction(SimpleInstruction.createGoto(merge));
 
-        // Add three phis
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++)
+        {
             SSAValue val0 = new SSAValue(PrimitiveType.INT, "val0_" + i);
             SSAValue val1 = new SSAValue(PrimitiveType.INT, "val1_" + i);
             SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_" + i);
@@ -812,12 +819,12 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify all removed
         assertEquals(0, merge.getPhiInstructions().size(), "All phis should be removed");
     }
 
     @Test
-    void phiWithSingleIncoming_stillEliminated() {
+    void phiWithSingleIncoming_stillEliminated()
+    {
         // Edge case: phi with only one incoming value (degenerate phi)
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -838,12 +845,12 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify eliminated
         assertEquals(0, b1.getPhiInstructions().size(), "Degenerate phi should be eliminated");
     }
 
     @Test
-    void blockWithoutTerminator_handlesGracefully() {
+    void blockWithoutTerminator_handlesGracefully()
+    {
         // Edge case: block without terminator (should handle gracefully)
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -864,13 +871,14 @@ class PhiEliminatorTest {
         // Should not crash
         assertDoesNotThrow(() -> eliminator.eliminate(method));
 
-        // Verify phi eliminated
         assertEquals(0, b1.getPhiInstructions().size(), "Phi should be eliminated");
 
         // Verify copy added at end of block (no terminator to insert before)
         boolean hasCopy = false;
-        for (IRInstruction instr : b0.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : b0.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 hasCopy = true;
                 break;
             }
@@ -879,7 +887,8 @@ class PhiEliminatorTest {
     }
 
     @Test
-    void complexCFG_allPhisEliminated() {
+    void complexCFG_allPhisEliminated()
+    {
         // Complex CFG with multiple blocks and phis
         IRBlock entry = new IRBlock("entry");
         IRBlock a = new IRBlock("a");
@@ -913,7 +922,6 @@ class PhiEliminatorTest {
         merge1.addSuccessor(merge2);
         merge1.addInstruction(SimpleInstruction.createGoto(merge2));
 
-        // Add phis at merge1
         SSAValue valA = new SSAValue(PrimitiveType.INT, "valA");
         SSAValue valC = new SSAValue(PrimitiveType.INT, "valC");
         SSAValue phi1Result = new SSAValue(PrimitiveType.INT, "phi1");
@@ -925,13 +933,13 @@ class PhiEliminatorTest {
         // Eliminate
         eliminator.eliminate(method);
 
-        // Verify all phis removed
         assertEquals(0, merge1.getPhiInstructions().size(), "Phi should be removed from merge1");
         assertEquals(0, merge2.getPhiInstructions().size(), "No phis in merge2");
     }
 
     @Test
-    void preservesTypeInformation() {
+    void preservesTypeInformation()
+    {
         // Verify type information is preserved in copy instructions
         IRBlock b0 = new IRBlock("b0");
         IRBlock b1 = new IRBlock("b1");
@@ -954,8 +962,10 @@ class PhiEliminatorTest {
 
         // Find copy instruction
         CopyInstruction copy = null;
-        for (IRInstruction instr : b0.getInstructions()) {
-            if (instr instanceof CopyInstruction) {
+        for (IRInstruction instr : b0.getInstructions())
+        {
+            if (instr instanceof CopyInstruction)
+            {
                 copy = (CopyInstruction) instr;
                 break;
             }

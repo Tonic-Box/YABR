@@ -4,7 +4,6 @@ import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
-import com.tonic.parser.attribute.CodeAttribute;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,25 +15,31 @@ import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class StackFrameTest {
+class StackFrameTest
+{
 
     private ClassFile classFile;
     private MethodEntry methodWithCode;
     private MethodEntry abstractMethod;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         Path testClassPath = Paths.get("target/test-classes/com/tonic/demo/TestClass.class");
-        if (!Files.exists(testClassPath)) {
+        if (!Files.exists(testClassPath))
+        {
             testClassPath = Paths.get("build/classes/java/test/com/tonic/demo/TestClass.class");
         }
 
-        if (Files.exists(testClassPath)) {
+        if (Files.exists(testClassPath))
+        {
             byte[] classBytes = Files.readAllBytes(testClassPath);
             classFile = new ClassFile(new ByteArrayInputStream(classBytes));
 
-            for (MethodEntry method : classFile.getMethods()) {
-                if (method.getName().equals("simpleMethod") && method.getCodeAttribute() != null) {
+            for (MethodEntry method : classFile.getMethods())
+            {
+                if (method.getName().equals("simpleMethod") && method.getCodeAttribute() != null)
+                {
                     methodWithCode = method;
                 }
             }
@@ -42,17 +47,21 @@ class StackFrameTest {
     }
 
     @Test
-    void testConstructionWithNullMethodThrows() {
+    void testConstructionWithNullMethodThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new StackFrame(null, new ConcreteValue[0]));
     }
 
     @Test
-    void testConstructionWithAbstractMethodThrows() {
-        if (classFile != null) {
-            for (MethodEntry method : classFile.getMethods()) {
-                if (method.getCodeAttribute() == null) {
-                    assertThrows(IllegalArgumentException.class,
-                        () -> new StackFrame(method, new ConcreteValue[0]));
+    void testConstructionWithAbstractMethodThrows()
+    {
+        if (classFile != null)
+        {
+            for (MethodEntry method : classFile.getMethods())
+            {
+                if (method.getCodeAttribute() == null)
+                {
+                    assertThrows(IllegalArgumentException.class, () -> new StackFrame(method, new ConcreteValue[0]));
                     return;
                 }
             }
@@ -60,8 +69,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testConstructionWithValidMethod() {
-        if (methodWithCode != null) {
+    void testConstructionWithValidMethod()
+    {
+        if (methodWithCode != null)
+        {
             ConcreteValue[] args = new ConcreteValue[]{ConcreteValue.intValue(42)};
             StackFrame frame = new StackFrame(methodWithCode, args);
 
@@ -76,8 +87,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testPCManagement() {
-        if (methodWithCode != null) {
+    void testPCManagement()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             assertEquals(0, frame.getPC());
@@ -94,36 +107,45 @@ class StackFrameTest {
     }
 
     @Test
-    void testSetPCWithNegativeValueThrows() {
-        if (methodWithCode != null) {
+    void testSetPCWithNegativeValueThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalArgumentException.class, () -> frame.setPC(-1));
         }
     }
 
     @Test
-    void testAdvancePCWithNegativeValueThrows() {
-        if (methodWithCode != null) {
+    void testAdvancePCWithNegativeValueThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalArgumentException.class, () -> frame.advancePC(-5));
         }
     }
 
     @Test
-    void testSetPCExceedingBytecodeLengthThrows() {
-        if (methodWithCode != null) {
+    void testSetPCExceedingBytecodeLengthThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalArgumentException.class, () -> frame.setPC(100000));
         }
     }
 
     @Test
-    void testGetCurrentInstruction() {
-        if (methodWithCode != null) {
+    void testGetCurrentInstruction()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             var instruction = frame.getCurrentInstruction();
-            if (methodWithCode.getCodeAttribute().getCode().length > 0) {
+            if (methodWithCode.getCodeAttribute().getCode().length > 0)
+            {
                 assertNotNull(instruction);
                 assertEquals(0, instruction.getOffset());
             }
@@ -131,12 +153,15 @@ class StackFrameTest {
     }
 
     @Test
-    void testGetInstructionAt() {
-        if (methodWithCode != null) {
+    void testGetInstructionAt()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             var instruction = frame.getInstructionAt(0);
-            if (methodWithCode.getCodeAttribute().getCode().length > 0) {
+            if (methodWithCode.getCodeAttribute().getCode().length > 0)
+            {
                 assertNotNull(instruction);
                 assertEquals(0, instruction.getOffset());
             }
@@ -144,11 +169,14 @@ class StackFrameTest {
     }
 
     @Test
-    void testHasMoreInstructions() {
-        if (methodWithCode != null) {
+    void testHasMoreInstructions()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
-            if (methodWithCode.getCodeAttribute().getCode().length > 0) {
+            if (methodWithCode.getCodeAttribute().getCode().length > 0)
+            {
                 assertTrue(frame.hasMoreInstructions());
             }
 
@@ -158,8 +186,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testNormalCompletion() {
-        if (methodWithCode != null) {
+    void testNormalCompletion()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             assertFalse(frame.isCompleted());
@@ -174,8 +204,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testVoidCompletion() {
-        if (methodWithCode != null) {
+    void testVoidCompletion()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             frame.complete(null);
@@ -187,8 +219,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testExceptionalCompletion() {
-        if (methodWithCode != null) {
+    void testExceptionalCompletion()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             ObjectInstance exception = new ObjectInstance(1, "java/lang/RuntimeException");
@@ -200,16 +234,20 @@ class StackFrameTest {
     }
 
     @Test
-    void testCompleteExceptionallyWithNullThrows() {
-        if (methodWithCode != null) {
+    void testCompleteExceptionallyWithNullThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalArgumentException.class, () -> frame.completeExceptionally(null));
         }
     }
 
     @Test
-    void testDoubleCompletionThrows() {
-        if (methodWithCode != null) {
+    void testDoubleCompletionThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             frame.complete(ConcreteValue.intValue(0));
@@ -218,16 +256,20 @@ class StackFrameTest {
     }
 
     @Test
-    void testGetReturnValueBeforeCompletionThrows() {
-        if (methodWithCode != null) {
+    void testGetReturnValueBeforeCompletionThrows()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertThrows(IllegalStateException.class, frame::getReturnValue);
         }
     }
 
     @Test
-    void testLocalsInitializationWithArgs() {
-        if (methodWithCode != null) {
+    void testLocalsInitializationWithArgs()
+    {
+        if (methodWithCode != null)
+        {
             ConcreteValue[] args = new ConcreteValue[]{
                 ConcreteValue.intValue(42)
             };
@@ -239,8 +281,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testLocalsInitializationWithWideValues() {
-        if (methodWithCode != null) {
+    void testLocalsInitializationWithWideValues()
+    {
+        if (methodWithCode != null)
+        {
             ConcreteValue[] args = new ConcreteValue[]{
                 ConcreteValue.longValue(123456789L)
             };
@@ -252,8 +296,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testGetMethodSignature() {
-        if (methodWithCode != null) {
+    void testGetMethodSignature()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             String signature = frame.getMethodSignature();
@@ -264,8 +310,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testGetLineNumber() {
-        if (methodWithCode != null) {
+    void testGetLineNumber()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             int lineNumber = frame.getLineNumber();
@@ -274,8 +322,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testStackAccessors() {
-        if (methodWithCode != null) {
+    void testStackAccessors()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             frame.getStack().pushInt(42);
@@ -284,8 +334,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testToString() {
-        if (methodWithCode != null) {
+    void testToString()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             String str = frame.toString();
@@ -296,8 +348,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testFrameStateAfterPCAdvancement() {
-        if (methodWithCode != null) {
+    void testFrameStateAfterPCAdvancement()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             frame.advancePC(10);
@@ -309,8 +363,10 @@ class StackFrameTest {
     }
 
     @Test
-    void testMultipleLocalsAccess() {
-        if (methodWithCode != null) {
+    void testMultipleLocalsAccess()
+    {
+        if (methodWithCode != null)
+        {
             ConcreteValue[] args = new ConcreteValue[]{
                 ConcreteValue.intValue(1),
                 ConcreteValue.intValue(2),
@@ -326,16 +382,20 @@ class StackFrameTest {
     }
 
     @Test
-    void testExceptionAccessBeforeCompletion() {
-        if (methodWithCode != null) {
+    void testExceptionAccessBeforeCompletion()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
             assertNull(frame.getException());
         }
     }
 
     @Test
-    void testNormalCompletionDoesNotSetException() {
-        if (methodWithCode != null) {
+    void testNormalCompletionDoesNotSetException()
+    {
+        if (methodWithCode != null)
+        {
             StackFrame frame = new StackFrame(methodWithCode, new ConcreteValue[0]);
 
             frame.complete(ConcreteValue.intValue(0));

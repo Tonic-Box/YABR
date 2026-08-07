@@ -23,23 +23,27 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SimulationEngineTest {
+class SimulationEngineTest
+{
 
     private ClassPool pool;
     private SimulationContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
         pool = TestUtils.emptyPool();
         context = SimulationContext.forPool(pool);
     }
 
     @Nested
-    class EngineSetupTests {
+    class EngineSetupTests
+    {
 
         @Test
-        void engineCreation() {
+        void engineCreation()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             assertNotNull(engine);
             assertNotNull(engine.getContext());
@@ -47,7 +51,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void engineAddListener() {
+        void engineAddListener()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             AllocationListener listener = new AllocationListener();
 
@@ -56,7 +61,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void engineAddMultipleListeners() {
+        void engineAddMultipleListeners()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             AllocationListener alloc = new AllocationListener();
             MethodCallListener call = new MethodCallListener();
@@ -65,7 +71,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void engineRemoveListener() {
+        void engineRemoveListener()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             AllocationListener listener = new AllocationListener();
 
@@ -75,7 +82,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void engineGetListener() {
+        void engineGetListener()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             AllocationListener listener = new AllocationListener();
             engine.addListener(listener);
@@ -86,10 +94,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class BasicSimulationTests {
+    class BasicSimulationTests
+    {
 
         @Test
-        void simulateEmptyMethod() {
+        void simulateEmptyMethod()
+        {
             IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -105,7 +115,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void simulateMethodWithListener() {
+        void simulateMethodWithListener()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -122,7 +133,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void simulateMethodEntryLiftsAndSimulates() throws IOException {
+        void simulateMethodEntryLiftsAndSimulates() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Lifted")
                 .publicStaticMethod("run", "()V")
                     .vreturn()
@@ -137,7 +149,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void simulateWithMultipleListeners() {
+        void simulateWithMultipleListeners()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -145,11 +158,7 @@ class SimulationEngineTest {
             entry.addInstruction(new ReturnInstruction(null));
 
             SimulationEngine engine = new SimulationEngine(context);
-            engine.addListeners(
-                new AllocationListener(),
-                new MethodCallListener(),
-                new ControlFlowListener()
-            );
+            engine.addListeners(new AllocationListener(), new MethodCallListener(), new ControlFlowListener());
 
             SimulationResult result = engine.simulate(method);
 
@@ -159,10 +168,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class HandleNullEntryBlockTests {
+    class HandleNullEntryBlockTests
+    {
 
         @Test
-        void handleNullEntryBlock() {
+        void handleNullEntryBlock()
+        {
             IRMethod method = new IRMethod("com/test/Test", "nullEntry", "()V", true);
 
             SimulationEngine engine = new SimulationEngine(context);
@@ -173,7 +184,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void handleEmptyBlockList() {
+        void handleEmptyBlockList()
+        {
             IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.setEntryBlock(entry);
@@ -186,10 +198,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class HandleLoopWithStateRevisitTests {
+    class HandleLoopWithStateRevisitTests
+    {
 
         @Test
-        void handleSimpleLoop() {
+        void handleSimpleLoop()
+        {
             IRMethod method = new IRMethod("com/test/Test", "loop", "()V", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -225,7 +239,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void handleLoopWithMultiplePredecessors() {
+        void handleLoopWithMultiplePredecessors()
+        {
             IRMethod method = new IRMethod("com/test/Test", "multiPredLoop", "()V", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -270,10 +285,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class PhiInstructionMergingTests {
+    class PhiInstructionMergingTests
+    {
 
         @Test
-        void phiInstructionMerging() {
+        void phiInstructionMerging()
+        {
             IRMethod method = new IRMethod("com/test/Test", "phiMerge", "()V", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -323,10 +340,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class ReturnInstructionTerminationTests {
+    class ReturnInstructionTerminationTests
+    {
 
         @Test
-        void returnInstructionTerminationVoid() {
+        void returnInstructionTerminationVoid()
+        {
             IRMethod method = new IRMethod("com/test/Test", "returnVoid", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -342,7 +361,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void multipleReturnPaths() {
+        void multipleReturnPaths()
+        {
             IRMethod method = new IRMethod("com/test/Test", "multiReturn", "()I", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -377,10 +397,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class ThrowInstructionTerminationTests {
+    class ThrowInstructionTerminationTests
+    {
 
         @Test
-        void throwInstructionTermination() {
+        void throwInstructionTermination()
+        {
             IRMethod method = new IRMethod("com/test/Test", "throwException", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -398,7 +420,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void throwInstructionWithCondition() {
+        void throwInstructionWithCondition()
+        {
             IRMethod method = new IRMethod("com/test/Test", "conditionalThrow", "()V", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -431,10 +454,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class StepOperationTests {
+    class StepOperationTests
+    {
 
         @Test
-        void stepSingleInstruction() {
+        void stepSingleInstruction()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             SimulationState state = SimulationState.empty();
 
@@ -447,7 +472,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void stepBlock() {
+        void stepBlock()
+        {
             SimulationEngine engine = new SimulationEngine(context);
             SimulationState state = SimulationState.empty();
 
@@ -465,10 +491,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class SimulatePathTests {
+    class SimulatePathTests
+    {
 
         @Test
-        void simulateSpecificPath() {
+        void simulateSpecificPath()
+        {
             IRMethod method = new IRMethod("com/test/Test", "path", "()V", true);
 
             IRBlock entry = new IRBlock("entry");
@@ -506,7 +534,8 @@ class SimulationEngineTest {
         }
 
         @Test
-        void simulateEmptyPath() {
+        void simulateEmptyPath()
+        {
             IRMethod method = new IRMethod("com/test/Test", "emptyPath", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -523,10 +552,12 @@ class SimulationEngineTest {
     }
 
     @Nested
-    class InstructionLevelTrackingTests {
+    class InstructionLevelTrackingTests
+    {
 
         @Test
-        void instructionLevelTracking() {
+        void instructionLevelTracking()
+        {
             SimulationContext trackingContext = SimulationContext.forPool(pool)
                 .withMode(SimulationMode.INSTRUCTION);
 

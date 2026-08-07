@@ -15,22 +15,26 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ControlFlowSimplifierBranchCoverageTest {
+class ControlFlowSimplifierBranchCoverageTest
+{
 
     private ControlFlowSimplifier simplifier;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         simplifier = new ControlFlowSimplifier();
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Nested
-    class GuardClauseTests {
+    class GuardClauseTests
+    {
 
         @Test
-        void convertsThrowElseToGuard() {
+        void convertsThrowElseToGuard()
+        {
             List<Statement> thenStmts = new ArrayList<>();
             thenStmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
             BlockStmt thenBlock = new BlockStmt(thenStmts);
@@ -39,11 +43,7 @@ class ControlFlowSimplifierBranchCoverageTest {
                 new NewExpr("java/lang/IllegalArgumentException", new ArrayList<>(), new ReferenceSourceType("IllegalArgumentException"))
             );
 
-            IfStmt ifStmt = new IfStmt(
-                new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN),
-                thenBlock,
-                throwStmt
-            );
+            IfStmt ifStmt = new IfStmt(new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN), thenBlock, throwStmt);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(ifStmt);
@@ -54,7 +54,25 @@ class ControlFlowSimplifierBranchCoverageTest {
         }
 
         @Test
-        void doesNotConvertNonEarlyExitElse() {
+        void doesNotConvertNonEarlyExitElse()
+        {
+            IfStmt ifStmt = new IfStmt(
+                new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN),
+                new ExprStmt(new VarRefExpr("y", PrimitiveSourceType.INT)),
+                new ExprStmt(new VarRefExpr("x", PrimitiveSourceType.INT))
+            );
+
+            List<Statement> stmts = new ArrayList<>();
+            stmts.add(ifStmt);
+            BlockStmt block = new BlockStmt(stmts);
+
+            boolean changed = simplifier.transform(block);
+            assertFalse(changed);
+        }
+
+        @Test
+        void flattensRedundantElseAfterTerminalThen()
+        {
             IfStmt ifStmt = new IfStmt(
                 new VarRefExpr("valid", PrimitiveSourceType.BOOLEAN),
                 new ReturnStmt(LiteralExpr.ofInt(1)),
@@ -66,15 +84,21 @@ class ControlFlowSimplifierBranchCoverageTest {
             BlockStmt block = new BlockStmt(stmts);
 
             boolean changed = simplifier.transform(block);
-            assertFalse(changed);
+            assertTrue(changed);
+            assertEquals(2, block.getStatements().size());
+            IfStmt guard = (IfStmt) block.getStatements().get(0);
+            assertFalse(guard.hasElse());
+            assertTrue(block.getStatements().get(1) instanceof ExprStmt);
         }
     }
 
     @Nested
-    class NestedGuardFlattening {
+    class NestedGuardFlattening
+    {
 
         @Test
-        void flattensNestedNegatedGuards() {
+        void flattensNestedNegatedGuards()
+        {
             List<Statement> innermostStmts = new ArrayList<>();
             innermostStmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
             BlockStmt innermostBlock = new BlockStmt(innermostStmts);
@@ -112,7 +136,8 @@ class ControlFlowSimplifierBranchCoverageTest {
         }
 
         @Test
-        void doesNotFlattenWithoutEarlyExit() {
+        void doesNotFlattenWithoutEarlyExit()
+        {
             IfStmt innerIf = new IfStmt(
                 new UnaryExpr(UnaryOperator.NOT, new VarRefExpr("b", PrimitiveSourceType.BOOLEAN), PrimitiveSourceType.BOOLEAN),
                 new BlockStmt()
@@ -137,10 +162,12 @@ class ControlFlowSimplifierBranchCoverageTest {
     }
 
     @Nested
-    class DuplicateAssignmentRemoval {
+    class DuplicateAssignmentRemoval
+    {
 
         @Test
-        void removesDuplicateAssignment() {
+        void removesDuplicateAssignment()
+        {
             BinaryExpr assign1 = new BinaryExpr(
                 BinaryOperator.ASSIGN,
                 new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -166,10 +193,12 @@ class ControlFlowSimplifierBranchCoverageTest {
     }
 
     @Nested
-    class EmptyIfTests {
+    class EmptyIfTests
+    {
 
         @Test
-        void emptyThenNoElseSideEffectFreeRemoved() {
+        void emptyThenNoElseSideEffectFreeRemoved()
+        {
             // if (x != 3) {}  -> removed entirely (condition has no side effects)
             IfStmt ifStmt = new IfStmt(
                 new BinaryExpr(BinaryOperator.NE,
@@ -188,7 +217,8 @@ class ControlFlowSimplifierBranchCoverageTest {
         }
 
         @Test
-        void emptyThenSideEffectingComparisonKeptAsIf() {
+        void emptyThenSideEffectingComparisonKeptAsIf()
+        {
             // if (foo() != 0) {}  -> kept as an empty if: the condition is side-effecting (call)
             // but a bare comparison is not a legal Java statement.
             MethodCallExpr call = MethodCallExpr.staticCall(
@@ -209,7 +239,8 @@ class ControlFlowSimplifierBranchCoverageTest {
         }
 
         @Test
-        void emptyThenBareCallConditionLoweredToStatement() {
+        void emptyThenBareCallConditionLoweredToStatement()
+        {
             // if (foo()) {}  -> foo();  (the call is itself a valid statement expression)
             MethodCallExpr call = MethodCallExpr.staticCall(
                 "com/test/T", "foo", new ArrayList<>(), PrimitiveSourceType.BOOLEAN);
@@ -226,7 +257,8 @@ class ControlFlowSimplifierBranchCoverageTest {
         }
 
         @Test
-        void emptyThenWithElseInverted() {
+        void emptyThenWithElseInverted()
+        {
             // if (x) {} else { y = 1; }  -> if (!x) { y = 1; }
             BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN,
                 new VarRefExpr("y", PrimitiveSourceType.INT), LiteralExpr.ofInt(1), PrimitiveSourceType.INT);

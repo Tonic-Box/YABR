@@ -13,26 +13,25 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CodeBuilderTest {
+class CodeBuilderTest
+{
 
     @Nested
-    class LoadAndStoreInstructions {
+    class LoadAndStoreInstructions
+    {
 
         @Test
-        void iloadAndIstore() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .istore(1)
-                .iload(1)
-                .ireturn()
-            );
+        void iloadAndIstore()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .istore(1) .iload(1) .ireturn());
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(insns.size() >= 4);
         }
 
         @Test
-        void aloadAndAstore() {
+        void aloadAndAstore()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .astore(1)
@@ -45,13 +44,9 @@ class CodeBuilderTest {
         }
 
         @Test
-        void lloadAndLstore() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lstore(2)
-                .lload(2)
-                .lreturn()
-            , "(J)J");
+        void lloadAndLstore()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lstore(2) .lload(2) .lreturn() , "(J)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(insns.size() >= 4);
@@ -59,105 +54,79 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ArithmeticInstructions {
+    class ArithmeticInstructions
+    {
 
         @Test
-        void integerArithmetic() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .iadd()
-                .ireturn()
-            , "(II)I");
+        void integerArithmetic()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .iadd() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void integerSubtraction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .isub()
-                .ireturn()
-            , "(II)I");
+        void integerSubtraction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .isub() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void integerMultiplication() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .imul()
-                .ireturn()
-            , "(II)I");
+        void integerMultiplication()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .imul() .ireturn() , "(II)I");
 
             assertNotNull(cf);
         }
     }
 
     @Nested
-    class StackManipulationInstructions {
+    class StackManipulationInstructions
+    {
 
         @Test
-        void dupInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iconst(5)
-                .dup()
-                .iadd()
-                .ireturn()
-            , "()I");
+        void dupInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iconst(5) .dup() .iadd() .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, DupInstruction.class));
         }
 
         @Test
-        void popInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iconst(5)
-                .pop()
-                .iconst(10)
-                .ireturn()
-            , "()I");
+        void popInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iconst(5) .pop() .iconst(10) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, PopInstruction.class));
         }
 
         @Test
-        void pop2Instruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lconst(5)
-                .pop2()
-                .iconst(10)
-                .ireturn()
-            , "()I");
+        void pop2Instruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lconst(5) .pop2() .iconst(10) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, Pop2Instruction.class));
         }
 
         @Test
-        void swapInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iconst(1)
-                .iconst(2)
-                .swap()
-                .isub()
-                .ireturn()
-            , "()I");
+        void swapInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iconst(1) .iconst(2) .swap() .isub() .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, SwapInstruction.class));
         }
 
         @Test
-        void dup_x1Instruction() {
+        void dup_x1Instruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(1)
                 .iconst(2)
@@ -172,7 +141,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void dup_x2Instruction() {
+        void dup_x2Instruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(1)
                 .iconst(2)
@@ -189,20 +159,17 @@ class CodeBuilderTest {
         }
 
         @Test
-        void dup2Instruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lconst(5)
-                .dup2()
-                .ladd()
-                .lreturn()
-            , "()J");
+        void dup2Instruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lconst(5) .dup2() .ladd() .lreturn() , "()J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, DupInstruction.class));
         }
 
         @Test
-        void dup2_x1Instruction() {
+        void dup2_x1Instruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(1)
                 .lconst(2)
@@ -217,7 +184,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void dup2_x2Instruction() {
+        void dup2_x2Instruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .lconst(1)
                 .lconst(2)
@@ -233,10 +201,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class BranchInstructions {
+    class BranchInstructions
+    {
 
         @Test
-        void gotoInstruction() {
+        void gotoInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .goto_("end")
                 .iconst(0)
@@ -250,7 +220,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifeqInstruction() {
+        void ifeqInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .ifeq("zero")
@@ -266,7 +237,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifneInstruction() {
+        void ifneInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .ifne("nonzero")
@@ -281,7 +253,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifltInstruction() {
+        void ifltInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iflt("negative")
@@ -297,7 +270,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifgeInstruction() {
+        void ifgeInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .ifge("nonnegative")
@@ -313,7 +287,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifgtInstruction() {
+        void ifgtInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .ifgt("positive")
@@ -329,7 +304,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifleInstruction() {
+        void ifleInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .ifle("nonpositive")
@@ -345,7 +321,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpltInstruction() {
+        void if_icmpltInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -362,7 +339,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpgeInstruction() {
+        void if_icmpgeInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -379,7 +357,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpgtInstruction() {
+        void if_icmpgtInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -396,7 +375,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpleInstruction() {
+        void if_icmpleInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -413,7 +393,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpeqInstruction() {
+        void if_icmpeqInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -430,7 +411,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_icmpneInstruction() {
+        void if_icmpneInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .iload(1)
@@ -447,7 +429,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_acmpeqInstruction() {
+        void if_acmpeqInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .aload(1)
@@ -464,7 +447,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void if_acmpneInstruction() {
+        void if_acmpneInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .aload(1)
@@ -481,7 +465,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifnullInstruction() {
+        void ifnullInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .ifnull("isnull")
@@ -497,7 +482,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ifnonnullInstruction() {
+        void ifnonnullInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .ifnonnull("notnull")
@@ -514,10 +500,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class MethodInvocationInstructions {
+    class MethodInvocationInstructions
+    {
 
         @Test
-        void invokestaticInstruction() {
+        void invokestaticInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iload(0)
                 .invokestatic("java/lang/Math", "abs", "(I)I")
@@ -529,7 +517,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void invokevirtualInstruction() {
+        void invokevirtualInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .invokevirtual("java/lang/Object", "hashCode", "()I")
@@ -541,7 +530,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void invokespecialInstruction() {
+        void invokespecialInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .invokespecial("java/lang/Object", "<init>", "()V")
@@ -553,7 +543,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void invokeinterfaceInstruction() {
+        void invokeinterfaceInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .invokeinterface("java/util/List", "size", "()I")
@@ -566,10 +557,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class FieldAccessInstructions {
+    class FieldAccessInstructions
+    {
 
         @Test
-        void getstaticInstruction() {
+        void getstaticInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
                 .areturn()
@@ -579,7 +572,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void getfieldInstruction() {
+        void getfieldInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .getfield("com/test/TestClass", "value", "I")
@@ -591,7 +585,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void putfieldInstruction() {
+        void putfieldInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(42)
@@ -604,7 +599,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void putstaticInstruction() {
+        void putstaticInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(100)
                 .putstatic("com/test/TestClass", "staticValue", "I")
@@ -617,65 +613,54 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ArrayInstructions {
+    class ArrayInstructions
+    {
 
         @Test
-        void newarrayInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iconst(10)
-                .newarray(AccessFlags.T_INT)
-                .areturn()
-            , "()[I");
+        void newarrayInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iconst(10) .newarray(AccessFlags.T_INT) .areturn() , "()[I");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, NewArrayInstruction.class));
+            assertTrue(containsOpcodeType(insns, NewPrimitiveArrayInstruction.class));
         }
     }
 
     @Nested
-    class ConstantInstructions {
+    class ConstantInstructions
+    {
 
         @Test
-        void iconstInstructions() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iconst(0)
-                .iconst(5)
-                .iadd()
-                .ireturn()
-            , "()I");
+        void iconstInstructions()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iconst(0) .iconst(5) .iadd() .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IConstInstruction.class));
         }
 
         @Test
-        void bipushInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .bipush(100)
-                .ireturn()
-            , "()I");
+        void bipushInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .bipush(100) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, BipushInstruction.class));
         }
 
         @Test
-        void sipushInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .sipush(1000)
-                .ireturn()
-            , "()I");
+        void sipushInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .sipush(1000) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, SipushInstruction.class));
         }
 
         @Test
-        void aconstNullInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aconst_null()
-                .areturn()
-            , "()Ljava/lang/Object;");
+        void aconstNullInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aconst_null() .areturn() , "()Ljava/lang/Object;");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, AConstNullInstruction.class));
@@ -683,435 +668,335 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ReturnInstructions {
+    class ReturnInstructions
+    {
 
         @Test
-        void vreturnInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb.vreturn(), "()V");
+        void vreturnInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(CodeBuilder::vreturn, "()V");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
 
         @Test
-        void ireturnInstruction() {
+        void ireturnInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb.iconst(0).ireturn(), "()I");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
 
         @Test
-        void areturnInstruction() {
+        void areturnInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb.aconst_null().areturn(), "()Ljava/lang/Object;");
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
     @Nested
-    class LongOperations {
+    class LongOperations
+    {
 
         @Test
-        void lconstInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lconst(0)
-                .lreturn()
-            , "()J");
+        void lconstInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lconst(0) .lreturn() , "()J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, LConstInstruction.class));
         }
 
         @Test
-        void lloadAndLstoreInstructions() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lstore(2)
-                .lload(2)
-                .lreturn()
-            , "(J)J");
+        void lloadAndLstoreInstructions()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lstore(2) .lload(2) .lreturn() , "(J)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(insns.size() >= 4);
         }
 
         @Test
-        void laddInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .ladd()
-                .lreturn()
-            , "(JJ)J");
+        void laddInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .ladd() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void lsubInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lsub()
-                .lreturn()
-            , "(JJ)J");
+        void lsubInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lsub() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void lmulInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lmul()
-                .lreturn()
-            , "(JJ)J");
+        void lmulInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lmul() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void ldivInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .ldiv()
-                .lreturn()
-            , "(JJ)J");
+        void ldivInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .ldiv() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void lremInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lrem()
-                .lreturn()
-            , "(JJ)J");
+        void lremInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lrem() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void lnegInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lneg()
-                .lreturn()
-            , "(J)J");
+        void lnegInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lneg() .lreturn() , "(J)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, LNegInstruction.class));
         }
 
         @Test
-        void lreturnInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lconst(0)
-                .lreturn()
-            , "()J");
+        void lreturnInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lconst(0) .lreturn() , "()J");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
     @Nested
-    class FloatOperations {
+    class FloatOperations
+    {
 
         @Test
-        void fconstInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fconst(0)
-                .freturn()
-            , "()F");
+        void fconstInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fconst(0) .freturn() , "()F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, FConstInstruction.class));
         }
 
         @Test
-        void floadAndFstoreInstructions() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fstore(1)
-                .fload(1)
-                .freturn()
-            , "(F)F");
+        void floadAndFstoreInstructions()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fstore(1) .fload(1) .freturn() , "(F)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(insns.size() >= 4);
         }
 
         @Test
-        void faddInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fadd()
-                .freturn()
-            , "(FF)F");
+        void faddInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fadd() .freturn() , "(FF)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void fsubInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fsub()
-                .freturn()
-            , "(FF)F");
+        void fsubInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fsub() .freturn() , "(FF)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void fmulInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fmul()
-                .freturn()
-            , "(FF)F");
+        void fmulInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fmul() .freturn() , "(FF)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void fdivInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fdiv()
-                .freturn()
-            , "(FF)F");
+        void fdivInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fdiv() .freturn() , "(FF)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void fremInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .frem()
-                .freturn()
-            , "(FF)F");
+        void fremInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .frem() .freturn() , "(FF)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void fnegInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fneg()
-                .freturn()
-            , "(F)F");
+        void fnegInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fneg() .freturn() , "(F)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, FNegInstruction.class));
         }
 
         @Test
-        void freturnInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fconst(0)
-                .freturn()
-            , "()F");
+        void freturnInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fconst(0) .freturn() , "()F");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
     @Nested
-    class DoubleOperations {
+    class DoubleOperations
+    {
 
         @Test
-        void dconstInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dconst(0)
-                .dreturn()
-            , "()D");
+        void dconstInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dconst(0) .dreturn() , "()D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, DConstInstruction.class));
         }
 
         @Test
-        void dloadAndDstoreInstructions() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dstore(2)
-                .dload(2)
-                .dreturn()
-            , "(D)D");
+        void dloadAndDstoreInstructions()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dstore(2) .dload(2) .dreturn() , "(D)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(insns.size() >= 4);
         }
 
         @Test
-        void daddInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .dadd()
-                .dreturn()
-            , "(DD)D");
+        void daddInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .dadd() .dreturn() , "(DD)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void dsubInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .dsub()
-                .dreturn()
-            , "(DD)D");
+        void dsubInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .dsub() .dreturn() , "(DD)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void dmulInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .dmul()
-                .dreturn()
-            , "(DD)D");
+        void dmulInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .dmul() .dreturn() , "(DD)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void ddivInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .ddiv()
-                .dreturn()
-            , "(DD)D");
+        void ddivInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .ddiv() .dreturn() , "(DD)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void dremInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .drem()
-                .dreturn()
-            , "(DD)D");
+        void dremInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .drem() .dreturn() , "(DD)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticInstruction.class));
         }
 
         @Test
-        void dnegInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dneg()
-                .dreturn()
-            , "(D)D");
+        void dnegInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dneg() .dreturn() , "(D)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, DNegInstruction.class));
         }
 
         @Test
-        void dreturnInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dconst(0)
-                .dreturn()
-            , "()D");
+        void dreturnInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dconst(0) .dreturn() , "()D");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, ReturnInstruction.class));
+            assertTrue(containsOpcodeType(insns, MethodReturnInstruction.class));
         }
     }
 
     @Nested
-    class ArrayOperations {
+    class ArrayOperations
+    {
 
         @Test
-        void ialoadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .iaload()
-                .ireturn()
-            , "([I)I");
+        void ialoadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .iaload() .ireturn() , "([I)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IALoadInstruction.class));
         }
 
         @Test
-        void laloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .laload()
-                .lreturn()
-            , "([J)J");
+        void laloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .laload() .lreturn() , "([J)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, LALoadInstruction.class));
         }
 
         @Test
-        void faloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .faload()
-                .freturn()
-            , "([F)F");
+        void faloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .faload() .freturn() , "([F)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, FALoadInstruction.class));
         }
 
         @Test
-        void daloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .daload()
-                .dreturn()
-            , "([D)D");
+        void daloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .daload() .dreturn() , "([D)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, DALoadInstruction.class));
         }
 
         @Test
-        void aaloadInstruction() {
+        void aaloadInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1124,46 +1009,35 @@ class CodeBuilderTest {
         }
 
         @Test
-        void baloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .baload()
-                .ireturn()
-            , "([B)I");
+        void baloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .baload() .ireturn() , "([B)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, BALOADInstruction.class));
         }
 
         @Test
-        void caloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .caload()
-                .ireturn()
-            , "([C)I");
+        void caloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .caload() .ireturn() , "([C)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CALoadInstruction.class));
         }
 
         @Test
-        void saloadInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .iconst(0)
-                .saload()
-                .ireturn()
-            , "([S)I");
+        void saloadInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .iconst(0) .saload() .ireturn() , "([S)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, SALoadInstruction.class));
         }
 
         @Test
-        void iastoreInstruction() {
+        void iastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1177,7 +1051,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void lastoreInstruction() {
+        void lastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1191,7 +1066,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void fastoreInstruction() {
+        void fastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1205,7 +1081,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void dastoreInstruction() {
+        void dastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1219,7 +1096,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void aastoreInstruction() {
+        void aastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1233,7 +1111,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void bastoreInstruction() {
+        void bastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1247,7 +1126,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void castoreInstruction() {
+        void castoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1261,7 +1141,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void sastoreInstruction() {
+        void sastoreInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .iconst(0)
@@ -1275,12 +1156,9 @@ class CodeBuilderTest {
         }
 
         @Test
-        void arraylengthInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .aload(0)
-                .arraylength()
-                .ireturn()
-            , "([I)I");
+        void arraylengthInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .aload(0) .arraylength() .ireturn() , "([I)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArrayLengthInstruction.class));
@@ -1288,159 +1166,112 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class BitwiseOperations {
+    class BitwiseOperations
+    {
 
         @Test
-        void iandInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .iand()
-                .ireturn()
-            , "(II)I");
+        void iandInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .iand() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IAndInstruction.class));
         }
 
         @Test
-        void iorInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .ior()
-                .ireturn()
-            , "(II)I");
+        void iorInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .ior() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IOrInstruction.class));
         }
 
         @Test
-        void ixorInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .ixor()
-                .ireturn()
-            , "(II)I");
+        void ixorInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .ixor() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IXorInstruction.class));
         }
 
         @Test
-        void ishlInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .ishl()
-                .ireturn()
-            , "(II)I");
+        void ishlInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .ishl() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
         }
 
         @Test
-        void ishrInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .ishr()
-                .ireturn()
-            , "(II)I");
+        void ishrInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .ishr() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
         }
 
         @Test
-        void iushrInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .iload(1)
-                .iushr()
-                .ireturn()
-            , "(II)I");
+        void iushrInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .iload(1) .iushr() .ireturn() , "(II)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
         }
 
         @Test
-        void landInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .land()
-                .lreturn()
-            , "(JJ)J");
+        void landInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .land() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IAndInstruction.class));
         }
 
         @Test
-        void lorInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lor()
-                .lreturn()
-            , "(JJ)J");
+        void lorInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lor() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IOrInstruction.class));
         }
 
         @Test
-        void lxorInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lxor()
-                .lreturn()
-            , "(JJ)J");
+        void lxorInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lxor() .lreturn() , "(JJ)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, IXorInstruction.class));
         }
 
         @Test
-        void lshlInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .iload(2)
-                .lshl()
-                .lreturn()
-            , "(JI)J");
+        void lshlInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .iload(2) .lshl() .lreturn() , "(JI)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
         }
 
         @Test
-        void lshrInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .iload(2)
-                .lshr()
-                .lreturn()
-            , "(JI)J");
+        void lshrInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .iload(2) .lshr() .lreturn() , "(JI)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
         }
 
         @Test
-        void lushrInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .iload(2)
-                .lushr()
-                .lreturn()
-            , "(JI)J");
+        void lushrInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .iload(2) .lushr() .lreturn() , "(JI)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ArithmeticShiftInstruction.class));
@@ -1448,183 +1279,139 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class TypeConversions {
+    class TypeConversions
+    {
 
         @Test
-        void i2lInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2l()
-                .lreturn()
-            , "(I)J");
+        void i2lInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2l() .lreturn() , "(I)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, I2LInstruction.class));
         }
 
         @Test
-        void i2fInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2f()
-                .freturn()
-            , "(I)F");
+        void i2fInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2f() .freturn() , "(I)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void i2dInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2d()
-                .dreturn()
-            , "(I)D");
+        void i2dInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2d() .dreturn() , "(I)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void i2bInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2b()
-                .ireturn()
-            , "(I)I");
+        void i2bInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2b() .ireturn() , "(I)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, NarrowingConversionInstruction.class));
         }
 
         @Test
-        void i2cInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2c()
-                .ireturn()
-            , "(I)I");
+        void i2cInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2c() .ireturn() , "(I)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, NarrowingConversionInstruction.class));
         }
 
         @Test
-        void i2sInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2s()
-                .ireturn()
-            , "(I)I");
+        void i2sInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2s() .ireturn() , "(I)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, NarrowingConversionInstruction.class));
         }
 
         @Test
-        void l2iInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .l2i()
-                .ireturn()
-            , "(J)I");
+        void l2iInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .l2i() .ireturn() , "(J)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void l2fInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .l2f()
-                .freturn()
-            , "(J)F");
+        void l2fInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .l2f() .freturn() , "(J)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void l2dInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .l2d()
-                .dreturn()
-            , "(J)D");
+        void l2dInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .l2d() .dreturn() , "(J)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void f2iInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .f2i()
-                .ireturn()
-            , "(F)I");
+        void f2iInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .f2i() .ireturn() , "(F)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void f2lInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .f2l()
-                .lreturn()
-            , "(F)J");
+        void f2lInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .f2l() .lreturn() , "(F)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void f2dInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .f2d()
-                .dreturn()
-            , "(F)D");
+        void f2dInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .f2d() .dreturn() , "(F)D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void d2iInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .d2i()
-                .ireturn()
-            , "(D)I");
+        void d2iInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .d2i() .ireturn() , "(D)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void d2lInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .d2l()
-                .lreturn()
-            , "(D)J");
+        void d2lInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .d2l() .lreturn() , "(D)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
         }
 
         @Test
-        void d2fInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .d2f()
-                .freturn()
-            , "(D)F");
+        void d2fInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .d2f() .freturn() , "(D)F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, ConversionInstruction.class));
@@ -1632,68 +1419,49 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ComparisonOperations {
+    class ComparisonOperations
+    {
 
         @Test
-        void lcmpInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .lload(0)
-                .lload(2)
-                .lcmp()
-                .ireturn()
-            , "(JJ)I");
+        void lcmpInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .lload(0) .lload(2) .lcmp() .ireturn() , "(JJ)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CompareInstruction.class));
         }
 
         @Test
-        void fcmplInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fcmpl()
-                .ireturn()
-            , "(FF)I");
+        void fcmplInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fcmpl() .ireturn() , "(FF)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CompareInstruction.class));
         }
 
         @Test
-        void fcmpgInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .fload(0)
-                .fload(1)
-                .fcmpg()
-                .ireturn()
-            , "(FF)I");
+        void fcmpgInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .fload(0) .fload(1) .fcmpg() .ireturn() , "(FF)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CompareInstruction.class));
         }
 
         @Test
-        void dcmplInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .dcmpl()
-                .ireturn()
-            , "(DD)I");
+        void dcmplInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .dcmpl() .ireturn() , "(DD)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CompareInstruction.class));
         }
 
         @Test
-        void dcmpgInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .dload(0)
-                .dload(2)
-                .dcmpg()
-                .ireturn()
-            , "(DD)I");
+        void dcmpgInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .dload(0) .dload(2) .dcmpg() .ireturn() , "(DD)I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, CompareInstruction.class));
@@ -1701,15 +1469,13 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class TypeConversionInstructions {
+    class TypeConversionInstructions
+    {
 
         @Test
-        void i2lInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .iload(0)
-                .i2l()
-                .lreturn()
-            , "(I)J");
+        void i2lInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .iload(0) .i2l() .lreturn() , "(I)J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, I2LInstruction.class));
@@ -1717,10 +1483,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ObjectOperations {
+    class ObjectOperations
+    {
 
         @Test
-        void newInstruction() {
+        void newInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .new_("java/lang/Object")
                 .dup()
@@ -1729,11 +1497,12 @@ class CodeBuilderTest {
             , "()Ljava/lang/Object;");
 
             List<Instruction> insns = getInstructions(cf, "test");
-            assertTrue(containsOpcodeType(insns, NewInstruction.class));
+            assertTrue(containsOpcodeType(insns, NewObjectInstruction.class));
         }
 
         @Test
-        void anewarrayInstruction() {
+        void anewarrayInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(5)
                 .anewarray("java/lang/String")
@@ -1745,7 +1514,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void multianewarrayInstruction() {
+        void multianewarrayInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(3)
                 .iconst(4)
@@ -1758,7 +1528,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void checkcastInstruction() {
+        void checkcastInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .checkcast("java/lang/String")
@@ -1770,7 +1541,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void instanceofInstruction() {
+        void instanceofInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .instanceof_("java/lang/String")
@@ -1783,10 +1555,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class ExceptionHandling {
+    class ExceptionHandling
+    {
 
         @Test
-        void trycatchWithException() {
+        void trycatchWithException()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .trycatch("start", "end", "handler", "java/lang/Exception")
                 .label("start")
@@ -1807,7 +1581,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void athrowInstruction() {
+        void athrowInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .new_("java/lang/RuntimeException")
                 .dup()
@@ -1820,7 +1595,8 @@ class CodeBuilderTest {
         }
 
         @Test
-        void trycatchWithNullExceptionType() {
+        void trycatchWithNullExceptionType()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .trycatch("start", "end", "handler", null)
                 .label("start")
@@ -1842,10 +1618,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class SynchronizationInstructions {
+    class SynchronizationInstructions
+    {
 
         @Test
-        void monitorenterAndMonitorexit() {
+        void monitorenterAndMonitorexit()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .aload(0)
                 .dup()
@@ -1863,12 +1641,9 @@ class CodeBuilderTest {
         }
 
         @Test
-        void nopInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .nop()
-                .iconst(1)
-                .ireturn()
-            , "()I");
+        void nopInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .nop() .iconst(1) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, NopInstruction.class));
@@ -1876,10 +1651,12 @@ class CodeBuilderTest {
     }
 
     @Nested
-    class MiscInstructions {
+    class MiscInstructions
+    {
 
         @Test
-        void iincInstruction() {
+        void iincInstruction()
+        {
             ClassFile cf = buildMethodWithCode(cb -> cb
                 .iconst(10)
                 .istore(1)
@@ -1893,76 +1670,67 @@ class CodeBuilderTest {
         }
 
         @Test
-        void ldcStringInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .ldc("test string")
-                .areturn()
-            , "()Ljava/lang/String;");
+        void ldcStringInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .ldc("test string") .areturn() , "()Ljava/lang/String;");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, LdcInstruction.class));
         }
 
         @Test
-        void ldcIntegerInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .ldc(12345)
-                .ireturn()
-            , "()I");
+        void ldcIntegerInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .ldc(12345) .ireturn() , "()I");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, SipushInstruction.class));
         }
 
         @Test
-        void ldcLongInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .ldc(123456789L)
-                .lreturn()
-            , "()J");
+        void ldcLongInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .ldc(123456789L) .lreturn() , "()J");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, Ldc2WInstruction.class));
         }
 
         @Test
-        void ldcFloatInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .ldc(3.14f)
-                .freturn()
-            , "()F");
+        void ldcFloatInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .ldc(3.14f) .freturn() , "()F");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, LdcInstruction.class));
         }
 
         @Test
-        void ldcDoubleInstruction() {
-            ClassFile cf = buildMethodWithCode(cb -> cb
-                .ldc(3.14159)
-                .dreturn()
-            , "()D");
+        void ldcDoubleInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb .ldc(3.14159) .dreturn() , "()D");
 
             List<Instruction> insns = getInstructions(cf, "test");
             assertTrue(containsOpcodeType(insns, Ldc2WInstruction.class));
         }
 
         @Test
-        void ldcUnsupportedTypeThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                buildMethodWithCode(cb -> cb
-                    .ldc(new Object())
-                    .areturn()
-                , "()Ljava/lang/Object;");
-            });
+        void ldcUnsupportedTypeThrowsException()
+        {
+            assertThrows(IllegalArgumentException.class, () -> buildMethodWithCode(cb -> cb
+                .ldc(new Object())
+                .areturn()
+            , "()Ljava/lang/Object;"));
         }
     }
 
-    private ClassFile buildMethodWithCode(java.util.function.Consumer<CodeBuilder> codeConsumer) {
+    private ClassFile buildMethodWithCode(java.util.function.Consumer<CodeBuilder> codeConsumer)
+    {
         return buildMethodWithCode(codeConsumer, "()I");
     }
 
-    private ClassFile buildMethodWithCode(java.util.function.Consumer<CodeBuilder> codeConsumer, String descriptor) {
+    private ClassFile buildMethodWithCode(java.util.function.Consumer<CodeBuilder> codeConsumer, String descriptor)
+    {
         ClassBuilder cb = ClassBuilder.create("com/test/CodeTest");
         MethodBuilder mb = cb.addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", descriptor);
         CodeBuilder code = mb.code();
@@ -1972,12 +1740,16 @@ class CodeBuilderTest {
         return cb.build();
     }
 
-    private List<Instruction> getInstructions(ClassFile cf, String methodName) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+    private List<Instruction> getInstructions(ClassFile cf, String methodName)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 Bytecode bc = new Bytecode(method);
                 List<Instruction> result = new ArrayList<>();
-                for (Instruction insn : bc.getCodeWriter().getInstructions()) {
+                for (Instruction insn : bc.getCodeWriter().getInstructions())
+                {
                     result.add(insn);
                 }
                 return result;
@@ -1986,9 +1758,12 @@ class CodeBuilderTest {
         return List.of();
     }
 
-    private boolean containsOpcodeType(List<Instruction> insns, Class<? extends Instruction> type) {
-        for (Instruction insn : insns) {
-            if (type.isInstance(insn)) {
+    private boolean containsOpcodeType(List<Instruction> insns, Class<? extends Instruction> type)
+    {
+        for (Instruction insn : insns)
+        {
+            if (type.isInstance(insn))
+            {
                 return true;
             }
         }

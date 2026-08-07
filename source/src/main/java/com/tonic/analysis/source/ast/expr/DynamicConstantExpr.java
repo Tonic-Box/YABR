@@ -7,49 +7,69 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 
 /**
- * Represents an unresolved dynamic constant (condy) with bootstrap method information.
- * <p>
- * Dynamic constants are loaded via ldc from CONSTANT_Dynamic entries (Java 11+).
- * When the bootstrap method is not a recognized pattern (like ConstantBootstraps.invoke),
- * this expression preserves the bootstrap information for display.
- * <p>
- * Output format: {@code /* condy:"name" descriptor @bsm owner.method *\/}
+ * A dynamic constant (condy, Java 11+) whose bootstrap method was not a recognized pattern,
+ * preserving the bootstrap information for display.
  */
-public final class DynamicConstantExpr implements Expression {
+public final class DynamicConstantExpr implements Expression
+{
 
-    /** The name of the dynamic constant. */
+    /**
+     * The name of the dynamic constant.
+     */
     private final String name;
 
-    /** The type descriptor of the constant. */
+    /**
+     * The type descriptor of the constant.
+     */
     private final String descriptor;
 
-    /** The bootstrap method index in the BootstrapMethods attribute. */
+    /**
+     * The bootstrap method index in the BootstrapMethods attribute.
+     */
     private final int bootstrapMethodIndex;
 
-    /** The owner class of the bootstrap method. */
+    /**
+     * The owner class of the bootstrap method.
+     */
     private final String bootstrapOwner;
 
-    /** The name of the bootstrap method. */
+    /**
+     * The name of the bootstrap method.
+     */
     private final String bootstrapName;
 
-    /** The descriptor of the bootstrap method. */
+    /**
+     * The descriptor of the bootstrap method.
+     */
     private final String bootstrapDescriptor;
 
-    /** The inferred type. */
+    /**
+     * The inferred type.
+     */
     private SourceType type;
 
-    /** Source location. */
+    /**
+     * Source location.
+     */
     private final SourceLocation location;
 
-    /** Parent AST node. */
+    /**
+     * Parent AST node.
+     */
     private ASTNode parent;
 
     /**
-     * Creates a dynamic constant expression with full bootstrap information.
+     * Creates a dynamic constant with full bootstrap information; null arguments fall back to placeholders.
+     * @param name the constant name
+     * @param descriptor the constant type descriptor
+     * @param bootstrapMethodIndex the index into the BootstrapMethods attribute
+     * @param bootstrapOwner the bootstrap method owner class
+     * @param bootstrapName the bootstrap method name
+     * @param bootstrapDescriptor the bootstrap method descriptor
+     * @param type the inferred source type, or null for Object
      */
-    public DynamicConstantExpr(String name, String descriptor, int bootstrapMethodIndex,
-                                String bootstrapOwner, String bootstrapName, String bootstrapDescriptor,
-                                SourceType type) {
+    public DynamicConstantExpr(String name, String descriptor, int bootstrapMethodIndex, String bootstrapOwner, String bootstrapName, String bootstrapDescriptor, SourceType type)
+    {
         this.name = name != null ? name : "<unknown>";
         this.descriptor = descriptor != null ? descriptor : "Ljava/lang/Object;";
         this.bootstrapMethodIndex = bootstrapMethodIndex;
@@ -61,71 +81,122 @@ public final class DynamicConstantExpr implements Expression {
     }
 
     /**
-     * Creates a dynamic constant expression with minimal information.
+     * Creates a dynamic constant with unknown bootstrap owner, name, and descriptor.
+     * @param name the constant name
+     * @param descriptor the constant type descriptor
+     * @param bootstrapMethodIndex the index into the BootstrapMethods attribute
+     * @param type the inferred source type, or null for Object
      */
-    public DynamicConstantExpr(String name, String descriptor, int bootstrapMethodIndex, SourceType type) {
+    public DynamicConstantExpr(String name, String descriptor, int bootstrapMethodIndex, SourceType type)
+    {
         this(name, descriptor, bootstrapMethodIndex, "unknown", "unknown", "", type);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public int getBootstrapMethodIndex() {
+    /**
+     * @return the bootstrap method index
+     */
+    public int getBootstrapMethodIndex()
+    {
         return bootstrapMethodIndex;
     }
 
-    public String getBootstrapOwner() {
+    /**
+     * @return the bootstrap owner
+     */
+    public String getBootstrapOwner()
+    {
         return bootstrapOwner;
     }
 
-    public String getBootstrapName() {
+    /**
+     * @return the bootstrap name
+     */
+    public String getBootstrapName()
+    {
         return bootstrapName;
     }
 
-    public String getBootstrapDescriptor() {
+    /**
+     * @return the bootstrap descriptor
+     */
+    public String getBootstrapDescriptor()
+    {
         return bootstrapDescriptor;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public void setType(SourceType type) {
+    /**
+     * @param type the new inferred source type
+     */
+    public void setType(SourceType type)
+    {
         this.type = type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitDynamicConstant(this);
     }
 
     /**
-     * Gets a formatted string for the bootstrap method reference.
+     * @return the bootstrap method reference as owner.method with dots for slashes
      */
-    public String getFormattedBootstrapMethod() {
+    public String getFormattedBootstrapMethod()
+    {
         return bootstrapOwner.replace('/', '.') + "." + bootstrapName;
     }
 
     @Override
-    public String toString() {
-        return String.format("/* condy:\"%s\" %s @bsm %s */",
-                name, descriptor, getFormattedBootstrapMethod());
+    public String toString()
+    {
+        return String.format("/* condy:\"%s\" %s @bsm %s */", name, descriptor, getFormattedBootstrapMethod());
     }
 }

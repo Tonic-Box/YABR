@@ -5,14 +5,25 @@ import com.tonic.analysis.execution.state.ConcreteValue;
 
 import java.util.Objects;
 
-public final class ValueInfo {
+/**
+ * A debugger-facing description of one interpreter value: its tag, a printable rendering, and the underlying object.
+ */
+public final class ValueInfo
+{
 
     private final String type;
     private final String valueStr;
     private final Object rawValue;
 
-    public ValueInfo(ConcreteValue value) {
-        if (value == null) {
+    /**
+     * Captures the tag, display text, and boxed contents of a value.
+     * @param value the interpreter value to describe
+     * @throws IllegalArgumentException if the value is null
+     */
+    public ValueInfo(ConcreteValue value)
+    {
+        if (value == null)
+        {
             throw new IllegalArgumentException("Value cannot be null");
         }
 
@@ -21,8 +32,10 @@ public final class ValueInfo {
         this.rawValue = extractRawValue(value);
     }
 
-    private String formatValue(ConcreteValue value) {
-        switch (value.getTag()) {
+    private String formatValue(ConcreteValue value)
+    {
+        switch (value.getTag())
+        {
             case INT:
                 return String.valueOf(value.asInt());
             case LONG:
@@ -33,7 +46,7 @@ public final class ValueInfo {
                 return String.valueOf(value.asDouble());
             case REFERENCE:
                 ObjectInstance ref = value.asReference();
-                return ref.toString();
+                return ref == null ? "null" : ref.toString();
             case NULL:
                 return "null";
             case RETURN_ADDRESS:
@@ -43,8 +56,10 @@ public final class ValueInfo {
         }
     }
 
-    private Object extractRawValue(ConcreteValue value) {
-        switch (value.getTag()) {
+    private Object extractRawValue(ConcreteValue value)
+    {
+        switch (value.getTag())
+        {
             case INT:
                 return value.asInt();
             case LONG:
@@ -55,8 +70,6 @@ public final class ValueInfo {
                 return value.asDouble();
             case REFERENCE:
                 return value.asReference();
-            case NULL:
-                return null;
             case RETURN_ADDRESS:
                 return value.asReturnAddress();
             default:
@@ -64,20 +77,33 @@ public final class ValueInfo {
         }
     }
 
-    public String getType() {
+    /**
+     * @return the type
+     */
+    public String getType()
+    {
         return type;
     }
 
-    public String getValueString() {
+    /**
+     * @return the value string
+     */
+    public String getValueString()
+    {
         return valueStr;
     }
 
-    public Object getRawValue() {
+    /**
+     * @return the raw value
+     */
+    public Object getRawValue()
+    {
         return rawValue;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ValueInfo)) return false;
         ValueInfo valueInfo = (ValueInfo) o;
@@ -87,12 +113,14 @@ public final class ValueInfo {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(type, valueStr, rawValue);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ValueInfo{type=" + type + ", value=" + valueStr + "}";
     }
 }

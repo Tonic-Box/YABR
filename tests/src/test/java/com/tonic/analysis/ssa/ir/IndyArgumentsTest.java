@@ -17,15 +17,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Regression test: invokedynamic has no receiver, so getReceiver() must be null and
  * getMethodArguments() must return every stack argument instead of dropping index 0.
  */
-class IndyArgumentsTest {
+class IndyArgumentsTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void dynamicInvokeKeepsAllArguments() throws Exception {
+    void dynamicInvokeKeepsAllArguments() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("Concats");
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals("tag"))
@@ -34,11 +37,15 @@ class IndyArgumentsTest {
         IRMethod ir = new SSA(cf.getConstPool()).lift(method);
 
         boolean sawIndy = false;
-        for (IRBlock block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof InvokeInstruction) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invoke = (InvokeInstruction) instr;
-                    if (invoke.getInvokeType() == InvokeType.DYNAMIC) {
+                    if (invoke.getInvokeType() == InvokeType.DYNAMIC)
+                    {
                         sawIndy = true;
                         assertNull(invoke.getReceiver(), "indy has no receiver");
                         assertEquals(invoke.getArguments().size(), invoke.getMethodArguments().size(),

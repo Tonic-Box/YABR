@@ -9,13 +9,16 @@ import java.util.jar.JarFile;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ClinitHoistTest {
+public class ClinitHoistTest
+{
 
-    private static String decompileMain() throws Exception {
+    private static String decompileMain() throws Exception
+    {
         File jar = new File("DemoJar.jar");
         if (!jar.exists()) jar = new File("src/test/resources/DemoJar.jar");
         ClassPool pool = new ClassPool(true);
-        try (JarFile jf = new JarFile(jar)) {
+        try (JarFile jf = new JarFile(jar))
+        {
             pool.loadJar(jf);
         }
         ClassFile cf = pool.get("osrs/dev/Main");
@@ -24,7 +27,8 @@ public class ClinitHoistTest {
     }
 
     @Test
-    public void mainStaticFieldsHoist() throws Exception {
+    public void mainStaticFieldsHoist() throws Exception
+    {
         String src = decompileMain();
         System.out.println(src);
         // pull just the field region for clarity

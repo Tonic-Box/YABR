@@ -6,32 +6,42 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a CONSTANT_String entry in the constant pool.
+ * A CONSTANT_String constant pool entry, holding the pool index of its UTF-8 value.
  */
-public class StringRefItem extends Item<Integer> {
+public class StringRefItem extends Item<Integer>
+{
     private Integer value;
 
-    public void setValue(Integer value) {
+    /**
+     * Repoints this entry at another string constant.
+     * @param value constant pool index of the UTF-8 entry holding the text
+     */
+    public void setValue(Integer value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.value = classFile.readUnsignedShort();
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(value);
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_STRING_REF;
     }
 
     @Override
-    public Integer getValue() {
+    public Integer getValue()
+    {
         return value;
     }
 }

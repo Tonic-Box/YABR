@@ -14,13 +14,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConstantDynamicItemTest {
+class ConstantDynamicItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = BytecodeBuilder.forClass("com/test/ConstantDynamicTest")
             .publicStaticMethod("test", "()V")
                 .vreturn()
@@ -29,17 +31,20 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void defaultConstructor() {
+        void defaultConstructor()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             assertNotNull(item);
             assertEquals(Item.ITEM_DYNAMIC, item.getType());
         }
 
         @Test
-        void constructorWithValue() {
+        void constructorWithValue()
+        {
             ConstantDynamic value = new ConstantDynamic(3, 7);
             ConstantDynamicItem item = new ConstantDynamicItem(value);
 
@@ -50,7 +55,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void setValueAfterConstruction() {
+        void setValueAfterConstruction()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(5, 10);
             item.setValue(value);
@@ -62,10 +68,12 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class ResolutionTests {
+    class ResolutionTests
+    {
 
         @Test
-        void getNameReturnsNullWhenConstPoolNotSet() {
+        void getNameReturnsNullWhenConstPoolNotSet()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0, 1);
             item.setValue(value);
@@ -74,7 +82,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getDescriptorReturnsNullWhenConstPoolNotSet() {
+        void getDescriptorReturnsNullWhenConstPoolNotSet()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0, 1);
             item.setValue(value);
@@ -83,7 +92,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getDescriptorForObjectType() throws IOException {
+        void getDescriptorForObjectType() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("defaultValue", "Ljava/lang/String;");
 
             String descriptor = item.getDescriptor();
@@ -92,7 +102,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getDescriptorForLongType() throws IOException {
+        void getDescriptorForLongType() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("timestamp", "J");
 
             String descriptor = item.getDescriptor();
@@ -101,7 +112,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getDescriptorForDoubleType() throws IOException {
+        void getDescriptorForDoubleType() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("epsilon", "D");
 
             String descriptor = item.getDescriptor();
@@ -110,7 +122,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getNameReturnsCorrectValue() throws IOException {
+        void getNameReturnsCorrectValue() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("PI", "D");
 
             String name = item.getName();
@@ -120,10 +133,12 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class BootstrapMethodTests {
+    class BootstrapMethodTests
+    {
 
         @Test
-        void getBootstrapMethodAttrIndexFromValue() {
+        void getBootstrapMethodAttrIndexFromValue()
+        {
             ConstantDynamic value = new ConstantDynamic(42, 100);
             ConstantDynamicItem item = new ConstantDynamicItem(value);
 
@@ -131,7 +146,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getBootstrapMethodAttrIndexAfterSetValue() {
+        void getBootstrapMethodAttrIndexAfterSetValue()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(15, 30);
             item.setValue(value);
@@ -140,7 +156,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getBootstrapMethodAttrIndexWithZero() {
+        void getBootstrapMethodAttrIndexWithZero()
+        {
             ConstantDynamic value = new ConstantDynamic(0, 5);
             ConstantDynamicItem item = new ConstantDynamicItem(value);
 
@@ -148,7 +165,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void getBootstrapMethodAttrIndexWithLargeValue() {
+        void getBootstrapMethodAttrIndexWithLargeValue()
+        {
             ConstantDynamic value = new ConstantDynamic(65535, 10);
             ConstantDynamicItem item = new ConstantDynamicItem(value);
 
@@ -157,10 +175,12 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class SerializationTests {
+    class SerializationTests
+    {
 
         @Test
-        void writeConstantDynamic() throws IOException {
+        void writeConstantDynamic() throws IOException
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0x0004, 0x000C);
             item.setValue(value);
@@ -178,7 +198,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void writeConstantDynamicWithZeroIndices() throws IOException {
+        void writeConstantDynamicWithZeroIndices() throws IOException
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0, 0);
             item.setValue(value);
@@ -189,13 +210,15 @@ class ConstantDynamicItemTest {
 
             byte[] bytes = baos.toByteArray();
             assertEquals(4, bytes.length);
-            for (byte b : bytes) {
+            for (byte b : bytes)
+            {
                 assertEquals(0x00, b & 0xFF);
             }
         }
 
         @Test
-        void writeConstantDynamicWithMaxIndices() throws IOException {
+        void writeConstantDynamicWithMaxIndices() throws IOException
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0xFFFF, 0xFFFF);
             item.setValue(value);
@@ -213,7 +236,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void writeConstantDynamicWithMixedIndices() throws IOException {
+        void writeConstantDynamicWithMixedIndices() throws IOException
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(0x1234, 0x5678);
             item.setValue(value);
@@ -232,17 +256,20 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class TypeTests {
+    class TypeTests
+    {
 
         @Test
-        void getTypeReturnsConstantDynamicConstant() {
+        void getTypeReturnsConstantDynamicConstant()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             assertEquals(Item.ITEM_DYNAMIC, item.getType());
             assertEquals(0x11, item.getType());
         }
 
         @Test
-        void typeIsConsistentAcrossInstances() {
+        void typeIsConsistentAcrossInstances()
+        {
             ConstantDynamicItem item1 = new ConstantDynamicItem();
             ConstantDynamicItem item2 = new ConstantDynamicItem(new ConstantDynamic(1, 2));
 
@@ -251,10 +278,12 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class ValueTests {
+    class ValueTests
+    {
 
         @Test
-        void getValueReturnsConstantDynamic() {
+        void getValueReturnsConstantDynamic()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(8, 16);
             item.setValue(value);
@@ -266,7 +295,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void valueFromConstructorIsAccessible() {
+        void valueFromConstructorIsAccessible()
+        {
             ConstantDynamic value = new ConstantDynamic(25, 50);
             ConstantDynamicItem item = new ConstantDynamicItem(value);
 
@@ -276,7 +306,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void constantDynamicValuesAreImmutable() {
+        void constantDynamicValuesAreImmutable()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             ConstantDynamic value = new ConstantDynamic(100, 200);
             item.setValue(value);
@@ -286,7 +317,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void setValueReplacesExistingValue() {
+        void setValueReplacesExistingValue()
+        {
             ConstantDynamic value1 = new ConstantDynamic(10, 20);
             ConstantDynamic value2 = new ConstantDynamic(30, 40);
 
@@ -299,10 +331,12 @@ class ConstantDynamicItemTest {
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void handlesEmptyNameGracefully() throws IOException {
+        void handlesEmptyNameGracefully() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("", "I");
 
             String name = item.getName();
@@ -311,7 +345,8 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void handlesComplexDescriptor() throws IOException {
+        void handlesComplexDescriptor() throws IOException
+        {
             ConstantDynamicItem item = createConstantDynamicWithNameAndType("complexValue", "Ljava/util/List;");
 
             String descriptor = item.getDescriptor();
@@ -320,13 +355,15 @@ class ConstantDynamicItemTest {
         }
 
         @Test
-        void valueCanBeNull() {
+        void valueCanBeNull()
+        {
             ConstantDynamicItem item = new ConstantDynamicItem();
             assertNull(item.getValue());
         }
     }
 
-    private ConstantDynamicItem createConstantDynamicWithNameAndType(String name, String descriptor) {
+    private ConstantDynamicItem createConstantDynamicWithNameAndType(String name, String descriptor)
+    {
         int natIndex = constPool.addNameAndType(name, descriptor);
         ConstantDynamicItem item = new ConstantDynamicItem();
         ConstantDynamic value = new ConstantDynamic(0, natIndex);

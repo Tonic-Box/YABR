@@ -12,11 +12,15 @@ import java.io.ByteArrayInputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-class RecoveryEquivalenceTest {
+class RecoveryEquivalenceTest
+{
 
-    /** Walking-skeleton smoke test: a correct method must never be reported NOT_EQUIVALENT. */
+    /**
+     * Walking-skeleton smoke test: a correct method must never be reported NOT_EQUIVALENT.
+     */
     @Test
-    void pureMethodIsNotFalselyFlagged() throws Exception {
+    void pureMethodIsNotFalselyFlagged() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OracleSmoke")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
                 .code()
@@ -38,9 +42,12 @@ class RecoveryEquivalenceTest {
         assertNotEquals(RecoveryEquivalenceOracle.Kind.NOT_EQUIVALENT, verdict.kind, verdict.toString());
     }
 
-    /** Positive control: two behaviourally different methods must be caught as NOT_EQUIVALENT. */
+    /**
+     * Positive control: two behaviourally different methods must be caught as NOT_EQUIVALENT.
+     */
     @Test
-    void divergentMethodsAreCaught() throws Exception {
+    void divergentMethodsAreCaught() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OraclePosCtl")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
                 .code().iload(0).iload(1).iadd().ireturn().end()
@@ -67,7 +74,8 @@ class RecoveryEquivalenceTest {
      * different number of times must be caught (validates the call-interception + trace recording).
      */
     @Test
-    void droppedCallIsCaught() throws Exception {
+    void droppedCallIsCaught() throws Exception
+    {
         String owner = "com/test/OracleCalls";
         byte[] bytes = ClassBuilder.create(owner)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "sink", "(I)V")
@@ -99,7 +107,8 @@ class RecoveryEquivalenceTest {
      * field-write observability (the observable set beyond calls + terminal).
      */
     @Test
-    void fieldWriteDivergenceIsCaught() throws Exception {
+    void fieldWriteDivergenceIsCaught() throws Exception
+    {
         String owner = "com/test/OracleFields";
         byte[] bytes = ClassBuilder.create(owner)
                 .addField(AccessFlags.ACC_PUBLIC, "x", "I").end()
@@ -128,7 +137,8 @@ class RecoveryEquivalenceTest {
      * side-effecting calls is a real behavioural change, not benign restructuring.
      */
     @Test
-    void callOrderDivergenceIsCaught() throws Exception {
+    void callOrderDivergenceIsCaught() throws Exception
+    {
         String owner = "com/test/OracleOrder";
         byte[] bytes = ClassBuilder.create(owner)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "sinkA", "(I)V")
@@ -164,7 +174,8 @@ class RecoveryEquivalenceTest {
      * must NOT be flagged - benign restructuring is not a divergence.
      */
     @Test
-    void benignRestructureIsEquivalent() throws Exception {
+    void benignRestructureIsEquivalent() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OracleBenign")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "addDirect", "(II)I")
                 .code().iload(0).iload(1).iadd().ireturn().end()
@@ -186,9 +197,12 @@ class RecoveryEquivalenceTest {
         assertNotEquals(RecoveryEquivalenceOracle.Kind.NOT_EQUIVALENT, verdict.kind, verdict.toString());
     }
 
-    /** The same comparison must produce an identical verdict and counterexample across runs. */
+    /**
+     * The same comparison must produce an identical verdict and counterexample across runs.
+     */
     @Test
-    void verdictIsDeterministic() throws Exception {
+    void verdictIsDeterministic() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OracleDet")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
                 .code().iload(0).iload(1).iadd().ireturn().end()
@@ -217,7 +231,8 @@ class RecoveryEquivalenceTest {
      * constant is in the bytecode, so the dictionary feeds it and the divergence is caught.
      */
     @Test
-    void coverageGuidanceReachesGuardedBranch() throws Exception {
+    void coverageGuidanceReachesGuardedBranch() throws Exception
+    {
         String owner = "com/test/OracleGuarded";
         byte[] bytes = ClassBuilder.create(owner)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "sink", "(I)V")
@@ -246,9 +261,12 @@ class RecoveryEquivalenceTest {
         assertEquals(RecoveryEquivalenceOracle.Kind.NOT_EQUIVALENT, verdict.kind, verdict.toString());
     }
 
-    /** A method the engine cannot run (native, no code) must be INCONCLUSIVE, never a crash. */
+    /**
+     * A method the engine cannot run (native, no code) must be INCONCLUSIVE, never a crash.
+     */
     @Test
-    void nativeMethodIsInconclusive() throws Exception {
+    void nativeMethodIsInconclusive() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OracleNative")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC | AccessFlags.ACC_NATIVE, "nat", "()V")
                 .end()
@@ -270,7 +288,8 @@ class RecoveryEquivalenceTest {
      * match across runs, so this also confirms recompilation is deterministic.
      */
     @Test
-    void cacheReusesVerdictWithoutReExecuting() throws Exception {
+    void cacheReusesVerdictWithoutReExecuting() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("com/test/OracleCacheCtl")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "add", "(II)I")
                 .code().iload(0).iload(1).iadd().ireturn().end()

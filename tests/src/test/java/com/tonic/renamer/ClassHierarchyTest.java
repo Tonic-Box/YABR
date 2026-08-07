@@ -22,27 +22,31 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests building hierarchy from ClassPool, inheritance relationships,
  * method resolution, and override detection.
  */
-class ClassHierarchyTest {
+class ClassHierarchyTest
+{
 
     private ClassPool pool;
     private ClassHierarchy hierarchy;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
         hierarchy = new ClassHierarchy();
     }
 
-    // ========== Building Hierarchy Tests ==========
+    // Building Hierarchy Tests
 
     @Test
-    void buildFromEmptyPoolCreatesEmptyHierarchy() {
+    void buildFromEmptyPoolCreatesEmptyHierarchy()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         assertEquals(0, h.size(), "Hierarchy from empty pool should be empty");
     }
 
     @Test
-    void buildFromSingleClassCreatesNode() throws IOException {
+    void buildFromSingleClassCreatesNode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Single", access);
 
@@ -53,7 +57,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void buildFromMultipleClassesCreatesAllNodes() throws IOException {
+    void buildFromMultipleClassesCreatesAllNodes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -68,7 +73,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void buildSetsClassFilesInNodes() throws IOException {
+    void buildSetsClassFilesInNodes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/WithFile", access);
 
@@ -81,7 +87,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void buildCreatesExternalNodesForSuperclass() throws IOException {
+    void buildCreatesExternalNodesForSuperclass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -93,10 +100,11 @@ class ClassHierarchyTest {
         assertNull(objectNode.getClassFile());
     }
 
-    // ========== Superclass Relationship Tests ==========
+    // Superclass Relationship Tests
 
     @Test
-    void classHasObjectAsSuperclass() throws IOException {
+    void classHasObjectAsSuperclass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -108,12 +116,12 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void childClassHasCorrectSuperclass() throws IOException {
+    void childClassHasCorrectSuperclass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
 
-        // Set child's superclass to parent
         child.setSuperClassName("com/test/Parent");
 
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
@@ -126,7 +134,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void superclassHasSubclassReference() throws IOException {
+    void superclassHasSubclassReference() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -136,12 +145,12 @@ class ClassHierarchyTest {
         ClassNode parentNode = h.getNode("com/test/Parent");
         ClassNode childNode = h.getNode("com/test/Child");
 
-        assertTrue(parentNode.getSubClasses().contains(childNode),
-                "Parent should have child in subclasses");
+        assertTrue(parentNode.getSubClasses().contains(childNode), "Parent should have child in subclasses");
     }
 
     @Test
-    void multiLevelInheritanceChain() throws IOException {
+    void multiLevelInheritanceChain() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile grandparent = pool.createNewClass("com/test/GrandParent", access);
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
@@ -157,30 +166,30 @@ class ClassHierarchyTest {
         assertEquals("com/test/GrandParent", childNode.getSuperClass().getSuperClass().getName());
     }
 
-    // ========== Interface Relationship Tests ==========
+    // Interface Relationship Tests
 
     @Test
-    void classWithInterfaceHasInterfaceNode() throws IOException {
+    void classWithInterfaceHasInterfaceNode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
         ClassFile iface = pool.createNewClass("com/test/MyInterface", ifaceAccess);
         ClassFile impl = pool.createNewClass("com/test/Implementation", access);
 
-        // Add interface to implementation
         impl.addInterface("com/test/MyInterface");
 
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         ClassNode implNode = h.getNode("com/test/Implementation");
         ClassNode ifaceNode = h.getNode("com/test/MyInterface");
 
-        assertTrue(implNode.getInterfaces().contains(ifaceNode),
-                "Class should have interface in interfaces list");
+        assertTrue(implNode.getInterfaces().contains(ifaceNode), "Class should have interface in interfaces list");
         assertTrue(ifaceNode.isInterface());
     }
 
     @Test
-    void interfaceHasImplementorReference() throws IOException {
+    void interfaceHasImplementorReference() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -198,7 +207,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void classWithMultipleInterfaces() throws IOException {
+    void classWithMultipleInterfaces() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -212,14 +222,14 @@ class ClassHierarchyTest {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         ClassNode implNode = h.getNode("com/test/MultiImpl");
 
-        assertEquals(2, implNode.getInterfaces().size(),
-                "Class should have both interfaces");
+        assertEquals(2, implNode.getInterfaces().size(), "Class should have both interfaces");
     }
 
-    // ========== Ancestor/Descendant Tests ==========
+    // Ancestor/Descendant Tests
 
     @Test
-    void getAllAncestorsIncludesSuperclass() throws IOException {
+    void getAllAncestorsIncludesSuperclass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -234,7 +244,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getAllAncestorsIncludesInterfaces() throws IOException {
+    void getAllAncestorsIncludesInterfaces() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -252,7 +263,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getAllDescendantsIncludesSubclasses() throws IOException {
+    void getAllDescendantsIncludesSubclasses() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -267,7 +279,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getAllDescendantsIncludesImplementors() throws IOException {
+    void getAllDescendantsIncludesImplementors() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -284,10 +297,11 @@ class ClassHierarchyTest {
                 "Descendants should include implementor");
     }
 
-    // ========== isAncestorOf Tests ==========
+    // isAncestorOf Tests
 
     @Test
-    void isAncestorOfReturnsTrueForParent() throws IOException {
+    void isAncestorOfReturnsTrueForParent() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -299,7 +313,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void isAncestorOfReturnsTrueForGrandparent() throws IOException {
+    void isAncestorOfReturnsTrueForGrandparent() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile grandparent = pool.createNewClass("com/test/GrandParent", access);
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
@@ -314,7 +329,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void isAncestorOfReturnsTrueForInterface() throws IOException {
+    void isAncestorOfReturnsTrueForInterface() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -329,7 +345,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void isAncestorOfReturnsFalseForUnrelated() throws IOException {
+    void isAncestorOfReturnsFalseForUnrelated() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -340,16 +357,18 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void isAncestorOfReturnsFalseForNonexistentClass() {
+    void isAncestorOfReturnsFalseForNonexistentClass()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
 
         assertFalse(h.isAncestorOf("com/test/A", "com/test/Nonexistent"));
     }
 
-    // ========== Method Hierarchy Tests ==========
+    // Method Hierarchy Tests
 
     @Test
-    void findMethodHierarchyForNonexistentClassReturnsEmpty() {
+    void findMethodHierarchyForNonexistentClassReturnsEmpty()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
 
         Set<ClassNode> result = h.findMethodHierarchy("com/test/Nonexistent", "method", "()V");
@@ -359,7 +378,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void findMethodHierarchyForMethodInSingleClass() throws IOException {
+    void findMethodHierarchyForMethodInSingleClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/MyClass", access);
 
@@ -374,7 +394,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void findMethodHierarchyIncludesOverriddenMethods() throws IOException {
+    void findMethodHierarchyIncludesOverriddenMethods() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/Parent", access);
         ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -393,7 +414,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void findMethodHierarchyWithInterfaceMethod() throws IOException {
+    void findMethodHierarchyWithInterfaceMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
@@ -411,14 +433,13 @@ class ClassHierarchyTest {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         Set<ClassNode> result = h.findMethodHierarchy("com/test/Interface", "execute", "()V");
 
-        assertTrue(result.stream().anyMatch(n -> n.getName().equals("com/test/Interface")),
-                "Should include interface");
-        assertTrue(result.stream().anyMatch(n -> n.getName().equals("com/test/Impl")),
-                "Should include implementation");
+        assertTrue(result.stream().anyMatch(n -> n.getName().equals("com/test/Interface")), "Should include interface");
+        assertTrue(result.stream().anyMatch(n -> n.getName().equals("com/test/Impl")), "Should include implementation");
     }
 
     @Test
-    void findMethodHierarchyReturnsEmptyForNonexistentMethod() throws IOException {
+    void findMethodHierarchyReturnsEmptyForNonexistentMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -428,10 +449,11 @@ class ClassHierarchyTest {
         assertTrue(result.isEmpty());
     }
 
-    // ========== getMethod Tests ==========
+    // getMethod Tests
 
     @Test
-    void getMethodReturnsMethodEntry() throws IOException {
+    void getMethodReturnsMethodEntry() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/MyClass", access);
 
@@ -447,7 +469,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getMethodReturnsNullForNonexistentMethod() throws IOException {
+    void getMethodReturnsNullForNonexistentMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -458,7 +481,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getMethodReturnsNullForNonexistentClass() {
+    void getMethodReturnsNullForNonexistentClass()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         MethodEntry result = h.getMethod("com/test/Nonexistent", "method", "()V");
 
@@ -466,7 +490,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getMethodReturnsNullForExternalClass() throws IOException {
+    void getMethodReturnsNullForExternalClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -476,10 +501,11 @@ class ClassHierarchyTest {
         assertNull(result, "External classes should return null");
     }
 
-    // ========== Node Retrieval Tests ==========
+    // Node Retrieval Tests
 
     @Test
-    void getNodeReturnsNode() throws IOException {
+    void getNodeReturnsNode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -491,7 +517,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getNodeReturnsNullForNonexistent() {
+    void getNodeReturnsNullForNonexistent()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         ClassNode node = h.getNode("com/test/Nonexistent");
 
@@ -499,7 +526,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getAllNodesReturnsAllNodes() throws IOException {
+    void getAllNodesReturnsAllNodes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -513,7 +541,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getPoolNodesReturnsOnlyPoolNodes() throws IOException {
+    void getPoolNodesReturnsOnlyPoolNodes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -526,7 +555,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void getPoolNodesExcludesExternalNodes() throws IOException {
+    void getPoolNodesExcludesExternalNodes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -537,16 +567,18 @@ class ClassHierarchyTest {
                 "Should not include java/lang/Object");
     }
 
-    // ========== Size Tests ==========
+    // Size Tests
 
     @Test
-    void sizeReturnsZeroForEmptyHierarchy() {
+    void sizeReturnsZeroForEmptyHierarchy()
+    {
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
         assertEquals(0, h.size());
     }
 
     @Test
-    void sizeReturnsCorrectCount() throws IOException {
+    void sizeReturnsCorrectCount() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -557,17 +589,16 @@ class ClassHierarchyTest {
         assertTrue(h.size() >= 2);
     }
 
-    // ========== Complex Hierarchy Tests ==========
+    // Complex Hierarchy Tests
 
     @Test
-    void complexInheritanceHierarchy() throws IOException {
+    void complexInheritanceHierarchy() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int ifaceAccess = new AccessBuilder().setPublic().setInterface().build();
 
-        // Create interface
         ClassFile iface = pool.createNewClass("com/test/Runnable", ifaceAccess);
 
-        // Create base class
         ClassFile base = pool.createNewClass("com/test/Base", access);
 
         // Create child class that extends base and implements interface
@@ -575,13 +606,11 @@ class ClassHierarchyTest {
         child.setSuperClassName("com/test/Base");
         child.addInterface("com/test/Runnable");
 
-        // Create grandchild
         ClassFile grandchild = pool.createNewClass("com/test/GrandChild", access);
         grandchild.setSuperClassName("com/test/Child");
 
         ClassHierarchy h = ClassHierarchyBuilder.build(pool);
 
-        // Verify hierarchy
         assertTrue(h.isAncestorOf("com/test/Base", "com/test/Child"));
         assertTrue(h.isAncestorOf("com/test/Base", "com/test/GrandChild"));
         assertTrue(h.isAncestorOf("com/test/Runnable", "com/test/Child"));
@@ -596,7 +625,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void methodOverrideAcrossMultipleLevels() throws IOException {
+    void methodOverrideAcrossMultipleLevels() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         int methodAccess = new AccessBuilder().setPublic().build();
 
@@ -620,10 +650,11 @@ class ClassHierarchyTest {
         assertTrue(hierarchy.stream().anyMatch(n -> n.getName().equals("com/test/Leaf")));
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void hierarchyToStringReturnsDescription() throws IOException {
+    void hierarchyToStringReturnsDescription() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/MyClass", access);
 
@@ -635,7 +666,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void rebuildHierarchyAfterChanges() throws IOException {
+    void rebuildHierarchyAfterChanges() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
 
@@ -650,7 +682,8 @@ class ClassHierarchyTest {
     }
 
     @Test
-    void hierarchyHandlesMethodsWithDifferentDescriptors() throws IOException {
+    void hierarchyHandlesMethodsWithDifferentDescriptors() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Overloaded", access);
 

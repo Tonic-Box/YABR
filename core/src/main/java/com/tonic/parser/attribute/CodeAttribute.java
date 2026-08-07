@@ -13,73 +13,128 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the Code attribute.
- * Contains the bytecode and related information for a method.
+ * The Code attribute: a method's bytecode, stack/local sizes, exception table, and nested attributes.
  */
-public class CodeAttribute extends Attribute {
+public class CodeAttribute extends Attribute
+{
     private int maxStack, maxLocals;
     private byte[] code;
     private List<ExceptionTableEntry> exceptionTable = new ArrayList<>();
     private List<Attribute> attributes = new ArrayList<>();
 
-    public CodeAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public CodeAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public CodeAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public CodeAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public int getMaxStack() {
+    /**
+     * @return the max stack
+     */
+    public int getMaxStack()
+    {
         return maxStack;
     }
 
-    public int getMaxLocals() {
+    /**
+     * @return the max locals
+     */
+    public int getMaxLocals()
+    {
         return maxLocals;
     }
 
-    public byte[] getCode() {
+    /**
+     * @return the code
+     */
+    public byte[] getCode()
+    {
         return code;
     }
 
-    public List<ExceptionTableEntry> getExceptionTable() {
+    /**
+     * @return the exception table
+     */
+    public List<ExceptionTableEntry> getExceptionTable()
+    {
         return exceptionTable;
     }
 
-    public List<Attribute> getAttributes() {
+    /**
+     * @return the attributes
+     */
+    public List<Attribute> getAttributes()
+    {
         return attributes;
     }
 
-    public void setMaxStack(int maxStack) {
+    /**
+     * @param maxStack the operand stack size limit
+     */
+    public void setMaxStack(int maxStack)
+    {
         this.maxStack = maxStack;
     }
 
-    public void setMaxLocals(int maxLocals) {
+    /**
+     * @param maxLocals the local variable slot count
+     */
+    public void setMaxLocals(int maxLocals)
+    {
         this.maxLocals = maxLocals;
     }
 
-    public void setCode(byte[] code) {
+    /**
+     * @param code the raw bytecode
+     */
+    public void setCode(byte[] code)
+    {
         this.code = code;
     }
 
-    public void setAttributes(List<Attribute> attributes) {
+    /**
+     * @param attributes the nested code attributes
+     */
+    public void setAttributes(List<Attribute> attributes)
+    {
         this.attributes = attributes;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
+    public void read(ClassFile classFile, int length)
+    {
         int startIndex = classFile.getIndex();
 
         this.maxStack = classFile.readUnsignedShort();
         this.maxLocals = classFile.readUnsignedShort();
 
         long codeLengthLong = classFile.readUnsignedInt();
-        if (codeLengthLong > Integer.MAX_VALUE) {
+        if (codeLengthLong > Integer.MAX_VALUE)
+        {
             throw new IllegalArgumentException("Code attribute code_length too large: " + codeLengthLong);
         }
         int codeLength = (int) codeLengthLong;
 
-        if (classFile.getLength() - classFile.getIndex() < codeLength) {
+        if (classFile.getLength() - classFile.getIndex() < codeLength)
+        {
             throw new IllegalArgumentException("Not enough bytes to read code array. Requested: "
                     + codeLength + ", Available: " + (classFile.getLength() - classFile.getIndex()));
         }
@@ -89,7 +144,8 @@ public class CodeAttribute extends Attribute {
 
         int exceptionTableLength = classFile.readUnsignedShort();
         this.exceptionTable = new ArrayList<>(exceptionTableLength);
-        for (int i = 0; i < exceptionTableLength; i++) {
+        for (int i = 0; i < exceptionTableLength; i++)
+        {
             int startPc = classFile.readUnsignedShort();
             int endPc = classFile.readUnsignedShort();
             int handlerPc = classFile.readUnsignedShort();
@@ -99,21 +155,22 @@ public class CodeAttribute extends Attribute {
 
         int attributesCount = classFile.readUnsignedShort();
         this.attributes = new ArrayList<>(attributesCount);
-        for (int i = 0; i < attributesCount; i++) {
+        for (int i = 0; i < attributesCount; i++)
+        {
             Attribute attribute = Attribute.get(classFile, getClassFile().getConstPool(), parent);
             this.attributes.add(attribute);
         }
 
         int bytesRead = classFile.getIndex() - startIndex;
 
-        if (bytesRead != length) {
+        if (bytesRead != length)
+        {
             Logger.error("Warning: CodeAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
         }
     }
 
     /**
      * Sets the parent method entry for this code attribute.
-     *
      * @param methodEntry The parent method entry
      */
     public void setParent(MethodEntry methodEntry)
@@ -123,32 +180,34 @@ public class CodeAttribute extends Attribute {
 
     /**
      * Returns the class file that owns this code attribute.
-     *
      * @return the owning class file
      */
     @Override
-    public ClassFile getClassFile() {
+    public ClassFile getClassFile()
+    {
         return super.getClassFile();
     }
 
     /**
      * Returns the method that owns this code attribute, or {@code null} if its parent is not a method.
-     *
      * @return the owning method entry, or {@code null}
      */
-    public MethodEntry getMethod() {
+    public MethodEntry getMethod()
+    {
         return parent instanceof MethodEntry ? (MethodEntry) parent : null;
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(maxStack);
         dos.writeShort(maxLocals);
         dos.writeInt(code.length);
         dos.write(code);
         dos.writeShort(exceptionTable.size());
 
-        for (ExceptionTableEntry entry : exceptionTable) {
+        for (ExceptionTableEntry entry : exceptionTable)
+        {
             dos.writeShort(entry.getStartPc());
             dos.writeShort(entry.getEndPc());
             dos.writeShort(entry.getHandlerPc());
@@ -157,13 +216,15 @@ public class CodeAttribute extends Attribute {
 
         dos.writeShort(attributes.size());
 
-        for (Attribute attr : attributes) {
+        for (Attribute attr : attributes)
+        {
             attr.write(dos);
         }
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         int codeLength = (code != null) ? code.length : 0;
 
         int baseInfoSize = 2
@@ -175,7 +236,8 @@ public class CodeAttribute extends Attribute {
                 + 2;
 
         int subAttributesSize = 0;
-        for (Attribute attr : attributes) {
+        for (Attribute attr : attributes)
+        {
             subAttributesSize += 6 + attr.length;
         }
 
@@ -183,7 +245,8 @@ public class CodeAttribute extends Attribute {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "CodeAttribute{" +
                 "maxStack=" + maxStack +
                 ", maxLocals=" + maxLocals +
@@ -195,7 +258,6 @@ public class CodeAttribute extends Attribute {
 
     /**
      * Accepts a visitor for bytecode analysis.
-     *
      * @param abstractMethodVisitor The visitor to accept
      */
     public void accept(AbstractMethodVisitor abstractMethodVisitor)

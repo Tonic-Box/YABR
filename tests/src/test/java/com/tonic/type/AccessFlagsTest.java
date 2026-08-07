@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AccessFlagsTest {
+class AccessFlagsTest
+{
 
     @Test
-    void testClassAccessFlags() {
+    void testClassAccessFlags()
+    {
         assertEquals(0x0001, AccessFlags.ACC_PUBLIC);
         assertEquals(0x0010, AccessFlags.ACC_FINAL);
         assertEquals(0x0020, AccessFlags.ACC_SUPER);
@@ -19,7 +21,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testFieldAccessFlags() {
+    void testFieldAccessFlags()
+    {
         assertEquals(0x0002, AccessFlags.ACC_PRIVATE);
         assertEquals(0x0004, AccessFlags.ACC_PROTECTED);
         assertEquals(0x0008, AccessFlags.ACC_STATIC);
@@ -28,7 +31,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testMethodAccessFlags() {
+    void testMethodAccessFlags()
+    {
         assertEquals(0x0020, AccessFlags.ACC_SYNCHRONIZED);
         assertEquals(0x0040, AccessFlags.ACC_BRIDGE);
         assertEquals(0x0080, AccessFlags.ACC_VARARGS);
@@ -37,7 +41,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testArrayTypeConstants() {
+    void testArrayTypeConstants()
+    {
         assertEquals(4, AccessFlags.T_BOOLEAN);
         assertEquals(5, AccessFlags.T_CHAR);
         assertEquals(6, AccessFlags.T_FLOAT);
@@ -49,7 +54,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testVersionConstants() {
+    void testVersionConstants()
+    {
         assertEquals(45, AccessFlags.V1_1);
         assertEquals(49, AccessFlags.V1_5);
         assertEquals(50, AccessFlags.V1_6);
@@ -62,7 +68,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testFlagCombinations() {
+    void testFlagCombinations()
+    {
         int publicStatic = AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC;
         assertEquals(0x0009, publicStatic);
 
@@ -71,7 +78,8 @@ class AccessFlagsTest {
     }
 
     @Test
-    void testOpcodeConstants() {
+    void testOpcodeConstants()
+    {
         assertEquals(0x15, AccessFlags.ILOAD);
         assertEquals(0x16, AccessFlags.LLOAD);
         assertEquals(0x17, AccessFlags.FLOAD);

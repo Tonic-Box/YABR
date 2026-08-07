@@ -12,9 +12,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugLoopMapping {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing the block-to-loop mapping computed for one method of a class file.
+ */
+public class DebugLoopMapping
+{
+    /**
+     * Lifts the named method to IR and prints which loop each block belongs to.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugLoopMapping <classfile> <methodName>");
             return;
         }
@@ -23,8 +34,10 @@ public class DebugLoopMapping {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -38,27 +51,34 @@ public class DebugLoopMapping {
 
                 System.out.println("\n=== All loops in order ===");
                 int i = 0;
-                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+                {
                     System.out.println("Loop " + i++ + ": header=" + loop.getHeader().getName() +
                         " blocks=" + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                 }
 
                 System.out.println("\n=== Check B82 ===");
                 IRBlock b82 = null;
-                for (IRBlock block : irMethod.getBlocks()) {
-                    if (block.getName().equals("B82")) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
+                    if (block.getName().equals("B82"))
+                    {
                         b82 = block;
                         break;
                     }
                 }
 
-                if (b82 != null) {
+                if (b82 != null)
+                {
                     System.out.println("isLoopHeader(B82): " + loopAnalysis.isLoopHeader(b82));
                     LoopAnalysis.Loop loop = loopAnalysis.getLoop(b82);
-                    if (loop != null) {
+                    if (loop != null)
+                    {
                         System.out.println("getLoop(B82) returns: header=" + loop.getHeader().getName() +
                             " blocks=" + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
-                    } else {
+                    }
+                    else
+                    {
                         System.out.println("getLoop(B82) returns null!");
                     }
                 }

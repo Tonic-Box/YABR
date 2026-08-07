@@ -7,49 +7,56 @@ import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.Utf8Item;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class NativeRegistryTest {
+class NativeRegistryTest
+{
 
     private NativeRegistry registry;
     private NativeContext context;
     private HeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         registry = new NativeRegistry();
         heapManager = new SimpleHeapManager();
         ClassResolver resolver = mock(ClassResolver.class);
 
         context = new NativeContext() {
             @Override
-            public HeapManager getHeapManager() {
+            public HeapManager getHeapManager()
+            {
                 return heapManager;
             }
 
             @Override
-            public ClassResolver getClassResolver() {
+            public ClassResolver getClassResolver()
+            {
                 return resolver;
             }
 
             @Override
-            public ObjectInstance createString(String value) {
+            public ObjectInstance createString(String value)
+            {
                 return heapManager.internString(value);
             }
 
             @Override
-            public ObjectInstance createException(String className, String message) {
+            public ObjectInstance createException(String className, String message)
+            {
                 ObjectInstance ex = heapManager.newObject(className);
-                if (message != null) {
-                    ex.setField(className, "detailMessage", "Ljava/lang/String;",
-                        heapManager.internString(message));
+                if (message != null)
+                {
+                    ex.setField(className, "detailMessage", "Ljava/lang/String;", heapManager.internString(message));
                 }
                 return ex;
             }
@@ -57,7 +64,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testRegisterByComponents() {
+    void testRegisterByComponents()
+    {
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(42);
         registry.register("TestClass", "method", "()I", handler);
 
@@ -65,7 +73,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testRegisterByKey() {
+    void testRegisterByKey()
+    {
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(42);
         String key = NativeRegistry.methodKey("TestClass", "method", "()I");
         registry.register(key, handler);
@@ -74,7 +83,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testHasHandlerWithMethod() {
+    void testHasHandlerWithMethod()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "()I", 0x0101);
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(0);
         registry.register("TestClass", "method", "()I", handler);
@@ -83,12 +93,14 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testHasHandlerReturnsFalse() {
+    void testHasHandlerReturnsFalse()
+    {
         assertFalse(registry.hasHandler("NonExistent", "method", "()V"));
     }
 
     @Test
-    void testGetHandler() {
+    void testGetHandler()
+    {
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(42);
         registry.register("TestClass", "method", "()I", handler);
 
@@ -98,7 +110,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testGetHandlerWithMethod() {
+    void testGetHandlerWithMethod()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "()I", 0x0101);
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(42);
         registry.register("TestClass", "method", "()I", handler);
@@ -108,14 +121,14 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testGetHandlerThrowsWhenNotFound() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            registry.getHandler("NonExistent", "method", "()V");
-        });
+    void testGetHandlerThrowsWhenNotFound()
+    {
+        assertThrows(IllegalArgumentException.class, () -> registry.getHandler("NonExistent", "method", "()V"));
     }
 
     @Test
-    void testExecute() throws NativeException {
+    void testExecute() throws NativeException
+    {
         NativeMethodHandler handler = (receiver, args, ctx) -> ConcreteValue.intValue(99);
         registry.register("TestClass", "method", "()I", handler);
 
@@ -126,20 +139,23 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMethodKeyGeneration() {
+    void testMethodKeyGeneration()
+    {
         String key = NativeRegistry.methodKey("java/lang/Object", "hashCode", "()I");
         assertEquals("java/lang/Object.hashCode()I", key);
     }
 
     @Test
-    void testMethodKeyFromMethodEntry() {
+    void testMethodKeyFromMethodEntry()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "(II)I", 0x0009);
         String key = NativeRegistry.methodKey(method);
         assertEquals("TestClass.method(II)I", key);
     }
 
     @Test
-    void testRegisterDefaults() {
+    void testRegisterDefaults()
+    {
         registry.registerDefaults();
 
         assertTrue(registry.hasHandler("java/lang/Object", "hashCode", "()I"));
@@ -152,7 +168,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testObjectHashCode() throws NativeException {
+    void testObjectHashCode() throws NativeException
+    {
         registry.registerDefaults();
         ObjectInstance obj = new ObjectInstance(123, "TestClass");
 
@@ -167,7 +184,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testObjectEquals() throws NativeException {
+    void testObjectEquals() throws NativeException
+    {
         registry.registerDefaults();
         ObjectInstance obj1 = new ObjectInstance(1, "TestClass");
         ObjectInstance obj2 = new ObjectInstance(2, "TestClass");
@@ -190,7 +208,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testSystemIdentityHashCode() throws NativeException {
+    void testSystemIdentityHashCode() throws NativeException
+    {
         registry.registerDefaults();
         ObjectInstance obj = new ObjectInstance(456, "TestClass");
 
@@ -205,7 +224,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testSystemCurrentTimeMillis() throws NativeException {
+    void testSystemCurrentTimeMillis() throws NativeException
+    {
         registry.registerDefaults();
         long before = System.currentTimeMillis();
 
@@ -222,7 +242,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathAbsInt() throws NativeException {
+    void testMathAbsInt() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -236,7 +257,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathAbsLong() throws NativeException {
+    void testMathAbsLong() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -250,7 +272,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathMaxInt() throws NativeException {
+    void testMathMaxInt() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -264,7 +287,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathMaxLong() throws NativeException {
+    void testMathMaxLong() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -278,7 +302,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathMaxDouble() throws NativeException {
+    void testMathMaxDouble() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -292,7 +317,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathMinLong() throws NativeException {
+    void testMathMinLong() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -306,7 +332,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathMinDouble() throws NativeException {
+    void testMathMinDouble() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -320,7 +347,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testMathSqrt() throws NativeException {
+    void testMathSqrt() throws NativeException
+    {
         registry.registerDefaults();
 
         ConcreteValue result = registry.execute(
@@ -334,7 +362,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testFloatToRawIntBits() throws NativeException {
+    void testFloatToRawIntBits() throws NativeException
+    {
         registry.registerDefaults();
         float value = 3.14f;
 
@@ -349,7 +378,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testIntBitsToFloat() throws NativeException {
+    void testIntBitsToFloat() throws NativeException
+    {
         registry.registerDefaults();
         int bits = Float.floatToRawIntBits(3.14f);
 
@@ -364,7 +394,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testDoubleToRawLongBits() throws NativeException {
+    void testDoubleToRawLongBits() throws NativeException
+    {
         registry.registerDefaults();
         double value = 2.718;
 
@@ -379,7 +410,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testStringLength() throws NativeException {
+    void testStringLength() throws NativeException
+    {
         registry.registerDefaults();
         ObjectInstance str = heapManager.internString("Hello");
 
@@ -394,7 +426,8 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testStringCharAt() throws NativeException {
+    void testStringCharAt() throws NativeException
+    {
         registry.registerDefaults();
         ObjectInstance str = heapManager.internString("Test");
 
@@ -409,12 +442,14 @@ class NativeRegistryTest {
     }
 
     @Test
-    void testArrayCopy() throws NativeException {
+    void testArrayCopy() throws NativeException
+    {
         registry.registerDefaults();
         ArrayInstance src = heapManager.newArray("I", 5);
         ArrayInstance dest = heapManager.newArray("I", 5);
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 5; i++)
+        {
             src.setInt(i, i * 10);
         }
 
@@ -436,21 +471,20 @@ class NativeRegistryTest {
         assertEquals(30, dest.getInt(2));
     }
 
-    private MethodEntry createTestMethod(String owner, String name, String desc, int access) {
+    private MethodEntry createTestMethod(String owner, String name, String desc, int access)
+    {
         ClassFile classFile = mock(ClassFile.class);
         when(classFile.getClassName()).thenReturn(owner);
 
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
-        com.tonic.parser.constpool.Utf8Item nameItem = mock(com.tonic.parser.constpool.Utf8Item.class);
-        com.tonic.parser.constpool.Utf8Item descItem = mock(com.tonic.parser.constpool.Utf8Item.class);
+        ConstPool constPool = mock(ConstPool.class);
+        Utf8Item nameItem = mock(Utf8Item.class);
+        Utf8Item descItem = mock(Utf8Item.class);
         when(nameItem.getValue()).thenReturn(name);
         when(descItem.getValue()).thenReturn(desc);
         doReturn(nameItem).when(constPool).getItem(1);
         doReturn(descItem).when(constPool).getItem(2);
         when(classFile.getConstPool()).thenReturn(constPool);
 
-        MethodEntry method = new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
-
-        return method;
+        return new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
     }
 }

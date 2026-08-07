@@ -12,7 +12,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public final class ClassDecl implements TypeDecl {
+/**
+ * A Java class declaration: name, modifiers, supertypes, and its member fields, methods, constructors, initializers, and inner types.
+ */
+public final class ClassDecl implements TypeDecl
+{
 
     private String name;
     private final Set<Modifier> modifiers;
@@ -29,7 +33,13 @@ public final class ClassDecl implements TypeDecl {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public ClassDecl(String name, SourceLocation location) {
+    /**
+     * Creates an empty class declaration.
+     * @param name the simple class name
+     * @param location the source location, or null for unknown
+     */
+    public ClassDecl(String name, SourceLocation location)
+    {
         this.name = name;
         this.modifiers = EnumSet.noneOf(Modifier.class);
         this.annotations = new NodeList<>(this);
@@ -44,151 +54,314 @@ public final class ClassDecl implements TypeDecl {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public ClassDecl(String name) {
+    /**
+     * Creates an empty class declaration at an unknown location.
+     * @param name the simple class name
+     */
+    public ClassDecl(String name)
+    {
         this(name, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the class name.
+     * @param name the simple class name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public Set<Modifier> getModifiers() {
+    /**
+     * @return the modifiers
+     */
+    public Set<Modifier> getModifiers()
+    {
         return modifiers;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public SourceType getSuperclass() {
+    /**
+     * @return the superclass
+     */
+    public SourceType getSuperclass()
+    {
         return superclass;
     }
 
-    public void setSuperclass(SourceType superclass) {
-        this.superclass = superclass;
+    /**
+     * Sets the superclass type.
+     * @param superclass the extended type
+     */
+    public void setSuperclass(SourceType superclass)
+    {
+        withSuperclass(superclass);
     }
 
-    public NodeList<SourceType> getInterfaces() {
+    /**
+     * @return the interfaces
+     */
+    public NodeList<SourceType> getInterfaces()
+    {
         return interfaces;
     }
 
-    public NodeList<SourceType> getTypeParameters() {
+    /**
+     * @return the type parameters
+     */
+    public NodeList<SourceType> getTypeParameters()
+    {
         return typeParameters;
     }
 
-    public NodeList<FieldDecl> getFields() {
+    /**
+     * @return the fields
+     */
+    public NodeList<FieldDecl> getFields()
+    {
         return fields;
     }
 
-    public NodeList<MethodDecl> getMethods() {
+    /**
+     * @return the methods
+     */
+    public NodeList<MethodDecl> getMethods()
+    {
         return methods;
     }
 
-    public NodeList<ConstructorDecl> getConstructors() {
+    /**
+     * @return the constructors
+     */
+    public NodeList<ConstructorDecl> getConstructors()
+    {
         return constructors;
     }
 
-    public NodeList<TypeDecl> getInnerTypes() {
+    /**
+     * @return the inner types
+     */
+    public NodeList<TypeDecl> getInnerTypes()
+    {
         return innerTypes;
     }
 
-    public List<BlockStmt> getStaticInitializers() {
+    /**
+     * @return the static initializers
+     */
+    public List<BlockStmt> getStaticInitializers()
+    {
         return staticInitializers;
     }
 
-    public List<BlockStmt> getInstanceInitializers() {
+    /**
+     * @return the instance initializers
+     */
+    public List<BlockStmt> getInstanceInitializers()
+    {
         return instanceInitializers;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public ClassDecl withName(String name) {
+    /**
+     * Sets the class name.
+     * @param name the simple class name
+     * @return this declaration
+     */
+    public ClassDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public ClassDecl withSuperclass(SourceType superclass) {
+    /**
+     * Sets the superclass type.
+     * @param superclass the extended type
+     * @return this declaration
+     */
+    public ClassDecl withSuperclass(SourceType superclass)
+    {
         this.superclass = superclass;
         return this;
     }
 
-    public ClassDecl withModifiers(Set<Modifier> modifiers) {
+    /**
+     * Replaces all modifiers with the given set.
+     * @param modifiers the modifiers to apply
+     * @return this declaration
+     */
+    public ClassDecl withModifiers(Set<Modifier> modifiers)
+    {
         this.modifiers.clear();
         this.modifiers.addAll(modifiers);
         return this;
     }
 
-    public ClassDecl addModifier(Modifier modifier) {
+    /**
+     * Adds a modifier.
+     * @param modifier the modifier to add
+     * @return this declaration
+     */
+    public ClassDecl addModifier(Modifier modifier)
+    {
         modifiers.add(modifier);
         return this;
     }
 
-    public ClassDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Adds an annotation.
+     * @param annotation the annotation to add
+     * @return this declaration
+     */
+    public ClassDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
-    public ClassDecl addInterface(SourceType iface) {
+    /**
+     * Adds an implemented interface.
+     * @param iface the interface type
+     * @return this declaration
+     */
+    public ClassDecl addInterface(SourceType iface)
+    {
         interfaces.add(iface);
         return this;
     }
 
-    public ClassDecl addTypeParameter(SourceType typeParam) {
+    /**
+     * Adds a type parameter.
+     * @param typeParam the type parameter
+     * @return this declaration
+     */
+    public ClassDecl addTypeParameter(SourceType typeParam)
+    {
         typeParameters.add(typeParam);
         return this;
     }
 
-    public ClassDecl addField(FieldDecl field) {
+    /**
+     * Adds a field member.
+     * @param field the field declaration
+     * @return this declaration
+     */
+    public ClassDecl addField(FieldDecl field)
+    {
         fields.add(field);
         return this;
     }
 
-    public ClassDecl addMethod(MethodDecl method) {
+    /**
+     * Adds a method member.
+     * @param method the method declaration
+     * @return this declaration
+     */
+    public ClassDecl addMethod(MethodDecl method)
+    {
         methods.add(method);
         return this;
     }
 
-    public ClassDecl addConstructor(ConstructorDecl constructor) {
+    /**
+     * Adds a constructor.
+     * @param constructor the constructor declaration
+     * @return this declaration
+     */
+    public ClassDecl addConstructor(ConstructorDecl constructor)
+    {
         constructors.add(constructor);
         return this;
     }
 
-    public ClassDecl addInnerType(TypeDecl innerType) {
+    /**
+     * Adds a nested type.
+     * @param innerType the nested type declaration
+     * @return this declaration
+     */
+    public ClassDecl addInnerType(TypeDecl innerType)
+    {
         innerTypes.add(innerType);
         return this;
     }
 
-    public ClassDecl addStaticInitializer(BlockStmt block) {
+    /**
+     * Adds a static initializer block.
+     * @param block the initializer body
+     * @return this declaration
+     */
+    public ClassDecl addStaticInitializer(BlockStmt block)
+    {
         staticInitializers.add(block);
         return this;
     }
 
-    public ClassDecl addInstanceInitializer(BlockStmt block) {
+    /**
+     * Adds an instance initializer block.
+     * @param block the initializer body
+     * @return this declaration
+     */
+    public ClassDecl addInstanceInitializer(BlockStmt block)
+    {
         instanceInitializers.add(block);
         return this;
     }
 
-    public ConstructorDecl getConstructor(SourceType... paramTypes) {
+    /**
+     * Finds a constructor by exact parameter types.
+     * @param paramTypes the parameter types to match
+     * @return the matching constructor, or null if none
+     */
+    public ConstructorDecl getConstructor(SourceType... paramTypes)
+    {
         outer:
-        for (ConstructorDecl ctor : constructors) {
+        for (ConstructorDecl ctor : constructors)
+        {
             if (ctor.getParameters().size() != paramTypes.length) continue;
-            for (int i = 0; i < paramTypes.length; i++) {
+            for (int i = 0; i < paramTypes.length; i++)
+            {
                 SourceType param = ctor.getParameters().get(i).getType();
-                if (!param.equals(paramTypes[i])) {
+                if (!param.equals(paramTypes[i]))
+                {
                     continue outer;
                 }
             }
@@ -197,14 +370,24 @@ public final class ClassDecl implements TypeDecl {
         return null;
     }
 
-    public MethodDecl getMethod(String name, SourceType... paramTypes) {
+    /**
+     * Finds a method by name and exact parameter types.
+     * @param name the method name
+     * @param paramTypes the parameter types to match
+     * @return the matching method, or null if none
+     */
+    public MethodDecl getMethod(String name, SourceType... paramTypes)
+    {
         outer:
-        for (MethodDecl method : methods) {
+        for (MethodDecl method : methods)
+        {
             if (!name.equals(method.getName())) continue;
             if (method.getParameters().size() != paramTypes.length) continue;
-            for (int i = 0; i < paramTypes.length; i++) {
+            for (int i = 0; i < paramTypes.length; i++)
+            {
                 SourceType param = method.getParameters().get(i).getType();
-                if (!param.equals(paramTypes[i])) {
+                if (!param.equals(paramTypes[i]))
+                {
                     continue outer;
                 }
             }
@@ -214,18 +397,24 @@ public final class ClassDecl implements TypeDecl {
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>(annotations);
-        for (SourceType tp : typeParameters) {
-            if (tp != null) {
+        for (SourceType tp : typeParameters)
+        {
+            if (tp != null)
+            {
                 children.add(tp);
             }
         }
-        if (superclass != null) {
+        if (superclass != null)
+        {
             children.add(superclass);
         }
-        for (SourceType iface : interfaces) {
-            if (iface != null) {
+        for (SourceType iface : interfaces)
+        {
+            if (iface != null)
+            {
                 children.add(iface);
             }
         }
@@ -239,35 +428,44 @@ public final class ClassDecl implements TypeDecl {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append("\n");
         }
         String mods = Modifier.toSourceString(modifiers);
-        if (!mods.isEmpty()) {
+        if (!mods.isEmpty())
+        {
             sb.append(mods).append(" ");
         }
         sb.append("class ").append(name);
-        if (!typeParameters.isEmpty()) {
+        if (!typeParameters.isEmpty())
+        {
             sb.append("<");
-            for (int i = 0; i < typeParameters.size(); i++) {
+            for (int i = 0; i < typeParameters.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(typeParameters.get(i));
             }
             sb.append(">");
         }
-        if (superclass != null) {
+        if (superclass != null)
+        {
             sb.append(" extends ").append(superclass);
         }
-        if (!interfaces.isEmpty()) {
+        if (!interfaces.isEmpty())
+        {
             sb.append(" implements ");
-            for (int i = 0; i < interfaces.size(); i++) {
+            for (int i = 0; i < interfaces.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(interfaces.get(i));
             }

@@ -14,7 +14,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public final class TracingListener extends AbstractBytecodeListener implements CapableListener {
+/**
+ * Listener that records interpreter events as TraceEvent entries, optionally with stack snapshots and an event cap.
+ */
+public final class TracingListener extends AbstractBytecodeListener implements CapableListener
+{
 
     private static final Set<ListenerCapability> DEFAULT_CAPABILITIES =
         EnumSet.of(ListenerCapability.ALL_OPERATIONS);
@@ -23,56 +27,79 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     private final boolean includeStackState;
     private final int maxEvents;
 
-    public TracingListener() {
+    /**
+     * Creates a tracer without stack snapshots and with no event cap.
+     */
+    public TracingListener()
+    {
         this(false, Integer.MAX_VALUE);
     }
 
-    public TracingListener(boolean includeStackState) {
+    /**
+     * Creates a tracer with no event cap.
+     * @param includeStackState whether instruction events capture an operand stack snapshot
+     */
+    public TracingListener(boolean includeStackState)
+    {
         this(includeStackState, Integer.MAX_VALUE);
     }
 
-    public TracingListener(boolean includeStackState, int maxEvents) {
+    /**
+     * Creates a tracer that stops recording once the event cap is reached.
+     * @param includeStackState whether instruction events capture an operand stack snapshot
+     * @param maxEvents the maximum number of events to record
+     */
+    public TracingListener(boolean includeStackState, int maxEvents)
+    {
         this.events = new ArrayList<>();
         this.includeStackState = includeStackState;
         this.maxEvents = maxEvents;
     }
 
-    private void recordEvent(TraceEvent event) {
-        if (events.size() < maxEvents) {
+    private void recordEvent(TraceEvent event)
+    {
+        if (events.size() < maxEvents)
+        {
             events.add(event);
         }
     }
 
     @Override
-    public void onExecutionStart(MethodEntry entryPoint) {
+    public void onExecutionStart(MethodEntry entryPoint)
+    {
         super.onExecutionStart(entryPoint);
         recordEvent(TraceEvent.executionStart(entryPoint.getOwnerName() + "." + entryPoint.getName() + entryPoint.getDesc()));
     }
 
     @Override
-    public void onExecutionEnd(BytecodeResult result) {
+    public void onExecutionEnd(BytecodeResult result)
+    {
         recordEvent(TraceEvent.executionEnd(result != null ? result.toString() : "null"));
     }
 
     @Override
-    public void onFramePush(StackFrame frame) {
+    public void onFramePush(StackFrame frame)
+    {
         super.onFramePush(frame);
         recordEvent(TraceEvent.framePush(frame.getMethodSignature()));
     }
 
     @Override
-    public void onFramePop(StackFrame frame, ConcreteValue returnValue) {
+    public void onFramePop(StackFrame frame, ConcreteValue returnValue)
+    {
         recordEvent(TraceEvent.framePop(frame.getMethodSignature(),
             returnValue != null ? returnValue.toString() : "void"));
     }
 
     @Override
-    public void onFrameException(StackFrame frame, ObjectInstance exception) {
+    public void onFrameException(StackFrame frame, ObjectInstance exception)
+    {
         recordEvent(TraceEvent.frameException(frame.getMethodSignature(), exception.toString()));
     }
 
     @Override
-    public void beforeInstruction(StackFrame frame, Instruction instruction) {
+    public void beforeInstruction(StackFrame frame, Instruction instruction)
+    {
         recordEvent(TraceEvent.instruction(
             frame.getPC(),
             instruction.getOpcode(),
@@ -81,50 +108,50 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void onStackPush(StackFrame frame, ConcreteValue value) {
+    public void onStackPush(StackFrame frame, ConcreteValue value)
+    {
         recordEvent(TraceEvent.stackPush(frame.getPC(), value.toString()));
     }
 
     @Override
-    public void onStackPop(StackFrame frame, ConcreteValue value) {
+    public void onStackPop(StackFrame frame, ConcreteValue value)
+    {
         recordEvent(TraceEvent.stackPop(frame.getPC(), value.toString()));
     }
 
     @Override
-    public void onLocalLoad(StackFrame frame, int slot, ConcreteValue value) {
+    public void onLocalLoad(StackFrame frame, int slot, ConcreteValue value)
+    {
         recordEvent(TraceEvent.localLoad(frame.getPC(), slot, value.toString()));
     }
 
     @Override
-    public void onLocalStore(StackFrame frame, int slot, ConcreteValue value) {
+    public void onLocalStore(StackFrame frame, int slot, ConcreteValue value)
+    {
         recordEvent(TraceEvent.localStore(frame.getPC(), slot, value.toString()));
     }
 
     @Override
-    public void onObjectAllocation(ObjectInstance instance) {
+    public void onObjectAllocation(ObjectInstance instance)
+    {
         recordEvent(TraceEvent.objectAllocation(instance.getClassName(), instance.getId()));
     }
 
     @Override
-    public void onArrayAllocation(ArrayInstance array) {
-        recordEvent(TraceEvent.arrayAllocation(
-            array.getComponentType(),
-            array.getLength(),
-            array.getId()
-        ));
+    public void onArrayAllocation(ArrayInstance array)
+    {
+        recordEvent(TraceEvent.arrayAllocation(array.getComponentType(), array.getLength(), array.getId()));
     }
 
     @Override
-    public void onFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value) {
-        recordEvent(TraceEvent.fieldRead(
-            instance.toString(),
-            fieldName,
-            value != null ? value.toString() : "null"
-        ));
+    public void onFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value)
+    {
+        recordEvent(TraceEvent.fieldRead(instance.toString(), fieldName, value != null ? value.toString() : "null"));
     }
 
     @Override
-    public void onFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue) {
+    public void onFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue)
+    {
         recordEvent(TraceEvent.fieldWrite(
             instance.toString(),
             fieldName,
@@ -134,16 +161,14 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void onArrayRead(ArrayInstance array, int index, ConcreteValue value) {
-        recordEvent(TraceEvent.arrayRead(
-            array.toString(),
-            index,
-            value != null ? value.toString() : "null"
-        ));
+    public void onArrayRead(ArrayInstance array, int index, ConcreteValue value)
+    {
+        recordEvent(TraceEvent.arrayRead(array.toString(), index, value != null ? value.toString() : "null"));
     }
 
     @Override
-    public void onArrayWrite(ArrayInstance array, int index, ConcreteValue oldValue, ConcreteValue newValue) {
+    public void onArrayWrite(ArrayInstance array, int index, ConcreteValue oldValue, ConcreteValue newValue)
+    {
         recordEvent(TraceEvent.arrayWrite(
             array.toString(),
             index,
@@ -153,12 +178,14 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken) {
+    public void onBranch(StackFrame frame, int fromPC, int toPC, boolean taken)
+    {
         recordEvent(TraceEvent.branch(fromPC, toPC, taken));
     }
 
     @Override
-    public void onMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args) {
+    public void onMethodCall(StackFrame caller, MethodEntry target, ConcreteValue[] args)
+    {
         recordEvent(TraceEvent.methodCall(
             caller != null ? caller.getMethodSignature() : "root",
             target.getOwnerName() + "." + target.getName() + target.getDesc()
@@ -166,7 +193,8 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void onMethodReturn(StackFrame frame, ConcreteValue returnValue) {
+    public void onMethodReturn(StackFrame frame, ConcreteValue returnValue)
+    {
         recordEvent(TraceEvent.methodReturn(
             frame.getMethodSignature(),
             returnValue != null ? returnValue.toString() : "void"
@@ -174,53 +202,72 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void onExceptionThrow(StackFrame frame, ObjectInstance exception) {
+    public void onExceptionThrow(StackFrame frame, ObjectInstance exception)
+    {
         recordEvent(TraceEvent.exceptionThrow(frame.getMethodSignature(), exception.toString()));
     }
 
     @Override
-    public void onExceptionCatch(StackFrame frame, ObjectInstance exception, int handlerPC) {
-        recordEvent(TraceEvent.exceptionCatch(
-            frame.getMethodSignature(),
-            exception.toString(),
-            handlerPC
-        ));
+    public void onExceptionCatch(StackFrame frame, ObjectInstance exception, int handlerPC)
+    {
+        recordEvent(TraceEvent.exceptionCatch(frame.getMethodSignature(), exception.toString(), handlerPC));
     }
 
     @Override
-    public void onNativeMethodCall(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args) {
-        recordEvent(TraceEvent.nativeCall(
-            method.getOwnerName() + "." + method.getName() + method.getDesc()
-        ));
+    public void onNativeMethodCall(MethodEntry method, ObjectInstance receiver, ConcreteValue[] args)
+    {
+        recordEvent(TraceEvent.nativeCall(method.getOwnerName() + "." + method.getName() + method.getDesc()));
     }
 
     @Override
-    public void onNativeMethodReturn(MethodEntry method, ConcreteValue result) {
+    public void onNativeMethodReturn(MethodEntry method, ConcreteValue result)
+    {
         recordEvent(TraceEvent.nativeReturn(
             method.getOwnerName() + "." + method.getName() + method.getDesc(),
             result != null ? result.toString() : "void"
         ));
     }
 
-    public List<TraceEvent> getEvents() {
+    /**
+     * @return an unmodifiable view of the recorded events
+     */
+    public List<TraceEvent> getEvents()
+    {
         return Collections.unmodifiableList(events);
     }
 
-    public void clearEvents() {
+    /**
+     * Discards all recorded events.
+     */
+    public void clearEvents()
+    {
         events.clear();
     }
 
-    public String formatTrace() {
+    /**
+     * Formats the full recorded trace without a line limit.
+     * @return the formatted trace
+     */
+    public String formatTrace()
+    {
         return formatTrace(Integer.MAX_VALUE);
     }
 
-    public String formatTrace(int maxLines) {
+    /**
+     * Formats the recorded trace, truncating after the given number of lines.
+     * @param maxLines the maximum number of event lines to include
+     * @return the formatted trace
+     */
+    public String formatTrace(int maxLines)
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("Execution Trace (").append(events.size()).append(" events):\n");
 
         int count = 0;
-        for (TraceEvent event : events) {
-            if (count >= maxLines) {
+        for (TraceEvent event : events)
+        {
+            if (count >= maxLines)
+            {
                 sb.append("... (").append(events.size() - count).append(" more events)\n");
                 break;
             }
@@ -232,13 +279,15 @@ public final class TracingListener extends AbstractBytecodeListener implements C
     }
 
     @Override
-    public void reset() {
+    public void reset()
+    {
         super.reset();
         events.clear();
     }
 
     @Override
-    public Set<ListenerCapability> getCapabilities() {
+    public Set<ListenerCapability> getCapabilities()
+    {
         return DEFAULT_CAPABILITIES;
     }
 }

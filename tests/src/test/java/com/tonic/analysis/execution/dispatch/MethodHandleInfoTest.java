@@ -5,12 +5,15 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodHandleInfoTest {
+class MethodHandleInfoTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
         @Test
-        void shouldCreateWithAllParameters() {
+        void shouldCreateWithAllParameters()
+        {
             MethodHandleInfo info = new MethodHandleInfo(
                 MethodHandleInfo.REF_invokeVirtual,
                 "java/lang/String",
@@ -26,279 +29,331 @@ class MethodHandleInfoTest {
     }
 
     @Nested
-    class ReferenceKindConstantsTests {
+    class ReferenceKindConstantsTests
+    {
         @Test
-        void shouldHaveCorrectGetFieldValue() {
+        void shouldHaveCorrectGetFieldValue()
+        {
             assertEquals(1, MethodHandleInfo.REF_getField);
         }
 
         @Test
-        void shouldHaveCorrectGetStaticValue() {
+        void shouldHaveCorrectGetStaticValue()
+        {
             assertEquals(2, MethodHandleInfo.REF_getStatic);
         }
 
         @Test
-        void shouldHaveCorrectPutFieldValue() {
+        void shouldHaveCorrectPutFieldValue()
+        {
             assertEquals(3, MethodHandleInfo.REF_putField);
         }
 
         @Test
-        void shouldHaveCorrectPutStaticValue() {
+        void shouldHaveCorrectPutStaticValue()
+        {
             assertEquals(4, MethodHandleInfo.REF_putStatic);
         }
 
         @Test
-        void shouldHaveCorrectInvokeVirtualValue() {
+        void shouldHaveCorrectInvokeVirtualValue()
+        {
             assertEquals(5, MethodHandleInfo.REF_invokeVirtual);
         }
 
         @Test
-        void shouldHaveCorrectInvokeStaticValue() {
+        void shouldHaveCorrectInvokeStaticValue()
+        {
             assertEquals(6, MethodHandleInfo.REF_invokeStatic);
         }
 
         @Test
-        void shouldHaveCorrectInvokeSpecialValue() {
+        void shouldHaveCorrectInvokeSpecialValue()
+        {
             assertEquals(7, MethodHandleInfo.REF_invokeSpecial);
         }
 
         @Test
-        void shouldHaveCorrectNewInvokeSpecialValue() {
+        void shouldHaveCorrectNewInvokeSpecialValue()
+        {
             assertEquals(8, MethodHandleInfo.REF_newInvokeSpecial);
         }
 
         @Test
-        void shouldHaveCorrectInvokeInterfaceValue() {
+        void shouldHaveCorrectInvokeInterfaceValue()
+        {
             assertEquals(9, MethodHandleInfo.REF_invokeInterface);
         }
     }
 
     @Nested
-    class FieldReferenceTests {
+    class FieldReferenceTests
+    {
         @Test
-        void shouldIdentifyGetFieldAsFieldReference() {
+        void shouldIdentifyGetFieldAsFieldReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "Owner", "field", "I");
             assertTrue(info.isFieldReference());
         }
 
         @Test
-        void shouldIdentifyGetStaticAsFieldReference() {
+        void shouldIdentifyGetStaticAsFieldReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getStatic, "Owner", "field", "I");
             assertTrue(info.isFieldReference());
         }
 
         @Test
-        void shouldIdentifyPutFieldAsFieldReference() {
+        void shouldIdentifyPutFieldAsFieldReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putField, "Owner", "field", "I");
             assertTrue(info.isFieldReference());
         }
 
         @Test
-        void shouldIdentifyPutStaticAsFieldReference() {
+        void shouldIdentifyPutStaticAsFieldReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putStatic, "Owner", "field", "I");
             assertTrue(info.isFieldReference());
         }
 
         @Test
-        void shouldNotIdentifyInvokeVirtualAsFieldReference() {
+        void shouldNotIdentifyInvokeVirtualAsFieldReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeVirtual, "Owner", "method", "()V");
             assertFalse(info.isFieldReference());
         }
     }
 
     @Nested
-    class MethodReferenceTests {
+    class MethodReferenceTests
+    {
         @Test
-        void shouldIdentifyInvokeVirtualAsMethodReference() {
+        void shouldIdentifyInvokeVirtualAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeVirtual, "Owner", "method", "()V");
             assertTrue(info.isMethodReference());
         }
 
         @Test
-        void shouldIdentifyInvokeStaticAsMethodReference() {
+        void shouldIdentifyInvokeStaticAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeStatic, "Owner", "method", "()V");
             assertTrue(info.isMethodReference());
         }
 
         @Test
-        void shouldIdentifyInvokeSpecialAsMethodReference() {
+        void shouldIdentifyInvokeSpecialAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeSpecial, "Owner", "method", "()V");
             assertTrue(info.isMethodReference());
         }
 
         @Test
-        void shouldIdentifyNewInvokeSpecialAsMethodReference() {
+        void shouldIdentifyNewInvokeSpecialAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_newInvokeSpecial, "Owner", "<init>", "()V");
             assertTrue(info.isMethodReference());
         }
 
         @Test
-        void shouldIdentifyInvokeInterfaceAsMethodReference() {
+        void shouldIdentifyInvokeInterfaceAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeInterface, "Owner", "method", "()V");
             assertTrue(info.isMethodReference());
         }
 
         @Test
-        void shouldNotIdentifyGetFieldAsMethodReference() {
+        void shouldNotIdentifyGetFieldAsMethodReference()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "Owner", "field", "I");
             assertFalse(info.isMethodReference());
         }
     }
 
     @Nested
-    class GetterSetterTests {
+    class GetterSetterTests
+    {
         @Test
-        void shouldIdentifyGetFieldAsGetter() {
+        void shouldIdentifyGetFieldAsGetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "Owner", "field", "I");
             assertTrue(info.isGetter());
         }
 
         @Test
-        void shouldIdentifyGetStaticAsGetter() {
+        void shouldIdentifyGetStaticAsGetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getStatic, "Owner", "field", "I");
             assertTrue(info.isGetter());
         }
 
         @Test
-        void shouldNotIdentifyPutFieldAsGetter() {
+        void shouldNotIdentifyPutFieldAsGetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putField, "Owner", "field", "I");
             assertFalse(info.isGetter());
         }
 
         @Test
-        void shouldIdentifyPutFieldAsSetter() {
+        void shouldIdentifyPutFieldAsSetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putField, "Owner", "field", "I");
             assertTrue(info.isSetter());
         }
 
         @Test
-        void shouldIdentifyPutStaticAsSetter() {
+        void shouldIdentifyPutStaticAsSetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putStatic, "Owner", "field", "I");
             assertTrue(info.isSetter());
         }
 
         @Test
-        void shouldNotIdentifyGetFieldAsSetter() {
+        void shouldNotIdentifyGetFieldAsSetter()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "Owner", "field", "I");
             assertFalse(info.isSetter());
         }
     }
 
     @Nested
-    class StaticTests {
+    class StaticTests
+    {
         @Test
-        void shouldIdentifyGetStaticAsStatic() {
+        void shouldIdentifyGetStaticAsStatic()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getStatic, "Owner", "field", "I");
             assertTrue(info.isStatic());
         }
 
         @Test
-        void shouldIdentifyPutStaticAsStatic() {
+        void shouldIdentifyPutStaticAsStatic()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putStatic, "Owner", "field", "I");
             assertTrue(info.isStatic());
         }
 
         @Test
-        void shouldIdentifyInvokeStaticAsStatic() {
+        void shouldIdentifyInvokeStaticAsStatic()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeStatic, "Owner", "method", "()V");
             assertTrue(info.isStatic());
         }
 
         @Test
-        void shouldNotIdentifyGetFieldAsStatic() {
+        void shouldNotIdentifyGetFieldAsStatic()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "Owner", "field", "I");
             assertFalse(info.isStatic());
         }
 
         @Test
-        void shouldNotIdentifyInvokeVirtualAsStatic() {
+        void shouldNotIdentifyInvokeVirtualAsStatic()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeVirtual, "Owner", "method", "()V");
             assertFalse(info.isStatic());
         }
     }
 
     @Nested
-    class ConstructorTests2 {
+    class ConstructorTests2
+    {
         @Test
-        void shouldIdentifyNewInvokeSpecialAsConstructor() {
+        void shouldIdentifyNewInvokeSpecialAsConstructor()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_newInvokeSpecial, "Owner", "<init>", "()V");
             assertTrue(info.isConstructor());
         }
 
         @Test
-        void shouldNotIdentifyInvokeSpecialAsConstructor() {
+        void shouldNotIdentifyInvokeSpecialAsConstructor()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeSpecial, "Owner", "<init>", "()V");
             assertFalse(info.isConstructor());
         }
     }
 
     @Nested
-    class ReferenceKindNameTests {
+    class ReferenceKindNameTests
+    {
         @Test
-        void shouldReturnGetFieldName() {
+        void shouldReturnGetFieldName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getField, "O", "f", "I");
             assertEquals("REF_getField", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnGetStaticName() {
+        void shouldReturnGetStaticName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_getStatic, "O", "f", "I");
             assertEquals("REF_getStatic", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnPutFieldName() {
+        void shouldReturnPutFieldName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putField, "O", "f", "I");
             assertEquals("REF_putField", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnPutStaticName() {
+        void shouldReturnPutStaticName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_putStatic, "O", "f", "I");
             assertEquals("REF_putStatic", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnInvokeVirtualName() {
+        void shouldReturnInvokeVirtualName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeVirtual, "O", "m", "()V");
             assertEquals("REF_invokeVirtual", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnInvokeStaticName() {
+        void shouldReturnInvokeStaticName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeStatic, "O", "m", "()V");
             assertEquals("REF_invokeStatic", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnInvokeSpecialName() {
+        void shouldReturnInvokeSpecialName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeSpecial, "O", "m", "()V");
             assertEquals("REF_invokeSpecial", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnNewInvokeSpecialName() {
+        void shouldReturnNewInvokeSpecialName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_newInvokeSpecial, "O", "<init>", "()V");
             assertEquals("REF_newInvokeSpecial", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnInvokeInterfaceName() {
+        void shouldReturnInvokeInterfaceName()
+        {
             MethodHandleInfo info = new MethodHandleInfo(MethodHandleInfo.REF_invokeInterface, "O", "m", "()V");
             assertEquals("REF_invokeInterface", info.getReferenceKindName());
         }
 
         @Test
-        void shouldReturnUnknownForInvalidKind() {
+        void shouldReturnUnknownForInvalidKind()
+        {
             MethodHandleInfo info = new MethodHandleInfo(99, "O", "m", "()V");
             assertTrue(info.getReferenceKindName().contains("unknown"));
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
         @Test
-        void shouldFormatToString() {
+        void shouldFormatToString()
+        {
             MethodHandleInfo info = new MethodHandleInfo(
                 MethodHandleInfo.REF_invokeVirtual,
                 "java/lang/String",

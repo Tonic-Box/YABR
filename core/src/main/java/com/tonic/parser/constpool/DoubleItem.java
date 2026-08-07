@@ -6,33 +6,43 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a CONSTANT_Double entry in the constant pool.
+ * A CONSTANT_Double entry in the constant pool.
  */
-public class DoubleItem extends Item<Double> {
+public class DoubleItem extends Item<Double>
+{
 
     private Double value;
 
-    public void setValue(Double value) {
+    /**
+     * Replaces the constant this entry holds.
+     * @param value the new double value
+     */
+    public void setValue(Double value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.value = classFile.readDouble();
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeDouble(value);
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_DOUBLE;
     }
 
     @Override
-    public Double getValue() {
+    public Double getValue()
+    {
         return value;
     }
 }

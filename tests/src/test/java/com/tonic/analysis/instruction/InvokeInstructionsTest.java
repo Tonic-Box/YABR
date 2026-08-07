@@ -14,37 +14,44 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InvokeInstructionsTest {
+class InvokeInstructionsTest
+{
 
     private ConstPool constPool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         classFile = new ClassFile("TestClass", 0);
         constPool = classFile.getConstPool();
     }
 
-    private int setupMethodRef(String className, String methodName, String descriptor) {
+    private int setupMethodRef(String className, String methodName, String descriptor)
+    {
         MethodRefItem methodRef = constPool.findOrAddMethodRef(className, methodName, descriptor);
         return constPool.getIndexOf(methodRef);
     }
 
-    private int setupInterfaceRef(String interfaceName, String methodName, String descriptor) {
+    private int setupInterfaceRef(String interfaceName, String methodName, String descriptor)
+    {
         InterfaceRefItem interfaceRef = constPool.findOrAddInterfaceRef(interfaceName, methodName, descriptor);
         return constPool.getIndexOf(interfaceRef);
     }
 
-    private int setupInvokeDynamic(String methodName, String descriptor, int bootstrapMethodIndex) {
+    private int setupInvokeDynamic(String methodName, String descriptor, int bootstrapMethodIndex)
+    {
         int nameAndTypeIndex = constPool.addNameAndType(methodName, descriptor);
         return constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
     }
 
     @Nested
-    class InvokeVirtualInstructionTests {
+    class InvokeVirtualInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectOpcode() {
+        void constructorSetsCorrectOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -52,18 +59,18 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void constructorRejectsInvalidOpcode() {
+        void constructorRejectsInvalidOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeVirtualInstruction(constPool, 0xB7, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeVirtualInstruction(constPool, 0xB7, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeVirtualInstruction"));
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -71,7 +78,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodIndexReturnsCorrectValue() {
+        void getMethodIndexReturnsCorrectValue()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -79,7 +87,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithSingleParamAndObjectReturn() {
+        void getStackChangeWithSingleParamAndObjectReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -87,7 +96,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithNoParamsAndVoidReturn() {
+        void getStackChangeWithNoParamsAndVoidReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "notify", "()V");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -95,7 +105,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithMultipleParamsAndIntReturn() {
+        void getStackChangeWithMultipleParamsAndIntReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "indexOf", "(Ljava/lang/String;I)I");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -103,7 +114,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithLongReturn() {
+        void getStackChangeWithLongReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "hashCode", "()J");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -111,7 +123,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getLocalChangeAlwaysZero() {
+        void getLocalChangeAlwaysZero()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "length", "()I");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -119,7 +132,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodNameReturnsCorrectName() {
+        void getMethodNameReturnsCorrectName()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -127,7 +141,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodDescriptorReturnsCorrectDescriptor() {
+        void getMethodDescriptorReturnsCorrectDescriptor()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -135,7 +150,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getOwnerClassReturnsCorrectClass() {
+        void getOwnerClassReturnsCorrectClass()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -143,7 +159,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void toStringContainsInvokevirtualMnemonic() {
+        void toStringContainsInvokevirtualMnemonic()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "length", "()I");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -153,7 +170,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             int methodIndex = setupMethodRef("java/lang/String", "length", "()I");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -170,7 +188,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "length", "()I");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
             TestVisitor visitor = new TestVisitor();
@@ -182,10 +201,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class InvokeStaticInstructionTests {
+    class InvokeStaticInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectOpcode() {
+        void constructorSetsCorrectOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -193,18 +214,18 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void constructorRejectsInvalidOpcode() {
+        void constructorRejectsInvalidOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeStaticInstruction(constPool, 0xB6, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeStaticInstruction(constPool, 0xB6, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeStaticInstruction"));
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -212,7 +233,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithTwoParamsAndIntReturn() {
+        void getStackChangeWithTwoParamsAndIntReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -220,7 +242,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithNoParamsAndObjectReturn() {
+        void getStackChangeWithNoParamsAndObjectReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/System", "currentTimeMillis", "()J");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -228,7 +251,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getLocalChangeAlwaysZero() {
+        void getLocalChangeAlwaysZero()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "abs", "(I)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -236,7 +260,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodNameReturnsCorrectName() {
+        void getMethodNameReturnsCorrectName()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -244,7 +269,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodDescriptorReturnsCorrectDescriptor() {
+        void getMethodDescriptorReturnsCorrectDescriptor()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -252,7 +278,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getOwnerClassReturnsCorrectClass() {
+        void getOwnerClassReturnsCorrectClass()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -260,7 +287,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void toStringContainsInvokestaticMnemonic() {
+        void toStringContainsInvokestaticMnemonic()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -270,7 +298,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -288,10 +317,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class InvokeSpecialInstructionTests {
+    class InvokeSpecialInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectOpcode() {
+        void constructorSetsCorrectOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -299,18 +330,18 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void constructorRejectsInvalidOpcode() {
+        void constructorRejectsInvalidOpcode()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeSpecialInstruction(constPool, 0xB8, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeSpecialInstruction(constPool, 0xB8, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeSpecialInstruction"));
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -318,7 +349,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithConstructor() {
+        void getStackChangeWithConstructor()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -326,7 +358,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithSuperMethodCall() {
+        void getStackChangeWithSuperMethodCall()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "toString", "()Ljava/lang/String;");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -334,7 +367,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getLocalChangeAlwaysZero() {
+        void getLocalChangeAlwaysZero()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -342,7 +376,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodNameReturnsCorrectName() {
+        void getMethodNameReturnsCorrectName()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -350,7 +385,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodDescriptorReturnsCorrectDescriptor() {
+        void getMethodDescriptorReturnsCorrectDescriptor()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -358,7 +394,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getOwnerClassReturnsCorrectClass() {
+        void getOwnerClassReturnsCorrectClass()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -366,7 +403,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getOwnerNameConvertsSlashesToDots() {
+        void getOwnerNameConvertsSlashesToDots()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -374,7 +412,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void toStringContainsInvokespecialMnemonic() {
+        void toStringContainsInvokespecialMnemonic()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -384,7 +423,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -401,7 +441,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
             TestVisitor visitor = new TestVisitor();
@@ -413,10 +454,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class InvokeInterfaceInstructionTests {
+    class InvokeInterfaceInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectOpcode() {
+        void constructorSetsCorrectOpcode()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -424,18 +467,18 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void constructorRejectsInvalidOpcode() {
+        void constructorRejectsInvalidOpcode()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeInterfaceInstruction(constPool, 0xB8, 0, methodIndex, 1);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeInterfaceInstruction(constPool, 0xB8, 0, methodIndex, 1));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeInterfaceInstruction"));
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -443,7 +486,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getCountReturnsCorrectValue() {
+        void getCountReturnsCorrectValue()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "add", "(Ljava/lang/Object;)Z");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 2);
 
@@ -451,7 +495,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithNoParamsAndIntReturn() {
+        void getStackChangeWithNoParamsAndIntReturn()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -459,7 +504,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithOneParamAndBooleanReturn() {
+        void getStackChangeWithOneParamAndBooleanReturn()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "add", "(Ljava/lang/Object;)Z");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 2);
 
@@ -467,7 +513,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getLocalChangeAlwaysZero() {
+        void getLocalChangeAlwaysZero()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -475,7 +522,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodNameReturnsCorrectName() {
+        void getMethodNameReturnsCorrectName()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -483,7 +531,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getMethodDescriptorReturnsCorrectDescriptor() {
+        void getMethodDescriptorReturnsCorrectDescriptor()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -491,7 +540,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getOwnerClassReturnsCorrectInterface() {
+        void getOwnerClassReturnsCorrectInterface()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -499,7 +549,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void toStringContainsInvokeinterfaceMnemonic() {
+        void toStringContainsInvokeinterfaceMnemonic()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -510,7 +561,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
 
@@ -529,7 +581,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 1);
             TestVisitor visitor = new TestVisitor();
@@ -541,10 +594,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class InvokeDynamicInstructionTests {
+    class InvokeDynamicInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectOpcode() {
+        void constructorSetsCorrectOpcode()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -552,18 +607,18 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void constructorRejectsInvalidOpcode() {
+        void constructorRejectsInvalidOpcode()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeDynamicInstruction(constPool, 0xB8, 0, cpIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeDynamicInstruction(constPool, 0xB8, 0, cpIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeDynamicInstruction"));
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -571,7 +626,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getCpIndexReturnsCorrectValue() {
+        void getCpIndexReturnsCorrectValue()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -579,7 +635,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getBootstrapMethodAttrIndexReturnsCorrectValue() {
+        void getBootstrapMethodAttrIndexReturnsCorrectValue()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 5);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -587,7 +644,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithNoParamsAndObjectReturn() {
+        void getStackChangeWithNoParamsAndObjectReturn()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -595,7 +653,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithOneParamAndVoidReturn() {
+        void getStackChangeWithOneParamAndVoidReturn()
+        {
             int cpIndex = setupInvokeDynamic("accept", "(Ljava/lang/Object;)V", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -603,7 +662,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getStackChangeWithInvalidItemReturnsZero() {
+        void getStackChangeWithInvalidItemReturnsZero()
+        {
             Utf8Item utf8 = new Utf8Item();
             utf8.setValue("invalid");
             constPool.getItems().add(utf8);
@@ -615,7 +675,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void getLocalChangeAlwaysZero() {
+        void getLocalChangeAlwaysZero()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -623,7 +684,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void resolveMethodReturnsCorrectString() {
+        void resolveMethodReturnsCorrectString()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -633,14 +695,16 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void resolveMethodWithZeroIndexReturnsNotInClassPool() {
+        void resolveMethodWithZeroIndexReturnsNotInClassPool()
+        {
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, 0);
 
             assertEquals("NotInClassPool", instr.resolveMethod());
         }
 
         @Test
-        void resolveMethodWithInvalidItemReturnsErrorMessage() {
+        void resolveMethodWithInvalidItemReturnsErrorMessage()
+        {
             Utf8Item utf8 = new Utf8Item();
             utf8.setValue("invalid");
             constPool.getItems().add(utf8);
@@ -654,7 +718,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void toStringContainsInvokedynamicMnemonic() {
+        void toStringContainsInvokedynamicMnemonic()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -664,7 +729,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
 
@@ -683,7 +749,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
             InvokeDynamicInstruction instr = new InvokeDynamicInstruction(constPool, 0xBA, 0, cpIndex);
             TestVisitor visitor = new TestVisitor();
@@ -695,10 +762,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class StackEffectEdgeCasesTests {
+    class StackEffectEdgeCasesTests
+    {
 
         @Test
-        void invokeVirtualWithDoubleReturnAddsTwo() {
+        void invokeVirtualWithDoubleReturnAddsTwo()
+        {
             int methodIndex = setupMethodRef("java/lang/Math", "random", "()D");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -706,7 +775,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void invokeStaticWithLongParamsAndVoidReturn() {
+        void invokeStaticWithLongParamsAndVoidReturn()
+        {
             int methodIndex = setupMethodRef("java/lang/System", "setProperty", "(JJ)V");
             InvokeStaticInstruction instr = new InvokeStaticInstruction(constPool, 0xB8, 0, methodIndex);
 
@@ -714,7 +784,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void invokeSpecialWithMixedParams() {
+        void invokeSpecialWithMixedParams()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "<init>", "([BII)V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -722,7 +793,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void invokeInterfaceWithComplexDescriptor() {
+        void invokeInterfaceWithComplexDescriptor()
+        {
             int methodIndex = setupInterfaceRef("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
             InvokeInterfaceInstruction instr = new InvokeInterfaceInstruction(constPool, 0xB9, 0, methodIndex, 3);
 
@@ -731,10 +803,12 @@ class InvokeInstructionsTest {
     }
 
     @Nested
-    class DescriptorParsingTests {
+    class DescriptorParsingTests
+    {
 
         @Test
-        void parsesSimpleVoidMethod() {
+        void parsesSimpleVoidMethod()
+        {
             int methodIndex = setupMethodRef("java/lang/Object", "notify", "()V");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -742,7 +816,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void parsesMethodWithPrimitiveParams() {
+        void parsesMethodWithPrimitiveParams()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(II)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -750,7 +825,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void parsesMethodWithObjectParams() {
+        void parsesMethodWithObjectParams()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;");
             InvokeVirtualInstruction instr = new InvokeVirtualInstruction(constPool, 0xB6, 0, methodIndex);
 
@@ -759,7 +835,8 @@ class InvokeInstructionsTest {
         }
 
         @Test
-        void parsesMethodWithArrayParam() {
+        void parsesMethodWithArrayParam()
+        {
             int methodIndex = setupMethodRef("java/lang/String", "<init>", "([C)V");
             InvokeSpecialInstruction instr = new InvokeSpecialInstruction(constPool, 0xB7, 0, methodIndex);
 
@@ -767,7 +844,8 @@ class InvokeInstructionsTest {
         }
     }
 
-    private static class TestVisitor extends AbstractBytecodeVisitor {
+    private static class TestVisitor extends AbstractBytecodeVisitor
+    {
         boolean visitedInvokeVirtual = false;
         boolean visitedInvokeStatic = false;
         boolean visitedInvokeSpecial = false;
@@ -775,22 +853,26 @@ class InvokeInstructionsTest {
         boolean visitedInvokeDynamic = false;
 
         @Override
-        public void visit(InvokeVirtualInstruction instr) {
+        public void visit(InvokeVirtualInstruction instr)
+        {
             visitedInvokeVirtual = true;
         }
 
         @Override
-        public void visit(InvokeSpecialInstruction instr) {
+        public void visit(InvokeSpecialInstruction instr)
+        {
             visitedInvokeSpecial = true;
         }
 
         @Override
-        public void visit(InvokeInterfaceInstruction instr) {
+        public void visit(InvokeInterfaceInstruction instr)
+        {
             visitedInvokeInterface = true;
         }
 
         @Override
-        public void visit(InvokeDynamicInstruction instr) {
+        public void visit(InvokeDynamicInstruction instr)
+        {
             visitedInvokeDynamic = true;
         }
     }

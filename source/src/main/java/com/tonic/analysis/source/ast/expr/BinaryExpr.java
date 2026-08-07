@@ -8,9 +8,10 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.Objects;
 
 /**
- * Represents a binary expression: left op right
+ * A binary expression: left op right, including assignments and logical operators.
  */
-public final class BinaryExpr implements Expression {
+public final class BinaryExpr implements Expression
+{
 
     private BinaryOperator operator;
     private Expression left;
@@ -19,111 +20,209 @@ public final class BinaryExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public BinaryExpr(BinaryOperator operator, Expression left, Expression right,
-                      SourceType type, SourceLocation location) {
+    /**
+     * Creates a binary expression and reparents both operands.
+     * @param operator the binary operator
+     * @param left the left operand
+     * @param right the right operand
+     * @param type the result type of the expression
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if operator, left, right, or type is null
+     */
+    public BinaryExpr(BinaryOperator operator, Expression left, Expression right, SourceType type, SourceLocation location)
+    {
         this.operator = Objects.requireNonNull(operator, "operator cannot be null");
         this.left = Objects.requireNonNull(left, "left cannot be null");
         this.right = Objects.requireNonNull(right, "right cannot be null");
         this.type = Objects.requireNonNull(type, "type cannot be null");
         this.location = location != null ? location : SourceLocation.UNKNOWN;
 
+        String dbg = System.getProperty("yabr.debug.assign");
+        if (dbg != null && operator == BinaryOperator.ASSIGN
+                && left instanceof VarRefExpr && dbg.equals(((VarRefExpr) left).getName()))
+        {
+            new Exception("assign " + dbg + " = " + right.getClass().getSimpleName()).printStackTrace();
+        }
+
         left.setParent(this);
         right.setParent(this);
     }
 
-    public BinaryExpr(BinaryOperator operator, Expression left, Expression right, SourceType type) {
+    /**
+     * Creates a binary expression with an unknown source location.
+     * @param operator the binary operator
+     * @param left the left operand
+     * @param right the right operand
+     * @param type the result type of the expression
+     * @throws NullPointerException if operator, left, right, or type is null
+     */
+    public BinaryExpr(BinaryOperator operator, Expression left, Expression right, SourceType type)
+    {
         this(operator, left, right, type, SourceLocation.UNKNOWN);
     }
 
-    public BinaryOperator getOperator() {
+    /**
+     * @return the operator
+     */
+    public BinaryOperator getOperator()
+    {
         return operator;
     }
 
-    public void setOperator(BinaryOperator operator) {
-        this.operator = operator;
+    /**
+     * @param operator the new binary operator
+     */
+    public void setOperator(BinaryOperator operator)
+    {
+        withOperator(operator);
     }
 
-    public Expression getLeft() {
+    /**
+     * @return the left
+     */
+    public Expression getLeft()
+    {
         return left;
     }
 
-    public void setLeft(Expression left) {
-        this.left = left;
+      /**
+       * Replaces the left operand, reparenting the new child.
+       * @param left the new left operand
+       */
+      public void setLeft(Expression left)
+      {
+        withLeft(left);
     }
 
-    public Expression getRight() {
+    /**
+     * @return the right operand
+     */
+    public Expression getRight()
+    {
         return right;
     }
 
-    public void setRight(Expression right) {
-        this.right = right;
+        /**
+         * Replaces the right operand, reparenting the new child.
+         * @param right the new right operand
+         */
+        public void setRight(Expression right)
+        {
+        withRight(right);
     }
 
-    public SourceType getType() {
+    /**
+     * @return the static type of this expression
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Gets the precedence of this expression's operator.
+     * @return the precedence of the operator
      */
-    public int getPrecedence() {
+    public int getPrecedence()
+    {
         return operator.getPrecedence();
     }
 
     /**
-     * Checks if this is an assignment expression.
+     * @return true if the operator is an assignment
      */
-    public boolean isAssignment() {
+    public boolean isAssignment()
+    {
         return operator.isAssignment();
     }
 
     /**
-     * Checks if this is a comparison expression.
+     * @return true if the operator is a comparison
      */
-    public boolean isComparison() {
+    public boolean isComparison()
+    {
         return operator.isComparison();
     }
 
     /**
-     * Checks if this is a logical expression (&&, ||).
+     * @return true if the operator is logical (&amp;&amp; or ||)
      */
-    public boolean isLogical() {
+    public boolean isLogical()
+    {
         return operator.isLogical();
     }
 
-    public BinaryExpr withOperator(BinaryOperator operator) {
+    /**
+     * Replaces the operator.
+     * @param operator the new binary operator
+     * @return this expression
+     */
+    public BinaryExpr withOperator(BinaryOperator operator)
+    {
         this.operator = operator;
         return this;
     }
 
-    public BinaryExpr withLeft(Expression left) {
-        if (this.left != null) this.left.setParent(null);
+    /**
+     * Replaces the left operand, reparenting the new child and releasing the former one.
+     * @param left the new left operand
+     * @return this expression
+     */
+    public BinaryExpr withLeft(Expression left)
+    {
+        ASTNode previous = this.left;
         this.left = left;
-        if (left != null) left.setParent(this);
+        if (left != null)
+        {
+            left.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public BinaryExpr withRight(Expression right) {
-        if (this.right != null) this.right.setParent(null);
+    /**
+     * Replaces the right operand, reparenting the new child and releasing the former one.
+     * @param right the new right operand
+     * @return this expression
+     */
+    public BinaryExpr withRight(Expression right)
+    {
+        ASTNode previous = this.right;
         this.right = right;
-        if (right != null) right.setParent(this);
+        if (right != null)
+        {
+            right.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (left != null) children.add(left);
         if (right != null) children.add(right);
@@ -131,12 +230,14 @@ public final class BinaryExpr implements Expression {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitBinary(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "(" + left + " " + operator.getSymbol() + " " + right + ")";
     }
 }

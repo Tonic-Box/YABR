@@ -5,7 +5,11 @@ import com.tonic.analysis.cpg.node.CPGNode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class CPGEdge {
+/**
+ * Directed, typed edge between two CPG nodes; identity is (source id, target id, type).
+ */
+public class CPGEdge
+{
 
     private final CPGNode source;
     private final CPGNode target;
@@ -14,87 +18,175 @@ public class CPGEdge {
 
     private boolean tainted;
 
-    public CPGEdge(CPGNode source, CPGNode target, CPGEdgeType type) {
+    /**
+     * Creates an edge of the given type.
+     * @param source the edge source
+     * @param target the edge target
+     * @param type the edge type
+     */
+    public CPGEdge(CPGNode source, CPGNode target, CPGEdgeType type)
+    {
         this.source = source;
         this.target = target;
         this.type = type;
     }
 
-    public CPGEdge(CPGNode source, CPGNode target, CPGEdgeType type, Map<String, Object> properties) {
+    /**
+     * Creates an edge of the given type carrying the supplied properties.
+     * @param source the edge source
+     * @param target the edge target
+     * @param type the edge type
+     * @param properties initial edge properties, may be null
+     */
+    public CPGEdge(CPGNode source, CPGNode target, CPGEdgeType type, Map<String, Object> properties)
+    {
         this.source = source;
         this.target = target;
         this.type = type;
-        if (properties != null) {
+        if (properties != null)
+        {
             this.properties.putAll(properties);
         }
     }
 
-    public CPGNode getSource() {
+    /**
+     * @return the source
+     */
+    public CPGNode getSource()
+    {
         return source;
     }
 
-    public CPGNode getTarget() {
+    /**
+     * @return the target
+     */
+    public CPGNode getTarget()
+    {
         return target;
     }
 
-    public CPGEdgeType getType() {
+    /**
+     * @return the type
+     */
+    public CPGEdgeType getType()
+    {
         return type;
     }
 
-    public Map<String, Object> getProperties() {
+    /**
+     * @return the properties
+     */
+    public Map<String, Object> getProperties()
+    {
         return properties;
     }
 
-    public boolean isTainted() {
+    /**
+     * @return whether tainted
+     */
+    public boolean isTainted()
+    {
         return tainted;
     }
 
-    public void setTainted(boolean tainted) {
+    /**
+     * Marks or clears this edge as part of a taint flow.
+     * @param tainted whether the edge is tainted
+     */
+    public void setTainted(boolean tainted)
+    {
         this.tainted = tainted;
     }
 
-    public Object getProperty(String key) {
+    /**
+     * Reads a property value.
+     * @param key the property key
+     * @return the value, or null if absent
+     */
+    public Object getProperty(String key)
+    {
         return properties.get(key);
     }
 
-    public void setProperty(String key, Object value) {
+    /**
+     * Sets a property value.
+     * @param key the property key
+     * @param value the value to store
+     */
+    public void setProperty(String key, Object value)
+    {
         properties.put(key, value);
     }
 
-    public boolean hasProperty(String key) {
+    /**
+     * Tests whether a property is present.
+     * @param key the property key
+     * @return whether the property exists
+     */
+    public boolean hasProperty(String key)
+    {
         return properties.containsKey(key);
     }
 
-    public String getLabel() {
+    /**
+     * @return the edge type's short display name
+     */
+    public String getLabel()
+    {
         return type.getShortName();
     }
 
-    public boolean isASTEdge() {
+    /**
+     * @return whether this is an AST structure edge
+     */
+    public boolean isASTEdge()
+    {
         return type.isASTEdge();
     }
 
-    public boolean isCFGEdge() {
+    /**
+     * @return whether this is a control-flow edge
+     */
+    public boolean isCFGEdge()
+    {
         return type.isCFGEdge();
     }
 
-    public boolean isDataFlowEdge() {
+    /**
+     * @return whether this is a data-flow edge
+     */
+    public boolean isDataFlowEdge()
+    {
         return type.isDataFlowEdge();
     }
 
-    public boolean isControlDependenceEdge() {
+    /**
+     * @return whether this is a control-dependence edge
+     */
+    public boolean isControlDependenceEdge()
+    {
         return type.isControlDependenceEdge();
     }
 
-    public boolean isCallGraphEdge() {
+    /**
+     * @return whether this is a call-graph edge
+     */
+    public boolean isCallGraphEdge()
+    {
         return type.isCallGraphEdge();
     }
 
-    public boolean isInterproceduralEdge() {
+    /**
+     * @return whether this is an interprocedural parameter or summary edge
+     */
+    public boolean isInterproceduralEdge()
+    {
         return type.isInterproceduralEdge();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CPGEdge cpgEdge = (CPGEdge) o;
@@ -104,7 +196,8 @@ public class CPGEdge {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         int result = Long.hashCode(source.getId());
         result = 31 * result + Long.hashCode(target.getId());
         result = 31 * result + type.hashCode();
@@ -112,8 +205,8 @@ public class CPGEdge {
     }
 
     @Override
-    public String toString() {
-        return String.format("CPGEdge[%d --[%s]--> %d]",
-            source.getId(), type.getShortName(), target.getId());
+    public String toString()
+    {
+        return String.format("CPGEdge[%d --[%s]--> %d]", source.getId(), type.getShortName(), target.getId());
     }
 }

@@ -6,105 +6,173 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
- * A specialized list implementation for AST nodes that automatically manages
- * parent-child relationships. When nodes are added to this list, their parent
- * is automatically set to the owner node. When nodes are removed, their parent
- * is cleared.
- *
+ * List of AST nodes that keeps parent links consistent: adding sets each element's parent to the owner, removing clears it.
  * @param <T> the type of AST nodes stored in this list
  */
-public class NodeList<T extends ASTNode> extends AbstractList<T> implements RandomAccess {
+public class NodeList<T extends ASTNode> extends AbstractList<T> implements RandomAccess
+{
 
     private final List<T> backing;
     private final ASTNode owner;
 
-    public NodeList(ASTNode owner) {
+    /**
+     * Creates an empty list attached to an owner.
+     * @param owner the node that parents added elements
+     */
+    public NodeList(ASTNode owner)
+    {
         this.backing = new ArrayList<>();
         this.owner = Objects.requireNonNull(owner, "owner cannot be null");
     }
 
-    public NodeList(ASTNode owner, int initialCapacity) {
+    /**
+     * Creates an empty list attached to an owner with a backing capacity hint.
+     * @param owner the node that parents added elements
+     * @param initialCapacity the initial backing capacity
+     */
+    public NodeList(ASTNode owner, int initialCapacity)
+    {
         this.backing = new ArrayList<>(initialCapacity);
         this.owner = Objects.requireNonNull(owner, "owner cannot be null");
     }
 
-    public NodeList(ASTNode owner, Collection<? extends T> elements) {
+    /**
+     * Creates a list attached to an owner, adopting the given elements.
+     * @param owner the node that parents added elements
+     * @param elements the initial elements
+     */
+    public NodeList(ASTNode owner, Collection<? extends T> elements)
+    {
         this.backing = new ArrayList<>(elements.size());
         this.owner = Objects.requireNonNull(owner, "owner cannot be null");
         addAll(elements);
     }
 
     @Override
-    public T get(int index) {
+    public T get(int index)
+    {
         return backing.get(index);
     }
 
     @Override
-    public int size() {
+    public int size()
+    {
         return backing.size();
     }
 
     @Override
-    public boolean add(T element) {
-        if (element != null) {
+    public boolean add(T element)
+    {
+        if (element != null)
+        {
             element.setParent(owner);
         }
         return backing.add(element);
     }
 
+    /**
+     * Detaches an element this list no longer holds, unless something else has already taken it.
+     */
+    private void releaseIfStillOurs(T element)
+    {
+        if (element != null && element.getParent() == owner)
+        {
+            element.setParent(null);
+        }
+    }
+
     @Override
-    public void add(int index, T element) {
-        if (element != null) {
+    public void add(int index, T element)
+    {
+        if (element != null)
+        {
             element.setParent(owner);
         }
         backing.add(index, element);
     }
 
     @Override
-    public T set(int index, T element) {
+    public T set(int index, T element)
+    {
         T old = backing.get(index);
-        if (old != null) {
-            old.setParent(null);
+        if (old != null)
+        {
+            releaseIfStillOurs(old);
         }
-        if (element != null) {
+        if (element != null)
+        {
             element.setParent(owner);
         }
         return backing.set(index, element);
     }
 
     @Override
-    public T remove(int index) {
+    public T remove(int index)
+    {
         T removed = backing.remove(index);
-        if (removed != null) {
-            removed.setParent(null);
+        if (removed != null)
+        {
+            releaseIfStillOurs(removed);
         }
         return removed;
     }
 
+    /**
+     * Removes a specific node, matching by identity rather than by equals as {@link List} specifies.
+     * Types compare by value, so a list such as the type arguments of {@code Map<String, String>}
+     * holds equal entries that an equals-based search cannot tell apart.
+     * @param o the node instance to remove
+     * @return true if the instance was present
+     */
     @Override
-    public boolean remove(Object o) {
-        int index = backing.indexOf(o);
-        if (index >= 0) {
+    public boolean remove(Object o)
+    {
+        int index = indexOfNode(o);
+        if (index >= 0)
+        {
             remove(index);
             return true;
         }
         return false;
     }
 
+    /**
+     * Locates a node by identity.
+     * @param node the node instance to look for
+     * @return its index, or -1 if this list does not hold that instance
+     */
+    private int indexOfNode(Object node)
+    {
+        for (int i = 0; i < backing.size(); i++)
+        {
+            if (backing.get(i) == node)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Override
-    public void clear() {
-        for (T element : backing) {
-            if (element != null) {
-                element.setParent(null);
+    public void clear()
+    {
+        for (T element : backing)
+        {
+            if (element != null)
+            {
+                releaseIfStillOurs(element);
             }
         }
         backing.clear();
     }
 
     @Override
-    public boolean addAll(Collection<? extends T> c) {
-        for (T element : c) {
-            if (element != null) {
+    public boolean addAll(Collection<? extends T> c)
+    {
+        for (T element : c)
+        {
+            if (element != null)
+            {
                 element.setParent(owner);
             }
         }
@@ -112,9 +180,12 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     @Override
-    public boolean addAll(int index, Collection<? extends T> c) {
-        for (T element : c) {
-            if (element != null) {
+    public boolean addAll(int index, Collection<? extends T> c)
+    {
+        for (T element : c)
+        {
+            if (element != null)
+            {
                 element.setParent(owner);
             }
         }
@@ -122,10 +193,13 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     @Override
-    public boolean removeAll(Collection<?> c) {
+    public boolean removeAll(Collection<?> c)
+    {
         boolean modified = false;
-        for (Object o : c) {
-            if (remove(o)) {
+        for (Object o : c)
+        {
+            if (remove(o))
+            {
                 modified = true;
             }
         }
@@ -133,14 +207,18 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     @Override
-    public boolean retainAll(Collection<?> c) {
+    public boolean retainAll(Collection<?> c)
+    {
         Iterator<T> it = backing.iterator();
         boolean modified = false;
-        while (it.hasNext()) {
+        while (it.hasNext())
+        {
             T element = it.next();
-            if (!c.contains(element)) {
-                if (element != null) {
-                    element.setParent(null);
+            if (!c.contains(element))
+            {
+                if (element != null)
+                {
+                    releaseIfStillOurs(element);
                 }
                 it.remove();
                 modified = true;
@@ -150,15 +228,19 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     @Override
-    public boolean removeIf(Predicate<? super T> filter) {
+    public boolean removeIf(Predicate<? super T> filter)
+    {
         Objects.requireNonNull(filter);
         boolean modified = false;
         Iterator<T> it = backing.iterator();
-        while (it.hasNext()) {
+        while (it.hasNext())
+        {
             T element = it.next();
-            if (filter.test(element)) {
-                if (element != null) {
-                    element.setParent(null);
+            if (filter.test(element))
+            {
+                if (element != null)
+                {
+                    releaseIfStillOurs(element);
                 }
                 it.remove();
                 modified = true;
@@ -167,76 +249,158 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
         return modified;
     }
 
-    public NodeList<T> addNode(T element) {
+    /**
+     * Adds an element and returns this list for chaining.
+     * @param element the node to add
+     * @return this list
+     */
+    public NodeList<T> addNode(T element)
+    {
         add(element);
         return this;
     }
 
+    /**
+     * Adds all given elements and returns this list for chaining.
+     * @param elements the nodes to add
+     * @return this list
+     */
     @SafeVarargs
-    public final NodeList<T> addNodes(T... elements) {
-        for (T element : elements) {
-            add(element);
-        }
+    public final NodeList<T> addNodes(T... elements)
+    {
+        this.addAll(Arrays.asList(elements));
         return this;
     }
 
-    public ASTNode getOwner() {
+    /**
+     * @return the owner
+     */
+    public ASTNode getOwner()
+    {
         return owner;
     }
 
-    public T getFirst() {
-        if (isEmpty()) {
+    /**
+     * Returns the first element.
+     * @return the first element
+     * @throws NoSuchElementException if the list is empty
+     */
+    public T getFirst()
+    {
+        if (isEmpty())
+        {
             throw new NoSuchElementException("List is empty");
         }
         return get(0);
     }
 
-    public Optional<T> getFirstOptional() {
+    /**
+     * @return the first element, or empty if the list is empty
+     */
+    public Optional<T> getFirstOptional()
+    {
         return isEmpty() ? Optional.empty() : Optional.ofNullable(get(0));
     }
 
-    public T getLast() {
-        if (isEmpty()) {
+    /**
+     * Returns the last element.
+     * @return the last element
+     * @throws NoSuchElementException if the list is empty
+     */
+    public T getLast()
+    {
+        if (isEmpty())
+        {
             throw new NoSuchElementException("List is empty");
         }
         return get(size() - 1);
     }
 
-    public Optional<T> getLastOptional() {
+    /**
+     * @return the last element, or empty if the list is empty
+     */
+    public Optional<T> getLastOptional()
+    {
         return isEmpty() ? Optional.empty() : Optional.ofNullable(get(size() - 1));
     }
 
-    public void replace(T oldNode, T newNode) {
-        int index = indexOf(oldNode);
-        if (index >= 0) {
+    /**
+     * Swaps one node for another in place, doing nothing if the old node is absent. The old node is
+     * matched by identity, so a value-equal sibling is never swapped by mistake.
+     * @param oldNode the node instance to replace
+     * @param newNode the replacement
+     */
+    public void replace(T oldNode, T newNode)
+    {
+        int index = indexOfNode(oldNode);
+        if (index >= 0)
+        {
             set(index, newNode);
         }
     }
 
-    public boolean contains(T node) {
+    /**
+     * Tests whether a node is present.
+     * @param node the node to look for
+     * @return true if the node is in this list
+     */
+    public boolean contains(T node)
+    {
         return backing.contains(node);
     }
 
-    public void forEachNode(Consumer<? super T> action) {
+    /**
+     * Applies an action to each element.
+     * @param action the action to apply
+     */
+    public void forEachNode(Consumer<? super T> action)
+    {
         backing.forEach(action);
     }
 
-    public Stream<T> nodeStream() {
+    /**
+     * @return a stream over the elements
+     */
+    public Stream<T> nodeStream()
+    {
         return backing.stream();
     }
 
-    public static <T extends ASTNode> NodeList<T> empty(ASTNode owner) {
+    /**
+     * Creates an empty list attached to an owner.
+     * @param owner the node that parents added elements
+     * @param <T> the element node type
+     * @return the empty list
+     */
+    public static <T extends ASTNode> NodeList<T> empty(ASTNode owner)
+    {
         return new NodeList<>(owner);
     }
 
+    /**
+     * Creates a list of the given elements attached to an owner.
+     * @param owner the node that parents added elements
+     * @param elements the initial elements
+     * @param <T> the element node type
+     * @return the populated list
+     */
     @SafeVarargs
-    public static <T extends ASTNode> NodeList<T> of(ASTNode owner, T... elements) {
+    public static <T extends ASTNode> NodeList<T> of(ASTNode owner, T... elements)
+    {
         NodeList<T> list = new NodeList<>(owner, elements.length);
         list.addNodes(elements);
         return list;
     }
 
-    public static <T extends ASTNode> NodeList<T> copyOf(ASTNode owner, Collection<? extends T> elements) {
+    /**
+     * Creates a list copying the given elements, attached to an owner.
+     * @param owner the node that parents added elements
+     * @param elements the elements to copy
+     * @param <T> the element node type
+     * @return the populated list
+     */
+    public static <T extends ASTNode> NodeList<T> copyOf(ASTNode owner, Collection<? extends T> elements)
+    {
         return new NodeList<>(owner, elements);
     }
 }

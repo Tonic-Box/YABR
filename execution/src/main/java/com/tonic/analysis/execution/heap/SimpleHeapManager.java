@@ -3,7 +3,11 @@ package com.tonic.analysis.execution.heap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class SimpleHeapManager implements HeapManager {
+/**
+ * In-memory heap manager backed by concurrent maps, with a string pool and flat static-field storage.
+ */
+public class SimpleHeapManager implements HeapManager
+{
 
     private final AtomicInteger nextId;
     private final ConcurrentHashMap<Integer, ObjectInstance> heap;
@@ -11,27 +15,46 @@ public class SimpleHeapManager implements HeapManager {
     private final ConcurrentHashMap<String, Object> staticFields;
     private Object classResolver;
 
-    public SimpleHeapManager() {
+    /**
+     * Creates an empty heap with object ids starting at 1.
+     */
+    public SimpleHeapManager()
+    {
         this.nextId = new AtomicInteger(1);
         this.heap = new ConcurrentHashMap<>();
         this.stringPool = new StringPool(nextId);
         this.staticFields = new ConcurrentHashMap<>();
     }
 
-    public void setClassResolver(Object classResolver) {
+    /**
+     * Sets the resolver attached to every subsequently allocated object.
+     * @param classResolver the resolver to attach
+     */
+    public void setClassResolver(Object classResolver)
+    {
         this.classResolver = classResolver;
     }
 
-    public void setUseCompactStrings(boolean compact) {
+    /**
+     * Selects the string layout used when interning.
+     * @param compact true for the Java 9+ byte-array layout, false for char-array
+     */
+    public void setUseCompactStrings(boolean compact)
+    {
         stringPool.setUseCompactStrings(compact);
     }
 
-    public boolean isUsingCompactStrings() {
+    /**
+     * @return whether interned strings use the compact byte-array layout
+     */
+    public boolean isUsingCompactStrings()
+    {
         return stringPool.isUsingCompactStrings();
     }
 
     @Override
-    public ObjectInstance newObject(String className) {
+    public ObjectInstance newObject(String className)
+    {
         int id = nextId.getAndIncrement();
         ObjectInstance instance = new ObjectInstance(id, className);
         instance.setClassResolver(classResolver);
@@ -40,12 +63,15 @@ public class SimpleHeapManager implements HeapManager {
         return instance;
     }
 
-    private void initializeFields(ObjectInstance instance, String className) {
+    private void initializeFields(ObjectInstance instance, String className)
+    {
     }
 
     @Override
-    public ArrayInstance newArray(String componentType, int length) {
-        if (length < 0) {
+    public ArrayInstance newArray(String componentType, int length)
+    {
+        if (length < 0)
+        {
             throw new HeapException("Negative array length: " + length);
         }
 
@@ -56,13 +82,17 @@ public class SimpleHeapManager implements HeapManager {
     }
 
     @Override
-    public ArrayInstance newMultiArray(String componentType, int[] dimensions) {
-        if (dimensions == null || dimensions.length == 0) {
+    public ArrayInstance newMultiArray(String componentType, int[] dimensions)
+    {
+        if (dimensions == null || dimensions.length == 0)
+        {
             throw new HeapException("Invalid dimensions for multi-array");
         }
 
-        for (int dim : dimensions) {
-            if (dim < 0) {
+        for (int dim : dimensions)
+        {
+            if (dim < 0)
+            {
                 throw new HeapException("Negative dimension in multi-array: " + dim);
             }
         }
@@ -70,17 +100,20 @@ public class SimpleHeapManager implements HeapManager {
         return createMultiArrayRecursive(componentType, dimensions, 0);
     }
 
-    private ArrayInstance createMultiArrayRecursive(String componentType, int[] dimensions, int depth) {
+    private ArrayInstance createMultiArrayRecursive(String componentType, int[] dimensions, int depth)
+    {
         int currentDim = dimensions[depth];
 
-        if (depth == dimensions.length - 1) {
+        if (depth == dimensions.length - 1)
+        {
             return newArray(componentType, currentDim);
         }
 
         String arrayComponentType = "[" + componentType;
         ArrayInstance array = newArray(arrayComponentType, currentDim);
 
-        for (int i = 0; i < currentDim; i++) {
+        for (int i = 0; i < currentDim; i++)
+        {
             ArrayInstance subArray = createMultiArrayRecursive(componentType, dimensions, depth + 1);
             array.set(i, subArray);
         }
@@ -89,12 +122,14 @@ public class SimpleHeapManager implements HeapManager {
     }
 
     @Override
-    public ObjectInstance internString(String value) {
+    public ObjectInstance internString(String value)
+    {
         ObjectInstance stringObj = stringPool.intern(value);
         heap.put(stringObj.getId(), stringObj);
 
         Object charArrayObj = stringObj.getField("java/lang/String", "value", "[C");
-        if (charArrayObj instanceof ArrayInstance) {
+        if (charArrayObj instanceof ArrayInstance)
+        {
             heap.put(((ArrayInstance) charArrayObj).getId(), (ArrayInstance) charArrayObj);
         }
 
@@ -102,102 +137,127 @@ public class SimpleHeapManager implements HeapManager {
     }
 
     @Override
-    public String extractString(ObjectInstance instance) {
-        if (instance == null) {
+    public String extractString(ObjectInstance instance)
+    {
+        if (instance == null)
+        {
             return null;
         }
-        if (!"java/lang/String".equals(instance.getClassName())) {
+        if (!"java/lang/String".equals(instance.getClassName()))
+        {
             return null;
         }
 
         Object byteArrayObj = instance.getField("java/lang/String", "value", "[B");
-        if (byteArrayObj instanceof ArrayInstance) {
+        if (byteArrayObj instanceof ArrayInstance)
+        {
             return extractJava9PlusString(instance, (ArrayInstance) byteArrayObj);
         }
 
         Object charArrayObj = instance.getField("java/lang/String", "value", "[C");
-        if (charArrayObj instanceof ArrayInstance) {
+        if (charArrayObj instanceof ArrayInstance)
+        {
             return extractJava8String((ArrayInstance) charArrayObj);
         }
 
         return null;
     }
 
-    private String extractJava8String(ArrayInstance charArray) {
+    private String extractJava8String(ArrayInstance charArray)
+    {
         int length = charArray.getLength();
         char[] chars = new char[length];
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++)
+        {
             chars[i] = charArray.getChar(i);
         }
         return new String(chars);
     }
 
-    private String extractJava9PlusString(ObjectInstance stringObj, ArrayInstance byteArray) {
+    private String extractJava9PlusString(ObjectInstance stringObj, ArrayInstance byteArray)
+    {
         Object coderObj = stringObj.getField("java/lang/String", "coder", "B");
         int coder = 0;
-        if (coderObj instanceof Byte) {
+        if (coderObj instanceof Byte)
+        {
             coder = (Byte) coderObj;
-        } else if (coderObj instanceof Integer) {
+        }
+        else if (coderObj instanceof Integer)
+        {
             coder = (Integer) coderObj;
         }
 
         int length = byteArray.getLength();
-        if (coder == 0) {
-            char[] chars = new char[length];
-            for (int i = 0; i < length; i++) {
+        char[] chars;
+        if (coder == 0)
+        {
+            chars = new char[length];
+            for (int i = 0; i < length; i++)
+            {
                 chars[i] = (char) (byteArray.getByte(i) & 0xFF);
             }
-            return new String(chars);
-        } else {
-            char[] chars = new char[length / 2];
-            for (int i = 0; i < chars.length; i++) {
+        }
+        else
+        {
+            chars = new char[length / 2];
+            for (int i = 0; i < chars.length; i++)
+            {
                 int lo = byteArray.getByte(i * 2) & 0xFF;
                 int hi = byteArray.getByte(i * 2 + 1) & 0xFF;
                 chars[i] = (char) (lo | (hi << 8));
             }
-            return new String(chars);
         }
+        return new String(chars);
     }
 
     @Override
-    public boolean isNull(ObjectInstance instance) {
+    public boolean isNull(ObjectInstance instance)
+    {
         return instance == null;
     }
 
     @Override
-    public int identityHashCode(ObjectInstance instance) {
-        if (instance == null) {
+    public int identityHashCode(ObjectInstance instance)
+    {
+        if (instance == null)
+        {
             return 0;
         }
         return instance.getIdentityHashCode();
     }
 
     @Override
-    public long objectCount() {
+    public long objectCount()
+    {
         return heap.size();
     }
 
-    private String staticFieldKey(String owner, String name, String descriptor) {
+    private String staticFieldKey(String owner, String name, String descriptor)
+    {
         return owner + "." + name + ":" + descriptor;
     }
 
     @Override
-    public void putStaticField(String owner, String name, String descriptor, Object value) {
+    public void putStaticField(String owner, String name, String descriptor, Object value)
+    {
         staticFields.put(staticFieldKey(owner, name, descriptor), value);
     }
 
     @Override
-    public Object getStaticField(String owner, String name, String descriptor) {
+    public Object getStaticField(String owner, String name, String descriptor)
+    {
         return staticFields.get(staticFieldKey(owner, name, descriptor));
     }
 
     @Override
-    public boolean hasStaticField(String owner, String name, String descriptor) {
+    public boolean hasStaticField(String owner, String name, String descriptor)
+    {
         return staticFields.containsKey(staticFieldKey(owner, name, descriptor));
     }
 
     @Override
-    public void clearStaticFields() {
+    public void clearStaticFields()
+    {
         staticFields.clear();
     }
 }

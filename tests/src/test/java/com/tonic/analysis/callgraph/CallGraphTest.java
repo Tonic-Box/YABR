@@ -19,19 +19,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for the CallGraph API.
  * Covers building call graphs, querying callers/callees, and handling static/virtual calls.
  */
-class CallGraphTest {
+class CallGraphTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
-    // ========== Build Tests ==========
+    // Build Tests
 
     @Test
-    void buildEmptyPoolReturnsGraph() {
+    void buildEmptyPoolReturnsGraph()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         assertNotNull(graph);
@@ -39,7 +42,8 @@ class CallGraphTest {
     }
 
     @Test
-    void buildSingleClassWithNoMethods() throws IOException {
+    void buildSingleClassWithNoMethods() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Empty", access);
 
@@ -50,7 +54,8 @@ class CallGraphTest {
     }
 
     @Test
-    void buildClassWithSimpleMethod() throws IOException {
+    void buildClassWithSimpleMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Simple", classAccess);
 
@@ -65,7 +70,8 @@ class CallGraphTest {
     }
 
     @Test
-    void buildClassWithStaticMethod() throws IOException {
+    void buildClassWithStaticMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/StaticTest", classAccess);
 
@@ -80,7 +86,8 @@ class CallGraphTest {
     }
 
     @Test
-    void buildClassWithMultipleMethods() throws IOException {
+    void buildClassWithMultipleMethods() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Multiple", classAccess);
 
@@ -97,10 +104,11 @@ class CallGraphTest {
         assertNotNull(node2);
     }
 
-    // ========== Node Query Tests ==========
+    // Node Query Tests
 
     @Test
-    void getNodeReturnsNullForNonExistent() {
+    void getNodeReturnsNullForNonExistent()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         CallGraphNode node = graph.getNode("com/test/Nonexistent", "method", "()V");
@@ -109,7 +117,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getNodeByMethodReference() throws IOException {
+    void getNodeByMethodReference() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NodeTest", classAccess);
 
@@ -126,7 +135,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getNodeByMethodEntry() throws IOException {
+    void getNodeByMethodEntry() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/EntryTest", classAccess);
 
@@ -142,7 +152,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getAllNodesReturnsCollection() throws IOException {
+    void getAllNodesReturnsCollection() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/AllNodes", classAccess);
 
@@ -159,7 +170,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getPoolNodesReturnsOnlyPoolMethods() throws IOException {
+    void getPoolNodesReturnsOnlyPoolMethods() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/PoolOnly", classAccess);
 
@@ -171,15 +183,17 @@ class CallGraphTest {
         Collection<CallGraphNode> poolNodes = graph.getPoolNodes();
 
         assertNotNull(poolNodes);
-        for (CallGraphNode node : poolNodes) {
+        for (CallGraphNode node : poolNodes)
+        {
             assertTrue(node.isInPool());
         }
     }
 
-    // ========== Caller/Callee Query Tests ==========
+    // Caller/Callee Query Tests
 
     @Test
-    void getCallersReturnsEmptyForNonExistent() {
+    void getCallersReturnsEmptyForNonExistent()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         Set<MethodReference> callers = graph.getCallers("com/test/None", "none", "()V");
@@ -189,7 +203,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getCalleesReturnsEmptyForNonExistent() {
+    void getCalleesReturnsEmptyForNonExistent()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         Set<MethodReference> callees = graph.getCallees("com/test/None", "none", "()V");
@@ -199,7 +214,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getCallersForExistingMethod() throws IOException {
+    void getCallersForExistingMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/CallerTest", classAccess);
 
@@ -215,7 +231,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getCalleesForExistingMethod() throws IOException {
+    void getCalleesForExistingMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/CalleeTest", classAccess);
 
@@ -231,7 +248,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getCallSitesForMethod() throws IOException {
+    void getCallSitesForMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/CallSiteTest", classAccess);
 
@@ -247,7 +265,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getCallSitesFromMethod() throws IOException {
+    void getCallSitesFromMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/FromTest", classAccess);
 
@@ -262,10 +281,11 @@ class CallGraphTest {
         assertNotNull(sites);
     }
 
-    // ========== Reachability Tests ==========
+    // Reachability Tests
 
     @Test
-    void getReachableFromEmptyEntryPoints() {
+    void getReachableFromEmptyEntryPoints()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         Set<MethodReference> reachable = graph.getReachableFrom(Set.of());
@@ -275,7 +295,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getReachableFromSingleMethod() throws IOException {
+    void getReachableFromSingleMethod() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/ReachTest", classAccess);
 
@@ -292,7 +313,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getReachableFromMainEntryPoints() throws IOException {
+    void getReachableFromMainEntryPoints() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/MainTest", classAccess);
 
@@ -307,7 +329,8 @@ class CallGraphTest {
     }
 
     @Test
-    void getUnreachableFromFindsUnused() throws IOException {
+    void getUnreachableFromFindsUnused() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/UnusedTest", classAccess);
 
@@ -324,7 +347,8 @@ class CallGraphTest {
     }
 
     @Test
-    void findMethodsWithNoCallers() throws IOException {
+    void findMethodsWithNoCallers() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NoCaller", classAccess);
 
@@ -338,10 +362,11 @@ class CallGraphTest {
         assertNotNull(noCaller);
     }
 
-    // ========== Relationship Tests ==========
+    // Relationship Tests
 
     @Test
-    void callsReturnsFalseForNonExistent() {
+    void callsReturnsFalseForNonExistent()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         MethodReference ref1 = new MethodReference("com/test/A", "method", "()V");
@@ -351,7 +376,8 @@ class CallGraphTest {
     }
 
     @Test
-    void canReachReturnsFalseForUnconnected() {
+    void canReachReturnsFalseForUnconnected()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         MethodReference ref1 = new MethodReference("com/test/A", "method", "()V");
@@ -361,18 +387,19 @@ class CallGraphTest {
     }
 
     @Test
-    void resolveVirtualTargetsWithoutHierarchy() {
+    void resolveVirtualTargetsWithoutHierarchy()
+    {
         CallGraph graph = CallGraph.build(pool);
 
-        Set<MethodReference> targets = graph.resolveVirtualTargets(
-            "com/test/Base", "method", "()V");
+        Set<MethodReference> targets = graph.resolveVirtualTargets("com/test/Base", "method", "()V");
 
         assertNotNull(targets);
         assertFalse(targets.isEmpty());
     }
 
     @Test
-    void resolveVirtualTargetsWithHierarchy() throws IOException {
+    void resolveVirtualTargetsWithHierarchy() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Virtual", classAccess);
 
@@ -381,16 +408,16 @@ class CallGraphTest {
 
         CallGraph graph = CallGraph.build(pool);
 
-        Set<MethodReference> targets = graph.resolveVirtualTargets(
-            "com/test/Virtual", "virtualMethod", "()V");
+        Set<MethodReference> targets = graph.resolveVirtualTargets("com/test/Virtual", "virtualMethod", "()V");
 
         assertNotNull(targets);
     }
 
-    // ========== Metadata Tests ==========
+    // Metadata Tests
 
     @Test
-    void sizeReturnsMethodCount() throws IOException {
+    void sizeReturnsMethodCount() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Size", classAccess);
 
@@ -404,7 +431,8 @@ class CallGraphTest {
     }
 
     @Test
-    void edgeCountReturnsCallCount() {
+    void edgeCountReturnsCallCount()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         int edges = graph.edgeCount();
@@ -413,14 +441,16 @@ class CallGraphTest {
     }
 
     @Test
-    void getClassPoolReturnsOriginal() {
+    void getClassPoolReturnsOriginal()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         assertSame(pool, graph.getClassPool());
     }
 
     @Test
-    void getHierarchyReturnsHierarchy() {
+    void getHierarchyReturnsHierarchy()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         // Hierarchy may be null or non-null depending on construction
@@ -428,7 +458,8 @@ class CallGraphTest {
     }
 
     @Test
-    void toStringContainsBasicInfo() {
+    void toStringContainsBasicInfo()
+    {
         CallGraph graph = CallGraph.build(pool);
 
         String str = graph.toString();
@@ -437,10 +468,11 @@ class CallGraphTest {
         assertTrue(str.contains("CallGraph"));
     }
 
-    // ========== Static vs Virtual Call Tests ==========
+    // Static vs Virtual Call Tests
 
     @Test
-    void handleStaticMethodInGraph() throws IOException {
+    void handleStaticMethodInGraph() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/StaticCall", classAccess);
 
@@ -455,7 +487,8 @@ class CallGraphTest {
     }
 
     @Test
-    void handleVirtualMethodInGraph() throws IOException {
+    void handleVirtualMethodInGraph() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/VirtualCall", classAccess);
 
@@ -470,7 +503,8 @@ class CallGraphTest {
     }
 
     @Test
-    void findMethodsByPredicate() throws IOException {
+    void findMethodsByPredicate() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Predicate", classAccess);
 
@@ -479,13 +513,14 @@ class CallGraphTest {
 
         CallGraph graph = CallGraph.build(pool);
 
-        Set<MethodReference> methods = graph.findMethods(node -> node.isInPool());
+        Set<MethodReference> methods = graph.findMethods(CallGraphNode::isInPool);
 
         assertNotNull(methods);
     }
 
     @Test
-    void callGraphNodeHasCorrectReference() throws IOException {
+    void callGraphNodeHasCorrectReference() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/NodeRef", classAccess);
 
@@ -501,7 +536,8 @@ class CallGraphTest {
     }
 
     @Test
-    void callGraphNodeInPoolIsTrue() throws IOException {
+    void callGraphNodeInPoolIsTrue() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/InPool", classAccess);
 
@@ -516,7 +552,8 @@ class CallGraphTest {
     }
 
     @Test
-    void callGraphHandlesConstructor() throws IOException {
+    void callGraphHandlesConstructor() throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = pool.createNewClass("com/test/Constructor", classAccess);
 

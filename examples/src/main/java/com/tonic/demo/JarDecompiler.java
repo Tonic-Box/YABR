@@ -17,14 +17,10 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Utility to decompile all classes in a JAR file to Java source files.
- *
- * Usage: java JarDecompiler &lt;input.jar&gt; &lt;output-dir&gt;
- *
- * The output directory will be cleared before decompilation begins.
- * Classes are written to subdirectories matching their package structure.
+ * Demo utility that decompiles every class in a jar to Java source files under a cleared output directory.
  */
-public class JarDecompiler {
+public class JarDecompiler
+{
 
     private final Path inputJar;
     private final Path outputDir;
@@ -33,18 +29,37 @@ public class JarDecompiler {
     private int successCount = 0;
     private int failCount = 0;
 
-    public JarDecompiler(Path inputJar, Path outputDir) {
+    /**
+     * Creates a decompiler with the default decompiler configuration.
+     * @param inputJar the jar to decompile
+     * @param outputDir the directory receiving generated source files
+     */
+    public JarDecompiler(Path inputJar, Path outputDir)
+    {
         this(inputJar, outputDir, DecompilerConfig.defaults());
     }
 
-    public JarDecompiler(Path inputJar, Path outputDir, DecompilerConfig config) {
+    /**
+     * Creates a decompiler with an explicit configuration.
+     * @param inputJar the jar to decompile
+     * @param outputDir the directory receiving generated source files
+     * @param config the decompiler configuration to use
+     */
+    public JarDecompiler(Path inputJar, Path outputDir, DecompilerConfig config)
+    {
         this.inputJar = inputJar;
         this.outputDir = outputDir;
         this.config = config;
     }
 
-    public void decompile() throws IOException {
-        if (!Files.exists(inputJar)) {
+    /**
+     * Clears the output directory and decompiles every class entry of the jar, inner classes first.
+     * @throws IOException if the jar is missing or reading/writing files fails
+     */
+    public void decompile() throws IOException
+    {
+        if (!Files.exists(inputJar))
+        {
             throw new FileNotFoundException("Input JAR not found: " + inputJar);
         }
 
@@ -55,25 +70,30 @@ public class JarDecompiler {
         System.out.println("Output: " + outputDir);
         System.out.println();
 
-        try (JarFile jar = new JarFile(inputJar.toFile())) {
+        try (JarFile jar = new JarFile(inputJar.toFile()))
+        {
             // First pass: inner classes (for switch map analysis)
             Enumeration<JarEntry> entries = jar.entries();
-            while (entries.hasMoreElements()) {
+            while (entries.hasMoreElements())
+            {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (name.endsWith(".class") && name.contains("$")) {
+                if (name.endsWith(".class") && name.contains("$"))
+                {
                     decompileEntry(jar, entry);
                 }
             }
 
             // Second pass: outer classes
             entries = jar.entries();
-            while (entries.hasMoreElements()) {
+            while (entries.hasMoreElements())
+            {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (name.endsWith(".class") && !name.contains("$")) {
+                if (name.endsWith(".class") && !name.contains("$"))
+                {
                     decompileEntry(jar, entry);
                 }
             }
@@ -85,11 +105,13 @@ public class JarDecompiler {
         System.out.println("  Failed: " + failCount);
     }
 
-    private void decompileEntry(JarFile jar, JarEntry entry) {
+    private void decompileEntry(JarFile jar, JarEntry entry)
+    {
         String name = entry.getName();
         String className = name.substring(0, name.length() - 6); // Remove .class
 
-        try (InputStream is = jar.getInputStream(entry)) {
+        try (InputStream is = jar.getInputStream(entry))
+        {
             ClassFile classFile = new ClassFile(is);
 
             ClassDecompiler decompiler = new ClassDecompiler(classFile, config);
@@ -102,23 +124,28 @@ public class JarDecompiler {
             System.out.println("  [OK] " + className);
             successCount++;
 
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.err.println("  [FAIL] " + className + ": " + e.getMessage());
             failCount++;
         }
     }
 
-    private Path getOutputPath(String className) {
+    private Path getOutputPath(String className)
+    {
         String packagePath = className.replace('/', File.separatorChar);
         String simpleClassName = ClassNameUtil.getSimpleName(className);
 
         // Handle inner classes - use OuterClass$InnerClass.java naming
-        if (className.contains("$")) {
+        if (className.contains("$"))
+        {
             int lastSlash = className.lastIndexOf('/');
             String classNamePart = lastSlash >= 0 ? className.substring(lastSlash + 1) : className;
             String packagePart = lastSlash >= 0 ? className.substring(0, lastSlash).replace('/', File.separatorChar) : "";
 
-            if (packagePart.isEmpty()) {
+            if (packagePart.isEmpty())
+            {
                 return outputDir.resolve(classNamePart + ".java");
             }
             return outputDir.resolve(packagePart).resolve(classNamePart + ".java");
@@ -127,12 +154,14 @@ public class JarDecompiler {
         return outputDir.resolve(packagePath + ".java");
     }
 
-    private void clearDirectory(Path dir) throws IOException {
-        if (!Files.exists(dir)) {
+    private void clearDirectory(Path dir) throws IOException
+    {
+        if (!Files.exists(dir))
+        {
             return;
         }
 
-        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(dir, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
@@ -152,8 +181,14 @@ public class JarDecompiler {
     }
 
 
-    public static void main(String[] args) {
-        if (args.length < 2) {
+    /**
+     * Decompiles the given jar into the given output directory.
+     * @param args input jar path, output directory, and optional "--optimize" flag
+     */
+    public static void main(String[] args)
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: java JarDecompiler <input.jar> <output-dir> [--optimize]");
             System.out.println();
             System.out.println("Options:");
@@ -165,26 +200,34 @@ public class JarDecompiler {
         Path outputDir = Paths.get(args[1]);
 
         boolean optimize = false;
-        for (int i = 2; i < args.length; i++) {
+        for (int i = 2; i < args.length; i++)
+        {
             if ("--optimize".equals(args[i])) {
                 optimize = true;
+                break;
             }
         }
 
         DecompilerConfig config;
-        if (optimize) {
+        if (optimize)
+        {
             config = DecompilerConfig.builder()
                     .preset(TransformPreset.STANDARD)
                     .build();
             System.out.println("Using optimization preset: STANDARD");
-        } else {
+        }
+        else
+        {
             config = DecompilerConfig.defaults();
         }
 
-        try {
+        try
+        {
             JarDecompiler decompiler = new JarDecompiler(inputJar, outputDir, config);
             decompiler.decompile();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);

@@ -11,35 +11,52 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Abstract representation of an attribute in the class file.
+ * Abstract base for class-file attributes, attached to a class or a member.
  */
-public abstract class Attribute {
+public abstract class Attribute
+{
     protected String name;
     protected MemberEntry parent;
     protected ClassFile hostClass;
     protected int nameIndex, length;
 
-    public Attribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates an attribute attached to a field or method.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public Attribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         this.name = name;
         this.parent = parent;
         this.nameIndex = nameIndex;
         this.length = length;
     }
 
-    public Attribute(String name, ClassFile hostClass, int nameIndex, int length) {
+    /**
+     * Creates a class-level attribute.
+     * @param name the attribute name
+     * @param hostClass the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public Attribute(String name, ClassFile hostClass, int nameIndex, int length)
+    {
         this.name = name;
         this.hostClass = hostClass;
         this.nameIndex = nameIndex;
         this.length = length;
     }
 
-    protected ClassFile getClassFile() {
+    protected ClassFile getClassFile()
+    {
         return parent != null ? parent.getClassFile() : hostClass;
     }
 
     /**
      * Reads the attribute data from the class file.
-     *
      * @param classFile The ClassFile utility to read data.
      * @param length    The length of the attribute.
      */
@@ -47,20 +64,21 @@ public abstract class Attribute {
 
     /**
      * Factory method to instantiate the appropriate Attribute subclass based on the attribute name.
-     *
      * @param classFile The ClassFile utility to read data.
      * @param constPool The constant pool for resolving attribute names.
      * @param parent    The parent MemberEntry (e.g., FieldEntry, MethodEntry).
      * @return An instance of the appropriate Attribute subclass.
      */
-    public static Attribute get(ClassFile classFile, ConstPool constPool, MemberEntry parent) {
+    public static Attribute get(ClassFile classFile, ConstPool constPool, MemberEntry parent)
+    {
         int preReadIndex = classFile.getIndex();
         Logger.info("Reading attribute at byte index: " + preReadIndex);
 
         int nameIndex = classFile.readUnsignedShort();
         Item<?> nameItem = constPool.getItem(nameIndex);
 
-        if (!(nameItem instanceof Utf8Item)) {
+        if (!(nameItem instanceof Utf8Item))
+        {
             String errorMsg = "Attribute name at index " + nameIndex + " is not a Utf8Item.";
             Logger.error("ERROR: " + errorMsg);
             throw new IllegalArgumentException(errorMsg);
@@ -70,7 +88,8 @@ public abstract class Attribute {
         Logger.info("Attribute Name: " + name);
 
         long lengthLong = classFile.readUnsignedInt();
-        if (lengthLong > Integer.MAX_VALUE) {
+        if (lengthLong > Integer.MAX_VALUE)
+        {
             String errorMsg = "Attribute length too large: " + lengthLong;
             Logger.error("ERROR: " + errorMsg);
             throw new IllegalArgumentException(errorMsg);
@@ -88,11 +107,14 @@ public abstract class Attribute {
             attribute = getMethodAttribute(name, nameIndex, length, classFile, parent);
         }
 
-        try {
+        try
+        {
             Logger.info("Starting to read attribute data for: " + name);
             attribute.read(classFile, length);
             Logger.info("Completed reading attribute: " + name);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             Logger.error("ERROR: Failed to read attribute '" + name + "'. Exception: " + e.getMessage());
             throw e;
         }
@@ -106,7 +128,8 @@ public abstract class Attribute {
 
     private static Attribute getClassAttribute(String name, int nameIndex, int length, ClassFile classFile)
     {
-        switch (name) {
+        switch (name)
+        {
             case "ConstantValue":
                 return new ConstantValueAttribute(name, classFile, nameIndex, length);
             case "StackMapTable":
@@ -167,7 +190,8 @@ public abstract class Attribute {
 
     private static Attribute getMethodAttribute(String name, int nameIndex, int length,ClassFile classFile, MemberEntry parent)
     {
-        switch (name) {
+        switch (name)
+        {
             case "ConstantValue":
                 return new ConstantValueAttribute(name, parent, nameIndex, length);
             case "StackMapTable":
@@ -228,11 +252,11 @@ public abstract class Attribute {
 
     /**
      * Writes the attribute to the output stream.
-     *
      * @param dos The output stream to write to
      * @throws IOException If an I/O error occurs
      */
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         updateLength();
 
         dos.writeShort(nameIndex);
@@ -243,16 +267,19 @@ public abstract class Attribute {
 
     /**
      * Writes the attribute-specific data (info bytes).
-     *
      * @param dos The output stream to write to
      * @throws IOException If an I/O error occurs
      */
     protected abstract void writeInfo(DataOutputStream dos) throws IOException;
 
+    /**
+     * Recomputes the attribute length field from the current in-memory content.
+     */
     public abstract void updateLength();
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "Attribute{name='" + name + "'}";
     }
 }

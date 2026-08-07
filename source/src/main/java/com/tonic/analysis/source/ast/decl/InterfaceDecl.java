@@ -11,7 +11,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public final class InterfaceDecl implements TypeDecl {
+/**
+ * An interface declaration in the source AST, with its extended interfaces, type parameters, members, and nested
+ * types.
+ */
+public final class InterfaceDecl implements TypeDecl
+{
 
     private String name;
     private final Set<Modifier> modifiers;
@@ -24,7 +29,13 @@ public final class InterfaceDecl implements TypeDecl {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public InterfaceDecl(String name, SourceLocation location) {
+    /**
+     * Creates an interface with no modifiers or members.
+     * @param name the simple name
+     * @param location the source position, or null for UNKNOWN
+     */
+    public InterfaceDecl(String name, SourceLocation location)
+    {
         this.name = name;
         this.modifiers = EnumSet.noneOf(Modifier.class);
         this.annotations = new NodeList<>(this);
@@ -36,114 +47,228 @@ public final class InterfaceDecl implements TypeDecl {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public InterfaceDecl(String name) {
+    /**
+     * Creates an interface with no source position.
+     * @param name the simple name
+     */
+    public InterfaceDecl(String name)
+    {
         this(name, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Renames the interface.
+     * @param name the new simple name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public Set<Modifier> getModifiers() {
+    /**
+     * @return the modifiers
+     */
+    public Set<Modifier> getModifiers()
+    {
         return modifiers;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public NodeList<SourceType> getExtendedInterfaces() {
+    /**
+     * @return the extended interfaces
+     */
+    public NodeList<SourceType> getExtendedInterfaces()
+    {
         return extendedInterfaces;
     }
 
-    public NodeList<SourceType> getTypeParameters() {
+    /**
+     * @return the type parameters
+     */
+    public NodeList<SourceType> getTypeParameters()
+    {
         return typeParameters;
     }
 
-    public NodeList<FieldDecl> getFields() {
+    /**
+     * @return the fields
+     */
+    public NodeList<FieldDecl> getFields()
+    {
         return fields;
     }
 
-    public NodeList<MethodDecl> getMethods() {
+    /**
+     * @return the methods
+     */
+    public NodeList<MethodDecl> getMethods()
+    {
         return methods;
     }
 
-    public NodeList<TypeDecl> getInnerTypes() {
+    /**
+     * @return the inner types
+     */
+    public NodeList<TypeDecl> getInnerTypes()
+    {
         return innerTypes;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Records the node this declaration hangs under.
+     * @param parent the enclosing node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public InterfaceDecl withName(String name) {
+    /**
+     * Renames the interface.
+     * @param name the new simple name
+     * @return this declaration
+     */
+    public InterfaceDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public InterfaceDecl withModifiers(Set<Modifier> modifiers) {
+    /**
+     * Replaces the modifier set.
+     * @param modifiers the modifiers to hold
+     * @return this declaration
+     */
+    public InterfaceDecl withModifiers(Set<Modifier> modifiers)
+    {
         this.modifiers.clear();
         this.modifiers.addAll(modifiers);
         return this;
     }
 
-    public InterfaceDecl addModifier(Modifier modifier) {
+    /**
+     * Adds one modifier.
+     * @param modifier the modifier to add
+     * @return this declaration
+     */
+    public InterfaceDecl addModifier(Modifier modifier)
+    {
         modifiers.add(modifier);
         return this;
     }
 
-    public InterfaceDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Appends an annotation.
+     * @param annotation the annotation to add
+     * @return this declaration
+     */
+    public InterfaceDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
-    public InterfaceDecl addExtendedInterface(SourceType iface) {
+    /**
+     * Appends a super-interface to the extends clause.
+     * @param iface the interface type to add
+     * @return this declaration
+     */
+    public InterfaceDecl addExtendedInterface(SourceType iface)
+    {
         extendedInterfaces.add(iface);
         return this;
     }
 
-    public InterfaceDecl addTypeParameter(SourceType typeParam) {
+    /**
+     * Appends a type parameter.
+     * @param typeParam the type parameter to add
+     * @return this declaration
+     */
+    public InterfaceDecl addTypeParameter(SourceType typeParam)
+    {
         typeParameters.add(typeParam);
         return this;
     }
 
-    public InterfaceDecl addField(FieldDecl field) {
+    /**
+     * Appends a field.
+     * @param field the field to add
+     * @return this declaration
+     */
+    public InterfaceDecl addField(FieldDecl field)
+    {
         fields.add(field);
         return this;
     }
 
-    public InterfaceDecl addMethod(MethodDecl method) {
+    /**
+     * Appends a method.
+     * @param method the method to add
+     * @return this declaration
+     */
+    public InterfaceDecl addMethod(MethodDecl method)
+    {
         methods.add(method);
         return this;
     }
 
-    public InterfaceDecl addInnerType(TypeDecl innerType) {
+    /**
+     * Appends a nested type.
+     * @param innerType the nested declaration to add
+     * @return this declaration
+     */
+    public InterfaceDecl addInnerType(TypeDecl innerType)
+    {
         innerTypes.add(innerType);
         return this;
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>(annotations);
-        for (SourceType tp : typeParameters) {
-            if (tp != null) {
+        for (SourceType tp : typeParameters)
+        {
+            if (tp != null)
+            {
                 children.add(tp);
             }
         }
-        for (SourceType iface : extendedInterfaces) {
-            if (iface != null) {
+        for (SourceType iface : extendedInterfaces)
+        {
+            if (iface != null)
+            {
                 children.add(iface);
             }
         }
@@ -154,32 +279,40 @@ public final class InterfaceDecl implements TypeDecl {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append("\n");
         }
         String mods = Modifier.toSourceString(modifiers);
-        if (!mods.isEmpty()) {
+        if (!mods.isEmpty())
+        {
             sb.append(mods).append(" ");
         }
         sb.append("interface ").append(name);
-        if (!typeParameters.isEmpty()) {
+        if (!typeParameters.isEmpty())
+        {
             sb.append("<");
-            for (int i = 0; i < typeParameters.size(); i++) {
+            for (int i = 0; i < typeParameters.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(typeParameters.get(i));
             }
             sb.append(">");
         }
-        if (!extendedInterfaces.isEmpty()) {
+        if (!extendedInterfaces.isEmpty())
+        {
             sb.append(" extends ");
-            for (int i = 0; i < extendedInterfaces.size(); i++) {
+            for (int i = 0; i < extendedInterfaces.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(extendedInterfaces.get(i));
             }

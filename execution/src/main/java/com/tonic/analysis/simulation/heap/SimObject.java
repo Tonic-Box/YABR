@@ -5,54 +5,95 @@ import com.tonic.analysis.simulation.state.SimValue;
 import java.util.*;
 
 /**
- * Represents an abstract heap object with field-sensitive tracking.
- * SimObjects are immutable - all modifications return new instances.
+ * Immutable abstract heap object for one allocation site, holding a set of
+ * possible values per field; every mutator returns a new instance.
  */
-public final class SimObject {
+public final class SimObject
+{
 
     private final AllocationSite site;
     private final Map<FieldKey, Set<SimValue>> fields;
     private final boolean escaped;
 
-    public SimObject(AllocationSite site) {
+    /**
+     * Creates an unescaped object with no fields written.
+     * @param site the allocation site it stands for
+     * @throws NullPointerException if the site is null
+     */
+    public SimObject(AllocationSite site)
+    {
         this.site = Objects.requireNonNull(site);
         this.fields = Collections.emptyMap();
         this.escaped = false;
     }
 
-    private SimObject(AllocationSite site, Map<FieldKey, Set<SimValue>> fields, boolean escaped) {
+    private SimObject(AllocationSite site, Map<FieldKey, Set<SimValue>> fields, boolean escaped)
+    {
         this.site = site;
         this.fields = fields;
         this.escaped = escaped;
     }
 
-    public AllocationSite getSite() {
+    /**
+     * @return the site
+     */
+    public AllocationSite getSite()
+    {
         return site;
     }
 
-    public boolean hasEscaped() {
+    /**
+     * @return whether escaped
+     */
+    public boolean hasEscaped()
+    {
         return escaped;
     }
 
-    public Set<FieldKey> getFieldKeys() {
+    /**
+     * @return an unmodifiable view of the fields written so far
+     */
+    public Set<FieldKey> getFieldKeys()
+    {
         return Collections.unmodifiableSet(fields.keySet());
     }
 
-    public Set<SimValue> getField(FieldKey key) {
+    /**
+     * @param key the field to read
+     * @return an unmodifiable view of its values, empty if never written
+     */
+    public Set<SimValue> getField(FieldKey key)
+    {
         Set<SimValue> values = fields.get(key);
         return values != null ? Collections.unmodifiableSet(values) : Collections.emptySet();
     }
 
-    public boolean hasField(FieldKey key) {
+    /**
+     * @param key the field to test
+     * @return true if the field has been written
+     */
+    public boolean hasField(FieldKey key)
+    {
         return fields.containsKey(key);
     }
 
-    public SimObject withField(FieldKey key, SimValue value) {
+    /**
+     * Adds one value to a field's set - a weak update, keeping whatever is
+     * already there.
+     * @param key the field
+     * @param value the value to add
+     * @return the updated copy
+     */
+    public SimObject withField(FieldKey key, SimValue value)
+    {
         Map<FieldKey, Set<SimValue>> newFields = new HashMap<>(fields);
         Set<SimValue> existing = newFields.get(key);
-        if (existing == null) {
+        if (existing == null)
+        {
             newFields.put(key, Collections.singleton(value));
-        } else {
+        }
+        else
+        {
             Set<SimValue> merged = new HashSet<>(existing);
             merged.add(value);
             newFields.put(key, merged);
@@ -60,15 +101,27 @@ public final class SimObject {
         return new SimObject(site, newFields, escaped);
     }
 
-    public SimObject withFieldSet(FieldKey key, Set<SimValue> values) {
-        if (values.isEmpty()) {
+    /**
+     * Adds several values to a field's set - a weak update, keeping whatever is
+     * already there.
+     * @param key the field
+     * @param values the values to add; an empty set is a no-op
+     * @return the updated copy, or this object if nothing was added
+     */
+    public SimObject withFieldSet(FieldKey key, Set<SimValue> values)
+    {
+        if (values.isEmpty())
+        {
             return this;
         }
         Map<FieldKey, Set<SimValue>> newFields = new HashMap<>(fields);
         Set<SimValue> existing = newFields.get(key);
-        if (existing == null) {
+        if (existing == null)
+        {
             newFields.put(key, new HashSet<>(values));
-        } else {
+        }
+        else
+        {
             Set<SimValue> merged = new HashSet<>(existing);
             merged.addAll(values);
             newFields.put(key, merged);
@@ -76,27 +129,45 @@ public final class SimObject {
         return new SimObject(site, newFields, escaped);
     }
 
-    public SimObject markEscaped() {
-        if (escaped) {
+    /**
+     * @return a copy flagged as escaped, or this object if it already is
+     */
+    public SimObject markEscaped()
+    {
+        if (escaped)
+        {
             return this;
         }
         return new SimObject(site, fields, true);
     }
 
-    public SimObject merge(SimObject other) {
-        if (!this.site.equals(other.site)) {
+    /**
+     * Unions the field value sets of two views of the same allocation site,
+     * escaping the result if either side escaped.
+     * @param other the other view of this site
+     * @return the merged object
+     * @throws IllegalArgumentException if the allocation sites differ
+     */
+    public SimObject merge(SimObject other)
+    {
+        if (!this.site.equals(other.site))
+        {
             throw new IllegalArgumentException("Cannot merge SimObjects with different allocation sites");
         }
 
         Map<FieldKey, Set<SimValue>> mergedFields = new HashMap<>(this.fields);
-        for (Map.Entry<FieldKey, Set<SimValue>> entry : other.fields.entrySet()) {
+        for (Map.Entry<FieldKey, Set<SimValue>> entry : other.fields.entrySet())
+        {
             FieldKey key = entry.getKey();
             Set<SimValue> otherValues = entry.getValue();
             Set<SimValue> thisValues = mergedFields.get(key);
 
-            if (thisValues == null) {
+            if (thisValues == null)
+            {
                 mergedFields.put(key, new HashSet<>(otherValues));
-            } else {
+            }
+            else
+            {
                 Set<SimValue> merged = new HashSet<>(thisValues);
                 merged.addAll(otherValues);
                 mergedFields.put(key, merged);
@@ -108,7 +179,8 @@ public final class SimObject {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof SimObject)) return false;
         SimObject that = (SimObject) o;
@@ -118,21 +190,26 @@ public final class SimObject {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(site, fields, escaped);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("SimObject[");
         sb.append("site=").append(site);
-        if (escaped) {
+        if (escaped)
+        {
             sb.append(", ESCAPED");
         }
-        if (!fields.isEmpty()) {
+        if (!fields.isEmpty())
+        {
             sb.append(", fields={");
             boolean first = true;
-            for (Map.Entry<FieldKey, Set<SimValue>> entry : fields.entrySet()) {
+            for (Map.Entry<FieldKey, Set<SimValue>> entry : fields.entrySet())
+            {
                 if (!first) sb.append(", ");
                 first = false;
                 sb.append(entry.getKey().getName()).append("=").append(entry.getValue().size()).append(" values");

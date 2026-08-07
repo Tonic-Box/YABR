@@ -5,7 +5,8 @@ import java.util.Objects;
 /**
  * Represents an array type.
  */
-public final class ArrayType implements IRType {
+public final class ArrayType implements IRType
+{
 
     private final IRType elementType;
     private final int dimensions;
@@ -15,8 +16,10 @@ public final class ArrayType implements IRType {
      * @param elementType the element type
      * @param dimensions the number of dimensions
      */
-    public ArrayType(IRType elementType, int dimensions) {
-        if (dimensions < 1) {
+    public ArrayType(IRType elementType, int dimensions)
+    {
+        if (dimensions < 1)
+        {
             throw new IllegalArgumentException("Array must have at least 1 dimension");
         }
         this.elementType = elementType;
@@ -27,15 +30,24 @@ public final class ArrayType implements IRType {
      * Creates a single-dimensional array type.
      * @param elementType the element type
      */
-    public ArrayType(IRType elementType) {
+    public ArrayType(IRType elementType)
+    {
         this(elementType, 1);
     }
 
-    public IRType getElementType() {
+    /**
+     * @return the element type
+     */
+    public IRType getElementType()
+    {
         return elementType;
     }
 
-    public int getDimensions() {
+    /**
+     * @return the dimensions
+     */
+    public int getDimensions()
+    {
         return dimensions;
     }
 
@@ -44,12 +56,15 @@ public final class ArrayType implements IRType {
      * @param descriptor the array descriptor
      * @return the array type
      */
-    public static ArrayType fromDescriptor(String descriptor) {
+    public static ArrayType fromDescriptor(String descriptor)
+    {
         int dims = 0;
-        while (dims < descriptor.length() && descriptor.charAt(dims) == '[') {
+        while (dims < descriptor.length() && descriptor.charAt(dims) == '[')
+        {
             dims++;
         }
-        if (dims == 0) {
+        if (dims == 0)
+        {
             throw new IllegalArgumentException("Not an array descriptor: " + descriptor);
         }
 
@@ -59,37 +74,44 @@ public final class ArrayType implements IRType {
     }
 
     @Override
-    public String getDescriptor() {
+    public String getDescriptor()
+    {
         return "[".repeat(dimensions) + elementType.getDescriptor();
     }
 
     @Override
-    public int getSize() {
+    public int getSize()
+    {
         return 1;
     }
 
     @Override
-    public boolean isReference() {
+    public boolean isReference()
+    {
         return true;
     }
 
     @Override
-    public boolean isPrimitive() {
+    public boolean isPrimitive()
+    {
         return false;
     }
 
     @Override
-    public boolean isVoid() {
+    public boolean isVoid()
+    {
         return false;
     }
 
     @Override
-    public boolean isArray() {
+    public boolean isArray()
+    {
         return true;
     }
 
     @Override
-    public boolean isTwoSlot() {
+    public boolean isTwoSlot()
+    {
         return false;
     }
 
@@ -97,8 +119,10 @@ public final class ArrayType implements IRType {
      * Gets the base element type for multi-dimensional arrays.
      * @return the innermost element type
      */
-    public IRType getBaseElementType() {
-        if (elementType instanceof ArrayType) {
+    public IRType getBaseElementType()
+    {
+        if (elementType instanceof ArrayType)
+        {
             ArrayType arr = (ArrayType) elementType;
             return arr.getBaseElementType();
         }
@@ -106,12 +130,14 @@ public final class ArrayType implements IRType {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return elementType.toString() + "[]".repeat(dimensions);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ArrayType)) return false;
         ArrayType that = (ArrayType) o;
@@ -119,7 +145,8 @@ public final class ArrayType implements IRType {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(elementType, dimensions);
     }
 }

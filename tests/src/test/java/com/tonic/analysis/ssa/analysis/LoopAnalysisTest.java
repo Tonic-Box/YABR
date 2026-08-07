@@ -12,17 +12,20 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for LoopAnalysis.
  * Covers loop detection, loop headers, and loop nesting.
  */
-class LoopAnalysisTest {
+class LoopAnalysisTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
     }
 
-    // ========== Basic Tests ==========
+    // Basic Tests
 
     @Test
-    void computeOnEmptyMethod() {
+    void computeOnEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
@@ -34,7 +37,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void noLoopsInLinearCFG() {
+    void noLoopsInLinearCFG()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -55,10 +59,11 @@ class LoopAnalysisTest {
         assertTrue(loops.getLoops().isEmpty());
     }
 
-    // ========== Simple Loop Tests ==========
+    // Simple Loop Tests
 
     @Test
-    void detectsSimpleLoop() {
+    void detectsSimpleLoop()
+    {
         // entry -> header <-> body -> exit
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -87,10 +92,11 @@ class LoopAnalysisTest {
         assertFalse(loops.getLoops().isEmpty());
     }
 
-    // ========== isLoopHeader Tests ==========
+    // isLoopHeader Tests
 
     @Test
-    void isLoopHeaderTrueForHeader() {
+    void isLoopHeaderTrueForHeader()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -119,7 +125,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void isLoopHeaderFalseForNonHeader() {
+    void isLoopHeaderFalseForNonHeader()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -140,10 +147,11 @@ class LoopAnalysisTest {
         assertFalse(loops.isLoopHeader(entry));
     }
 
-    // ========== isInLoop Tests ==========
+    // isInLoop Tests
 
     @Test
-    void isInLoopTrueForLoopBody() {
+    void isInLoopTrueForLoopBody()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -173,7 +181,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void isInLoopFalseForBlockOutsideLoop() {
+    void isInLoopFalseForBlockOutsideLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -202,10 +211,11 @@ class LoopAnalysisTest {
         assertFalse(loops.isInLoop(exit));
     }
 
-    // ========== getLoop Tests ==========
+    // getLoop Tests
 
     @Test
-    void getLoopReturnsLoopForBlockInLoop() {
+    void getLoopReturnsLoopForBlockInLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -236,7 +246,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void getLoopReturnsNullForBlockOutsideLoop() {
+    void getLoopReturnsNullForBlockOutsideLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -257,10 +268,11 @@ class LoopAnalysisTest {
         assertNull(loops.getLoop(entry));
     }
 
-    // ========== getLoopDepth Tests ==========
+    // getLoopDepth Tests
 
     @Test
-    void getLoopDepthReturnsOneForSimpleLoop() {
+    void getLoopDepthReturnsOneForSimpleLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -289,7 +301,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void getLoopDepthReturnsZeroForBlockOutsideLoop() {
+    void getLoopDepthReturnsZeroForBlockOutsideLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock exit = new IRBlock("exit");
@@ -310,10 +323,11 @@ class LoopAnalysisTest {
         assertEquals(0, loops.getLoopDepth(entry));
     }
 
-    // ========== Loop.contains Tests ==========
+    // Loop.contains Tests
 
     @Test
-    void loopContainsBlockInLoop() {
+    void loopContainsBlockInLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -343,10 +357,11 @@ class LoopAnalysisTest {
         assertTrue(loop.contains(header));
     }
 
-    // ========== Back Edge Tests ==========
+    // Back Edge Tests
 
     @Test
-    void backEdgesDetected() {
+    void backEdgesDetected()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock header = new IRBlock("header");
@@ -376,10 +391,11 @@ class LoopAnalysisTest {
         assertTrue(loops.getBackEdges().get(body).contains(header));
     }
 
-    // ========== Self Loop Tests ==========
+    // Self Loop Tests
 
     @Test
-    void detectsSelfLoop() {
+    void detectsSelfLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock loop = new IRBlock("loop");
@@ -405,10 +421,11 @@ class LoopAnalysisTest {
         assertTrue(loops.isInLoop(loop));
     }
 
-    // ========== Method/DomTree Reference Tests ==========
+    // Method/DomTree Reference Tests
 
     @Test
-    void getMethodReturnsMethod() {
+    void getMethodReturnsMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DominatorTree domTree = new DominatorTree(method);
         LoopAnalysis loops = new LoopAnalysis(method, domTree);
@@ -417,7 +434,8 @@ class LoopAnalysisTest {
     }
 
     @Test
-    void getDominatorTreeReturnsDomTree() {
+    void getDominatorTreeReturnsDomTree()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DominatorTree domTree = new DominatorTree(method);
         LoopAnalysis loops = new LoopAnalysis(method, domTree);

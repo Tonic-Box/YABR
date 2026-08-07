@@ -7,7 +7,11 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FieldAccessInstruction extends IRInstruction {
+/**
+ * A static or instance field load or store, distinguished by its {@link AccessMode}.
+ */
+public class FieldAccessInstruction extends IRInstruction
+{
 
     private final AccessMode mode;
     private final String owner;
@@ -17,28 +21,62 @@ public class FieldAccessInstruction extends IRInstruction {
     private Value objectRef;
     private Value value;
 
-    public static FieldAccessInstruction createLoad(SSAValue result, String owner, String name,
-                                                    String descriptor, Value objectRef) {
+    /**
+     * Creates an instance field load.
+     * @param result the SSA value receiving the field value
+     * @param owner the internal name of the declaring class
+     * @param name the field name
+     * @param descriptor the field descriptor
+     * @param objectRef the receiver object
+     * @return the load instruction
+     */
+    public static FieldAccessInstruction createLoad(SSAValue result, String owner, String name, String descriptor, Value objectRef)
+    {
         return new FieldAccessInstruction(AccessMode.LOAD, result, owner, name, descriptor, false, objectRef, null);
     }
 
-    public static FieldAccessInstruction createStaticLoad(SSAValue result, String owner, String name,
-                                                          String descriptor) {
+    /**
+     * Creates a static field load.
+     * @param result the SSA value receiving the field value
+     * @param owner the internal name of the declaring class
+     * @param name the field name
+     * @param descriptor the field descriptor
+     * @return the load instruction
+     */
+    public static FieldAccessInstruction createStaticLoad(SSAValue result, String owner, String name, String descriptor)
+    {
         return new FieldAccessInstruction(AccessMode.LOAD, result, owner, name, descriptor, true, null, null);
     }
 
-    public static FieldAccessInstruction createStore(String owner, String name, String descriptor,
-                                                     Value objectRef, Value value) {
+    /**
+     * Creates an instance field store.
+     * @param owner the internal name of the declaring class
+     * @param name the field name
+     * @param descriptor the field descriptor
+     * @param objectRef the receiver object
+     * @param value the value to store
+     * @return the store instruction
+     */
+    public static FieldAccessInstruction createStore(String owner, String name, String descriptor, Value objectRef, Value value)
+    {
         return new FieldAccessInstruction(AccessMode.STORE, null, owner, name, descriptor, false, objectRef, value);
     }
 
-    public static FieldAccessInstruction createStaticStore(String owner, String name, String descriptor,
-                                                           Value value) {
+    /**
+     * Creates a static field store.
+     * @param owner the internal name of the declaring class
+     * @param name the field name
+     * @param descriptor the field descriptor
+     * @param value the value to store
+     * @return the store instruction
+     */
+    public static FieldAccessInstruction createStaticStore(String owner, String name, String descriptor, Value value)
+    {
         return new FieldAccessInstruction(AccessMode.STORE, null, owner, name, descriptor, true, null, value);
     }
 
-    private FieldAccessInstruction(AccessMode mode, SSAValue result, String owner, String name,
-                                   String descriptor, boolean isStatic, Value objectRef, Value value) {
+    private FieldAccessInstruction(AccessMode mode, SSAValue result, String owner, String name, String descriptor, boolean isStatic, Value objectRef, Value value)
+    {
         super(result);
         this.mode = mode;
         this.owner = owner;
@@ -50,108 +88,167 @@ public class FieldAccessInstruction extends IRInstruction {
         registerUses();
     }
 
-    public AccessMode getMode() {
+    /**
+     * @return the mode
+     */
+    public AccessMode getMode()
+    {
         return mode;
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public boolean isStatic() {
+    /**
+     * @return whether static
+     */
+    public boolean isStatic()
+    {
         return isStatic;
     }
 
-    public Value getObjectRef() {
+    /**
+     * @return the object ref
+     */
+    public Value getObjectRef()
+    {
         return objectRef;
     }
 
-    public Value getValue() {
+    /**
+     * @return the value
+     */
+    public Value getValue()
+    {
         return value;
     }
 
-    public boolean isLoad() {
+    /**
+     * @return true if this access is a load
+     */
+    public boolean isLoad()
+    {
         return mode == AccessMode.LOAD;
     }
 
-    public boolean isStore() {
+    /**
+     * @return true if this access is a store
+     */
+    public boolean isStore()
+    {
         return mode == AccessMode.STORE;
     }
 
-    private void registerUses() {
-        if (objectRef instanceof SSAValue) {
+    private void registerUses()
+    {
+        if (objectRef instanceof SSAValue)
+        {
             ((SSAValue) objectRef).addUse(this);
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             ((SSAValue) value).addUse(this);
         }
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         List<Value> ops = new ArrayList<>();
-        if (objectRef != null) {
+        if (objectRef != null)
+        {
             ops.add(objectRef);
         }
-        if (value != null) {
+        if (value != null)
+        {
             ops.add(value);
         }
         return ops;
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (objectRef != null && objectRef.equals(oldValue)) {
-            if (objectRef instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (objectRef != null && objectRef.equals(oldValue))
+        {
+            if (objectRef instanceof SSAValue)
+            {
                 ((SSAValue) objectRef).removeUse(this);
             }
             objectRef = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
-        if (value != null && value.equals(oldValue)) {
-            if (value instanceof SSAValue) {
+        if (value != null && value.equals(oldValue))
+        {
+            if (value instanceof SSAValue)
+            {
                 ((SSAValue) value).removeUse(this);
             }
             value = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitFieldAccess(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        if (mode == AccessMode.LOAD) {
-            if (isStatic) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
+        if (mode == AccessMode.LOAD)
+        {
+            if (isStatic)
+            {
                 return createStaticLoad(newResult, owner, name, descriptor);
             }
-            if (newOperands.isEmpty()) {
+            if (newOperands.isEmpty())
+            {
                 return null;
             }
             return createLoad(newResult, owner, name, descriptor, newOperands.get(0));
-        } else {
-            if (isStatic) {
-                if (newOperands.isEmpty()) {
+        }
+        else
+        {
+            if (isStatic)
+            {
+                if (newOperands.isEmpty())
+                {
                     return null;
                 }
                 return createStaticStore(owner, name, descriptor, newOperands.get(0));
             }
-            if (newOperands.size() < 2) {
+            if (newOperands.size() < 2)
+            {
                 return null;
             }
             return createStore(owner, name, descriptor, newOperands.get(0), newOperands.get(1));
@@ -159,14 +256,20 @@ public class FieldAccessInstruction extends IRInstruction {
     }
 
     @Override
-    public String toString() {
-        if (mode == AccessMode.LOAD) {
-            if (isStatic) {
+    public String toString()
+    {
+        if (mode == AccessMode.LOAD)
+        {
+            if (isStatic)
+            {
                 return result + " = getstatic " + owner + "." + name + " : " + descriptor;
             }
             return result + " = getfield " + objectRef + "." + name + " : " + descriptor;
-        } else {
-            if (isStatic) {
+        }
+        else
+        {
+            if (isStatic)
+            {
                 return "putstatic " + owner + "." + name + " : " + descriptor + " = " + value;
             }
             return "putfield " + objectRef + "." + name + " : " + descriptor + " = " + value;

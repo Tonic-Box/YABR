@@ -2,12 +2,22 @@ package com.tonic.analysis.cpg.node;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 
-public class BlockNode extends CPGNode {
+/**
+ * CPG node wrapping a basic block of SSA IR.
+ */
+public class BlockNode extends CPGNode
+{
 
     private final IRBlock block;
     private final int blockId;
 
-    public BlockNode(long id, IRBlock block) {
+    /**
+     * Creates a node for a basic block.
+     * @param id the unique node id
+     * @param block the wrapped IR block
+     */
+    public BlockNode(long id, IRBlock block)
+    {
         super(id, CPGNodeType.BLOCK);
         this.block = block;
         this.blockId = block.getId();
@@ -17,47 +27,78 @@ public class BlockNode extends CPGNode {
         setProperty("isEntry", block.isEntry());
     }
 
-    public IRBlock getBlock() {
+    /**
+     * @return the block
+     */
+    public IRBlock getBlock()
+    {
         return block;
     }
 
-    public int getBlockId() {
+    /**
+     * @return the block id
+     */
+    public int getBlockId()
+    {
         return blockId;
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         return "B" + blockId;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getUnderlying() {
+    public <T> T getUnderlying()
+    {
         return (T) block;
     }
 
-    public boolean isEntry() {
+    /**
+     * @return whether the block is the method entry block
+     */
+    public boolean isEntry()
+    {
         return block.isEntry();
     }
 
-    public boolean isEntryBlock() {
+    /**
+     * @return whether the block is the method entry block
+     */
+    public boolean isEntryBlock()
+    {
         return block.isEntry();
     }
 
-    public boolean isExitBlock() {
+    /**
+     * @return whether the block is an exit block
+     */
+    public boolean isExitBlock()
+    {
         return block.isExit();
     }
 
-    public boolean hasTerminator() {
+    /**
+     * @return whether the block ends in a terminator instruction
+     */
+    public boolean hasTerminator()
+    {
         return block.hasTerminator();
     }
 
-    public int getInstructionCount() {
+    /**
+     * @return the number of instructions in the block, phis included
+     */
+    public int getInstructionCount()
+    {
         return block.getInstructions().size() + block.getPhiInstructions().size();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("BlockNode[%d: B%d]", getId(), blockId);
     }
 }

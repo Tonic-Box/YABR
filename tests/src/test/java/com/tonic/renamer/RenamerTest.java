@@ -27,49 +27,60 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-class RenamerTest {
+class RenamerTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
-    private FieldEntry findField(ClassFile cf, String name) {
+    private FieldEntry findField(ClassFile cf, String name)
+    {
         return cf.getFields().stream()
                 .filter(f -> f.getName().equals(name))
                 .findFirst()
                 .orElse(null);
     }
 
-    private FieldEntry findField(ClassFile cf, String name, String desc) {
+    private FieldEntry findField(ClassFile cf, String name, String desc)
+    {
         return cf.getFields().stream()
                 .filter(f -> f.getName().equals(name) && f.getDesc().equals(desc))
                 .findFirst()
                 .orElse(null);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
                 .orElse(null);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name, String desc) {
+    private MethodEntry findMethod(ClassFile cf, String name, String desc)
+    {
         return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name) && m.getDesc().equals(desc))
                 .findFirst()
                 .orElse(null);
     }
 
-    /** True if the class's constant pool contains a FieldRefItem with the given owner, name and descriptor. */
-    private boolean hasFieldRef(ClassFile cf, String owner, String name, String desc) {
+    /**
+     * True if the class's constant pool contains a FieldRefItem with the given owner, name and descriptor.
+     */
+    private boolean hasFieldRef(ClassFile cf, String owner, String name, String desc)
+    {
         ConstPool cp = cf.getConstPool();
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        for (int i = 1; i < cp.getItems().size(); i++)
+        {
             Item<?> item = cp.getItems().get(i);
-            if (!(item instanceof FieldRefItem)) {
+            if (!(item instanceof FieldRefItem))
+            {
                 continue;
             }
             FieldRefItem ref = (FieldRefItem) item;
@@ -77,19 +88,25 @@ class RenamerTest {
             Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
             NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(ref.getValue().getNameAndTypeIndex());
             nat.setConstPool(cp);
-            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc)) {
+            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    /** True if the class's constant pool contains a MethodRefItem with the given owner, name and descriptor. */
-    private boolean hasMethodRef(ClassFile cf, String owner, String name, String desc) {
+    /**
+     * True if the class's constant pool contains a MethodRefItem with the given owner, name and descriptor.
+     */
+    private boolean hasMethodRef(ClassFile cf, String owner, String name, String desc)
+    {
         ConstPool cp = cf.getConstPool();
-        for (int i = 1; i < cp.getItems().size(); i++) {
+        for (int i = 1; i < cp.getItems().size(); i++)
+        {
             Item<?> item = cp.getItems().get(i);
-            if (!(item instanceof MethodRefItem)) {
+            if (!(item instanceof MethodRefItem))
+            {
                 continue;
             }
             MethodRefItem ref = (MethodRefItem) item;
@@ -97,7 +114,8 @@ class RenamerTest {
             Utf8Item ownerUtf8 = (Utf8Item) cp.getItem(classRef.getNameIndex());
             NameAndTypeRefItem nat = (NameAndTypeRefItem) cp.getItem(ref.getValue().getNameAndTypeIndex());
             nat.setConstPool(cp);
-            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc)) {
+            if (ownerUtf8.getValue().equals(owner) && nat.getName().equals(name) && nat.getDescriptor().equals(desc))
+            {
                 return true;
             }
         }
@@ -105,10 +123,12 @@ class RenamerTest {
     }
 
     @Nested
-    class RenamerApiTests {
+    class RenamerApiTests
+    {
 
         @Test
-        void constructorCreatesRenamer() {
+        void constructorCreatesRenamer()
+        {
             Renamer renamer = new Renamer(pool);
             assertNotNull(renamer);
             assertNotNull(renamer.getMappings());
@@ -116,7 +136,8 @@ class RenamerTest {
         }
 
         @Test
-        void mapClassAddsMappingAndReturnsThis() {
+        void mapClassAddsMappingAndReturnsThis()
+        {
             Renamer renamer = new Renamer(pool);
             Renamer result = renamer.mapClass("com/old/Class", "com/new/Class");
             assertSame(renamer, result);
@@ -124,7 +145,8 @@ class RenamerTest {
         }
 
         @Test
-        void mapMethodAddsMappingAndReturnsThis() {
+        void mapMethodAddsMappingAndReturnsThis()
+        {
             Renamer renamer = new Renamer(pool);
             Renamer result = renamer.mapMethod("com/test/Class", "oldMethod", "()V", "newMethod");
             assertSame(renamer, result);
@@ -132,7 +154,8 @@ class RenamerTest {
         }
 
         @Test
-        void mapMethodInHierarchyAddsMappingWithPropagateFlag() {
+        void mapMethodInHierarchyAddsMappingWithPropagateFlag()
+        {
             Renamer renamer = new Renamer(pool);
             renamer.mapMethodInHierarchy("com/test/Class", "oldMethod", "()V", "newMethod");
             MethodMapping mapping = renamer.getMappings().getMethodMappings().iterator().next();
@@ -140,7 +163,8 @@ class RenamerTest {
         }
 
         @Test
-        void mapFieldAddsMappingAndReturnsThis() {
+        void mapFieldAddsMappingAndReturnsThis()
+        {
             Renamer renamer = new Renamer(pool);
             Renamer result = renamer.mapField("com/test/Class", "oldField", "I", "newField");
             assertSame(renamer, result);
@@ -148,7 +172,8 @@ class RenamerTest {
         }
 
         @Test
-        void clearRemovesAllMappingsAndReturnsThis() {
+        void clearRemovesAllMappingsAndReturnsThis()
+        {
             Renamer renamer = new Renamer(pool);
             renamer.mapClass("com/old/A", "com/new/A");
             renamer.mapMethod("com/test/B", "m", "()V", "n");
@@ -161,7 +186,8 @@ class RenamerTest {
         }
 
         @Test
-        void getHierarchyReturnsHierarchy() throws IOException {
+        void getHierarchyReturnsHierarchy() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             pool.createNewClass("com/test/TestClass", access);
 
@@ -173,19 +199,22 @@ class RenamerTest {
         }
 
         @Test
-        void applyWithNoMappingsDoesNothing() {
+        void applyWithNoMappingsDoesNothing()
+        {
             Renamer renamer = new Renamer(pool);
             renamer.apply();
         }
 
         @Test
-        void applyUnsafeWithNoMappingsDoesNothing() {
+        void applyUnsafeWithNoMappingsDoesNothing()
+        {
             Renamer renamer = new Renamer(pool);
             renamer.applyUnsafe();
         }
 
         @Test
-        void validateReturnsValidResultForEmptyMappings() {
+        void validateReturnsValidResultForEmptyMappings()
+        {
             Renamer renamer = new Renamer(pool);
             ValidationResult result = renamer.validate();
             assertNotNull(result);
@@ -193,10 +222,12 @@ class RenamerTest {
     }
 
     @Nested
-    class RenamerContextTests {
+    class RenamerContextTests
+    {
 
         @Test
-        void contextCreatesWithPoolAndMappings() throws IOException {
+        void contextCreatesWithPoolAndMappings() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             pool.createNewClass("com/test/MyClass", access);
 
@@ -212,7 +243,8 @@ class RenamerTest {
         }
 
         @Test
-        void getAllClassesReturnsPoolClasses() throws IOException {
+        void getAllClassesReturnsPoolClasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             pool.createNewClass("com/test/ClassA", access);
             pool.createNewClass("com/test/ClassB", access);
@@ -224,7 +256,8 @@ class RenamerTest {
         }
 
         @Test
-        void getClassReturnsClassByName() throws IOException {
+        void getClassReturnsClassByName() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
 
@@ -235,7 +268,8 @@ class RenamerTest {
         }
 
         @Test
-        void getClassReturnsNullForUnknownClass() throws IOException {
+        void getClassReturnsNullForUnknownClass() throws IOException
+        {
             MappingStore mappings = new MappingStore();
             RenamerContext context = new RenamerContext(pool, mappings);
 
@@ -243,7 +277,8 @@ class RenamerTest {
         }
 
         @Test
-        void getClassLooksUpByNewNameAfterMapping() throws IOException {
+        void getClassLooksUpByNewNameAfterMapping() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/old/MyClass", access);
 
@@ -255,7 +290,8 @@ class RenamerTest {
         }
 
         @Test
-        void rebuildHierarchyUpdatesHierarchy() throws IOException {
+        void rebuildHierarchyUpdatesHierarchy() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             pool.createNewClass("com/test/ClassA", access);
 
@@ -270,7 +306,8 @@ class RenamerTest {
         }
 
         @Test
-        void countNameAndTypeReferencesCountsCorrectly() throws IOException {
+        void countNameAndTypeReferencesCountsCorrectly() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/TestClass", access);
             ConstPool cp = cf.getConstPool();
@@ -293,7 +330,8 @@ class RenamerTest {
         }
 
         @Test
-        void isSharedNameAndTypeReturnsFalseForSingleReference() throws IOException {
+        void isSharedNameAndTypeReturnsFalseForSingleReference() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/TestClass", access);
             ConstPool cp = cf.getConstPool();
@@ -315,7 +353,8 @@ class RenamerTest {
         }
 
         @Test
-        void findMatchingNameAndTypesFindsMatches() throws IOException {
+        void findMatchingNameAndTypesFindsMatches() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/TestClass", access);
             ConstPool cp = cf.getConstPool();
@@ -335,10 +374,12 @@ class RenamerTest {
     }
 
     @Nested
-    class ClassRenamerTests {
+    class ClassRenamerTests
+    {
 
         @Test
-        void renamesClassInConstantPool() throws IOException {
+        void renamesClassInConstantPool() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/old/MyClass", access);
 
@@ -350,7 +391,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMultipleClasses() throws IOException {
+        void renamesMultipleClasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf1 = pool.createNewClass("com/old/ClassA", access);
             ClassFile cf2 = pool.createNewClass("com/old/ClassB", access);
@@ -365,7 +407,8 @@ class RenamerTest {
         }
 
         @Test
-        void updatesFieldDescriptorsContainingRenamedClass() throws IOException {
+        void updatesFieldDescriptorsContainingRenamedClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Container", access);
             cf.createNewField(access, "ref", "Lcom/old/Referenced;", Collections.emptyList());
@@ -380,7 +423,8 @@ class RenamerTest {
         }
 
         @Test
-        void updatesMethodDescriptorsContainingRenamedClass() throws IOException {
+        void updatesMethodDescriptorsContainingRenamedClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Service", access);
             cf.createNewMethodWithDescriptor(access, "process", "(Lcom/old/Input;)Lcom/old/Output;");
@@ -397,7 +441,8 @@ class RenamerTest {
         }
 
         @Test
-        void updatesInnerClassesSimpleNameForRenamedInnerClass() throws IOException {
+        void updatesInnerClassesSimpleNameForRenamedInnerClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile outer = pool.createNewClass("com/old/Outer", access);
             pool.createNewClass("com/old/Outer$Inner", access);
@@ -416,16 +461,17 @@ class RenamerTest {
 
             InnerClassEntry entry = ica.getClasses().get(0);
             Utf8Item innerName = (Utf8Item) cp.getItem(entry.getInnerNameIndex());
-            assertEquals("Renamed", innerName.getValue(),
-                "InnerClasses simple name follows the renamed inner class");
+            assertEquals("Renamed", innerName.getValue(), "InnerClasses simple name follows the renamed inner class");
         }
     }
 
     @Nested
-    class MethodRenamerTests {
+    class MethodRenamerTests
+    {
 
         @Test
-        void renamesMethodDeclaration() throws IOException {
+        void renamesMethodDeclaration() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewMethodWithDescriptor(access, "oldMethod", "()V");
@@ -439,7 +485,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMethodWithParameters() throws IOException {
+        void renamesMethodWithParameters() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewMethodWithDescriptor(access, "process", "(ILjava/lang/String;)Z");
@@ -453,7 +500,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesOnlyMatchingDescriptor() throws IOException {
+        void renamesOnlyMatchingDescriptor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewMethodWithDescriptor(access, "overloaded", "()V");
@@ -470,7 +518,8 @@ class RenamerTest {
         }
 
         @Test
-        void hierarchyRenameAffectsSubclasses() throws IOException {
+        void hierarchyRenameAffectsSubclasses() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base", access);
             base.createNewMethodWithDescriptor(access, "process", "()V");
@@ -489,10 +538,12 @@ class RenamerTest {
     }
 
     @Nested
-    class FieldRenamerTests {
+    class FieldRenamerTests
+    {
 
         @Test
-        void renamesFieldDeclaration() throws IOException {
+        void renamesFieldDeclaration() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewField(access, "oldField", "I", Collections.emptyList());
@@ -508,7 +559,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesFieldWithObjectType() throws IOException {
+        void renamesFieldWithObjectType() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewField(access, "data", "Ljava/lang/String;", Collections.emptyList());
@@ -523,7 +575,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesOnlyMatchingDescriptorField() throws IOException {
+        void renamesOnlyMatchingDescriptorField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewField(access, "value", "I", Collections.emptyList());
@@ -543,7 +596,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesStaticField() throws IOException {
+        void renamesStaticField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewField(access, "CONSTANT", "I", Collections.emptyList());
@@ -558,36 +612,42 @@ class RenamerTest {
     }
 
     @Nested
-    class MappingStoreTests {
+    class MappingStoreTests
+    {
 
         @Test
-        void isEmptyReturnsTrueInitially() {
+        void isEmptyReturnsTrueInitially()
+        {
             MappingStore store = new MappingStore();
             assertTrue(store.isEmpty());
         }
 
         @Test
-        void isEmptyReturnsFalseAfterAddingClassMapping() {
+        void isEmptyReturnsFalseAfterAddingClassMapping()
+        {
             MappingStore store = new MappingStore();
             store.addClassMapping(new ClassMapping("old", "new"));
             assertFalse(store.isEmpty());
         }
 
         @Test
-        void getClassMappingReturnsNullForUnmapped() {
+        void getClassMappingReturnsNullForUnmapped()
+        {
             MappingStore store = new MappingStore();
             assertNull(store.getClassMapping("unknown"));
         }
 
         @Test
-        void getClassMappingReturnsNewName() {
+        void getClassMappingReturnsNewName()
+        {
             MappingStore store = new MappingStore();
             store.addClassMapping(new ClassMapping("com/old/Class", "com/new/Class"));
             assertEquals("com/new/Class", store.getClassMapping("com/old/Class"));
         }
 
         @Test
-        void clearRemovesAllMappings() {
+        void clearRemovesAllMappings()
+        {
             MappingStore store = new MappingStore();
             store.addClassMapping(new ClassMapping("old", "new"));
             store.addMethodMapping(new MethodMapping("owner", "m", "()V", "n", false));
@@ -602,10 +662,12 @@ class RenamerTest {
     }
 
     @Nested
-    class ClassMappingTests {
+    class ClassMappingTests
+    {
 
         @Test
-        void constructorSetsFields() {
+        void constructorSetsFields()
+        {
             ClassMapping mapping = new ClassMapping("com/old/Name", "com/new/Name");
             assertEquals("com/old/Name", mapping.getOldName());
             assertEquals("com/new/Name", mapping.getNewName());
@@ -613,10 +675,12 @@ class RenamerTest {
     }
 
     @Nested
-    class MethodMappingTests {
+    class MethodMappingTests
+    {
 
         @Test
-        void constructorSetsAllFields() {
+        void constructorSetsAllFields()
+        {
             MethodMapping mapping = new MethodMapping("com/test/Owner", "oldMethod", "(I)V", "newMethod", true);
             assertEquals("com/test/Owner", mapping.getOwner());
             assertEquals("oldMethod", mapping.getOldName());
@@ -626,17 +690,20 @@ class RenamerTest {
         }
 
         @Test
-        void propagateFalseWhenNotSet() {
+        void propagateFalseWhenNotSet()
+        {
             MethodMapping mapping = new MethodMapping("owner", "old", "()V", "new", false);
             assertFalse(mapping.isPropagate());
         }
     }
 
     @Nested
-    class FieldMappingTests {
+    class FieldMappingTests
+    {
 
         @Test
-        void constructorSetsAllFields() {
+        void constructorSetsAllFields()
+        {
             FieldMapping mapping = new FieldMapping("com/test/Owner", "oldField", "Ljava/lang/String;", "newField");
             assertEquals("com/test/Owner", mapping.getOwner());
             assertEquals("oldField", mapping.getOldName());
@@ -646,17 +713,20 @@ class RenamerTest {
     }
 
     @Nested
-    class FindOverridesTests {
+    class FindOverridesTests
+    {
 
         @Test
-        void findOverridesReturnsEmptyForNonExistentMethod() {
+        void findOverridesReturnsEmptyForNonExistentMethod()
+        {
             Renamer renamer = new Renamer(pool);
             Set<MethodEntry> overrides = renamer.findOverrides("com/unknown/Class", "method", "()V");
             assertTrue(overrides.isEmpty());
         }
 
         @Test
-        void findOverridesReturnsMethodInClass() throws IOException {
+        void findOverridesReturnsMethodInClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewMethodWithDescriptor(access, "process", "()V");
@@ -669,7 +739,8 @@ class RenamerTest {
         }
 
         @Test
-        void findOverridesIncludesSubclassMethods() throws IOException {
+        void findOverridesIncludesSubclassMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base", access);
             base.createNewMethodWithDescriptor(access, "process", "()V");
@@ -686,10 +757,12 @@ class RenamerTest {
     }
 
     @Nested
-    class FieldReferenceTests {
+    class FieldReferenceTests
+    {
 
         @Test
-        void renamesFieldGetFieldAccess() throws IOException {
+        void renamesFieldGetFieldAccess() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile owner = pool.createNewClass("com/test/Owner", access);
             owner.createNewField(access, "myField", "I", Collections.emptyList());
@@ -709,7 +782,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesFieldWithInheritance() throws IOException {
+        void renamesFieldWithInheritance() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile parent = pool.createNewClass("com/test/Parent", access);
             parent.createNewField(access, "inherited", "Ljava/lang/String;", Collections.emptyList());
@@ -727,10 +801,11 @@ class RenamerTest {
         }
 
         @Test
-        void renamesInheritedFieldRefOwnedBySubclass() throws IOException {
+        void renamesInheritedFieldRefOwnedBySubclass() throws IOException
+        {
             // An access to an INHERITED field names the receiver's static type (the subclass) as the ref owner:
             // `subValue.f` where f is declared in Base emits a Fieldref `Sub.f`. Renaming Base.f must also update
-            // that subclass-owned ref, otherwise it dangles on the old name — the bug that left `class81.do:[I`
+            // that subclass-owned ref, otherwise it dangles on the old name - the bug that left `class81.do:[I`
             // pointing at a no-longer-existent `do` (a Java keyword) after the field was renamed in its declarer.
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base", access);
@@ -753,9 +828,10 @@ class RenamerTest {
         }
 
         @Test
-        void doesNotRenameSubclassFieldRefWhenSubclassHidesField() throws IOException {
+        void doesNotRenameSubclassFieldRefWhenSubclassHidesField() throws IOException
+        {
             // If the subclass HIDES the field with its own declaration of the same name/descriptor, its
-            // self-owned ref resolves to ITS field, not Base's — renaming only Base.oldField must leave it alone.
+            // self-owned ref resolves to ITS field, not Base's - renaming only Base.oldField must leave it alone.
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base2", access);
             base.createNewField(access, "oldField", "[I", Collections.emptyList());
@@ -775,7 +851,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesFieldWithShadowing() throws IOException {
+        void renamesFieldWithShadowing() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile parent = pool.createNewClass("com/test/Parent", access);
             parent.createNewField(access, "field", "I", Collections.emptyList());
@@ -798,7 +875,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMultipleFieldsWithSameType() throws IOException {
+        void renamesMultipleFieldsWithSameType() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Container", access);
             cf.createNewField(access, "first", "I", Collections.emptyList());
@@ -816,7 +894,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesArrayTypeField() throws IOException {
+        void renamesArrayTypeField() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Container", access);
             cf.createNewField(access, "items", "[Ljava/lang/String;", Collections.emptyList());
@@ -832,10 +911,12 @@ class RenamerTest {
     }
 
     @Nested
-    class MethodReferenceTests {
+    class MethodReferenceTests
+    {
 
         @Test
-        void renamesMethodWithInterfaceCall() throws IOException {
+        void renamesMethodWithInterfaceCall() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile iface = pool.createNewClass("com/test/MyInterface", access);
             iface.createNewMethodWithDescriptor(access, "execute", "()V");
@@ -854,7 +935,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMethodWithSuperCall() throws IOException {
+        void renamesMethodWithSuperCall() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile parent = pool.createNewClass("com/test/Parent", access);
             parent.createNewMethodWithDescriptor(access, "init", "()V");
@@ -872,7 +954,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMethodWithOverloading() throws IOException {
+        void renamesMethodWithOverloading() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Service", access);
             cf.createNewMethodWithDescriptor(access, "send", "(Ljava/lang/String;)V");
@@ -889,7 +972,8 @@ class RenamerTest {
         }
 
         @Test
-        void doesNotRenameConstructors() throws IOException {
+        void doesNotRenameConstructors() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewMethodWithDescriptor(access, "<init>", "()V");
@@ -900,7 +984,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesStaticMethod() throws IOException {
+        void renamesStaticMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             ClassFile cf = pool.createNewClass("com/test/Utils", access);
             cf.createNewMethodWithDescriptor(access, "helper", "(I)I");
@@ -914,7 +999,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesPrivateMethod() throws IOException {
+        void renamesPrivateMethod() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", new AccessBuilder().setPublic().build());
             cf.createNewMethodWithDescriptor(access, "internal", "()V");
@@ -927,7 +1013,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMultipleLevelsOfInheritance() throws IOException {
+        void renamesMultipleLevelsOfInheritance() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile grandparent = pool.createNewClass("com/test/GrandParent", access);
             grandparent.createNewMethodWithDescriptor(access, "method", "()V");
@@ -950,7 +1037,8 @@ class RenamerTest {
         }
 
         @Test
-        void doesNotRenameMethodInUnrelatedClass() throws IOException {
+        void doesNotRenameMethodInUnrelatedClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf1 = pool.createNewClass("com/test/ClassA", access);
             cf1.createNewMethodWithDescriptor(access, "process", "()V");
@@ -968,7 +1056,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMethodWithMethodRefs() throws IOException {
+        void renamesMethodWithMethodRefs() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile target = pool.createNewClass("com/test/Target", access);
             target.createNewMethodWithDescriptor(access, "oldMethod", "(I)I");
@@ -986,11 +1075,12 @@ class RenamerTest {
         }
 
         @Test
-        void renamesInheritedMethodRefOwnedBySubclass() throws IOException {
+        void renamesInheritedMethodRefOwnedBySubclass() throws IOException
+        {
             // A virtual call to an INHERITED method names the receiver's static type (the subclass) as the ref
             // owner: `this.m()` in Child, where m is declared in Base, emits a Methodref `Child.m`. Renaming
             // Base.m must also update that subclass-owned ref, otherwise it dangles on the old name (the bug
-            // that left `class104.do:(I)V` pointing at a no-longer-existent `do` after `class86.do`→method954).
+            // that left `class104.do:(I)V` pointing at a no-longer-existent `do` after `class86.do`->method954).
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base", access);
             base.createNewMethodWithDescriptor(access, "oldMethod", "(I)V");
@@ -1012,9 +1102,10 @@ class RenamerTest {
         }
 
         @Test
-        void doesNotRenameSubclassRefWhenSubclassRedeclaresMethod() throws IOException {
+        void doesNotRenameSubclassRefWhenSubclassRedeclaresMethod() throws IOException
+        {
             // If the subclass DECLARES its own method of the same name/descriptor, its self-owned ref resolves
-            // to ITS declaration, not Base's — renaming only Base.oldMethod must leave the Child's ref untouched.
+            // to ITS declaration, not Base's - renaming only Base.oldMethod must leave the Child's ref untouched.
             int access = new AccessBuilder().setPublic().build();
             ClassFile base = pool.createNewClass("com/test/Base2", access);
             base.createNewMethodWithDescriptor(access, "oldMethod", "(I)V");
@@ -1034,7 +1125,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesInterfaceMethod() throws IOException {
+        void renamesInterfaceMethod() throws IOException
+        {
             int ifaceAccess = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile iface = pool.createNewClass("com/test/MyInterface", ifaceAccess);
             iface.createNewMethodWithDescriptor(ifaceAccess, "action", "(Ljava/lang/String;)V");
@@ -1052,7 +1144,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMultipleInterfaceMethods() throws IOException {
+        void renamesMultipleInterfaceMethods() throws IOException
+        {
             int ifaceAccess = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile iface = pool.createNewClass("com/test/Service", ifaceAccess);
             iface.createNewMethodWithDescriptor(ifaceAccess, "start", "()V");
@@ -1070,7 +1163,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMethodAcrossMultipleInterfaces() throws IOException {
+        void renamesMethodAcrossMultipleInterfaces() throws IOException
+        {
             int ifaceAccess = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile iface1 = pool.createNewClass("com/test/Interface1", ifaceAccess);
             iface1.createNewMethodWithDescriptor(ifaceAccess, "common", "()V");
@@ -1089,10 +1183,12 @@ class RenamerTest {
     }
 
     @Nested
-    class ClassReferenceTests {
+    class ClassReferenceTests
+    {
 
         @Test
-        void renamesInnerClass() throws IOException {
+        void renamesInnerClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile outer = pool.createNewClass("com/test/Outer", access);
             ClassFile inner = pool.createNewClass("com/test/Outer$Inner", access);
@@ -1105,11 +1201,11 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassInMethodDescriptor() throws IOException {
+        void renamesClassInMethodDescriptor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile service = pool.createNewClass("com/test/Service", access);
-            service.createNewMethodWithDescriptor(access, "process",
-                "(Lcom/test/Request;)Lcom/test/Response;");
+            service.createNewMethodWithDescriptor(access, "process", "(Lcom/test/Request;)Lcom/test/Response;");
 
             pool.createNewClass("com/test/Request", access);
             pool.createNewClass("com/test/Response", access);
@@ -1124,7 +1220,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassInFieldDescriptor() throws IOException {
+        void renamesClassInFieldDescriptor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile container = pool.createNewClass("com/test/Container", access);
             container.createNewField(access, "data", "Lcom/test/Data;", Collections.emptyList());
@@ -1139,7 +1236,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassWithArrayDescriptor() throws IOException {
+        void renamesClassWithArrayDescriptor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile container = pool.createNewClass("com/test/Container", access);
             container.createNewField(access, "items", "[Lcom/test/Item;", Collections.emptyList());
@@ -1154,7 +1252,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassWithMultidimensionalArray() throws IOException {
+        void renamesClassWithMultidimensionalArray() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile container = pool.createNewClass("com/test/Container", access);
             container.createNewField(access, "matrix", "[[Lcom/test/Cell;", Collections.emptyList());
@@ -1169,7 +1268,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassInComplexMethodDescriptor() throws IOException {
+        void renamesClassInComplexMethodDescriptor() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile service = pool.createNewClass("com/test/Service", access);
             service.createNewMethodWithDescriptor(access, "complex",
@@ -1186,12 +1286,12 @@ class RenamerTest {
             renamer.applyUnsafe();
 
             MethodEntry method = findMethod(service, "complex");
-            assertEquals("(Lcom/test/Alpha;Lcom/test/Beta;ILcom/test/Gamma;)Ljava/util/List;",
-                method.getDesc());
+            assertEquals("(Lcom/test/Alpha;Lcom/test/Beta;ILcom/test/Gamma;)Ljava/util/List;", method.getDesc());
         }
 
         @Test
-        void renamesClassAndUpdatesSuperClass() throws IOException {
+        void renamesClassAndUpdatesSuperClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile parent = pool.createNewClass("com/test/OldParent", access);
             ClassFile child = pool.createNewClass("com/test/Child", access);
@@ -1205,7 +1305,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassAndUpdatesInterface() throws IOException {
+        void renamesClassAndUpdatesInterface() throws IOException
+        {
             int ifaceAccess = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile iface = pool.createNewClass("com/test/OldInterface", ifaceAccess);
 
@@ -1221,7 +1322,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesMultipleClassesSimultaneously() throws IOException {
+        void renamesMultipleClassesSimultaneously() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf1 = pool.createNewClass("com/test/ClassA", access);
             ClassFile cf2 = pool.createNewClass("com/test/ClassB", access);
@@ -1239,7 +1341,8 @@ class RenamerTest {
         }
 
         @Test
-        void renamesClassWithPackageChange() throws IOException {
+        void renamesClassWithPackageChange() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/old/pkg/MyClass", access);
 
@@ -1252,10 +1355,12 @@ class RenamerTest {
     }
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void renameClassFieldAndMethod() throws IOException {
+        void renameClassFieldAndMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/OldClass", access);
             cf.createNewField(access, "oldField", "I", Collections.emptyList());
@@ -1273,7 +1378,8 @@ class RenamerTest {
         }
 
         @Test
-        void renameWithCrossReferences() throws IOException {
+        void renameWithCrossReferences() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf1 = pool.createNewClass("com/test/ClassA", access);
             cf1.createNewField(access, "ref", "Lcom/test/ClassB;", Collections.emptyList());
@@ -1297,7 +1403,8 @@ class RenamerTest {
         }
 
         @Test
-        void clearAndReapplyMappings() throws IOException {
+        void clearAndReapplyMappings() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/MyClass", access);
             cf.createNewField(access, "field", "I", Collections.emptyList());
@@ -1313,14 +1420,16 @@ class RenamerTest {
         }
 
         @Test
-        void validateEmptyMappingsIsValid() {
+        void validateEmptyMappingsIsValid()
+        {
             Renamer renamer = new Renamer(pool);
             ValidationResult result = renamer.validate();
             assertTrue(result.getErrors().isEmpty());
         }
 
         @Test
-        void renameMultipleFieldsAndMethods() throws IOException {
+        void renameMultipleFieldsAndMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/Service", access);
             cf.createNewField(access, "counter", "I", Collections.emptyList());

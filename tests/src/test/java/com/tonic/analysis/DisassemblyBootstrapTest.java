@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the verbose disassembler resolves an invokedynamic's bootstrap and renders a
  * StringConcatFactory recipe with {@code {arg}} markers rather than leaking the raw {@code } tag.
  */
-class DisassemblyBootstrapTest {
+class DisassemblyBootstrapTest
+{
 
     private static final char TAG_ARG = (char) 1;
     private static final String RECIPE = "a" + TAG_ARG + "b";
@@ -28,7 +29,8 @@ class DisassemblyBootstrapTest {
             "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
                     + "Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;");
 
-    private static String disassembleConcat() {
+    private static String disassembleConcat()
+    {
         ClassFile cf = ClassBuilder.create("DynPrint")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "concat", "(I)V")
@@ -45,7 +47,8 @@ class DisassemblyBootstrapTest {
     }
 
     @Test
-    void verboseRendersRecipeArgMarker() {
+    void verboseRendersRecipeArgMarker()
+    {
         String output = disassembleConcat();
         assertTrue(output.contains("BSM:"), output);
         assertTrue(output.contains("makeConcatWithConstants"), output);
@@ -53,7 +56,8 @@ class DisassemblyBootstrapTest {
     }
 
     @Test
-    void verboseDoesNotLeakRawRecipeTag() {
+    void verboseDoesNotLeakRawRecipeTag()
+    {
         String output = disassembleConcat();
         assertFalse(output.indexOf(TAG_ARG) >= 0, "raw \\u0001 tag must not appear in output");
     }
@@ -64,7 +68,8 @@ class DisassemblyBootstrapTest {
      * invokes (the MethodHandle argument), not an opaque {@code UnknownReference}.
      */
     @Test
-    void verboseShowsNestedCondyBootstrapCall() {
+    void verboseShowsNestedCondyBootstrapCall()
+    {
         ClassFile cf = ClassBuilder.create("DynCondy")
                 .version(AccessFlags.V11, 0).access(AccessFlags.ACC_PUBLIC)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "concat", "(I)V")

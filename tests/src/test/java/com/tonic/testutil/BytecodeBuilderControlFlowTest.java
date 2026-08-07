@@ -1,39 +1,42 @@
 package com.tonic.testutil;
 
 import com.tonic.analysis.CodeWriter;
-import com.tonic.analysis.instruction.Instruction;
-import com.tonic.analysis.instruction.ConditionalBranchInstruction;
 import com.tonic.analysis.instruction.GotoInstruction;
+import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for BytecodeBuilder control flow support (labels, branches, jumps).
+ * * Tests for BytecodeBuilder control flow support (labels, branches, jumps).
  */
-class BytecodeBuilderControlFlowTest {
+class BytecodeBuilderControlFlowTest
+{
 
     // Helper to find method by name
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
             .orElse(null);
     }
 
-    // ========== Forward Jump Tests ==========
+    // Forward Jump Tests
 
     @Test
-    void testSimpleIfForwardJump() throws IOException {
+    void testSimpleIfForwardJump() throws IOException
+    {
         // if (a > 0) { return 1; } return 0;
         // iload_0, ifle end, iconst_1, ireturn, end: iconst_0, ireturn
         BytecodeBuilder.Label end = null;
@@ -56,7 +59,6 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify bytecode structure
         CodeWriter cw = new CodeWriter(method);
         int instructionCount = cw.getInstructionCount();
         assertTrue(instructionCount >= 5, "Should have at least 5 instructions");
@@ -69,7 +71,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testIfElseForwardJumps() throws IOException {
+    void testIfElseForwardJumps() throws IOException
+    {
         // if (a > 0) { return 1; } else { return -1; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfElseTest")
             .publicStaticMethod("test", "(I)I");
@@ -91,16 +94,16 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Lift to verify structure
         SSA ssa = new SSA(method.getClassFile().getConstPool());
         IRMethod ir = ssa.lift(method);
         assertNotNull(ir);
     }
 
-    // ========== Backward Jump Tests (Loops) ==========
+    // Backward Jump Tests (Loops)
 
     @Test
-    void testWhileLoopBackwardJump() throws IOException {
+    void testWhileLoopBackwardJump() throws IOException
+    {
         // int sum = 0; while (i > 0) { sum += i; i--; } return sum;
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/WhileTest")
             .publicStaticMethod("sum", "(I)I");
@@ -131,25 +134,28 @@ class BytecodeBuilderControlFlowTest {
         // Verify we have a backward jump (loop)
         CodeWriter cw = new CodeWriter(method);
         boolean hasBackwardJump = false;
-        for (Instruction instr : cw.getInstructions()) {
-            if (instr instanceof GotoInstruction) {
+        for (Instruction instr : cw.getInstructions())
+        {
+            if (instr instanceof GotoInstruction)
+            {
                 GotoInstruction gotoInstr = (GotoInstruction) instr;
                 // Backward jumps have negative offsets
-                if (gotoInstr.getBranchOffset() < 0) {
+                if (gotoInstr.getBranchOffset() < 0)
+                {
                     hasBackwardJump = true;
                 }
             }
         }
         assertTrue(hasBackwardJump, "Should have a backward jump for the loop");
 
-        // Verify IR structure
         SSA ssa = new SSA(method.getClassFile().getConstPool());
         IRMethod ir = ssa.lift(method);
         assertNotNull(ir);
     }
 
     @Test
-    void testForLoopPattern() throws IOException {
+    void testForLoopPattern() throws IOException
+    {
         // for (int i = 0; i < n; i++) { result++; } return result;
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/ForTest")
             .publicStaticMethod("countTo", "(I)I");
@@ -182,11 +188,11 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(ir);
     }
 
-    // ========== All Branch Types ==========
+    // All Branch Types
 
     @Test
-    void testAllConditionalBranches() throws IOException {
-        // Test each conditional branch type
+    void testAllConditionalBranches() throws IOException
+    {
         testBranch("ifeq", mb -> {
             BytecodeBuilder.Label l = mb.newLabel();
             return mb.iconst(0).ifeq(l).iconst(1).ireturn().label(l).iconst(0).ireturn();
@@ -219,7 +225,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testIntComparisonBranches() throws IOException {
+    void testIntComparisonBranches() throws IOException
+    {
         testBranch("if_icmpeq", mb -> {
             BytecodeBuilder.Label l = mb.newLabel();
             return mb.iconst(1).iconst(1).if_icmpeq(l).iconst(0).ireturn().label(l).iconst(1).ireturn();
@@ -252,7 +259,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testNullCheckBranches() throws IOException {
+    void testNullCheckBranches() throws IOException
+    {
         testBranchObject("ifnull", mb -> {
             BytecodeBuilder.Label l = mb.newLabel();
             return mb.aconst_null().ifnull(l).iconst(0).ireturn().label(l).iconst(1).ireturn();
@@ -264,10 +272,11 @@ class BytecodeBuilderControlFlowTest {
         });
     }
 
-    // ========== Nested Control Flow ==========
+    // Nested Control Flow
 
     @Test
-    void testNestedIfStatements() throws IOException {
+    void testNestedIfStatements() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedIf")
             .publicStaticMethod("classify", "(I)I");
 
@@ -301,7 +310,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testNestedLoops() throws IOException {
+    void testNestedLoops() throws IOException
+    {
         // Outer loop with inner loop
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedLoops")
             .publicStaticMethod("nestedCount", "(II)I");
@@ -341,10 +351,11 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(ir);
     }
 
-    // ========== Comparison Instructions ==========
+    // Comparison Instructions
 
     @Test
-    void testLongComparison() throws IOException {
+    void testLongComparison() throws IOException
+    {
         // Compare two longs: return 1 if a > b, -1 if a < b, 0 if equal
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LongCmp")
             .publicStaticMethod("compare", "(JJ)I");
@@ -381,7 +392,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testFloatComparison() throws IOException {
+    void testFloatComparison() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/FloatCmp")
             .publicStaticMethod("isGreater", "(FF)I");
 
@@ -407,10 +419,11 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(ir);
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Test
-    void testMultipleLabelsAtSamePosition() throws IOException {
+    void testMultipleLabelsAtSamePosition() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/MultiLabel")
             .publicStaticMethod("test", "()I");
 
@@ -434,7 +447,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testLabelAtEnd() throws IOException {
+    void testLabelAtEnd() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LabelEnd")
             .publicStaticMethod("test", "()V");
 
@@ -450,10 +464,11 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(method);
     }
 
-    // ========== Exception Handling Tests ==========
+    // Exception Handling Tests
 
     @Test
-    void testSimpleTryCatch() throws IOException {
+    void testSimpleTryCatch() throws IOException
+    {
         // try { result = 1 / 0; } catch (ArithmeticException e) { result = -1; } return result;
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryCatchTest")
             .publicStaticMethod("test", "()I");
@@ -484,14 +499,12 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify exception table was created
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertNotNull(code);
         assertFalse(code.getExceptionTable().isEmpty(), "Exception table should not be empty");
         assertEquals(1, code.getExceptionTable().size(), "Should have one exception handler");
 
-        // Verify exception table entry details
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry = code.getExceptionTable().get(0);
         assertTrue(entry.getStartPc() >= 0, "Start PC should be valid");
         assertTrue(entry.getEndPc() > entry.getStartPc(), "End PC should be after start PC");
         assertTrue(entry.getHandlerPc() >= 0, "Handler PC should be valid");
@@ -504,7 +517,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testTryCatchAll() throws IOException {
+    void testTryCatchAll() throws IOException
+    {
         // try { return 1; } catch (Throwable t) { return -1; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryCatchAllTest")
             .publicStaticMethod("test", "()I");
@@ -528,17 +542,16 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify exception table
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertFalse(code.getExceptionTable().isEmpty());
 
-        // Verify catch-all has catchType = 0
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry = code.getExceptionTable().get(0);
         assertEquals(0, entry.getCatchType(), "Catch-all handler should have catchType = 0");
     }
 
     @Test
-    void testMultipleCatchBlocks() throws IOException {
+    void testMultipleCatchBlocks() throws IOException
+    {
         // try { ... } catch (ArithmeticException e) { ... } catch (Exception e) { ... }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/MultiCatchTest")
             .publicStaticMethod("test", "()I");
@@ -576,20 +589,20 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify multiple exception handlers
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertEquals(2, code.getExceptionTable().size(), "Should have two exception handlers");
 
         // Verify both handlers cover the same try block
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry1 = code.getExceptionTable().get(0);
-        com.tonic.parser.attribute.table.ExceptionTableEntry entry2 = code.getExceptionTable().get(1);
+        ExceptionTableEntry entry1 = code.getExceptionTable().get(0);
+        ExceptionTableEntry entry2 = code.getExceptionTable().get(1);
         assertEquals(entry1.getStartPc(), entry2.getStartPc(), "Both handlers should have same start");
         assertEquals(entry1.getEndPc(), entry2.getEndPc(), "Both handlers should have same end");
         assertNotEquals(entry1.getHandlerPc(), entry2.getHandlerPc(), "Handlers should be different");
     }
 
     @Test
-    void testNestedTryCatch() throws IOException {
+    void testNestedTryCatch() throws IOException
+    {
         // try { try { ... } catch (ArithmeticException e) { ... } } catch (Exception e) { ... }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedTryCatchTest")
             .publicStaticMethod("test", "()I");
@@ -631,20 +644,19 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify nested exception handlers
-        com.tonic.parser.attribute.CodeAttribute code = method.getCodeAttribute();
+        CodeAttribute code = method.getCodeAttribute();
         assertEquals(2, code.getExceptionTable().size(), "Should have two exception handlers");
 
-        // Verify IR can handle exception table
         SSA ssa = new SSA(method.getClassFile().getConstPool());
         IRMethod ir = ssa.lift(method);
         assertNotNull(ir, "Should successfully lift method with exception handlers");
     }
 
-    // ========== Switch Statement Tests ==========
+    // Switch Statement Tests
 
     @Test
-    void testSimpleTableSwitch() throws IOException {
+    void testSimpleTableSwitch() throws IOException
+    {
         // switch (x) { case 1: return 10; case 2: return 20; default: return 0; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TableSwitchTest")
             .publicStaticMethod("test", "(I)I");
@@ -674,7 +686,6 @@ class BytecodeBuilderControlFlowTest {
         MethodEntry method = findMethod(cf, "test");
         assertNotNull(method);
 
-        // Verify we can lift to IR
         SSA ssa = new SSA(method.getClassFile().getConstPool());
         IRMethod ir = ssa.lift(method);
         assertNotNull(ir);
@@ -682,7 +693,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testTableSwitchWithGaps() throws IOException {
+    void testTableSwitchWithGaps() throws IOException
+    {
         // switch (x) { case 0: return 0; case 2: return 20; default: return -1; }
         // case 1 is missing, so it should use default
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TableSwitchGapsTest")
@@ -720,7 +732,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testLookupSwitch() throws IOException {
+    void testLookupSwitch() throws IOException
+    {
         // switch (x) { case 10: return 1; case 100: return 2; case 1000: return 3; default: return 0; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LookupSwitchTest")
             .publicStaticMethod("test", "(I)I");
@@ -762,7 +775,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testSwitchWithFallthrough() throws IOException {
+    void testSwitchWithFallthrough() throws IOException
+    {
         // switch (x) { case 1: case 2: return 12; default: return 0; }
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/SwitchFallthroughTest")
             .publicStaticMethod("test", "(I)I");
@@ -794,7 +808,8 @@ class BytecodeBuilderControlFlowTest {
     }
 
     @Test
-    void testNestedSwitch() throws IOException {
+    void testNestedSwitch() throws IOException
+    {
         // Outer switch with inner switch
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedSwitchTest")
             .publicStaticMethod("test", "(II)I");
@@ -848,14 +863,16 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(ir);
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
     @FunctionalInterface
-    interface BranchBuilder {
+    interface BranchBuilder
+    {
         BytecodeBuilder.MethodBuilder build(BytecodeBuilder.MethodBuilder mb);
     }
 
-    private void testBranch(String branchType, BranchBuilder builder) throws IOException {
+    private void testBranch(String branchType, BranchBuilder builder) throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Branch" + branchType)
             .publicStaticMethod("test", "()I");
 
@@ -868,7 +885,8 @@ class BytecodeBuilderControlFlowTest {
         assertNotNull(ir, "Should lift to IR for " + branchType);
     }
 
-    private void testBranchObject(String branchType, BranchBuilder builder) throws IOException {
+    private void testBranchObject(String branchType, BranchBuilder builder) throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Branch" + branchType)
             .publicStaticMethod("test", "(Ljava/lang/Object;)I");
 

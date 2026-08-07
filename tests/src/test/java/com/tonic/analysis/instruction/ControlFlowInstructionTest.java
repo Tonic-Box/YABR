@@ -14,23 +14,28 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ControlFlowInstructionTest {
+class ControlFlowInstructionTest
+{
 
     private TestVisitor visitor;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         visitor = new TestVisitor();
     }
 
     @Nested
-    class ConditionalBranchInstructionTests {
+    class ConditionalBranchInstructionTests
+    {
 
         @Nested
-        class SingleValueComparisonTests {
+        class SingleValueComparisonTests
+        {
 
             @Test
-            void ifeqHasCorrectOpcodeAndType() {
+            void ifeqHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 5);
 
                 assertEquals(0x99, instr.getOpcode());
@@ -38,7 +43,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifneHasCorrectOpcodeAndType() {
+            void ifneHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9A, 10, (short) 5);
 
                 assertEquals(0x9A, instr.getOpcode());
@@ -46,7 +52,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifltHasCorrectOpcodeAndType() {
+            void ifltHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9B, 10, (short) 5);
 
                 assertEquals(0x9B, instr.getOpcode());
@@ -54,7 +61,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifgeHasCorrectOpcodeAndType() {
+            void ifgeHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9C, 10, (short) 5);
 
                 assertEquals(0x9C, instr.getOpcode());
@@ -62,7 +70,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifgtHasCorrectOpcodeAndType() {
+            void ifgtHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9D, 10, (short) 5);
 
                 assertEquals(0x9D, instr.getOpcode());
@@ -70,7 +79,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifleHasCorrectOpcodeAndType() {
+            void ifleHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9E, 10, (short) 5);
 
                 assertEquals(0x9E, instr.getOpcode());
@@ -78,7 +88,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void singleValueComparisonsPopsOneValue() {
+            void singleValueComparisonsPopsOneValue()
+            {
                 ConditionalBranchInstruction ifeq = new ConditionalBranchInstruction(0x99, 10, (short) 5);
                 ConditionalBranchInstruction ifne = new ConditionalBranchInstruction(0x9A, 10, (short) 5);
                 ConditionalBranchInstruction iflt = new ConditionalBranchInstruction(0x9B, 10, (short) 5);
@@ -96,10 +107,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class IntegerComparisonTests {
+        class IntegerComparisonTests
+        {
 
             @Test
-            void ifIcmpeqHasCorrectOpcodeAndType() {
+            void ifIcmpeqHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x9F, 10, (short) 5);
 
                 assertEquals(0x9F, instr.getOpcode());
@@ -107,7 +120,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifIcmpneHasCorrectOpcodeAndType() {
+            void ifIcmpneHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA0, 10, (short) 5);
 
                 assertEquals(0xA0, instr.getOpcode());
@@ -115,7 +129,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifIcmpltHasCorrectOpcodeAndType() {
+            void ifIcmpltHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA1, 10, (short) 5);
 
                 assertEquals(0xA1, instr.getOpcode());
@@ -123,7 +138,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifIcmpgeHasCorrectOpcodeAndType() {
+            void ifIcmpgeHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA2, 10, (short) 5);
 
                 assertEquals(0xA2, instr.getOpcode());
@@ -131,7 +147,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifIcmpgtHasCorrectOpcodeAndType() {
+            void ifIcmpgtHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA3, 10, (short) 5);
 
                 assertEquals(0xA3, instr.getOpcode());
@@ -139,7 +156,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifIcmpleHasCorrectOpcodeAndType() {
+            void ifIcmpleHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA4, 10, (short) 5);
 
                 assertEquals(0xA4, instr.getOpcode());
@@ -147,7 +165,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void integerComparisonsPropsTwoValues() {
+            void integerComparisonsPropsTwoValues()
+            {
                 ConditionalBranchInstruction ifIcmpeq = new ConditionalBranchInstruction(0x9F, 10, (short) 5);
                 ConditionalBranchInstruction ifIcmpne = new ConditionalBranchInstruction(0xA0, 10, (short) 5);
                 ConditionalBranchInstruction ifIcmplt = new ConditionalBranchInstruction(0xA1, 10, (short) 5);
@@ -159,10 +178,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class ReferenceComparisonTests {
+        class ReferenceComparisonTests
+        {
 
             @Test
-            void ifAcmpeqHasCorrectOpcodeAndType() {
+            void ifAcmpeqHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA5, 10, (short) 5);
 
                 assertEquals(0xA5, instr.getOpcode());
@@ -170,7 +191,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifAcmpneHasCorrectOpcodeAndType() {
+            void ifAcmpneHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xA6, 10, (short) 5);
 
                 assertEquals(0xA6, instr.getOpcode());
@@ -178,7 +200,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void referenceComparisonsPropsTwoValues() {
+            void referenceComparisonsPropsTwoValues()
+            {
                 ConditionalBranchInstruction ifAcmpeq = new ConditionalBranchInstruction(0xA5, 10, (short) 5);
                 ConditionalBranchInstruction ifAcmpne = new ConditionalBranchInstruction(0xA6, 10, (short) 5);
 
@@ -188,10 +211,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class NullCheckTests {
+        class NullCheckTests
+        {
 
             @Test
-            void ifnullHasCorrectOpcodeAndType() {
+            void ifnullHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xC6, 10, (short) 5);
 
                 assertEquals(0xC6, instr.getOpcode());
@@ -199,7 +224,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void ifnonnullHasCorrectOpcodeAndType() {
+            void ifnonnullHasCorrectOpcodeAndType()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0xC7, 10, (short) 5);
 
                 assertEquals(0xC7, instr.getOpcode());
@@ -207,7 +233,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void nullChecksPopsOneValue() {
+            void nullChecksPopsOneValue()
+            {
                 ConditionalBranchInstruction ifnull = new ConditionalBranchInstruction(0xC6, 10, (short) 5);
                 ConditionalBranchInstruction ifnonnull = new ConditionalBranchInstruction(0xC7, 10, (short) 5);
 
@@ -217,24 +244,28 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class BranchOffsetTests {
+        class BranchOffsetTests
+        {
 
             @Test
-            void branchOffsetStoredCorrectly() {
+            void branchOffsetStoredCorrectly()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 42);
 
                 assertEquals(42, instr.getBranchOffset());
             }
 
             @Test
-            void negativeBranchOffsetStoredCorrectly() {
+            void negativeBranchOffsetStoredCorrectly()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) -15);
 
                 assertEquals(-15, instr.getBranchOffset());
             }
 
             @Test
-            void zeroBranchOffsetStoredCorrectly() {
+            void zeroBranchOffsetStoredCorrectly()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 0);
 
                 assertEquals(0, instr.getBranchOffset());
@@ -242,10 +273,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class CommonBehaviorTests {
+        class CommonBehaviorTests
+        {
 
             @Test
-            void allBranchesHaveLengthThree() {
+            void allBranchesHaveLengthThree()
+            {
                 ConditionalBranchInstruction ifeq = new ConditionalBranchInstruction(0x99, 10, (short) 5);
                 ConditionalBranchInstruction ifIcmpeq = new ConditionalBranchInstruction(0x9F, 10, (short) 5);
                 ConditionalBranchInstruction ifAcmpeq = new ConditionalBranchInstruction(0xA5, 10, (short) 5);
@@ -258,7 +291,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void allBranchesHaveZeroLocalChange() {
+            void allBranchesHaveZeroLocalChange()
+            {
                 ConditionalBranchInstruction ifeq = new ConditionalBranchInstruction(0x99, 10, (short) 5);
                 ConditionalBranchInstruction ifIcmpeq = new ConditionalBranchInstruction(0x9F, 10, (short) 5);
 
@@ -267,7 +301,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void writesCorrectBytecode() throws IOException {
+            void writesCorrectBytecode() throws IOException
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 0x0123);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -283,7 +318,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void toStringReturnsCorrectFormat() {
+            void toStringReturnsCorrectFormat()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 42);
 
                 String result = instr.toString();
@@ -293,7 +329,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void acceptsVisitor() {
+            void acceptsVisitor()
+            {
                 ConditionalBranchInstruction instr = new ConditionalBranchInstruction(0x99, 10, (short) 5);
 
                 instr.accept(visitor);
@@ -302,16 +339,16 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void throwsExceptionForInvalidOpcode() {
-                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                    new ConditionalBranchInstruction(0x00, 10, (short) 5);
-                });
+            void throwsExceptionForInvalidOpcode()
+            {
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new ConditionalBranchInstruction(0x00, 10, (short) 5));
 
                 assertTrue(exception.getMessage().contains("Invalid Conditional Branch opcode"));
             }
 
             @Test
-            void branchTypeFromOpcodeReturnsCorrectType() {
+            void branchTypeFromOpcodeReturnsCorrectType()
+            {
                 assertEquals(ConditionalBranchInstruction.BranchType.IFEQ,
                         ConditionalBranchInstruction.BranchType.fromOpcode(0x99));
                 assertEquals(ConditionalBranchInstruction.BranchType.IFNONNULL,
@@ -319,12 +356,14 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void branchTypeFromOpcodeReturnsNullForInvalidOpcode() {
+            void branchTypeFromOpcodeReturnsNullForInvalidOpcode()
+            {
                 assertNull(ConditionalBranchInstruction.BranchType.fromOpcode(0xFF));
             }
 
             @Test
-            void branchTypeGettersReturnCorrectValues() {
+            void branchTypeGettersReturnCorrectValues()
+            {
                 ConditionalBranchInstruction.BranchType type = ConditionalBranchInstruction.BranchType.IFEQ;
 
                 assertEquals(0x99, type.getOpcode());
@@ -334,13 +373,16 @@ class ControlFlowInstructionTest {
     }
 
     @Nested
-    class GotoInstructionTests {
+    class GotoInstructionTests
+    {
 
         @Nested
-        class GotoTests {
+        class GotoTests
+        {
 
             @Test
-            void gotoHasCorrectOpcodeAndType() {
+            void gotoHasCorrectOpcodeAndType()
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 42);
 
                 assertEquals(0xA7, instr.getOpcode());
@@ -348,28 +390,32 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void gotoHasLengthThree() {
+            void gotoHasLengthThree()
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 42);
 
                 assertEquals(3, instr.getLength());
             }
 
             @Test
-            void gotoBranchOffsetStoredCorrectly() {
+            void gotoBranchOffsetStoredCorrectly()
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 42);
 
                 assertEquals(42, instr.getBranchOffset());
             }
 
             @Test
-            void gotoNegativeBranchOffsetStoredCorrectly() {
+            void gotoNegativeBranchOffsetStoredCorrectly()
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) -100);
 
                 assertEquals(-100, instr.getBranchOffset());
             }
 
             @Test
-            void gotoWritesCorrectBytecode() throws IOException {
+            void gotoWritesCorrectBytecode() throws IOException
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 0x0123);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -386,10 +432,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class GotoWTests {
+        class GotoWTests
+        {
 
             @Test
-            void gotoWHasCorrectOpcodeAndType() {
+            void gotoWHasCorrectOpcodeAndType()
+            {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, 42);
 
                 assertEquals(0xC8, instr.getOpcode());
@@ -397,28 +445,32 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void gotoWHasLengthFive() {
+            void gotoWHasLengthFive()
+            {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, 42);
 
                 assertEquals(5, instr.getLength());
             }
 
             @Test
-            void gotoWBranchOffsetStoredCorrectly() {
+            void gotoWBranchOffsetStoredCorrectly()
+            {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, 0x12345678);
 
                 assertEquals(0x12345678, instr.getBranchOffsetWide());
             }
 
             @Test
-            void gotoWNegativeBranchOffsetStoredCorrectly() {
+            void gotoWNegativeBranchOffsetStoredCorrectly()
+            {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, -100000);
 
                 assertEquals(-100000, instr.getBranchOffsetWide());
             }
 
             @Test
-            void gotoWWritesCorrectBytecode() throws IOException {
+            void gotoWWritesCorrectBytecode() throws IOException
+            {
                 GotoInstruction instr = new GotoInstruction(0xC8, 10, 0x12345678);
 
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -437,10 +489,12 @@ class ControlFlowInstructionTest {
         }
 
         @Nested
-        class CommonBehaviorTests {
+        class CommonBehaviorTests
+        {
 
             @Test
-            void gotoHasZeroStackChange() {
+            void gotoHasZeroStackChange()
+            {
                 GotoInstruction gotoInstr = new GotoInstruction(0xA7, 10, (short) 42);
                 GotoInstruction gotoWInstr = new GotoInstruction(0xC8, 10, 42);
 
@@ -449,7 +503,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void gotoHasZeroLocalChange() {
+            void gotoHasZeroLocalChange()
+            {
                 GotoInstruction gotoInstr = new GotoInstruction(0xA7, 10, (short) 42);
                 GotoInstruction gotoWInstr = new GotoInstruction(0xC8, 10, 42);
 
@@ -458,7 +513,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void toStringReturnsCorrectFormat() {
+            void toStringReturnsCorrectFormat()
+            {
                 GotoInstruction gotoInstr = new GotoInstruction(0xA7, 10, (short) 42);
                 GotoInstruction gotoWInstr = new GotoInstruction(0xC8, 10, 100);
 
@@ -467,7 +523,8 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void acceptsVisitor() {
+            void acceptsVisitor()
+            {
                 GotoInstruction instr = new GotoInstruction(0xA7, 10, (short) 42);
 
                 instr.accept(visitor);
@@ -476,34 +533,35 @@ class ControlFlowInstructionTest {
             }
 
             @Test
-            void throwsExceptionForInvalidOpcode() {
-                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                    new GotoInstruction(0x00, 10, (short) 5);
-                });
+            void throwsExceptionForInvalidOpcode()
+            {
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new GotoInstruction(0x00, 10, (short) 5));
 
                 assertTrue(exception.getMessage().contains("Invalid GOTO opcode"));
             }
 
             @Test
-            void gotoTypeFromOpcodeReturnsCorrectType() {
-                assertEquals(GotoInstruction.GotoType.GOTO_NORMAL,
-                        GotoInstruction.GotoType.fromOpcode(0xA7));
-                assertEquals(GotoInstruction.GotoType.GOTO_WIDE,
-                        GotoInstruction.GotoType.fromOpcode(0xC8));
+            void gotoTypeFromOpcodeReturnsCorrectType()
+            {
+                assertEquals(GotoInstruction.GotoType.GOTO_NORMAL, GotoInstruction.GotoType.fromOpcode(0xA7));
+                assertEquals(GotoInstruction.GotoType.GOTO_WIDE, GotoInstruction.GotoType.fromOpcode(0xC8));
             }
 
             @Test
-            void gotoTypeFromOpcodeReturnsNullForInvalidOpcode() {
+            void gotoTypeFromOpcodeReturnsNullForInvalidOpcode()
+            {
                 assertNull(GotoInstruction.GotoType.fromOpcode(0xFF));
             }
         }
     }
 
     @Nested
-    class TableSwitchInstructionTests {
+    class TableSwitchInstructionTests
+    {
 
         @Test
-        void tableSwitchHasCorrectOpcode() {
+        void tableSwitchHasCorrectOpcode()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
             jumpOffsets.put(1, 20);
@@ -515,7 +573,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchLengthCalculatedCorrectly() {
+        void tableSwitchLengthCalculatedCorrectly()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
             jumpOffsets.put(1, 20);
@@ -523,12 +582,13 @@ class ControlFlowInstructionTest {
 
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 0, 2, jumpOffsets);
 
-            int expectedLength = 1 + 0 + 12 + ((2 - 0 + 1) * 4);
+            int expectedLength = 1 + 12 + ((2 + 1) * 4);
             assertEquals(expectedLength, instr.getLength());
         }
 
         @Test
-        void tableSwitchWithPaddingCalculatesLengthCorrectly() {
+        void tableSwitchWithPaddingCalculatesLengthCorrectly()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(5, 10);
             jumpOffsets.put(6, 20);
@@ -540,7 +600,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchStoresDefaultOffset() {
+        void tableSwitchStoresDefaultOffset()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 999, 0, 2, jumpOffsets);
 
@@ -548,7 +609,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchStoresLowAndHigh() {
+        void tableSwitchStoresLowAndHigh()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 10, 20, jumpOffsets);
 
@@ -557,7 +619,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchStoresJumpOffsets() {
+        void tableSwitchStoresJumpOffsets()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
             jumpOffsets.put(1, 20);
@@ -569,7 +632,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchHasStackChangeMinusOne() {
+        void tableSwitchHasStackChangeMinusOne()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 0, 2, jumpOffsets);
 
@@ -577,7 +641,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchHasZeroLocalChange() {
+        void tableSwitchHasZeroLocalChange()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 0, 2, jumpOffsets);
 
@@ -585,7 +650,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchWritesCorrectBytecode() throws IOException {
+        void tableSwitchWritesCorrectBytecode() throws IOException
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
             jumpOffsets.put(1, 20);
@@ -602,7 +668,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchWritesDefaultOffsetForMissingKey() throws IOException {
+        void tableSwitchWritesDefaultOffsetForMissingKey() throws IOException
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
 
@@ -619,7 +686,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchToStringContainsRelevantInfo() {
+        void tableSwitchToStringContainsRelevantInfo()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             jumpOffsets.put(0, 10);
             jumpOffsets.put(1, 20);
@@ -635,7 +703,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchAcceptsVisitor() {
+        void tableSwitchAcceptsVisitor()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
             TableSwitchInstruction instr = new TableSwitchInstruction(0xAA, 0, 0, 100, 0, 2, jumpOffsets);
 
@@ -645,22 +714,23 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void tableSwitchThrowsExceptionForInvalidOpcode() {
+        void tableSwitchThrowsExceptionForInvalidOpcode()
+        {
             Map<Integer, Integer> jumpOffsets = new HashMap<>();
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new TableSwitchInstruction(0xAB, 0, 0, 100, 0, 2, jumpOffsets);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new TableSwitchInstruction(0xAB, 0, 0, 100, 0, 2, jumpOffsets));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for TableSwitchInstruction"));
         }
     }
 
     @Nested
-    class LookupSwitchInstructionTests {
+    class LookupSwitchInstructionTests
+    {
 
         @Test
-        void lookupSwitchHasCorrectOpcode() {
+        void lookupSwitchHasCorrectOpcode()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
             matchOffsets.put(20, 200);
@@ -671,30 +741,33 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchLengthCalculatedCorrectly() {
+        void lookupSwitchLengthCalculatedCorrectly()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
             matchOffsets.put(20, 200);
 
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 999, 2, matchOffsets);
 
-            int expectedLength = 1 + 0 + 8 + (2 * 8);
+            int expectedLength = 1 + 8 + (2 * 8);
             assertEquals(expectedLength, instr.getLength());
         }
 
         @Test
-        void lookupSwitchWithPaddingCalculatesLengthCorrectly() {
+        void lookupSwitchWithPaddingCalculatesLengthCorrectly()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
 
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 1, 3, 999, 1, matchOffsets);
 
-            int expectedLength = 1 + 3 + 8 + (1 * 8);
+            int expectedLength = 1 + 3 + 8 + (8);
             assertEquals(expectedLength, instr.getLength());
         }
 
         @Test
-        void lookupSwitchStoresDefaultOffset() {
+        void lookupSwitchStoresDefaultOffset()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 888, 0, matchOffsets);
 
@@ -702,7 +775,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchStoresNpairs() {
+        void lookupSwitchStoresNpairs()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
             matchOffsets.put(20, 200);
@@ -714,7 +788,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchStoresMatchOffsets() {
+        void lookupSwitchStoresMatchOffsets()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
             matchOffsets.put(20, 200);
@@ -725,7 +800,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchHasStackChangeMinusOne() {
+        void lookupSwitchHasStackChangeMinusOne()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 999, 0, matchOffsets);
 
@@ -733,7 +809,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchHasZeroLocalChange() {
+        void lookupSwitchHasZeroLocalChange()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 999, 0, matchOffsets);
 
@@ -741,7 +818,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchWritesCorrectBytecode() throws IOException {
+        void lookupSwitchWritesCorrectBytecode() throws IOException
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
 
@@ -757,7 +835,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchToStringContainsRelevantInfo() {
+        void lookupSwitchToStringContainsRelevantInfo()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             matchOffsets.put(10, 100);
             matchOffsets.put(20, 200);
@@ -772,7 +851,8 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchAcceptsVisitor() {
+        void lookupSwitchAcceptsVisitor()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
             LookupSwitchInstruction instr = new LookupSwitchInstruction(0xAB, 0, 0, 999, 0, matchOffsets);
 
@@ -782,73 +862,80 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void lookupSwitchThrowsExceptionForInvalidOpcode() {
+        void lookupSwitchThrowsExceptionForInvalidOpcode()
+        {
             Map<Integer, Integer> matchOffsets = new HashMap<>();
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new LookupSwitchInstruction(0xAA, 0, 0, 999, 0, matchOffsets);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new LookupSwitchInstruction(0xAA, 0, 0, 999, 0, matchOffsets));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for LookupSwitchInstruction"));
         }
     }
 
     @Nested
-    class ReturnInstructionTests {
+    class ReturnInstructionTests
+    {
 
         @Test
-        void ireturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+        void ireturnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             assertEquals(0xAC, instr.getOpcode());
             assertEquals(ReturnType.IRETURN, instr.getType());
         }
 
         @Test
-        void lreturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAD, 10);
+        void lreturnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAD, 10);
 
             assertEquals(0xAD, instr.getOpcode());
             assertEquals(ReturnType.LRETURN, instr.getType());
         }
 
         @Test
-        void freturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAE, 10);
+        void freturnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAE, 10);
 
             assertEquals(0xAE, instr.getOpcode());
             assertEquals(ReturnType.FRETURN, instr.getType());
         }
 
         @Test
-        void dreturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xAF, 10);
+        void dreturnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAF, 10);
 
             assertEquals(0xAF, instr.getOpcode());
             assertEquals(ReturnType.DRETURN, instr.getType());
         }
 
         @Test
-        void areturnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xB0, 10);
+        void areturnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xB0, 10);
 
             assertEquals(0xB0, instr.getOpcode());
             assertEquals(ReturnType.ARETURN, instr.getType());
         }
 
         @Test
-        void returnHasCorrectOpcodeAndType() {
-            ReturnInstruction instr = new ReturnInstruction(0xB1, 10);
+        void returnHasCorrectOpcodeAndType()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0xB1, instr.getOpcode());
             assertEquals(ReturnType.RETURN, instr.getType());
         }
 
         @Test
-        void singleWordReturnsPopsOneValue() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction freturn = new ReturnInstruction(0xAE, 10);
-            ReturnInstruction areturn = new ReturnInstruction(0xB0, 10);
+        void singleWordReturnsPopsOneValue()
+        {
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction freturn = new MethodReturnInstruction(0xAE, 10);
+            MethodReturnInstruction areturn = new MethodReturnInstruction(0xB0, 10);
 
             assertEquals(-1, ireturn.getStackChange());
             assertEquals(-1, freturn.getStackChange());
@@ -856,29 +943,32 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void doubleWordReturnsPropsTwoValues() {
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction dreturn = new ReturnInstruction(0xAF, 10);
+        void doubleWordReturnsPropsTwoValues()
+        {
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction dreturn = new MethodReturnInstruction(0xAF, 10);
 
             assertEquals(-2, lreturn.getStackChange());
             assertEquals(-2, dreturn.getStackChange());
         }
 
         @Test
-        void voidReturnHasNoStackChange() {
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+        void voidReturnHasNoStackChange()
+        {
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0, returnInstr.getStackChange());
         }
 
         @Test
-        void allReturnsHaveLengthOne() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction freturn = new ReturnInstruction(0xAE, 10);
-            ReturnInstruction dreturn = new ReturnInstruction(0xAF, 10);
-            ReturnInstruction areturn = new ReturnInstruction(0xB0, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+        void allReturnsHaveLengthOne()
+        {
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction freturn = new MethodReturnInstruction(0xAE, 10);
+            MethodReturnInstruction dreturn = new MethodReturnInstruction(0xAF, 10);
+            MethodReturnInstruction areturn = new MethodReturnInstruction(0xB0, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(1, ireturn.getLength());
             assertEquals(1, lreturn.getLength());
@@ -889,17 +979,19 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void allReturnsHaveZeroLocalChange() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+        void allReturnsHaveZeroLocalChange()
+        {
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals(0, ireturn.getLocalChange());
             assertEquals(0, returnInstr.getLocalChange());
         }
 
         @Test
-        void returnWritesCorrectBytecode() throws IOException {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+        void returnWritesCorrectBytecode() throws IOException
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
@@ -912,10 +1004,11 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void returnToStringReturnsUpperCaseMnemonic() {
-            ReturnInstruction ireturn = new ReturnInstruction(0xAC, 10);
-            ReturnInstruction lreturn = new ReturnInstruction(0xAD, 10);
-            ReturnInstruction returnInstr = new ReturnInstruction(0xB1, 10);
+        void returnToStringReturnsUpperCaseMnemonic()
+        {
+            MethodReturnInstruction ireturn = new MethodReturnInstruction(0xAC, 10);
+            MethodReturnInstruction lreturn = new MethodReturnInstruction(0xAD, 10);
+            MethodReturnInstruction returnInstr = new MethodReturnInstruction(0xB1, 10);
 
             assertEquals("IRETURN", ireturn.toString());
             assertEquals("LRETURN", lreturn.toString());
@@ -923,8 +1016,9 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void returnAcceptsVisitor() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 10);
+        void returnAcceptsVisitor()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 10);
 
             instr.accept(visitor);
 
@@ -932,23 +1026,24 @@ class ControlFlowInstructionTest {
         }
 
         @Test
-        void throwsExceptionForInvalidOpcode() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new ReturnInstruction(0x00, 10);
-            });
+        void throwsExceptionForInvalidOpcode()
+        {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new MethodReturnInstruction(0x00, 10));
 
             assertTrue(exception.getMessage().contains("Invalid Return opcode"));
         }
 
         @Test
-        void constructorSetsCorrectOffset() {
-            ReturnInstruction instr = new ReturnInstruction(0xAC, 42);
+        void constructorSetsCorrectOffset()
+        {
+            MethodReturnInstruction instr = new MethodReturnInstruction(0xAC, 42);
 
             assertEquals(42, instr.getOffset());
         }
     }
 
-    private static class TestVisitor extends AbstractBytecodeVisitor {
+    private static class TestVisitor extends AbstractBytecodeVisitor
+    {
         boolean visitedConditionalBranch = false;
         boolean visitedGoto = false;
         boolean visitedTableSwitch = false;
@@ -956,27 +1051,32 @@ class ControlFlowInstructionTest {
         boolean visitedReturn = false;
 
         @Override
-        public void visit(ConditionalBranchInstruction instr) {
+        public void visit(ConditionalBranchInstruction instr)
+        {
             visitedConditionalBranch = true;
         }
 
         @Override
-        public void visit(GotoInstruction instr) {
+        public void visit(GotoInstruction instr)
+        {
             visitedGoto = true;
         }
 
         @Override
-        public void visit(TableSwitchInstruction instr) {
+        public void visit(TableSwitchInstruction instr)
+        {
             visitedTableSwitch = true;
         }
 
         @Override
-        public void visit(LookupSwitchInstruction instr) {
+        public void visit(LookupSwitchInstruction instr)
+        {
             visitedLookupSwitch = true;
         }
 
         @Override
-        public void visit(ReturnInstruction instr) {
+        public void visit(MethodReturnInstruction instr)
+        {
             visitedReturn = true;
         }
     }

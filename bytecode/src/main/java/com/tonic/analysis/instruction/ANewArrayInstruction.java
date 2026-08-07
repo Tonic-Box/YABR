@@ -10,22 +10,25 @@ import java.io.IOException;
 /**
  * Represents the ANEWARRAY instruction (0xBD).
  */
-public class ANewArrayInstruction extends Instruction {
+public class ANewArrayInstruction extends Instruction
+{
     private final int classIndex;
     private final int count;
     private final ConstPool constPool;
 
     /**
      * Constructs an ANewArrayInstruction.
-     *
      * @param constPool The constant pool associated with the class.
      * @param opcode    The opcode of the instruction.
      * @param offset    The bytecode offset of the instruction.
      * @param classIndex The constant pool index for the class reference.
+     * @param count     The array element count carried by this instruction.
      */
-    public ANewArrayInstruction(ConstPool constPool, int opcode, int offset, int classIndex, int count) {
+    public ANewArrayInstruction(ConstPool constPool, int opcode, int offset, int classIndex, int count)
+    {
         super(opcode, offset, 3);
-        if (opcode != 0xBD) {
+        if (opcode != 0xBD)
+        {
             throw new IllegalArgumentException("Invalid opcode for ANewArrayInstruction: " + opcode);
         }
         this.classIndex = classIndex;
@@ -34,77 +37,78 @@ public class ANewArrayInstruction extends Instruction {
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Writes the ANEWARRAY opcode and its operand to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
         dos.writeShort(classIndex);
     }
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change: pops the element count and pushes the array reference (net 0).
      */
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         return 0;
     }
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Returns the class index used by this instruction.
-     *
      * @return The constant pool index for the class reference.
      */
-    public int getClassIndex() {
+    public int getClassIndex()
+    {
         return classIndex;
     }
 
     /**
      * Returns the count of array elements.
-     *
      * @return The number of elements in the array.
      */
-    public int getCount() {
+    public int getCount()
+    {
         return count;
     }
 
     /**
      * Resolves and returns a string representation of the class.
-     *
      * @return The class as a string.
      */
-    public String resolveClass() {
+    public String resolveClass()
+    {
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
         return classRef.getClassName();
     }
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic, class index, and resolved class.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("ANEWARRAY #%d // %s", classIndex, resolveClass());
     }
 }

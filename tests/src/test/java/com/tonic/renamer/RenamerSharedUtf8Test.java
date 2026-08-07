@@ -21,10 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Utf8Item}. Renaming the class must repoint the class reference to a fresh Utf8 rather than
  * mutating the shared one in place, otherwise the string literal is silently corrupted.
  */
-class RenamerSharedUtf8Test {
+class RenamerSharedUtf8Test
+{
 
     @Test
-    void renamingClassPreservesEqualStringConstant() throws IOException {
+    void renamingClassPreservesEqualStringConstant() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
 
@@ -49,12 +51,13 @@ class RenamerSharedUtf8Test {
     }
 
     @Test
-    void renamingMethodPreservesEqualStringConstant() throws IOException {
+    void renamingMethodPreservesEqualStringConstant() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
 
         // Owner declares a method named "es"; Caller both calls it (creating a NameAndType "es")
-        // and holds the equal string literal "es" — sharing one Utf8 entry.
+        // and holds the equal string literal "es" - sharing one Utf8 entry.
         ClassFile owner = pool.createNewClass("com/test/Owner", access);
         owner.createNewMethodWithDescriptor(access, "es", "()V");
 
@@ -73,11 +76,15 @@ class RenamerSharedUtf8Test {
                 "string constant must not have been rewritten to the new method name");
     }
 
-    private static boolean hasStringConstant(ConstPool cp, String value) {
-        for (Item<?> item : cp.getItems()) {
-            if (item instanceof StringRefItem) {
+    private static boolean hasStringConstant(ConstPool cp, String value)
+    {
+        for (Item<?> item : cp.getItems())
+        {
+            if (item instanceof StringRefItem)
+            {
                 Item<?> utf8 = cp.getItem(((StringRefItem) item).getValue());
-                if (utf8 instanceof Utf8Item && value.equals(((Utf8Item) utf8).getValue())) {
+                if (utf8 instanceof Utf8Item && value.equals(((Utf8Item) utf8).getValue()))
+                {
                     return true;
                 }
             }

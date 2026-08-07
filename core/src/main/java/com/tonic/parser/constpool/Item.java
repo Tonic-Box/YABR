@@ -9,10 +9,10 @@ import java.io.IOException;
 
 /**
  * Abstract representation of a constant pool item.
- *
  * @param <T> The type of the value held by the constant pool item.
  */
-public abstract class Item<T> {
+public abstract class Item<T>
+{
     protected ClassFile classFile;
 
     public static final byte ITEM_UTF_8         =  0x1;
@@ -33,20 +33,23 @@ public abstract class Item<T> {
     public static final byte ITEM_PACKAGE = 0x13;
     public static final byte ITEM_MODULE  = 0x14;
 
-    public void setClassFile(ClassFile classFile) {
+    /**
+     * Binds this item to the class file that owns its pool.
+     * @param classFile the owning class file
+     */
+    public void setClassFile(ClassFile classFile)
+    {
         this.classFile = classFile;
     }
 
     /**
      * Reads the constant pool item from the class file.
-     *
      * @param classFile The ClassFile utility to read data.
      */
     public abstract void read(ClassFile classFile);
 
     /**
      * Writes the item to the output stream (excluding the tag byte, which is written by the caller).
-     *
      * @param dos The output stream to write to.
      * @throws IOException If an I/O error occurs.
      */
@@ -54,21 +57,18 @@ public abstract class Item<T> {
 
     /**
      * Returns the type of the constant pool item.
-     *
      * @return The constant pool tag.
      */
     public abstract byte getType();
 
     /**
      * Returns the value held by the constant pool item.
-     *
      * @return The value of type T.
      */
     public abstract T getValue();
 
     /**
      * Accepts a visitor for the visitor pattern.
-     *
      * @param visitor The visitor to accept.
      */
     public void accept(AbstractClassVisitor visitor)
@@ -78,7 +78,6 @@ public abstract class Item<T> {
 
     /**
      * Gets the index of this item in the constant pool.
-     *
      * @param constPool The constant pool to search.
      * @return The index of this item.
      */

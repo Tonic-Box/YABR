@@ -5,18 +5,24 @@ import com.tonic.analysis.source.ast.stmt.Statement;
 /**
  * Helpers for carrying {@link SourceLocation} provenance across statement rewrites.
  */
-public final class Locations {
+public final class Locations
+{
 
-    private Locations() {
+    private Locations()
+    {
     }
 
     /**
-     * Copies {@code from}'s location onto {@code to} when it carries a bytecode offset. A rewrite
-     * that replaces a statement 1:1 calls this so offset provenance survives the transform; no-op
-     * when either side is null or the source has no offset.
+     * Carries offset provenance across a 1:1 statement rewrite, doing nothing if either side
+     * is null or the source location has no bytecode offset.
+     *
+     * @param from statement supplying the location
+     * @param to statement receiving it
      */
-    public static void copy(Statement from, Statement to) {
-        if (from != null && to != null && from.getLocation() != null && from.getLocation().hasOffset()) {
+    public static void copy(Statement from, Statement to)
+    {
+        if (from != null && to != null && from.getLocation() != null && from.getLocation().hasOffset())
+        {
             to.setLocation(from.getLocation());
         }
     }

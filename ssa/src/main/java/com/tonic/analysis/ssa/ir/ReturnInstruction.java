@@ -7,53 +7,73 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.List;
 
 /**
- * Return instruction.
+ * A method return, with or without a value.
  */
-public class ReturnInstruction extends IRInstruction {
+public class ReturnInstruction extends IRInstruction
+{
 
     private Value returnValue;
 
-    public ReturnInstruction() {
+    /**
+     * Creates a void return.
+     */
+    public ReturnInstruction()
+    {
         super();
         this.returnValue = null;
     }
 
-    public ReturnInstruction(Value returnValue) {
+    /**
+     * Creates a value return and registers a use of an SSA return value.
+     * @param returnValue the value to return
+     */
+    public ReturnInstruction(Value returnValue)
+    {
         super();
         this.returnValue = returnValue;
-        if (returnValue instanceof SSAValue) {
+        if (returnValue instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) returnValue;
             ssa.addUse(this);
         }
     }
 
-    public Value getReturnValue() {
+    /**
+     * @return the return value
+     */
+    public Value getReturnValue()
+    {
         return returnValue;
     }
 
     /**
      * Checks if this is a void return.
-     *
      * @return true if returning void
      */
-    public boolean isVoidReturn() {
+    public boolean isVoidReturn()
+    {
         return returnValue == null;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return returnValue != null ? List.of(returnValue) : List.of();
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (returnValue != null && returnValue.equals(oldValue)) {
-            if (returnValue instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (returnValue != null && returnValue.equals(oldValue))
+        {
+            if (returnValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) returnValue;
                 ssa.removeUse(this);
             }
             returnValue = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) newValue;
                 ssa.addUse(this);
             }
@@ -61,25 +81,30 @@ public class ReturnInstruction extends IRInstruction {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitReturn(this);
     }
 
     @Override
-    public boolean isTerminator() {
+    public boolean isTerminator()
+    {
         return true;
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        if (newOperands.isEmpty()) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
+        if (newOperands.isEmpty())
+        {
             return new ReturnInstruction();
         }
         return new ReturnInstruction(newOperands.get(0));
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return returnValue != null ? "return " + returnValue : "return";
     }
 }

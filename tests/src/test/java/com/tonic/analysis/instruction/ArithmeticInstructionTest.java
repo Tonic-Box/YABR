@@ -11,20 +11,24 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ArithmeticInstructionTest {
+class ArithmeticInstructionTest
+{
 
     private TestVisitor visitor;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         visitor = new TestVisitor();
     }
 
     @Nested
-    class AddInstructionTests {
+    class AddInstructionTests
+    {
 
         @Test
-        void iaddHasCorrectOpcode() {
+        void iaddHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x60, 0);
 
             assertEquals(0x60, instr.getOpcode());
@@ -32,7 +36,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void laddHasCorrectOpcode() {
+        void laddHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x61, 0);
 
             assertEquals(0x61, instr.getOpcode());
@@ -40,7 +45,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void faddHasCorrectOpcode() {
+        void faddHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x62, 0);
 
             assertEquals(0x62, instr.getOpcode());
@@ -48,7 +54,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void daddHasCorrectOpcode() {
+        void daddHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x63, 0);
 
             assertEquals(0x63, instr.getOpcode());
@@ -56,28 +63,32 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void iaddStackChangeIsMinusOne() {
+        void iaddStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x60, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void laddStackChangeIsMinusTwo() {
+        void laddStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x61, 0);
 
             assertEquals(-2, instr.getStackChange());
         }
 
         @Test
-        void faddStackChangeIsMinusOne() {
+        void faddStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x62, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void daddStackChangeIsMinusTwo() {
+        void daddStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x63, 0);
 
             assertEquals(-2, instr.getStackChange());
@@ -85,10 +96,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class SubInstructionTests {
+    class SubInstructionTests
+    {
 
         @Test
-        void isubHasCorrectOpcode() {
+        void isubHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x64, 0);
 
             assertEquals(0x64, instr.getOpcode());
@@ -96,7 +109,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void lsubHasCorrectOpcode() {
+        void lsubHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x65, 0);
 
             assertEquals(0x65, instr.getOpcode());
@@ -104,7 +118,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fsubHasCorrectOpcode() {
+        void fsubHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x66, 0);
 
             assertEquals(0x66, instr.getOpcode());
@@ -112,7 +127,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void dsubHasCorrectOpcode() {
+        void dsubHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x67, 0);
 
             assertEquals(0x67, instr.getOpcode());
@@ -120,14 +136,16 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void isubStackChangeIsMinusOne() {
+        void isubStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x64, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void lsubStackChangeIsMinusTwo() {
+        void lsubStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x65, 0);
 
             assertEquals(-2, instr.getStackChange());
@@ -135,10 +153,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class MulInstructionTests {
+    class MulInstructionTests
+    {
 
         @Test
-        void imulHasCorrectOpcode() {
+        void imulHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x68, 0);
 
             assertEquals(0x68, instr.getOpcode());
@@ -146,7 +166,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void lmulHasCorrectOpcode() {
+        void lmulHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x69, 0);
 
             assertEquals(0x69, instr.getOpcode());
@@ -154,7 +175,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fmulHasCorrectOpcode() {
+        void fmulHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6A, 0);
 
             assertEquals(0x6A, instr.getOpcode());
@@ -162,7 +184,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void dmulHasCorrectOpcode() {
+        void dmulHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6B, 0);
 
             assertEquals(0x6B, instr.getOpcode());
@@ -170,14 +193,16 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void imulStackChangeIsMinusOne() {
+        void imulStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x68, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void lmulStackChangeIsMinusTwo() {
+        void lmulStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x69, 0);
 
             assertEquals(-2, instr.getStackChange());
@@ -185,10 +210,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class DivInstructionTests {
+    class DivInstructionTests
+    {
 
         @Test
-        void idivHasCorrectOpcode() {
+        void idivHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6C, 0);
 
             assertEquals(0x6C, instr.getOpcode());
@@ -196,7 +223,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void ldivHasCorrectOpcode() {
+        void ldivHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6D, 0);
 
             assertEquals(0x6D, instr.getOpcode());
@@ -204,7 +232,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fdivHasCorrectOpcode() {
+        void fdivHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6E, 0);
 
             assertEquals(0x6E, instr.getOpcode());
@@ -212,7 +241,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void ddivHasCorrectOpcode() {
+        void ddivHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6F, 0);
 
             assertEquals(0x6F, instr.getOpcode());
@@ -220,14 +250,16 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void idivStackChangeIsMinusOne() {
+        void idivStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6C, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void ldivStackChangeIsMinusTwo() {
+        void ldivStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x6D, 0);
 
             assertEquals(-2, instr.getStackChange());
@@ -235,10 +267,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class RemInstructionTests {
+    class RemInstructionTests
+    {
 
         @Test
-        void iremHasCorrectOpcode() {
+        void iremHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x70, 0);
 
             assertEquals(0x70, instr.getOpcode());
@@ -246,7 +280,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void lremHasCorrectOpcode() {
+        void lremHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x71, 0);
 
             assertEquals(0x71, instr.getOpcode());
@@ -254,7 +289,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fremHasCorrectOpcode() {
+        void fremHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x72, 0);
 
             assertEquals(0x72, instr.getOpcode());
@@ -262,7 +298,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void dremHasCorrectOpcode() {
+        void dremHasCorrectOpcode()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x73, 0);
 
             assertEquals(0x73, instr.getOpcode());
@@ -270,14 +307,16 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void iremStackChangeIsMinusOne() {
+        void iremStackChangeIsMinusOne()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x70, 0);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void lremStackChangeIsMinusTwo() {
+        void lremStackChangeIsMinusTwo()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x71, 0);
 
             assertEquals(-2, instr.getStackChange());
@@ -285,10 +324,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class CommonBehaviorTests {
+    class CommonBehaviorTests
+    {
 
         @Test
-        void allInstructionsHaveLengthOne() {
+        void allInstructionsHaveLengthOne()
+        {
             ArithmeticInstruction iadd = new ArithmeticInstruction(0x60, 0);
             ArithmeticInstruction ladd = new ArithmeticInstruction(0x61, 0);
             ArithmeticInstruction fadd = new ArithmeticInstruction(0x62, 0);
@@ -301,7 +342,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void allInstructionsHaveZeroLocalChange() {
+        void allInstructionsHaveZeroLocalChange()
+        {
             ArithmeticInstruction iadd = new ArithmeticInstruction(0x60, 0);
             ArithmeticInstruction lsub = new ArithmeticInstruction(0x65, 0);
             ArithmeticInstruction fmul = new ArithmeticInstruction(0x6A, 0);
@@ -314,7 +356,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void writesCorrectOpcode() throws IOException {
+        void writesCorrectOpcode() throws IOException
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x68, 0);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -328,7 +371,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void toStringReturnsUpperCaseMnemonic() {
+        void toStringReturnsUpperCaseMnemonic()
+        {
             ArithmeticInstruction iadd = new ArithmeticInstruction(0x60, 0);
             ArithmeticInstruction lsub = new ArithmeticInstruction(0x65, 0);
             ArithmeticInstruction fmul = new ArithmeticInstruction(0x6A, 0);
@@ -341,7 +385,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x60, 0);
 
             instr.accept(visitor);
@@ -350,23 +395,24 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void throwsExceptionForInvalidOpcode() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new ArithmeticInstruction(0x00, 0);
-            });
+        void throwsExceptionForInvalidOpcode()
+        {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new ArithmeticInstruction(0x00, 0));
 
             assertTrue(exception.getMessage().contains("Invalid Arithmetic opcode"));
         }
 
         @Test
-        void constructorSetsCorrectOffset() {
+        void constructorSetsCorrectOffset()
+        {
             ArithmeticInstruction instr = new ArithmeticInstruction(0x60, 42);
 
             assertEquals(42, instr.getOffset());
         }
 
         @Test
-        void arithmeticTypeFromOpcodeReturnsCorrectType() {
+        void arithmeticTypeFromOpcodeReturnsCorrectType()
+        {
             assertEquals(ArithmeticInstruction.ArithmeticType.IADD,
                         ArithmeticInstruction.ArithmeticType.fromOpcode(0x60));
             assertEquals(ArithmeticInstruction.ArithmeticType.DREM,
@@ -374,12 +420,14 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void arithmeticTypeFromOpcodeReturnsNullForInvalidOpcode() {
+        void arithmeticTypeFromOpcodeReturnsNullForInvalidOpcode()
+        {
             assertNull(ArithmeticInstruction.ArithmeticType.fromOpcode(0xFF));
         }
 
         @Test
-        void arithmeticTypeGettersReturnCorrectValues() {
+        void arithmeticTypeGettersReturnCorrectValues()
+        {
             ArithmeticInstruction.ArithmeticType type = ArithmeticInstruction.ArithmeticType.IADD;
 
             assertEquals(0x60, type.getOpcode());
@@ -388,10 +436,12 @@ class ArithmeticInstructionTest {
     }
 
     @Nested
-    class NegInstructionTests {
+    class NegInstructionTests
+    {
 
         @Test
-        void inegHasCorrectOpcodeAndLength() {
+        void inegHasCorrectOpcodeAndLength()
+        {
             INegInstruction instr = new INegInstruction(0x74, 0);
 
             assertEquals(0x74, instr.getOpcode());
@@ -399,7 +449,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void lnegHasCorrectOpcodeAndLength() {
+        void lnegHasCorrectOpcodeAndLength()
+        {
             LNegInstruction instr = new LNegInstruction(0x75, 0);
 
             assertEquals(0x75, instr.getOpcode());
@@ -407,7 +458,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fnegHasCorrectOpcodeAndLength() {
+        void fnegHasCorrectOpcodeAndLength()
+        {
             FNegInstruction instr = new FNegInstruction(0x76, 0);
 
             assertEquals(0x76, instr.getOpcode());
@@ -415,7 +467,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void dnegHasCorrectOpcodeAndLength() {
+        void dnegHasCorrectOpcodeAndLength()
+        {
             DNegInstruction instr = new DNegInstruction(0x77, 0);
 
             assertEquals(0x77, instr.getOpcode());
@@ -423,7 +476,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void allNegInstructionsHaveZeroStackChange() {
+        void allNegInstructionsHaveZeroStackChange()
+        {
             INegInstruction ineg = new INegInstruction(0x74, 0);
             LNegInstruction lneg = new LNegInstruction(0x75, 0);
             FNegInstruction fneg = new FNegInstruction(0x76, 0);
@@ -436,7 +490,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void allNegInstructionsHaveZeroLocalChange() {
+        void allNegInstructionsHaveZeroLocalChange()
+        {
             INegInstruction ineg = new INegInstruction(0x74, 0);
             LNegInstruction lneg = new LNegInstruction(0x75, 0);
             FNegInstruction fneg = new FNegInstruction(0x76, 0);
@@ -449,35 +504,40 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void inegToStringReturnsCorrectMnemonic() {
+        void inegToStringReturnsCorrectMnemonic()
+        {
             INegInstruction instr = new INegInstruction(0x74, 0);
 
             assertEquals("INEG", instr.toString());
         }
 
         @Test
-        void lnegToStringReturnsCorrectMnemonic() {
+        void lnegToStringReturnsCorrectMnemonic()
+        {
             LNegInstruction instr = new LNegInstruction(0x75, 0);
 
             assertEquals("LNEG", instr.toString());
         }
 
         @Test
-        void fnegToStringReturnsCorrectMnemonic() {
+        void fnegToStringReturnsCorrectMnemonic()
+        {
             FNegInstruction instr = new FNegInstruction(0x76, 0);
 
             assertEquals("FNEG", instr.toString());
         }
 
         @Test
-        void dnegToStringReturnsCorrectMnemonic() {
+        void dnegToStringReturnsCorrectMnemonic()
+        {
             DNegInstruction instr = new DNegInstruction(0x77, 0);
 
             assertEquals("DNEG", instr.toString());
         }
 
         @Test
-        void inegWritesCorrectBytecode() throws IOException {
+        void inegWritesCorrectBytecode() throws IOException
+        {
             INegInstruction instr = new INegInstruction(0x74, 0);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -491,7 +551,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void lnegWritesCorrectBytecode() throws IOException {
+        void lnegWritesCorrectBytecode() throws IOException
+        {
             LNegInstruction instr = new LNegInstruction(0x75, 0);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -505,7 +566,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void fnegAcceptsVisitor() {
+        void fnegAcceptsVisitor()
+        {
             FNegInstruction instr = new FNegInstruction(0x76, 0);
 
             instr.accept(visitor);
@@ -514,7 +576,8 @@ class ArithmeticInstructionTest {
         }
 
         @Test
-        void dnegAcceptsVisitor() {
+        void dnegAcceptsVisitor()
+        {
             DNegInstruction instr = new DNegInstruction(0x77, 0);
 
             instr.accept(visitor);
@@ -523,23 +586,27 @@ class ArithmeticInstructionTest {
         }
     }
 
-    private static class TestVisitor extends AbstractBytecodeVisitor {
+    private static class TestVisitor extends AbstractBytecodeVisitor
+    {
         boolean visitedArithmetic = false;
         boolean visitedFNeg = false;
         boolean visitedDNeg = false;
 
         @Override
-        public void visit(ArithmeticInstruction instr) {
+        public void visit(ArithmeticInstruction instr)
+        {
             visitedArithmetic = true;
         }
 
         @Override
-        public void visit(FNegInstruction instr) {
+        public void visit(FNegInstruction instr)
+        {
             visitedFNeg = true;
         }
 
         @Override
-        public void visit(DNegInstruction instr) {
+        public void visit(DNegInstruction instr)
+        {
             visitedDNeg = true;
         }
     }

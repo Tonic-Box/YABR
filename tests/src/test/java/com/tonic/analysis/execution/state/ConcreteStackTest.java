@@ -7,10 +7,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConcreteStackTest {
+class ConcreteStackTest
+{
 
     @Test
-    void testPushPopInt() {
+    void testPushPopInt()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         assertEquals(1, stack.depth());
@@ -19,7 +21,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopLong() {
+    void testPushPopLong()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushLong(123456789L);
         assertEquals(1, stack.depth());
@@ -28,7 +31,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopFloat() {
+    void testPushPopFloat()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushFloat(3.14f);
         assertEquals(1, stack.depth());
@@ -37,7 +41,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopDouble() {
+    void testPushPopDouble()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushDouble(2.718);
         assertEquals(1, stack.depth());
@@ -46,7 +51,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopReference() {
+    void testPushPopReference()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         ObjectInstance obj = new ObjectInstance(1, "java/lang/String");
         stack.pushReference(obj);
@@ -56,7 +62,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopNull() {
+    void testPushPopNull()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushNull();
         assertEquals(1, stack.depth());
@@ -65,7 +72,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushPopValue() {
+    void testPushPopValue()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         ConcreteValue val = ConcreteValue.intValue(99);
         stack.push(val);
@@ -73,7 +81,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPeek() {
+    void testPeek()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -83,7 +92,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPeekDepth() {
+    void testPeekDepth()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -94,13 +104,15 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPeekEmptyThrows() {
+    void testPeekEmptyThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertThrows(IllegalStateException.class, stack::peek);
     }
 
     @Test
-    void testPeekInvalidDepthThrows() {
+    void testPeekInvalidDepthThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         assertThrows(IllegalStateException.class, () -> stack.peek(1));
@@ -108,13 +120,15 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPopUnderflowThrows() {
+    void testPopUnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertThrows(IllegalStateException.class, stack::pop);
     }
 
     @Test
-    void testPushOverflowThrows() {
+    void testPushOverflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(2);
         stack.pushInt(1);
         stack.pushInt(2);
@@ -122,7 +136,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPopCount() {
+    void testPopCount()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -133,7 +148,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPopCountZero() {
+    void testPopCountZero()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         stack.pop(0);
@@ -141,20 +157,23 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPopCountUnderflowThrows() {
+    void testPopCountUnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         assertThrows(IllegalStateException.class, () -> stack.pop(2));
     }
 
     @Test
-    void testPopCountNegativeThrows() {
+    void testPopCountNegativeThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertThrows(IllegalArgumentException.class, () -> stack.pop(-1));
     }
 
     @Test
-    void testDup() {
+    void testDup()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         stack.dup();
@@ -164,7 +183,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDupX1() {
+    void testDupX1()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -176,7 +196,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDupX2() {
+    void testDupX2()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -190,7 +211,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDup2() {
+    void testDup2()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -203,7 +225,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDup2X1() {
+    void testDup2X1()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -218,7 +241,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDup2X2() {
+    void testDup2X2()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -235,7 +259,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testSwap() {
+    void testSwap()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -246,7 +271,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testClear() {
+    void testClear()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -257,7 +283,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testIsEmpty() {
+    void testIsEmpty()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertTrue(stack.isEmpty());
         stack.pushInt(42);
@@ -267,13 +294,15 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testMaxDepth() {
+    void testMaxDepth()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertEquals(10, stack.maxDepth());
     }
 
     @Test
-    void testSnapshot() {
+    void testSnapshot()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(10);
         stack.pushInt(20);
@@ -286,7 +315,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testSnapshotUnmodifiable() {
+    void testSnapshotUnmodifiable()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         List<ConcreteValue> snapshot = stack.snapshot();
@@ -294,14 +324,16 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testSnapshotEmpty() {
+    void testSnapshotEmpty()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         List<ConcreteValue> snapshot = stack.snapshot();
         assertTrue(snapshot.isEmpty());
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         String str = stack.toString();
@@ -310,7 +342,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testMultipleOperations() {
+    void testMultipleOperations()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         stack.pushInt(2);
@@ -327,7 +360,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testWideValues() {
+    void testWideValues()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushLong(100L);
         stack.pushDouble(3.14);
@@ -340,20 +374,23 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testDupUnderflowThrows() {
+    void testDupUnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         assertThrows(IllegalStateException.class, stack::dup);
     }
 
     @Test
-    void testDupX1UnderflowThrows() {
+    void testDupX1UnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         assertThrows(IllegalStateException.class, stack::dupX1);
     }
 
     @Test
-    void testDupX2UnderflowThrows() {
+    void testDupX2UnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         stack.pushInt(2);
@@ -361,14 +398,16 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testSwapUnderflowThrows() {
+    void testSwapUnderflowThrows()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         assertThrows(IllegalStateException.class, stack::swap);
     }
 
     @Test
-    void testDup2WithLong() {
+    void testDup2WithLong()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushLong(100L);
         stack.dup2();
@@ -378,7 +417,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testClearPreservesMaxDepth() {
+    void testClearPreservesMaxDepth()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(1);
         stack.pushInt(2);
@@ -388,7 +428,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testPushReturnAddress() {
+    void testPushReturnAddress()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.push(ConcreteValue.returnAddress(100));
         assertEquals(1, stack.depth());
@@ -396,7 +437,8 @@ class ConcreteStackTest {
     }
 
     @Test
-    void testMixedTypes() {
+    void testMixedTypes()
+    {
         ConcreteStack stack = new ConcreteStack(10);
         stack.pushInt(42);
         stack.pushFloat(3.14f);

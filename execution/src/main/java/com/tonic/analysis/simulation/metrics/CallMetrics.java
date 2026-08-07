@@ -3,12 +3,10 @@ package com.tonic.analysis.simulation.metrics;
 import com.tonic.analysis.simulation.listener.MethodCallListener;
 
 /**
- * Metrics container for method call operations.
- *
- * <p>This class provides a clean interface to call statistics
- * collected during simulation.
+ * An immutable tally of the method calls seen during a simulation.
  */
-public class CallMetrics {
+public class CallMetrics
+{
 
     private final int totalCalls;
     private final int virtualCalls;
@@ -18,8 +16,8 @@ public class CallMetrics {
     private final int dynamicCalls;
     private final int distinctMethods;
 
-    private CallMetrics(int totalCalls, int virtualCalls, int staticCalls,
-                        int interfaceCalls, int specialCalls, int dynamicCalls, int distinctMethods) {
+    private CallMetrics(int totalCalls, int virtualCalls, int staticCalls, int interfaceCalls, int specialCalls, int dynamicCalls, int distinctMethods)
+    {
         this.totalCalls = totalCalls;
         this.virtualCalls = virtualCalls;
         this.staticCalls = staticCalls;
@@ -30,9 +28,13 @@ public class CallMetrics {
     }
 
     /**
-     * Creates metrics from a MethodCallListener.
+     * Snapshots the counters a call listener accumulated.
+     *
+     * @param listener the listener to read
+     * @return the metrics
      */
-    public static CallMetrics from(MethodCallListener listener) {
+    public static CallMetrics from(MethodCallListener listener)
+    {
         return new CallMetrics(
             listener.getTotalCalls(),
             listener.getVirtualCalls(),
@@ -45,103 +47,120 @@ public class CallMetrics {
     }
 
     /**
-     * Creates empty metrics.
+     * @return metrics with every counter at zero
      */
-    public static CallMetrics empty() {
+    public static CallMetrics empty()
+    {
         return new CallMetrics(0, 0, 0, 0, 0, 0, 0);
     }
 
     /**
-     * Gets the total number of method calls.
+     * @return the total number of calls
      */
-    public int getTotalCalls() {
+    public int getTotalCalls()
+    {
         return totalCalls;
     }
 
     /**
-     * Gets the number of virtual method calls.
+     * @return the number of invokevirtual calls
      */
-    public int getVirtualCalls() {
+    public int getVirtualCalls()
+    {
         return virtualCalls;
     }
 
     /**
-     * Gets the number of static method calls.
+     * @return the number of invokestatic calls
      */
-    public int getStaticCalls() {
+    public int getStaticCalls()
+    {
         return staticCalls;
     }
 
     /**
-     * Gets the number of interface method calls.
+     * @return the number of invokeinterface calls
      */
-    public int getInterfaceCalls() {
+    public int getInterfaceCalls()
+    {
         return interfaceCalls;
     }
 
     /**
-     * Gets the number of special method calls.
+     * @return the number of invokespecial calls
      */
-    public int getSpecialCalls() {
+    public int getSpecialCalls()
+    {
         return specialCalls;
     }
 
     /**
-     * Gets the number of dynamic (invokedynamic) calls.
+     * @return the number of invokedynamic calls
      */
-    public int getDynamicCalls() {
+    public int getDynamicCalls()
+    {
         return dynamicCalls;
     }
 
     /**
-     * Gets the number of distinct methods called.
+     * @return the number of distinct methods called
      */
-    public int getDistinctMethods() {
+    public int getDistinctMethods()
+    {
         return distinctMethods;
     }
 
     /**
-     * Gets the number of polymorphic calls (virtual + interface).
+     * @return virtual plus interface calls
      */
-    public int getPolymorphicCalls() {
+    public int getPolymorphicCalls()
+    {
         return virtualCalls + interfaceCalls;
     }
 
     /**
-     * Gets the percentage of virtual calls.
+     * @return virtual calls as a percentage of total calls, or 0 if there were none
      */
-    public double getVirtualCallPercentage() {
+    public double getVirtualCallPercentage()
+    {
         if (totalCalls == 0) return 0;
         return (double) virtualCalls / totalCalls * 100;
     }
 
     /**
-     * Gets the percentage of static calls.
+     * @return static calls as a percentage of total calls, or 0 if there were none
      */
-    public double getStaticCallPercentage() {
+    public double getStaticCallPercentage()
+    {
         if (totalCalls == 0) return 0;
         return (double) staticCalls / totalCalls * 100;
     }
 
     /**
-     * Returns true if any calls occurred.
+     * @return true if at least one call was recorded
      */
-    public boolean hasCalls() {
+    public boolean hasCalls()
+    {
         return totalCalls > 0;
     }
 
     /**
-     * Gets the average calls per distinct method.
+     * @return total calls divided by distinct methods, or 0 if no method was called
      */
-    public double getAverageCallsPerMethod() {
+    public double getAverageCallsPerMethod()
+    {
         if (distinctMethods == 0) return 0;
         return (double) totalCalls / distinctMethods;
     }
 
     /**
-     * Combines this metrics with another.
+     * Sums every counter with another set of metrics.
+     *
+     * @param other the metrics to add
+     * @return the combined metrics
      */
-    public CallMetrics combine(CallMetrics other) {
+    public CallMetrics combine(CallMetrics other)
+    {
         return new CallMetrics(
             this.totalCalls + other.totalCalls,
             this.virtualCalls + other.virtualCalls,
@@ -154,7 +173,8 @@ public class CallMetrics {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "CallMetrics[total=" + totalCalls +
             ", virtual=" + virtualCalls +
             ", static=" + staticCalls +

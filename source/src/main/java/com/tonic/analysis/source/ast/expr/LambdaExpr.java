@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a lambda expression: (params) -> body
- * Body can be either an Expression or a Statement (block).
+ * A lambda expression: (params) -&gt; body, whose body is either an Expression or a Statement block.
  */
-public final class LambdaExpr implements Expression {
+public final class LambdaExpr implements Expression
+{
 
     private final List<LambdaParameter> parameters;
     /**
@@ -25,14 +25,21 @@ public final class LambdaExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
     /**
-     * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc}
-     * (e.g. {@code lambda$foo$0()V}), or null when it could not be identified. Lets the decompiler key
-     * the inlined body's offset→line entries under the lambda's own method rather than the enclosing
-     * method's offset space.
+     * The synthetic implementation method this lambda was reconstructed from, as {@code name + desc} (e.g. {@code
+     * lambda$foo$0()V}), or null when it could not be identified.
      */
     private String implMethodKey;
 
-    public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type, SourceLocation location) {
+    /**
+     * Creates a lambda over a defensive copy of the parameters and reparents the body.
+     * @param parameters the lambda parameters, or null for none
+     * @param body the body, an Expression or a Statement block
+     * @param type the functional interface type of the lambda
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if body or type is null
+     */
+    public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type, SourceLocation location)
+    {
         this.parameters = new ArrayList<>(parameters != null ? parameters : List.of());
         this.body = Objects.requireNonNull(body, "body cannot be null");
         this.type = Objects.requireNonNull(type, "type cannot be null");
@@ -41,125 +48,198 @@ public final class LambdaExpr implements Expression {
         body.setParent(this);
     }
 
-    public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type) {
+    /**
+     * Creates a lambda with an unknown source location.
+     * @param parameters the lambda parameters, or null for none
+     * @param body the body, an Expression or a Statement block
+     * @param type the functional interface type of the lambda
+     * @throws NullPointerException if body or type is null
+     */
+    public LambdaExpr(List<LambdaParameter> parameters, ASTNode body, SourceType type)
+    {
         this(parameters, body, type, SourceLocation.UNKNOWN);
     }
 
-    public List<LambdaParameter> getParameters() {
+    /**
+     * @return the parameters
+     */
+    public List<LambdaParameter> getParameters()
+    {
         return parameters;
     }
 
-    public ASTNode getBody() {
+    /**
+     * @return the body
+     */
+    public ASTNode getBody()
+    {
         return body;
     }
 
-    public void setBody(ASTNode body) {
-        this.body = body;
+    /**
+     * Replaces the body, reparenting the new child.
+     * @param body the new body, an Expression or a Statement block
+     */
+    public void setBody(ASTNode body)
+    {
+        withBody(body);
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public String getImplMethodKey() {
+    /**
+     * @return the impl method key
+     */
+    public String getImplMethodKey()
+    {
         return implMethodKey;
     }
 
-    public LambdaExpr withBody(ASTNode body) {
-        if (this.body != null) this.body.setParent(null);
+    /**
+     * Replaces the body, reparenting the new child and releasing the former one.
+     * @param body the new body, an Expression or a Statement block
+     * @return this expression
+     */
+    public LambdaExpr withBody(ASTNode body)
+    {
+        ASTNode previous = this.body;
         this.body = body;
-        if (body != null) body.setParent(this);
+        if (body != null)
+        {
+            body.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
     /**
-     * Records the synthetic implementation method key ({@code name + desc}, e.g. {@code lambda$foo$0()V})
-     * this lambda was built from. Fluent (returns {@code this}); null is allowed (key unset).
+     * Records the synthetic implementation method key this lambda was built from.
+     *
+     * @param implMethodKey name plus descriptor, e.g. {@code lambda$foo$0()V}; null leaves the key unset
+     * @return this expression
      */
-    public LambdaExpr withImplMethodKey(String implMethodKey) {
+    public LambdaExpr withImplMethodKey(String implMethodKey)
+    {
         this.implMethodKey = implMethodKey;
         return this;
     }
 
     /**
-     * Checks if this lambda has an expression body (vs. block body).
+     * @return true if the body is a single expression
      */
-    public boolean isExpressionBody() {
+    public boolean isExpressionBody()
+    {
         return body instanceof Expression;
     }
 
     /**
-     * Checks if this lambda has a block body.
+     * @return true if the body is a statement block
      */
-    public boolean isBlockBody() {
+    public boolean isBlockBody()
+    {
         return body instanceof Statement;
     }
 
     /**
-     * Gets the body as an expression (throws if block body).
+     * Returns the body as an expression.
+     * @return the expression body
+     * @throws IllegalStateException if the body is a statement block
      */
-    public Expression getExpressionBody() {
-        if (body instanceof Expression) {
+    public Expression getExpressionBody()
+    {
+        if (body instanceof Expression)
+        {
             return (Expression) body;
         }
         throw new IllegalStateException("Lambda has block body, not expression body");
     }
 
     /**
-     * Gets the body as a statement (throws if expression body).
+     * Returns the body as a statement block.
+     * @return the block body
+     * @throws IllegalStateException if the body is a single expression
      */
-    public Statement getBlockBody() {
-        if (body instanceof Statement) {
+    public Statement getBlockBody()
+    {
+        if (body instanceof Statement)
+        {
             return (Statement) body;
         }
         throw new IllegalStateException("Lambda has expression body, not block body");
     }
 
     /**
-     * Checks if all parameters have implicit types.
+     * @return true if every parameter has an implicit type
      */
-    public boolean hasImplicitParameterTypes() {
+    public boolean hasImplicitParameterTypes()
+    {
         return parameters.stream().allMatch(LambdaParameter::implicitType);
     }
 
     /**
-     * Gets the number of parameters.
+     * @return the number of parameters
      */
-    public int getParameterCount() {
+    public int getParameterCount()
+    {
         return parameters.size();
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         return body != null ? java.util.List.of(body) : java.util.List.of();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitLambda(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
 
-        if (parameters.size() == 1 && hasImplicitParameterTypes()) {
+        if (parameters.size() == 1 && hasImplicitParameterTypes())
+        {
             sb.append(parameters.get(0).name());
-        } else {
+        }
+        else
+        {
             sb.append("(");
-            for (int i = 0; i < parameters.size(); i++) {
+            for (int i = 0; i < parameters.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(parameters.get(i).toJavaSource());
             }
@@ -168,9 +248,12 @@ public final class LambdaExpr implements Expression {
 
         sb.append(" -> ");
 
-        if (isExpressionBody()) {
+        if (isExpressionBody())
+        {
             sb.append(body);
-        } else {
+        }
+        else
+        {
             sb.append("{ ... }");
         }
 

@@ -2,9 +2,7 @@ package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.MemberEntry;
 import com.tonic.parser.MethodEntry;
-import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.testutil.BytecodeBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,13 +13,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AttributeTest {
+class AttributeTest
+{
 
     @Nested
-    class AttributeFactoryTests {
+    class AttributeFactoryTests
+    {
 
         @Test
-        void factoryCreatesCodeAttributeForMethod() throws IOException {
+        void factoryCreatesCodeAttributeForMethod() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Factory")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -35,7 +36,8 @@ class AttributeTest {
         }
 
         @Test
-        void factoryCreatesCorrectAttributeTypes() throws IOException {
+        void factoryCreatesCorrectAttributeTypes() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Types")
                 .publicStaticMethod("method", "()I")
                     .iconst(42)
@@ -49,7 +51,8 @@ class AttributeTest {
         }
 
         @Test
-        void factoryHandlesUnknownAttributeType() throws IOException {
+        void factoryHandlesUnknownAttributeType() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Unknown")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -61,10 +64,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeNameResolutionTests {
+    class AttributeNameResolutionTests
+    {
 
         @Test
-        void attributeNameResolvedFromConstantPool() throws IOException {
+        void attributeNameResolvedFromConstantPool() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Name")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -79,7 +84,8 @@ class AttributeTest {
         }
 
         @Test
-        void attributeNameIndexMatchesConstantPool() throws IOException {
+        void attributeNameIndexMatchesConstantPool() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Index")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -93,10 +99,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeLengthTests {
+    class AttributeLengthTests
+    {
 
         @Test
-        void attributeLengthUpdatesCorrectly() throws IOException {
+        void attributeLengthUpdatesCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Length")
                 .publicStaticMethod("simple", "()V")
                     .vreturn()
@@ -110,7 +118,8 @@ class AttributeTest {
         }
 
         @Test
-        void attributeLengthChangesWithCodeSize() throws IOException {
+        void attributeLengthChangesWithCodeSize() throws IOException
+        {
             ClassFile cf1 = BytecodeBuilder.forClass("com/test/Short")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -136,10 +145,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeWriteReadTests {
+    class AttributeWriteReadTests
+    {
 
         @Test
-        void attributeWritePreservesData() throws IOException {
+        void attributeWritePreservesData() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Write")
                 .publicStaticMethod("compute", "(II)I")
                     .iload(0)
@@ -160,7 +171,8 @@ class AttributeTest {
         }
 
         @Test
-        void multipleAttributesPreservedOnRoundTrip() throws IOException {
+        void multipleAttributesPreservedOnRoundTrip() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Multiple")
                 .publicStaticMethod("method1", "()V")
                     .vreturn()
@@ -175,7 +187,8 @@ class AttributeTest {
 
             assertEquals(original.getMethods().size(), parsed.getMethods().size());
 
-            for (int i = 0; i < original.getMethods().size(); i++) {
+            for (int i = 0; i < original.getMethods().size(); i++)
+            {
                 MethodEntry origMethod = original.getMethods().get(i);
                 MethodEntry parsedMethod = parsed.getMethods().get(i);
 
@@ -186,10 +199,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeToStringTests {
+    class AttributeToStringTests
+    {
 
         @Test
-        void toStringContainsAttributeName() throws IOException {
+        void toStringContainsAttributeName() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ToString")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -204,7 +219,8 @@ class AttributeTest {
         }
 
         @Test
-        void toStringProducesNonEmptyString() throws IOException {
+        void toStringProducesNonEmptyString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NonEmpty")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -220,10 +236,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeGetClassFileTests {
+    class AttributeGetClassFileTests
+    {
 
         @Test
-        void getClassFileReturnsParentClassFile() throws IOException {
+        void getClassFileReturnsParentClassFile() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Parent")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -237,7 +255,8 @@ class AttributeTest {
         }
 
         @Test
-        void getClassFileWorksWithMemberParent() throws IOException {
+        void getClassFileWorksWithMemberParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Member")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -252,7 +271,8 @@ class AttributeTest {
         }
 
         @Test
-        void getClassFileWorksWithDirectClassFileParent() throws IOException {
+        void getClassFileWorksWithDirectClassFileParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Direct")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -264,10 +284,12 @@ class AttributeTest {
     }
 
     @Nested
-    class AttributeEdgeCasesTests {
+    class AttributeEdgeCasesTests
+    {
 
         @Test
-        void emptyMethodHasCodeAttribute() throws IOException {
+        void emptyMethodHasCodeAttribute() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Empty")
                 .publicStaticMethod("empty", "()V")
                     .vreturn()
@@ -282,7 +304,8 @@ class AttributeTest {
         }
 
         @Test
-        void complexMethodHasCodeAttribute() throws IOException {
+        void complexMethodHasCodeAttribute() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Complex")
                 .publicStaticMethod("complex", "(IIII)I")
                     .iload(0)
@@ -306,7 +329,8 @@ class AttributeTest {
         }
 
         @Test
-        void attributeWithZeroLengthHandledCorrectly() throws IOException {
+        void attributeWithZeroLengthHandledCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ZeroLen")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -318,10 +342,12 @@ class AttributeTest {
     }
 
     @Nested
-    class SpecificAttributeTypeTests {
+    class SpecificAttributeTypeTests
+    {
 
         @Test
-        void codeAttributeIsRecognized() throws IOException {
+        void codeAttributeIsRecognized() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Code")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -334,7 +360,8 @@ class AttributeTest {
         }
 
         @Test
-        void stackMapTableAttributeMayExist() throws IOException {
+        void stackMapTableAttributeMayExist() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/StackMap")
                 .publicStaticMethod("withBranch", "(I)V")
                     .iload(0)
@@ -349,10 +376,12 @@ class AttributeTest {
     }
 
     @Nested
-    class ConstantPoolIntegrationTests {
+    class ConstantPoolIntegrationTests
+    {
 
         @Test
-        void attributeNameInConstantPool() throws IOException {
+        void attributeNameInConstantPool() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CP")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -367,7 +396,8 @@ class AttributeTest {
         }
 
         @Test
-        void attributeConstantPoolReferencesValid() throws IOException {
+        void attributeConstantPoolReferencesValid() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Valid")
                 .publicStaticMethod("method", "()V")
                     .vreturn()

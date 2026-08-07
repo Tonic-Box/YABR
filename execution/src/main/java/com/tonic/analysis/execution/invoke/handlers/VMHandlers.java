@@ -1,15 +1,19 @@
 package com.tonic.analysis.execution.invoke.handlers;
 
 import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class VMHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the JDK internal VM, boot loader, perf, signal, and CDS natives.
+ */
+public final class VMHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerVMHandlers(registry);
         registerBootLoaderHandlers(registry);
         registerPerfHandlers(registry);
@@ -19,9 +23,9 @@ public final class VMHandlers implements NativeHandlerProvider {
         registerCDSHandlers(registry);
     }
 
-    private void registerVMHandlers(NativeRegistry registry) {
-        registry.register("jdk/internal/misc/VM", "initialize", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerVMHandlers(NativeRegistry registry)
+    {
+        registry.register("jdk/internal/misc/VM", "initialize", "()V", (receiver, args, ctx) -> null);
 
         registry.register("jdk/internal/misc/VM", "initializeFromArchive", "(Ljava/lang/Class;)V",
             (receiver, args, ctx) -> null);
@@ -51,7 +55,8 @@ public final class VMHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.longValue(1000L));
     }
 
-    private void registerBootLoaderHandlers(NativeRegistry registry) {
+    private void registerBootLoaderHandlers(NativeRegistry registry)
+    {
         registry.register("jdk/internal/loader/BootLoader", "getSystemPackageLocation", "(Ljava/lang/String;)Ljava/lang/String;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
 
@@ -68,9 +73,9 @@ public final class VMHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.nullRef());
     }
 
-    private void registerPerfHandlers(NativeRegistry registry) {
-        registry.register("jdk/internal/perf/Perf", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerPerfHandlers(NativeRegistry registry)
+    {
+        registry.register("jdk/internal/perf/Perf", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
         registry.register("jdk/internal/perf/Perf", "createLong", "(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
@@ -91,10 +96,12 @@ public final class VMHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.longValue(1000000000L));
     }
 
-    private void registerVMSupportHandlers(NativeRegistry registry) {
+    private void registerVMSupportHandlers(NativeRegistry registry)
+    {
         registry.register("jdk/internal/vm/VMSupport", "initAgentProperties", "(Ljava/util/Properties;)Ljava/util/Properties;",
             (receiver, args, ctx) -> {
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     return ConcreteValue.reference(args[0].asReference());
                 }
                 return ConcreteValue.nullRef();
@@ -104,18 +111,19 @@ public final class VMHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.reference(ctx.getHeapManager().internString(System.getProperty("java.io.tmpdir", "/tmp"))));
     }
 
-    private void registerSignalHandlers(NativeRegistry registry) {
+    private void registerSignalHandlers(NativeRegistry registry)
+    {
         registry.register("jdk/internal/misc/Signal", "findSignal0", "(Ljava/lang/String;)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
 
         registry.register("jdk/internal/misc/Signal", "handle0", "(IJ)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
 
-        registry.register("jdk/internal/misc/Signal", "raise0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Signal", "raise0", "(I)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerConstantPoolHandlers(NativeRegistry registry) {
+    private void registerConstantPoolHandlers(NativeRegistry registry)
+    {
         registry.register("jdk/internal/reflect/ConstantPool", "getSize0", "(Ljava/lang/Object;)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
@@ -180,7 +188,8 @@ public final class VMHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
     }
 
-    private void registerCDSHandlers(NativeRegistry registry) {
+    private void registerCDSHandlers(NativeRegistry registry)
+    {
         registry.register("jdk/internal/misc/CDS", "isDumpingClassList0", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 

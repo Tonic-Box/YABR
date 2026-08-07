@@ -6,10 +6,16 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class NetworkHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the java.net stack that stub out real I/O, resolving every host to
+ * localhost and failing every socket operation without touching the network.
+ */
+public final class NetworkHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerInetAddressHandlers(registry);
         registerPlainSocketImplHandlers(registry);
         registerDatagramSocketHandlers(registry);
@@ -17,15 +23,13 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registerSocketStreamHandlers(registry);
     }
 
-    private void registerInetAddressHandlers(NativeRegistry registry) {
-        registry.register("java/net/InetAddress", "init", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerInetAddressHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/InetAddress", "init", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/Inet4Address", "init", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/Inet4Address", "init", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/Inet6Address", "init", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/Inet6Address", "init", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/InetAddressImplFactory", "isIPv6Supported", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
@@ -65,9 +69,9 @@ public final class NetworkHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
     }
 
-    private void registerPlainSocketImplHandlers(NativeRegistry registry) {
-        registry.register("java/net/PlainSocketImpl", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerPlainSocketImplHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/PlainSocketImpl", "initIDs", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/PlainSocketImpl", "socket0", "(Z)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
@@ -75,8 +79,7 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registry.register("java/net/PlainSocketImpl", "bind0", "(ILjava/net/InetAddress;IZ)V",
             (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "listen0", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "listen0", "(II)V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/PlainSocketImpl", "connect0", "(ILjava/net/InetAddress;I)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
@@ -84,35 +87,27 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registry.register("java/net/PlainSocketImpl", "accept0", "(I[Ljava/net/InetSocketAddress;)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
 
-        registry.register("java/net/PlainSocketImpl", "waitForConnect", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "waitForConnect", "(II)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "waitForNewConnection", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "waitForNewConnection", "(II)V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/PlainSocketImpl", "available0", "(I)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/net/PlainSocketImpl", "close0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "close0", "(I)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "shutdown0", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "shutdown0", "(II)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "setIntOption", "(III)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "setIntOption", "(III)V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/PlainSocketImpl", "getIntOption", "(II)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/net/PlainSocketImpl", "setSoTimeout0", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "setSoTimeout0", "(II)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "sendOOB", "(II)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "sendOOB", "(II)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/PlainSocketImpl", "configureBlocking", "(IZ)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/PlainSocketImpl", "configureBlocking", "(IZ)V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/PlainSocketImpl", "localPort0", "(I)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -126,16 +121,14 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registry.register("java/net/AbstractPlainDatagramSocketImpl", "isReusePortAvailable0", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/net/SocketCleanable", "cleanupClose0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/SocketCleanable", "cleanupClose0", "(I)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerDatagramSocketHandlers(NativeRegistry registry) {
-        registry.register("java/net/DatagramPacket", "init", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerDatagramSocketHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/DatagramPacket", "init", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/net/DualStackPlainDatagramSocketImpl", "initIDs", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/DualStackPlainDatagramSocketImpl", "initIDs", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/DualStackPlainDatagramSocketImpl", "socketCreate", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
@@ -176,9 +169,9 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registerTwoStacksDatagramHandlers(registry);
     }
 
-    private void registerTwoStacksDatagramHandlers(NativeRegistry registry) {
-        registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "init", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerTwoStacksDatagramHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "init", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "datagramSocketCreate", "()V",
             (receiver, args, ctx) -> null);
@@ -210,8 +203,7 @@ public final class NetworkHandlers implements NativeHandlerProvider {
         registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "getTTL", "()B",
             (receiver, args, ctx) -> ConcreteValue.intValue(64));
 
-        registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "setTTL", "(B)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "setTTL", "(B)V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/TwoStacksPlainDatagramSocketImpl", "getTimeToLive", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(64));
@@ -238,9 +230,9 @@ public final class NetworkHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.nullRef());
     }
 
-    private void registerNetworkInterfaceHandlers(NativeRegistry registry) {
-        registry.register("java/net/NetworkInterface", "init", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerNetworkInterfaceHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/NetworkInterface", "init", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/NetworkInterface", "getByName0", "(Ljava/lang/String;)Ljava/net/NetworkInterface;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
@@ -279,15 +271,14 @@ public final class NetworkHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerSocketStreamHandlers(NativeRegistry registry) {
-        registry.register("java/net/SocketInputStream", "init", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerSocketStreamHandlers(NativeRegistry registry)
+    {
+        registry.register("java/net/SocketInputStream", "init", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/SocketInputStream", "socketRead0", "(Ljava/io/FileDescriptor;[BIII)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(-1));
 
-        registry.register("java/net/SocketOutputStream", "init", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/net/SocketOutputStream", "init", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/net/SocketOutputStream", "socketWrite0", "(Ljava/io/FileDescriptor;[BII)V",
             (receiver, args, ctx) -> null);

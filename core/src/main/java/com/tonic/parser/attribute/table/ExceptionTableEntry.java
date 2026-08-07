@@ -2,9 +2,9 @@ package com.tonic.parser.attribute.table;
 
 /**
  * Represents an entry in the exception table of a Code attribute.
- * Describes a try-catch block with handler location and exception type.
  */
-public class ExceptionTableEntry {
+public class ExceptionTableEntry
+{
     private int startPc;
     private int endPc;
     private int handlerPc;
@@ -12,13 +12,13 @@ public class ExceptionTableEntry {
 
     /**
      * Constructs an exception table entry.
-     *
      * @param startPc start of the try block (inclusive)
      * @param endPc end of the try block (exclusive)
      * @param handlerPc start of the exception handler
      * @param catchType constant pool index of the exception class, or 0 for any
      */
-    public ExceptionTableEntry(int startPc, int endPc, int handlerPc, int catchType) {
+    public ExceptionTableEntry(int startPc, int endPc, int handlerPc, int catchType)
+    {
         this.startPc = startPc;
         this.endPc = endPc;
         this.handlerPc = handlerPc;
@@ -26,55 +26,64 @@ public class ExceptionTableEntry {
     }
 
     /**
-     * Returns the start offset of the try block.
-     *
-     * @return the start program counter
+     * @return the inclusive start program counter of the try block
      */
-    public int getStartPc() {
+    public int getStartPc()
+    {
         return startPc;
     }
 
-    public void setStartPc(int startPc) {
+    /**
+     * @param startPc the new inclusive start program counter
+     */
+    public void setStartPc(int startPc)
+    {
         this.startPc = startPc;
     }
 
     /**
-     * Returns the end offset of the try block.
-     *
-     * @return the end program counter
+     * @return the exclusive end program counter of the try block
      */
-    public int getEndPc() {
+    public int getEndPc()
+    {
         return endPc;
     }
 
-    public void setEndPc(int endPc) {
+    /**
+     * @param endPc the new exclusive end program counter
+     */
+    public void setEndPc(int endPc)
+    {
         this.endPc = endPc;
     }
 
     /**
-     * Returns the start offset of the exception handler.
-     *
      * @return the handler program counter
      */
-    public int getHandlerPc() {
+    public int getHandlerPc()
+    {
         return handlerPc;
     }
 
-    public void setHandlerPc(int handlerPc) {
+    /**
+     * @param handlerPc the new handler program counter
+     */
+    public void setHandlerPc(int handlerPc)
+    {
         this.handlerPc = handlerPc;
     }
 
     /**
-     * Returns the constant pool index of the exception class.
-     *
      * @return the catch type index, or 0 for any exception
      */
-    public int getCatchType() {
+    public int getCatchType()
+    {
         return catchType;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ExceptionTableEntry{" +
                 "startPc=" + startPc +
                 ", endPc=" + endPc +

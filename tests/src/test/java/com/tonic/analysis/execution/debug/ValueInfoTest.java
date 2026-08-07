@@ -6,10 +6,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ValueInfoTest {
+class ValueInfoTest
+{
 
     @Test
-    void testIntValue() {
+    void testIntValue()
+    {
         ConcreteValue value = ConcreteValue.intValue(42);
         ValueInfo info = new ValueInfo(value);
 
@@ -19,7 +21,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testLongValue() {
+    void testLongValue()
+    {
         ConcreteValue value = ConcreteValue.longValue(123456789L);
         ValueInfo info = new ValueInfo(value);
 
@@ -29,7 +32,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testFloatValue() {
+    void testFloatValue()
+    {
         ConcreteValue value = ConcreteValue.floatValue(3.14f);
         ValueInfo info = new ValueInfo(value);
 
@@ -40,7 +44,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testDoubleValue() {
+    void testDoubleValue()
+    {
         ConcreteValue value = ConcreteValue.doubleValue(2.718);
         ValueInfo info = new ValueInfo(value);
 
@@ -50,7 +55,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testReferenceValue() {
+    void testReferenceValue()
+    {
         ObjectInstance obj = new ObjectInstance(123, "TestClass");
         ConcreteValue value = ConcreteValue.reference(obj);
         ValueInfo info = new ValueInfo(value);
@@ -61,7 +67,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testNullValue() {
+    void testNullValue()
+    {
         ConcreteValue value = ConcreteValue.nullRef();
         ValueInfo info = new ValueInfo(value);
 
@@ -71,7 +78,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testReturnAddressValue() {
+    void testReturnAddressValue()
+    {
         ConcreteValue value = ConcreteValue.returnAddress(100);
         ValueInfo info = new ValueInfo(value);
 
@@ -81,12 +89,14 @@ class ValueInfoTest {
     }
 
     @Test
-    void testNullValueThrows() {
+    void testNullValueThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new ValueInfo(null));
     }
 
     @Test
-    void testEquality() {
+    void testEquality()
+    {
         ConcreteValue value1 = ConcreteValue.intValue(42);
         ConcreteValue value2 = ConcreteValue.intValue(42);
         ValueInfo info1 = new ValueInfo(value1);
@@ -97,7 +107,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testInequality() {
+    void testInequality()
+    {
         ValueInfo info1 = new ValueInfo(ConcreteValue.intValue(42));
         ValueInfo info2 = new ValueInfo(ConcreteValue.intValue(43));
 
@@ -105,7 +116,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ValueInfo info = new ValueInfo(ConcreteValue.intValue(42));
         String str = info.toString();
 
@@ -114,7 +126,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testTypeStringCorrect() {
+    void testTypeStringCorrect()
+    {
         ValueInfo intInfo = new ValueInfo(ConcreteValue.intValue(1));
         ValueInfo longInfo = new ValueInfo(ConcreteValue.longValue(1L));
         ValueInfo floatInfo = new ValueInfo(ConcreteValue.floatValue(1.0f));
@@ -127,7 +140,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testNegativeIntValue() {
+    void testNegativeIntValue()
+    {
         ConcreteValue value = ConcreteValue.intValue(-42);
         ValueInfo info = new ValueInfo(value);
 
@@ -137,7 +151,8 @@ class ValueInfoTest {
     }
 
     @Test
-    void testZeroValue() {
+    void testZeroValue()
+    {
         ConcreteValue value = ConcreteValue.intValue(0);
         ValueInfo info = new ValueInfo(value);
 

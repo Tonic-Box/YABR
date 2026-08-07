@@ -1,10 +1,12 @@
 package com.tonic.analysis.bytecode;
 
 import com.tonic.analysis.CodeWriter;
+import com.tonic.analysis.instruction.GotoInstruction;
+import com.tonic.analysis.instruction.ILoadInstruction;
+import com.tonic.analysis.instruction.IStoreInstruction;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.analysis.instruction.NopInstruction;
-import com.tonic.builder.ClassBuilder;
-import com.tonic.type.AccessFlags;
+import com.tonic.analysis.instruction.WideInstruction;
 import com.tonic.analysis.source.ast.decl.ClassDecl;
 import com.tonic.analysis.source.ast.decl.CompilationUnit;
 import com.tonic.analysis.source.ast.decl.MethodDecl;
@@ -13,17 +15,19 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.lower.ASTLowerer;
 import com.tonic.analysis.source.parser.JavaParser;
 import com.tonic.analysis.ssa.SSA;
+import com.tonic.builder.ClassBuilder;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.testutil.TestUtils;
+import com.tonic.type.AccessFlags;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -32,12 +36,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * {@code replaceInstruction}) and the relink/layout pass: a method with backward+forward branches (a
  * loop) and a switch is edited at a point inside a branch span, then loaded and invoked. Correct
  * results prove branch/switch targets, the exception table, and StackMapTable frames are all relinked
- * — and that the previously latent branch-corruption bug in offset-shifting edits is fixed.
+ * - and that the previously latent branch-corruption bug in offset-shifting edits is fixed.
  */
-class BytecodeEditTest {
+class BytecodeEditTest
+{
 
-    /** Compiles a single-class source to a fresh ClassFile via the YABR front end (all methods static). */
-    private ClassFile compile(String src, String name) throws Exception {
+    /**
+     * Compiles a single-class source to a fresh ClassFile via the YABR front end (all methods static).
+     */
+    private ClassFile compile(String src, String name) throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         JavaParser parser = JavaParser.create();
         CompilationUnit cu = parser.parse(src);
@@ -47,23 +55,29 @@ class BytecodeEditTest {
         lowerer.setCurrentClassDecl(cls);
         lowerer.setImports(cu.getImports());
         SSA ssa = new SSA(cf.getConstPool());
-        for (MethodDecl m : cls.getMethods()) {
-            if (m.getBody() == null) {
+        for (MethodDecl m : cls.getMethods())
+        {
+            if (m.getBody() == null)
+            {
                 continue;
             }
             List<SourceType> params = new ArrayList<>();
-            for (ParameterDecl p : m.getParameters()) {
+            for (ParameterDecl p : m.getParameters())
+            {
                 params.add(p.getType());
             }
             StringBuilder d = new StringBuilder("(");
-            for (SourceType t : params) {
+            for (SourceType t : params)
+            {
                 d.append(t.toIRType().getDescriptor());
             }
             d.append(")").append(m.getReturnType().toIRType().getDescriptor());
             cf.createNewMethodWithDescriptor(new AccessBuilder().setPublic().setStatic().build(), m.getName(), d.toString());
             MethodEntry e = null;
-            for (MethodEntry me : cf.getMethods()) {
-                if (me.getName().equals(m.getName())) {
+            for (MethodEntry me : cf.getMethods())
+            {
+                if (me.getName().equals(m.getName()))
+                {
                     e = me;
                 }
             }
@@ -78,22 +92,27 @@ class BytecodeEditTest {
             + " public static int pick(int x) { int r; switch (x) { case 0: r = 10; break; case 1: r = 20;"
             + "   break; case 2: r = 30; break; default: r = -1; } return r; } }";
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException(name);
     }
 
-    private static Instruction middle(CodeWriter cw) {
+    private static Instruction middle(CodeWriter cw)
+    {
         List<Instruction> list = new ArrayList<>();
         cw.getInstructions().forEach(list::add);
         return list.get(list.size() / 2);
     }
 
-    private void assertBehaviour(ClassFile cf) throws Exception {
+    private void assertBehaviour(ClassFile cf) throws Exception
+    {
         Class<?> clazz = TestUtils.loadAndVerify(cf);
         assertEquals(10, (int) clazz.getMethod("loopSum", int.class).invoke(null, 5));
         assertEquals(30, (int) clazz.getMethod("pick", int.class).invoke(null, 2));
@@ -101,9 +120,11 @@ class BytecodeEditTest {
     }
 
     @Test
-    void insertBeforeAcrossBranchSpansRelinks() throws Exception {
+    void insertBeforeAcrossBranchSpansRelinks() throws Exception
+    {
         ClassFile cf = compile(SRC, "BE");
-        for (String mn : new String[]{"loopSum", "pick"}) {
+        for (String mn : new String[]{"loopSum", "pick"})
+        {
             CodeWriter cw = new CodeWriter(method(cf, mn));
             cw.insertBefore(middle(cw), new NopInstruction(0x00, 0));
             cw.write();
@@ -112,9 +133,11 @@ class BytecodeEditTest {
     }
 
     @Test
-    void removeInstructionRelinks() throws Exception {
+    void removeInstructionRelinks() throws Exception
+    {
         ClassFile cf = compile(SRC, "BE");
-        for (String mn : new String[]{"loopSum", "pick"}) {
+        for (String mn : new String[]{"loopSum", "pick"})
+        {
             // Insert a NOP mid-method, then remove it: net no-op, but both edits relink across branches.
             CodeWriter cw = new CodeWriter(method(cf, mn));
             NopInstruction nop = new NopInstruction(0x00, 0);
@@ -123,8 +146,10 @@ class BytecodeEditTest {
 
             CodeWriter cw2 = new CodeWriter(method(cf, mn));
             Instruction toRemove = null;
-            for (Instruction i : cw2.getInstructions()) {
-                if (i instanceof NopInstruction) {
+            for (Instruction i : cw2.getInstructions())
+            {
+                if (i instanceof NopInstruction)
+                {
                     toRemove = i;
                     break;
                 }
@@ -136,9 +161,11 @@ class BytecodeEditTest {
     }
 
     @Test
-    void replaceInstructionRelinks() throws Exception {
+    void replaceInstructionRelinks() throws Exception
+    {
         ClassFile cf = compile(SRC, "BE");
-        for (String mn : new String[]{"loopSum", "pick"}) {
+        for (String mn : new String[]{"loopSum", "pick"})
+        {
             // Insert a NOP, then replace it with another NOP: stack-neutral, so behaviour is preserved
             // while exercising replace + relink across branch spans.
             CodeWriter cw = new CodeWriter(method(cf, mn));
@@ -147,8 +174,10 @@ class BytecodeEditTest {
 
             CodeWriter cw2 = new CodeWriter(method(cf, mn));
             Instruction nop = null;
-            for (Instruction i : cw2.getInstructions()) {
-                if (i instanceof NopInstruction) {
+            for (Instruction i : cw2.getInstructions())
+            {
+                if (i instanceof NopInstruction)
+                {
                     nop = i;
                     break;
                 }
@@ -160,9 +189,11 @@ class BytecodeEditTest {
     }
 
     @Test
-    void replaceInstructionsBatchesInOneRelink() throws Exception {
+    void replaceInstructionsBatchesInOneRelink() throws Exception
+    {
         ClassFile cf = compile(SRC, "BE");
-        for (String mn : new String[]{"loopSum", "pick"}) {
+        for (String mn : new String[]{"loopSum", "pick"})
+        {
             // Insert several NOPs across the method, then replace them all in a single batched relink with
             // fresh NOPs: stack-neutral so behaviour is preserved, while exercising the batch path + relink
             // across branch spans. Equivalent to N replaceInstruction calls but with one relink.
@@ -176,8 +207,10 @@ class BytecodeEditTest {
 
             CodeWriter cw2 = new CodeWriter(method(cf, mn));
             Map<Instruction, Instruction> replacements = new IdentityHashMap<>();
-            for (Instruction i : cw2.getInstructions()) {
-                if (i instanceof NopInstruction) {
+            for (Instruction i : cw2.getInstructions())
+            {
+                if (i instanceof NopInstruction)
+                {
                     replacements.put(i, new NopInstruction(0x00, 0));
                 }
             }
@@ -189,9 +222,10 @@ class BytecodeEditTest {
     }
 
     @Test
-    void cloneRangeCanonicalizesLocalVarOpcodes() throws Exception {
+    void cloneRangeCanonicalizesLocalVarOpcodes() throws Exception
+    {
         // Locals at slots 0 (param n) and 1 (a). Clone with localOffset so a slot lands in 0-3 and,
-        // separately, beyond 255 — the clone must use the compact 1-byte form for the former and the
+        // separately, beyond 255 - the clone must use the compact 1-byte form for the former and the
         // wide form for the latter (rather than always emitting a general 2-byte load/store).
         ClassFile cf = compile("public class LV { static int f(int n) { int a = n + 1; return a; } }", "LV");
         CodeWriter cw = new CodeWriter(method(cf, "f"));
@@ -200,9 +234,10 @@ class BytecodeEditTest {
 
         List<Instruction> shifted = cw.cloneRange(body.get(0), body.get(body.size() - 1), 1);
         boolean sawLowLocal = false;
-        for (Instruction i : shifted) {
-            if (i instanceof com.tonic.analysis.instruction.ILoadInstruction
-                    || i instanceof com.tonic.analysis.instruction.IStoreInstruction) {
+        for (Instruction i : shifted)
+        {
+            if (i instanceof ILoadInstruction || i instanceof IStoreInstruction)
+            {
                 assertEquals(1, i.getLength(), "a local at index 0-3 must use the compact 1-byte form: " + i);
                 sawLowLocal = true;
             }
@@ -211,8 +246,10 @@ class BytecodeEditTest {
 
         List<Instruction> wide = cw.cloneRange(body.get(0), body.get(body.size() - 1), 300);
         boolean sawWide = false;
-        for (Instruction i : wide) {
-            if (i instanceof com.tonic.analysis.instruction.WideInstruction) {
+        for (Instruction i : wide)
+        {
+            if (i instanceof WideInstruction)
+            {
                 sawWide = true;
                 break;
             }
@@ -221,9 +258,10 @@ class BytecodeEditTest {
     }
 
     @Test
-    void cloneRangeReproducesBodyWithRelinkedBranches() throws Exception {
+    void cloneRangeReproducesBodyWithRelinkedBranches() throws Exception
+    {
         // A method with a loop + an if + locals; clone its whole body into a twin method (same pool)
-        // and confirm the twin computes the same result — proving cloneRange relinks the cloned
+        // and confirm the twin computes the same result - proving cloneRange relinks the cloned
         // branches and copies local-variable instructions correctly.
         ClassFile cf = compile(
                 "public class CL { public static int absSum(int n) { int s = 0;"
@@ -241,7 +279,8 @@ class BytecodeEditTest {
         twin.write();
 
         Class<?> clazz = TestUtils.loadAndVerify(cf);
-        for (int n : new int[]{0, 1, 5, 10}) {
+        for (int n : new int[]{0, 1, 5, 10})
+        {
             int a = (int) clazz.getMethod("absSum", int.class).invoke(null, n);
             int b = (int) clazz.getMethod("absSum2", int.class).invoke(null, n);
             assertEquals(a, b, "clone diverged at n=" + n);
@@ -249,7 +288,8 @@ class BytecodeEditTest {
     }
 
     @Test
-    void stripStackMapTablesRemovesFramesOnWrite() throws Exception {
+    void stripStackMapTablesRemovesFramesOnWrite() throws Exception
+    {
         ClassFile cf = compile(SRC, "BE");
         int before = countStackMapTables(new ClassFile(new java.io.ByteArrayInputStream(cf.write())));
         org.junit.jupiter.api.Assertions.assertTrue(before > 0, "fixture should have frames to strip");
@@ -261,7 +301,8 @@ class BytecodeEditTest {
     }
 
     @Test
-    void branchWideningOnLargeSpan() throws Exception {
+    void branchWideningOnLargeSpan() throws Exception
+    {
         // Insert ~40k NOPs inside a loop and an if/else so branch spans exceed +/-32767, forcing
         // goto->goto_w and conditional->inverted+goto_w. Behaviour is preserved and the class verifies.
         ClassFile cf = compile(
@@ -269,10 +310,12 @@ class BytecodeEditTest {
                 + " public static int loop(int x) { int s = 0; for (int i = 0; i < x; i++) { s = s + 1; } return s; }"
                 + " public static int branch(int x) { int r; if (x > 0) { r = 1; } else { r = 2; } return r; } }",
                 "WD");
-        for (String mn : new String[]{"loop", "branch"}) {
+        for (String mn : new String[]{"loop", "branch"})
+        {
             CodeWriter cw = new CodeWriter(method(cf, mn));
             List<Instruction> nops = new ArrayList<>();
-            for (int i = 0; i < 40000; i++) {
+            for (int i = 0; i < 40000; i++)
+            {
                 nops.add(new NopInstruction(0x00, 0));
             }
             cw.insertBefore(middle(cw), nops);
@@ -289,11 +332,12 @@ class BytecodeEditTest {
         assertEquals(2, (int) clazz.getMethod("branch", int.class).invoke(null, -5));
     }
 
-    private static boolean hasWideGoto(CodeWriter cw) {
-        for (Instruction i : cw.getInstructions()) {
-            if (i instanceof com.tonic.analysis.instruction.GotoInstruction
-                    && ((com.tonic.analysis.instruction.GotoInstruction) i).getType()
-                       == com.tonic.analysis.instruction.GotoInstruction.GotoType.GOTO_WIDE) {
+    private static boolean hasWideGoto(CodeWriter cw)
+    {
+        for (Instruction i : cw.getInstructions())
+        {
+            if (i instanceof GotoInstruction && ((GotoInstruction) i).getType() == GotoInstruction.GotoType.GOTO_WIDE)
+            {
                 return true;
             }
         }
@@ -301,7 +345,8 @@ class BytecodeEditTest {
     }
 
     @Test
-    void clonedSwitchSurvivesRealignment() throws Exception {
+    void clonedSwitchSurvivesRealignment() throws Exception
+    {
         // Clone a switch-containing body (identity-tracked targets), install it as another method's
         // body, then prepend NOPs to shift the switch to a different 4-byte alignment. With targets
         // carried by identity the switch relinks (re-pads + retargets) correctly at any alignment.
@@ -319,19 +364,20 @@ class BytecodeEditTest {
         CodeWriter hw = new CodeWriter(method(cf, "h"));
         hw.replaceBody(cr);
         Instruction first = hw.getInstructions().iterator().next();
-        hw.insertBefore(first, java.util.Arrays.asList(
-                new NopInstruction(0x00, 0), new NopInstruction(0x00, 0)));
+        hw.insertBefore(first, java.util.Arrays.asList(new NopInstruction(0x00, 0), new NopInstruction(0x00, 0)));
         hw.write();
 
         Class<?> clazz = TestUtils.loadAndVerify(cf);
-        for (int x : new int[]{1, 2, 5, 9}) {
+        for (int x : new int[]{1, 2, 5, 9})
+        {
             assertEquals((int) clazz.getMethod("pick", int.class).invoke(null, x),
                     (int) clazz.getMethod("h", int.class).invoke(null, x), "switch clone diverged at x=" + x);
         }
     }
 
     @Test
-    void insertIntoMethodWithTryCatchPreservesHandler() throws Exception {
+    void insertIntoMethodWithTryCatchPreservesHandler() throws Exception
+    {
         // Host has a real try/catch (10/x, catching ArithmeticException -> -1). Insert a NOP whose
         // scratch offset (0) collides with the host's first instruction; the exception table must
         // relink by identity (the prior offset-keyed remap corrupted it on such a collision).
@@ -363,14 +409,19 @@ class BytecodeEditTest {
         assertEquals(-1, (int) clazz.getMethod("guarded", int.class).invoke(null, 0));
     }
 
-    private static int countStackMapTables(ClassFile cf) {
+    private static int countStackMapTables(ClassFile cf)
+    {
         int n = 0;
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getCodeAttribute() == null) {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getCodeAttribute() == null)
+            {
                 continue;
             }
-            for (com.tonic.parser.attribute.Attribute a : m.getCodeAttribute().getAttributes()) {
-                if (a.getClass().getSimpleName().equals("StackMapTableAttribute")) {
+            for (Attribute a : m.getCodeAttribute().getAttributes())
+            {
+                if (a.getClass().getSimpleName().equals("StackMapTableAttribute"))
+                {
                     n++;
                 }
             }

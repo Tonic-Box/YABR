@@ -8,10 +8,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class InvocationResultTest {
+class InvocationResultTest
+{
 
     @Test
-    void testCompleted() {
+    void testCompleted()
+    {
         ConcreteValue value = ConcreteValue.intValue(42);
         InvocationResult result = InvocationResult.completed(value);
 
@@ -24,7 +26,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testCompletedWithNull() {
+    void testCompletedWithNull()
+    {
         InvocationResult result = InvocationResult.completed(null);
 
         assertEquals(InvocationResult.Status.COMPLETED, result.getStatus());
@@ -33,7 +36,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testPushFrame() {
+    void testPushFrame()
+    {
         StackFrame frame = mock(StackFrame.class);
         InvocationResult result = InvocationResult.pushFrame(frame);
 
@@ -46,14 +50,14 @@ class InvocationResultTest {
     }
 
     @Test
-    void testPushFrameWithNull() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            InvocationResult.pushFrame(null);
-        });
+    void testPushFrameWithNull()
+    {
+        assertThrows(IllegalArgumentException.class, () -> InvocationResult.pushFrame(null));
     }
 
     @Test
-    void testDelegated() {
+    void testDelegated()
+    {
         InvocationResult result = InvocationResult.delegated();
 
         assertEquals(InvocationResult.Status.DELEGATED, result.getStatus());
@@ -65,7 +69,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testNativeHandled() {
+    void testNativeHandled()
+    {
         ConcreteValue value = ConcreteValue.longValue(100L);
         InvocationResult result = InvocationResult.nativeHandled(value);
 
@@ -78,7 +83,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testNativeHandledWithNull() {
+    void testNativeHandledWithNull()
+    {
         InvocationResult result = InvocationResult.nativeHandled(null);
 
         assertEquals(InvocationResult.Status.NATIVE_HANDLED, result.getStatus());
@@ -86,7 +92,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testException() {
+    void testException()
+    {
         ObjectInstance exception = new ObjectInstance(1, "java/lang/Exception");
         InvocationResult result = InvocationResult.exception(exception);
 
@@ -99,14 +106,14 @@ class InvocationResultTest {
     }
 
     @Test
-    void testExceptionWithNull() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            InvocationResult.exception(null);
-        });
+    void testExceptionWithNull()
+    {
+        assertThrows(IllegalArgumentException.class, () -> InvocationResult.exception(null));
     }
 
     @Test
-    void testStatusPredicates() {
+    void testStatusPredicates()
+    {
         InvocationResult completed = InvocationResult.completed(ConcreteValue.intValue(0));
         assertTrue(completed.isCompleted());
         assertFalse(completed.isPushFrame());
@@ -126,7 +133,8 @@ class InvocationResultTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         InvocationResult result = InvocationResult.completed(ConcreteValue.intValue(42));
         String str = result.toString();
         assertTrue(str.contains("COMPLETED"));

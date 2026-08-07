@@ -2,7 +2,11 @@ package com.tonic.type;
 
 import java.util.Objects;
 
-public class MethodHandle {
+/**
+ * A CONSTANT_MethodHandle target: a reference kind tag plus the member it points at.
+ */
+public class MethodHandle
+{
 
     public static final int H_GETFIELD = 1;
     public static final int H_GETSTATIC = 2;
@@ -20,11 +24,28 @@ public class MethodHandle {
     private final String descriptor;
     private final boolean isInterface;
 
-    public MethodHandle(int tag, String owner, String name, String descriptor) {
+    /**
+     * Creates a method handle whose owner is a class rather than an interface.
+     * @param tag one of the H_ reference kinds
+     * @param owner the internal name of the declaring class
+     * @param name the member name
+     * @param descriptor the member descriptor
+     */
+    public MethodHandle(int tag, String owner, String name, String descriptor)
+    {
         this(tag, owner, name, descriptor, false);
     }
 
-    public MethodHandle(int tag, String owner, String name, String descriptor, boolean isInterface) {
+    /**
+     * Creates a method handle.
+     * @param tag one of the H_ reference kinds
+     * @param owner the internal name of the declaring class
+     * @param name the member name
+     * @param descriptor the member descriptor
+     * @param isInterface true if the owner is an interface
+     */
+    public MethodHandle(int tag, String owner, String name, String descriptor, boolean isInterface)
+    {
         this.tag = tag;
         this.owner = owner;
         this.name = name;
@@ -32,28 +53,49 @@ public class MethodHandle {
         this.isInterface = isInterface;
     }
 
-    public int getTag() {
+    /**
+     * @return the tag
+     */
+    public int getTag()
+    {
         return tag;
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public boolean isInterface() {
+    /**
+     * @return whether interface
+     */
+    public boolean isInterface()
+    {
         return isInterface;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MethodHandle that = (MethodHandle) o;
@@ -65,12 +107,14 @@ public class MethodHandle {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(tag, owner, name, descriptor, isInterface);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodHandle{" +
                "tag=" + tag +
                ", owner='" + owner + '\'' +

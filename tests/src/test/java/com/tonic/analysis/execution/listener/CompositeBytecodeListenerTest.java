@@ -17,24 +17,28 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class CompositeBytecodeListenerTest {
+class CompositeBytecodeListenerTest
+{
 
     private CompositeBytecodeListener composite;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         composite = new CompositeBytecodeListener();
     }
 
     @Test
-    void emptyCompositeIsValid() {
+    void emptyCompositeIsValid()
+    {
         assertNotNull(composite);
         assertTrue(composite.isEmpty());
         assertEquals(0, composite.size());
     }
 
     @Test
-    void constructorWithVarargs() {
+    void constructorWithVarargs()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
 
@@ -46,11 +50,9 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void constructorWithCollection() {
-        List<BytecodeListener> listeners = Arrays.asList(
-            mock(BytecodeListener.class),
-            mock(BytecodeListener.class)
-        );
+    void constructorWithCollection()
+    {
+        List<BytecodeListener> listeners = Arrays.asList(mock(BytecodeListener.class), mock(BytecodeListener.class));
 
         CompositeBytecodeListener comp = new CompositeBytecodeListener(listeners);
 
@@ -58,7 +60,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void addListener() {
+    void addListener()
+    {
         BytecodeListener listener = mock(BytecodeListener.class);
 
         composite.addListener(listener);
@@ -68,14 +71,16 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void addNullListenerIsIgnored() {
+    void addNullListenerIsIgnored()
+    {
         composite.addListener(null);
 
         assertEquals(0, composite.size());
     }
 
     @Test
-    void removeListener() {
+    void removeListener()
+    {
         BytecodeListener listener = mock(BytecodeListener.class);
 
         composite.addListener(listener);
@@ -86,7 +91,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void removeNonExistentListenerIsNoOp() {
+    void removeNonExistentListenerIsNoOp()
+    {
         BytecodeListener listener = mock(BytecodeListener.class);
 
         composite.removeListener(listener);
@@ -94,7 +100,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void clear() {
+    void clear()
+    {
         composite.addListener(mock(BytecodeListener.class));
         composite.addListener(mock(BytecodeListener.class));
 
@@ -107,16 +114,16 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void getListenersIsUnmodifiable() {
+    void getListenersIsUnmodifiable()
+    {
         List<BytecodeListener> listeners = composite.getListeners();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listeners.add(mock(BytecodeListener.class));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listeners.add(mock(BytecodeListener.class)));
     }
 
     @Test
-    void onExecutionStartDelegatesToAll() {
+    void onExecutionStartDelegatesToAll()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
         MethodEntry method = mock(MethodEntry.class);
@@ -131,7 +138,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void onExecutionEndDelegatesToAll() {
+    void onExecutionEndDelegatesToAll()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
         BytecodeResult result = BytecodeResult.success(null);
@@ -146,7 +154,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void onFramePushDelegatesToAll() {
+    void onFramePushDelegatesToAll()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
         StackFrame frame = mock(StackFrame.class);
@@ -161,7 +170,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void beforeInstructionDelegatesToAll() {
+    void beforeInstructionDelegatesToAll()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
         StackFrame frame = mock(StackFrame.class);
@@ -177,7 +187,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void onStackPushDelegatesToAll() {
+    void onStackPushDelegatesToAll()
+    {
         BytecodeListener l1 = mock(BytecodeListener.class);
         BytecodeListener l2 = mock(BytecodeListener.class);
         StackFrame frame = mock(StackFrame.class);
@@ -193,26 +204,30 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void orderIsPreserved() {
+    void orderIsPreserved()
+    {
         List<Integer> order = new ArrayList<>();
 
         BytecodeListener l1 = new BytecodeListener() {
             @Override
-            public void onExecutionStart(MethodEntry entryPoint) {
+            public void onExecutionStart(MethodEntry entryPoint)
+            {
                 order.add(1);
             }
         };
 
         BytecodeListener l2 = new BytecodeListener() {
             @Override
-            public void onExecutionStart(MethodEntry entryPoint) {
+            public void onExecutionStart(MethodEntry entryPoint)
+            {
                 order.add(2);
             }
         };
 
         BytecodeListener l3 = new BytecodeListener() {
             @Override
-            public void onExecutionStart(MethodEntry entryPoint) {
+            public void onExecutionStart(MethodEntry entryPoint)
+            {
                 order.add(3);
             }
         };
@@ -227,7 +242,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void allEventsDelegated() {
+    void allEventsDelegated()
+    {
         BytecodeListener listener = mock(BytecodeListener.class);
         composite.addListener(listener);
 
@@ -291,7 +307,8 @@ class CompositeBytecodeListenerTest {
     }
 
     @Test
-    void emptyCompositeDoesNotThrow() {
+    void emptyCompositeDoesNotThrow()
+    {
         assertDoesNotThrow(() -> {
             composite.onExecutionStart(null);
             composite.onExecutionEnd(null);

@@ -25,14 +25,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for FrameGenerator.
  * Verifies StackMapTable frame generation for various instruction patterns.
  */
-class FrameGeneratorTest {
+class FrameGeneratorTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/FrameTest", access);
@@ -40,13 +42,15 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void frameGeneratorCreatesWithConstPool() {
+    void frameGeneratorCreatesWithConstPool()
+    {
         FrameGenerator generator = new FrameGenerator(constPool);
         assertNotNull(generator);
     }
 
     @Test
-    void computeFramesForMethodWithNoCode() throws IOException {
+    void computeFramesForMethodWithNoCode() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setAbstract().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 
@@ -57,7 +61,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesForSimpleMethod() throws IOException {
+    void computeFramesForSimpleMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "simple", "()V");
 
@@ -69,12 +74,12 @@ class FrameGeneratorTest {
         List<StackMapFrame> frames = generator.computeFrames(method);
 
         // Simple method with no branches should have no frames
-        assertTrue(frames.isEmpty() || frames.size() >= 0,
-                "Simple method should produce valid frame list");
+        assertTrue(frames.isEmpty() || frames.size() >= 0, "Simple method should produce valid frame list");
     }
 
     @Test
-    void computeFramesForMethodWithBranch() throws IOException {
+    void computeFramesForMethodWithBranch() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/BranchTest")
                 .publicStaticMethod("withBranch", "(I)V")
                     .iload(0)
@@ -96,7 +101,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesHandlesSimpleReturn() throws IOException {
+    void computeFramesHandlesSimpleReturn() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/SimpleTest")
                 .publicStaticMethod("simple", "()I")
                     .iconst(42)
@@ -115,7 +121,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void framesAreFullFrameType() throws IOException {
+    void framesAreFullFrameType() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/FullFrameTest")
                 .publicStaticMethod("test", "()V")
                     .iconst(1)
@@ -132,16 +139,18 @@ class FrameGeneratorTest {
         List<StackMapFrame> frames = generator.computeFrames(method);
 
         // All frames should be FullFrame
-        for (StackMapFrame frame : frames) {
-            if (frame instanceof FullFrame) {
-                assertTrue(frame instanceof FullFrame,
-                        "All generated frames should be FullFrame type");
+        for (StackMapFrame frame : frames)
+        {
+            if (frame instanceof FullFrame)
+            {
+                assertTrue(frame instanceof FullFrame, "All generated frames should be FullFrame type");
             }
         }
     }
 
     @Test
-    void updateStackMapTableCreatesAttribute() throws IOException {
+    void updateStackMapTableCreatesAttribute() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "needsFrames", "(I)V");
 
@@ -159,7 +168,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void updateStackMapTableHandlesNoFrames() throws IOException {
+    void updateStackMapTableHandlesNoFrames() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "noFrames", "()V");
 
@@ -175,7 +185,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void frameLocalsMatchMethodSignature() throws IOException {
+    void frameLocalsMatchMethodSignature() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceTest")
                 .publicMethod("instanceMethod", "(IJ)V")
                     .iload(1)
@@ -196,7 +207,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesHandlesComplexMethod() throws IOException {
+    void computeFramesHandlesComplexMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ComplexTest")
                 .publicStaticMethod("complex", "(II)I")
                     .iload(0)
@@ -213,12 +225,12 @@ class FrameGeneratorTest {
         FrameGenerator generator = new FrameGenerator(cf.getConstPool());
         List<StackMapFrame> frames = generator.computeFrames(method);
 
-        // Should handle arithmetic operations
         assertNotNull(frames);
     }
 
     @Test
-    void computeFramesWithMultipleMethods() throws IOException {
+    void computeFramesWithMultipleMethods() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/MultiMethodTest")
                 .publicStaticMethod("method1", "()V")
                     .vreturn()
@@ -231,8 +243,10 @@ class FrameGeneratorTest {
 
         FrameGenerator generator = new FrameGenerator(cf.getConstPool());
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (!method.getName().equals("<init>") && !method.getName().equals("<clinit>")) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (!method.getName().equals("<init>") && !method.getName().equals("<clinit>"))
+            {
                 List<StackMapFrame> frames = generator.computeFrames(method);
                 assertNotNull(frames, "Frames should be computed for " + method.getName());
             }
@@ -240,7 +254,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesForMethodWithParameters() throws IOException {
+    void computeFramesForMethodWithParameters() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ParamTest")
                 .publicStaticMethod("withParams", "(IJFD)V")
                     .iload(0)
@@ -266,7 +281,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesHandlesStackManipulation() throws IOException {
+    void computeFramesHandlesStackManipulation() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/StackTest")
                 .publicStaticMethod("stackOps", "()I")
                     .iconst(10)
@@ -289,7 +305,8 @@ class FrameGeneratorTest {
     }
 
     @Test
-    void computeFramesDoesNotThrowOnValidMethod() throws IOException {
+    void computeFramesDoesNotThrowOnValidMethod() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/ValidTest")
                 .publicStaticMethod("valid", "(I)I")
                     .iload(0)
@@ -310,10 +327,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class ConditionalBranchTests {
+    class ConditionalBranchTests
+    {
 
         @Test
-        void computeFramesForIfComparison() throws IOException {
+        void computeFramesForIfComparison() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                     .publicStaticMethod("ifTest", "(II)I");
             BytecodeBuilder.Label elseLabel = mb.newLabel();
@@ -339,7 +358,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForIfNull() throws IOException {
+        void computeFramesForIfNull() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfNullTest")
                     .publicStaticMethod("ifNull", "(Ljava/lang/String;)I");
             BytecodeBuilder.Label elseLabel = mb.newLabel();
@@ -364,7 +384,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForIfZero() throws IOException {
+        void computeFramesForIfZero() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfZeroTest")
                     .publicStaticMethod("ifZero", "(I)I");
             BytecodeBuilder.Label elseLabel = mb.newLabel();
@@ -390,10 +411,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class SwitchInstructionTests {
+    class SwitchInstructionTests
+    {
 
         @Test
-        void computeFramesForTableSwitch() throws IOException {
+        void computeFramesForTableSwitch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TableSwitchTest")
                     .publicStaticMethod("tableSwitch", "(I)I");
             BytecodeBuilder.Label case0 = mb.newLabel();
@@ -434,7 +457,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForLookupSwitch() throws IOException {
+        void computeFramesForLookupSwitch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LookupSwitchTest")
                     .publicStaticMethod("lookupSwitch", "(I)I");
             BytecodeBuilder.Label case5 = mb.newLabel();
@@ -476,10 +500,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class ExceptionHandlerTests {
+    class ExceptionHandlerTests
+    {
 
         @Test
-        void computeFramesForTryCatch() throws IOException {
+        void computeFramesForTryCatch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TryCatchTest")
                     .publicStaticMethod("tryCatch", "()V");
             BytecodeBuilder.Label tryStart = mb.newLabel();
@@ -514,7 +540,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForCatchAll() throws IOException {
+        void computeFramesForCatchAll() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/CatchAllTest")
                     .publicStaticMethod("catchAll", "()V");
             BytecodeBuilder.Label tryStart = mb.newLabel();
@@ -545,7 +572,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForNestedTryCatch() throws IOException {
+        void computeFramesForNestedTryCatch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedTest")
                     .publicStaticMethod("nested", "()V");
             BytecodeBuilder.Label outerTryStart = mb.newLabel();
@@ -586,10 +614,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class LoopAndGotoTests {
+    class LoopAndGotoTests
+    {
 
         @Test
-        void computeFramesForSimpleLoop() throws IOException {
+        void computeFramesForSimpleLoop() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LoopTest")
                     .publicStaticMethod("loop", "(I)I");
             BytecodeBuilder.Label loopStart = mb.newLabel();
@@ -616,11 +646,12 @@ class FrameGeneratorTest {
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0, "Loop should require frame entries");
+            assertFalse(frames.isEmpty(), "Loop should require frame entries");
         }
 
         @Test
-        void computeFramesForGotoForward() throws IOException {
+        void computeFramesForGotoForward() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/GotoTest")
                     .publicStaticMethod("gotoForward", "()I");
             BytecodeBuilder.Label target = mb.newLabel();
@@ -643,7 +674,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForGotoBackward() throws IOException {
+        void computeFramesForGotoBackward() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/GotoBackTest")
                     .publicStaticMethod("gotoBack", "()I");
             BytecodeBuilder.Label backTarget = mb.newLabel();
@@ -672,10 +704,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class ObjectOperationTests {
+    class ObjectOperationTests
+    {
 
         @Test
-        void computeFramesForCheckCast() throws IOException {
+        void computeFramesForCheckCast() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CastTest")
                     .publicStaticMethod("cast", "(Ljava/lang/Object;)Ljava/lang/String;")
                         .aload(0)
@@ -694,7 +728,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForInstanceOf() throws IOException {
+        void computeFramesForInstanceOf() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/InstanceOfTest")
                     .publicStaticMethod("instanceOf", "(Ljava/lang/Object;)Z")
                         .aload(0)
@@ -713,7 +748,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForArrayCreation() throws IOException {
+        void computeFramesForArrayCreation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ArrayTest")
                     .publicStaticMethod("createArray", "()[I")
                         .iconst(10)
@@ -733,10 +769,12 @@ class FrameGeneratorTest {
     }
 
     @org.junit.jupiter.api.Nested
-    class MethodInvocationTests {
+    class MethodInvocationTests
+    {
 
         @Test
-        void computeFramesForInvokeVirtual() throws IOException {
+        void computeFramesForInvokeVirtual() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/InvokeTest")
                     .publicStaticMethod("invokeVirtual", "(Ljava/lang/String;)I")
                         .aload(0)
@@ -755,7 +793,8 @@ class FrameGeneratorTest {
         }
 
         @Test
-        void computeFramesForInvokeStatic() throws IOException {
+        void computeFramesForInvokeStatic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/InvokeStaticTest")
                     .publicStaticMethod("invokeStatic", "(I)Ljava/lang/String;")
                         .iload(0)

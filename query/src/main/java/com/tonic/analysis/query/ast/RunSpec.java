@@ -3,13 +3,29 @@ package com.tonic.analysis.query.ast;
 import java.util.Objects;
 
 /**
- * Execution configuration for queries that require running code.
+ * Execution budget and tracing configuration for queries that require running code.
  */
-public final class RunSpec {
+public final class RunSpec
+{
 
-    public enum TraceMode {
+    /**
+     * How much execution trace to retain: none, a bounded ring, or the full trace.
+     */
+    public enum TraceMode
+    {
+        /**
+         * Record nothing, running with no tracing overhead at all.
+         */
         NONE,
+        /**
+         * Keep only the most recent events in a fixed-size buffer, so a long run
+         * still leaves the tail leading up to a failure; the default.
+         */
         RING,
+        /**
+         * Keep every event for the whole run; the most expensive mode in memory
+         * and only practical for short executions.
+         */
         FULL
     }
 
@@ -19,8 +35,16 @@ public final class RunSpec {
     private final TraceMode traceMode;
     private final int timeBudgetMs;
 
-    public RunSpec(int seeds, int maxInstructions, int maxDepth,
-                   TraceMode traceMode, int timeBudgetMs) {
+    /**
+     * Creates a run specification.
+     * @param seeds the number of seed inputs per entry point
+     * @param maxInstructions the instruction execution cap
+     * @param maxDepth the maximum call depth
+     * @param traceMode how much execution trace to retain
+     * @param timeBudgetMs the wall-clock budget in milliseconds
+     */
+    public RunSpec(int seeds, int maxInstructions, int maxDepth, TraceMode traceMode, int timeBudgetMs)
+    {
         this.seeds = seeds;
         this.maxInstructions = maxInstructions;
         this.maxDepth = maxDepth;
@@ -28,40 +52,60 @@ public final class RunSpec {
         this.timeBudgetMs = timeBudgetMs;
     }
 
-    public int seeds() {
+    /**
+     * @return the number of seed inputs per entry point
+     */
+    public int seeds()
+    {
         return seeds;
     }
 
-    public int maxInstructions() {
+    /**
+     * @return the instruction execution cap
+     */
+    public int maxInstructions()
+    {
         return maxInstructions;
     }
 
-    public int maxDepth() {
+    /**
+     * @return the maximum call depth
+     */
+    public int maxDepth()
+    {
         return maxDepth;
     }
 
-    public TraceMode traceMode() {
+    /**
+     * @return the trace retention mode
+     */
+    public TraceMode traceMode()
+    {
         return traceMode;
     }
 
-    public int timeBudgetMs() {
+    /**
+     * @return the wall-clock budget in milliseconds
+     */
+    public int timeBudgetMs()
+    {
         return timeBudgetMs;
     }
 
-    public static final RunSpec DEFAULT = new RunSpec(
-        10,
-        100_000,
-        50,
-        TraceMode.RING,
-        60_000
-    );
+    public static final RunSpec DEFAULT = new RunSpec(10, 100_000, 50, TraceMode.RING, 60_000);
 
-    public static Builder builder() {
+    /**
+     * Creates a builder initialized with the default settings.
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof RunSpec)) return false;
         RunSpec runSpec = (RunSpec) o;
@@ -73,50 +117,91 @@ public final class RunSpec {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(seeds, maxInstructions, maxDepth, traceMode, timeBudgetMs);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "RunSpec{seeds=" + seeds + ", maxInstructions=" + maxInstructions +
                ", maxDepth=" + maxDepth + ", traceMode=" + traceMode +
                ", timeBudgetMs=" + timeBudgetMs + "}";
     }
 
-    public static class Builder {
+    /**
+     * Mutable builder for RunSpec instances.
+     */
+    public static class Builder
+    {
         private int seeds = 10;
         private int maxInstructions = 100_000;
         private int maxDepth = 50;
         private TraceMode traceMode = TraceMode.RING;
         private int timeBudgetMs = 60_000;
 
-        public Builder seeds(int seeds) {
+        /**
+         * Sets the number of seed inputs per entry point.
+         * @param seeds the seed count
+         * @return this builder
+         */
+        public Builder seeds(int seeds)
+        {
             this.seeds = seeds;
             return this;
         }
 
-        public Builder maxInstructions(int max) {
+        /**
+         * Sets the instruction execution cap.
+         * @param max the maximum instruction count
+         * @return this builder
+         */
+        public Builder maxInstructions(int max)
+        {
             this.maxInstructions = max;
             return this;
         }
 
-        public Builder maxDepth(int depth) {
+        /**
+         * Sets the maximum call depth.
+         * @param depth the depth limit
+         * @return this builder
+         */
+        public Builder maxDepth(int depth)
+        {
             this.maxDepth = depth;
             return this;
         }
 
-        public Builder traceMode(TraceMode mode) {
+        /**
+         * Sets the trace retention mode.
+         * @param mode the trace mode
+         * @return this builder
+         */
+        public Builder traceMode(TraceMode mode)
+        {
             this.traceMode = mode;
             return this;
         }
 
-        public Builder timeBudget(int ms) {
+        /**
+         * Sets the wall-clock budget.
+         * @param ms the budget in milliseconds
+         * @return this builder
+         */
+        public Builder timeBudget(int ms)
+        {
             this.timeBudgetMs = ms;
             return this;
         }
 
-        public RunSpec build() {
+        /**
+         * Builds the immutable run specification.
+         * @return the configured RunSpec
+         */
+        public RunSpec build()
+        {
             return new RunSpec(seeds, maxInstructions, maxDepth, traceMode, timeBudgetMs);
         }
     }

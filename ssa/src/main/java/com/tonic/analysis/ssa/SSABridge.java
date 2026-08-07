@@ -4,30 +4,33 @@ import com.tonic.analysis.CodeWriter;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 
 /**
- * Bridges {@link CodeWriter} (the bytecode layer) and the SSA IR pipeline. This lives in the SSA
- * module so that the bytecode layer does not depend on SSA; the dependency runs ssa -&gt; bytecode.
+ * Bridges {@link CodeWriter} (the bytecode layer) and the SSA IR pipeline.
  */
-public final class SSABridge {
+public final class SSABridge
+{
 
-    private SSABridge() {
+    private SSABridge()
+    {
     }
 
     /**
      * Lifts the given writer's method bytecode to SSA-form IR.
-     *
+     * @param writer the writer holding the method to lift
      * @return the IRMethod in SSA form
      */
-    public static IRMethod toSSA(CodeWriter writer) {
+    public static IRMethod toSSA(CodeWriter writer)
+    {
         SSA ssa = new SSA(writer.getConstPool());
         return ssa.lift(writer.getMethodEntry());
     }
 
     /**
      * Lowers an SSA-form IRMethod back to bytecode and refreshes the writer to reflect it.
-     *
+     * @param writer the writer receiving the lowered bytecode
      * @param irMethod the IRMethod to lower
      */
-    public static void fromSSA(CodeWriter writer, IRMethod irMethod) {
+    public static void fromSSA(CodeWriter writer, IRMethod irMethod)
+    {
         SSA ssa = new SSA(writer.getConstPool());
         ssa.lower(irMethod, writer.getMethodEntry());
         writer.reload();
@@ -35,8 +38,11 @@ public final class SSABridge {
 
     /**
      * Lifts to SSA, runs the standard optimizations, and lowers back to bytecode.
+     *
+     * @param writer the writer whose method is optimized in place
      */
-    public static void optimizeSSA(CodeWriter writer) {
+    public static void optimizeSSA(CodeWriter writer)
+    {
         SSA ssa = new SSA(writer.getConstPool()).withStandardOptimizations();
         IRMethod irMethod = ssa.lift(writer.getMethodEntry());
         ssa.runTransforms(irMethod);

@@ -7,106 +7,154 @@ import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.util.ClassNameUtil;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
- * Emits Java source code from AST nodes.
+ * Visitor that renders recovered AST nodes back to Java source text.
  */
-public class SourceEmitter implements SourceVisitor<Void> {
+public class SourceEmitter implements SourceVisitor<Void>
+{
 
     private final IndentingWriter writer;
     private final SourceEmitterConfig config;
     private final IdentifierNormalizer normalizer;
     private final Set<String> usedTypes = new HashSet<>();
 
-    /** Receives each provenance-carrying statement's (owning method key, statement, 1-based line). */
+    /**
+     * Receives each provenance-carrying statement's (owning method key, statement, 1-based line).
+     */
     @FunctionalInterface
-    public interface LineMapSink {
+    public interface LineMapSink
+    {
+        /**
+         * Reports where one statement was emitted.
+         *
+         * @param methodKey name and descriptor of the method the statement belongs to
+         * @param stmt the emitted statement
+         * @param line the 1-based line it was written on
+         */
         void record(String methodKey, Statement stmt, int line);
     }
 
-    /** Pushed for a lambda whose impl method is unknown — recording is then skipped (method keys,
-     *  being name+descriptor, are never empty, so an empty string is an unambiguous marker). */
+    /**
+     * Pushed for a lambda whose impl method is unknown - recording is then skipped.
+     */
     private static final String SUPPRESS = "";
 
     private LineMapSink lineMapSink;
-    /** Active recording key per nesting level: base method at the bottom, an impl key (or
-     *  {@link #SUPPRESS}) pushed for each lambda body. Empty when no sink is set. */
+    /**
+     * Active recording key per nesting level: base method at the bottom, an impl key (or {@link #SUPPRESS}) pushed
+     * for each lambda body.
+     */
     private final Deque<String> methodKeyStack = new ArrayDeque<>();
     private String currentClassName;
     /** Declared type of each local variable name, recorded as declarations are emitted, so member
      *  accesses cast against the DECLARED type (e.g. a merged Object slot) rather than the
      *  expression's narrowed type. */
     private final java.util.Map<String, SourceType> declaredLocalTypes = new java.util.HashMap<>();
+    private final java.util.Set<String> parameterNames = new java.util.HashSet<>();
 
-    public SourceEmitter(IndentingWriter writer) {
+    /**
+     * Creates an emitter with the default configuration.
+     * @param writer the output writer
+     */
+    public SourceEmitter(IndentingWriter writer)
+    {
         this(writer, SourceEmitterConfig.defaults());
     }
 
-    public SourceEmitter(IndentingWriter writer, SourceEmitterConfig config) {
+    /**
+     * Creates an emitter with the given configuration.
+     * @param writer the output writer
+     * @param config emission options
+     */
+    public SourceEmitter(IndentingWriter writer, SourceEmitterConfig config)
+    {
         this.writer = writer;
         this.config = config;
         this.normalizer = new IdentifierNormalizer(config.getIdentifierMode());
     }
 
-    public Set<String> getUsedTypes() {
+    /**
+     * @return the used types
+     */
+    public Set<String> getUsedTypes()
+    {
         return usedTypes;
     }
 
-    public void clearUsedTypes() {
+    /**
+     * Clears the record of types referenced during emission.
+     */
+    public void clearUsedTypes()
+    {
         usedTypes.clear();
     }
 
-    public void setCurrentClassName(String className) {
+    /**
+     * Sets the name of the class currently being emitted.
+     * @param className the class name
+     */
+    public void setCurrentClassName(String className)
+    {
         this.currentClassName = className;
     }
 
     /**
-     * Registers a sink invoked with each provenance-carrying statement and the 1-based output line its
-     * emission starts on, keyed by the method that owns the statement's offset. {@code baseMethodKey}
-     * is the method being emitted; statements inside an inlined lambda body are reported under the
-     * lambda's own impl-method key instead, so their (separate) offset space never pollutes the base
-     * method's map. Offsets whose owning method can't be identified are skipped.
+     * Registers a sink for the 1-based output line each provenance-carrying statement starts on.
+     *
+     * @param baseMethodKey key of the method being emitted.
+     * @param sink receives each statement and its start line, skipping offsets whose owning method
+     *             cannot be identified
      */
-    public void setLineMapSink(String baseMethodKey, LineMapSink sink) {
+    public void setLineMapSink(String baseMethodKey, LineMapSink sink)
+    {
         this.lineMapSink = sink;
         this.methodKeyStack.clear();
         this.methodKeyStack.push(baseMethodKey);
     }
 
-    private void recordLine(Statement stmt) {
+    private void recordLine(Statement stmt)
+    {
         if (lineMapSink == null || methodKeyStack.isEmpty()
-                || stmt.getLocation() == null || !stmt.getLocation().hasOffset()) {
+                || stmt.getLocation() == null || !stmt.getLocation().hasOffset())
+        {
             return;
         }
         String key = methodKeyStack.peek();
-        if (key == null || key.isEmpty()) {
+        if (key == null || key.isEmpty())
+        {
             return;
         }
         lineMapSink.record(key, stmt, writer.getCurrentLine());
     }
 
-    private void recordTypeUsage(String internalName) {
-        if (internalName != null && !internalName.isEmpty() && !internalName.startsWith("[")) {
+    private void recordTypeUsage(String internalName)
+    {
+        if (internalName != null && !internalName.isEmpty() && !internalName.startsWith("["))
+        {
             usedTypes.add(internalName);
         }
     }
 
     /**
-     * Emits a statement to a string.
+     * Emits a statement to source text with the default configuration.
+     * @param stmt the statement to emit
+     * @return the emitted source text
      */
-    public static String emit(Statement stmt) {
+    public static String emit(Statement stmt)
+    {
         return emit(stmt, SourceEmitterConfig.defaults());
     }
 
     /**
-     * Emits a statement to a string with configuration.
+     * Emits a statement to source text.
+     * @param stmt the statement to emit
+     * @param config emission options
+     * @return the emitted source text
      */
-    public static String emit(Statement stmt, SourceEmitterConfig config) {
+    public static String emit(Statement stmt, SourceEmitterConfig config)
+    {
         IndentingWriter writer = IndentingWriter.toStringWriter();
         SourceEmitter emitter = new SourceEmitter(writer, config);
         stmt.accept(emitter);
@@ -114,9 +162,12 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     /**
-     * Emits an expression to a string.
+     * Emits an expression to source text with the default configuration.
+     * @param expr the expression to emit
+     * @return the emitted source text
      */
-    public static String emit(Expression expr) {
+    public static String emit(Expression expr)
+    {
         IndentingWriter writer = IndentingWriter.toStringWriter();
         SourceEmitter emitter = new SourceEmitter(writer);
         expr.accept(emitter);
@@ -124,16 +175,23 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     /**
-     * Emits a compilation unit to a string.
+     * Emits a compilation unit to source text with the default configuration.
+     * @param cu the compilation unit to emit
+     * @return the emitted source text
      */
-    public static String emit(CompilationUnit cu) {
+    public static String emit(CompilationUnit cu)
+    {
         return emit(cu, SourceEmitterConfig.defaults());
     }
 
     /**
-     * Emits a compilation unit to a string with configuration.
+     * Emits a compilation unit to source text.
+     * @param cu the compilation unit to emit
+     * @param config emission options
+     * @return the emitted source text
      */
-    public static String emit(CompilationUnit cu, SourceEmitterConfig config) {
+    public static String emit(CompilationUnit cu, SourceEmitterConfig config)
+    {
         IndentingWriter writer = IndentingWriter.toStringWriter();
         SourceEmitter emitter = new SourceEmitter(writer, config);
         emitter.visitCompilationUnit(cu);
@@ -141,27 +199,37 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitCompilationUnit(CompilationUnit cu) {
-        if (cu.hasPackage()) {
+    public Void visitCompilationUnit(CompilationUnit cu)
+    {
+        if (cu.hasPackage())
+        {
             writer.write("package ");
             writer.write(cu.getPackageName());
             writer.writeLine(";");
             writer.newLine();
         }
 
-        for (ImportDecl imp : cu.getImports()) {
+        for (ImportDecl imp : cu.getImports())
+        {
             visitImportDecl(imp);
         }
-        if (!cu.getImports().isEmpty()) {
+        if (!cu.getImports().isEmpty())
+        {
             writer.newLine();
         }
 
-        for (TypeDecl type : cu.getTypes()) {
-            if (type instanceof ClassDecl) {
+        for (TypeDecl type : cu.getTypes())
+        {
+            if (type instanceof ClassDecl)
+            {
                 visitClassDecl((ClassDecl) type);
-            } else if (type instanceof InterfaceDecl) {
+            }
+            else if (type instanceof InterfaceDecl)
+            {
                 visitInterfaceDecl((InterfaceDecl) type);
-            } else if (type instanceof EnumDecl) {
+            }
+            else if (type instanceof EnumDecl)
+            {
                 visitEnumDecl((EnumDecl) type);
             }
         }
@@ -170,13 +238,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitImportDecl(ImportDecl decl) {
+    public Void visitImportDecl(ImportDecl decl)
+    {
         writer.write("import ");
-        if (decl.isStatic()) {
+        if (decl.isStatic())
+        {
             writer.write("static ");
         }
         writer.write(decl.getName());
-        if (decl.isWildcard()) {
+        if (decl.isWildcard())
+        {
             writer.write(".*");
         }
         writer.writeLine(";");
@@ -184,19 +255,22 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitClassDecl(ClassDecl decl) {
+    public Void visitClassDecl(ClassDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         writer.write("class ");
         writer.write(decl.getName());
         emitTypeParameters(decl.getTypeParameters());
 
-        if (decl.getSuperclass() != null) {
+        if (decl.getSuperclass() != null)
+        {
             writer.write(" extends ");
             writer.write(decl.getSuperclass().toJavaSource());
         }
 
-        if (!decl.getInterfaces().isEmpty()) {
+        if (!decl.getInterfaces().isEmpty())
+        {
             writer.write(" implements ");
             emitTypeList(decl.getInterfaces());
         }
@@ -205,29 +279,39 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.indent();
         writer.newLine();
 
-        for (FieldDecl field : decl.getFields()) {
+        for (FieldDecl field : decl.getFields())
+        {
             visitFieldDecl(field);
         }
-        if (!decl.getFields().isEmpty()) {
+        if (!decl.getFields().isEmpty())
+        {
             writer.newLine();
         }
 
-        for (ConstructorDecl ctor : decl.getConstructors()) {
+        for (ConstructorDecl ctor : decl.getConstructors())
+        {
             visitConstructorDecl(ctor);
             writer.newLine();
         }
 
-        for (MethodDecl method : decl.getMethods()) {
+        for (MethodDecl method : decl.getMethods())
+        {
             visitMethodDecl(method);
             writer.newLine();
         }
 
-        for (TypeDecl inner : decl.getInnerTypes()) {
-            if (inner instanceof ClassDecl) {
+        for (TypeDecl inner : decl.getInnerTypes())
+        {
+            if (inner instanceof ClassDecl)
+            {
                 visitClassDecl((ClassDecl) inner);
-            } else if (inner instanceof InterfaceDecl) {
+            }
+            else if (inner instanceof InterfaceDecl)
+            {
                 visitInterfaceDecl((InterfaceDecl) inner);
-            } else if (inner instanceof EnumDecl) {
+            }
+            else if (inner instanceof EnumDecl)
+            {
                 visitEnumDecl((EnumDecl) inner);
             }
         }
@@ -238,14 +322,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitInterfaceDecl(InterfaceDecl decl) {
+    public Void visitInterfaceDecl(InterfaceDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         writer.write("interface ");
         writer.write(decl.getName());
         emitTypeParameters(decl.getTypeParameters());
 
-        if (!decl.getExtendedInterfaces().isEmpty()) {
+        if (!decl.getExtendedInterfaces().isEmpty())
+        {
             writer.write(" extends ");
             emitTypeList(decl.getExtendedInterfaces());
         }
@@ -254,22 +340,29 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.indent();
         writer.newLine();
 
-        for (FieldDecl field : decl.getFields()) {
+        for (FieldDecl field : decl.getFields())
+        {
             visitFieldDecl(field);
         }
-        if (!decl.getFields().isEmpty()) {
+        if (!decl.getFields().isEmpty())
+        {
             writer.newLine();
         }
 
-        for (MethodDecl method : decl.getMethods()) {
+        for (MethodDecl method : decl.getMethods())
+        {
             visitMethodDecl(method);
             writer.newLine();
         }
 
-        for (TypeDecl inner : decl.getInnerTypes()) {
-            if (inner instanceof ClassDecl) {
+        for (TypeDecl inner : decl.getInnerTypes())
+        {
+            if (inner instanceof ClassDecl)
+            {
                 visitClassDecl((ClassDecl) inner);
-            } else if (inner instanceof InterfaceDecl) {
+            }
+            else if (inner instanceof InterfaceDecl)
+            {
                 visitInterfaceDecl((InterfaceDecl) inner);
             }
         }
@@ -280,13 +373,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitEnumDecl(EnumDecl decl) {
+    public Void visitEnumDecl(EnumDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         writer.write("enum ");
         writer.write(decl.getName());
 
-        if (!decl.getInterfaces().isEmpty()) {
+        if (!decl.getInterfaces().isEmpty())
+        {
             writer.write(" implements ");
             emitTypeList(decl.getInterfaces());
         }
@@ -295,33 +390,44 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.indent();
 
         List<EnumConstantDecl> constants = decl.getConstants();
-        for (int i = 0; i < constants.size(); i++) {
+        for (int i = 0; i < constants.size(); i++)
+        {
             visitEnumConstantDecl(constants.get(i));
-            if (i < constants.size() - 1) {
+            if (i < constants.size() - 1)
+            {
                 writer.writeLine(",");
-            } else if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty()) {
+            }
+            else if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty())
+            {
                 writer.writeLine(";");
-            } else {
+            }
+            else
+            {
                 writer.newLine();
             }
         }
 
-        if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty()) {
+        if (!decl.getFields().isEmpty() || !decl.getMethods().isEmpty() || !decl.getConstructors().isEmpty())
+        {
             writer.newLine();
 
-            for (FieldDecl field : decl.getFields()) {
+            for (FieldDecl field : decl.getFields())
+            {
                 visitFieldDecl(field);
             }
-            if (!decl.getFields().isEmpty()) {
+            if (!decl.getFields().isEmpty())
+            {
                 writer.newLine();
             }
 
-            for (ConstructorDecl ctor : decl.getConstructors()) {
+            for (ConstructorDecl ctor : decl.getConstructors())
+            {
                 visitConstructorDecl(ctor);
                 writer.newLine();
             }
 
-            for (MethodDecl method : decl.getMethods()) {
+            for (MethodDecl method : decl.getMethods())
+            {
                 visitMethodDecl(method);
                 writer.newLine();
             }
@@ -333,23 +439,28 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitEnumConstantDecl(EnumConstantDecl decl) {
+    public Void visitEnumConstantDecl(EnumConstantDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
         writer.write(decl.getName());
 
-        if (!decl.getArguments().isEmpty()) {
+        if (!decl.getArguments().isEmpty())
+        {
             writer.write("(");
             emitExpressionList(decl.getArguments());
             writer.write(")");
         }
 
-        if (decl.hasBody()) {
+        if (decl.hasBody())
+        {
             writer.writeLine(" {");
             writer.indent();
-            for (FieldDecl field : decl.getFields()) {
+            for (FieldDecl field : decl.getFields())
+            {
                 visitFieldDecl(field);
             }
-            for (MethodDecl method : decl.getMethods()) {
+            for (MethodDecl method : decl.getMethods())
+            {
                 visitMethodDecl(method);
             }
             writer.dedent();
@@ -360,7 +471,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitMethodDecl(MethodDecl decl) {
+    public Void visitMethodDecl(MethodDecl decl)
+    {
+        beginMethodScope(decl.getParameters());
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         emitTypeParameters(decl.getTypeParameters());
@@ -372,15 +485,19 @@ public class SourceEmitter implements SourceVisitor<Void> {
         emitParameters(decl.getParameters());
         writer.write(")");
 
-        if (!decl.getThrowsTypes().isEmpty()) {
+        if (!decl.getThrowsTypes().isEmpty())
+        {
             writer.write(" throws ");
             emitTypeList(decl.getThrowsTypes());
         }
 
-        if (decl.getBody() != null) {
+        if (decl.getBody() != null)
+        {
             writer.write(" ");
             decl.getBody().accept(this);
-        } else {
+        }
+        else
+        {
             writer.writeLine(";");
         }
 
@@ -388,7 +505,9 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitConstructorDecl(ConstructorDecl decl) {
+    public Void visitConstructorDecl(ConstructorDecl decl)
+    {
+        beginMethodScope(decl.getParameters());
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         emitTypeParameters(decl.getTypeParameters());
@@ -398,7 +517,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
         emitParameters(decl.getParameters());
         writer.write(")");
 
-        if (!decl.getThrowsTypes().isEmpty()) {
+        if (!decl.getThrowsTypes().isEmpty())
+        {
             writer.write(" throws ");
             emitTypeList(decl.getThrowsTypes());
         }
@@ -410,14 +530,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitFieldDecl(FieldDecl decl) {
+    public Void visitFieldDecl(FieldDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
         emitModifiers(decl.getModifiers());
         decl.getType().accept(this);
         writer.write(" ");
         writer.write(decl.getName());
 
-        if (decl.getInitializer() != null) {
+        if (decl.getInitializer() != null)
+        {
             writer.write(" = ");
             decl.getInitializer().accept(this);
         }
@@ -427,13 +549,16 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitParameterDecl(ParameterDecl decl) {
+    public Void visitParameterDecl(ParameterDecl decl)
+    {
         emitAnnotations(decl.getAnnotations());
-        if (decl.isFinal()) {
+        if (decl.isFinal())
+        {
             writer.write("final ");
         }
         decl.getType().accept(this);
-        if (decl.isVarArgs()) {
+        if (decl.isVarArgs())
+        {
             writer.write("...");
         }
         writer.write(" ");
@@ -442,17 +567,23 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitAnnotationExpr(AnnotationExpr expr) {
+    public Void visitAnnotationExpr(AnnotationExpr expr)
+    {
         writer.write("@");
         writer.write(expr.getAnnotationType().toJavaSource());
 
-        if (!expr.getValues().isEmpty()) {
+        if (!expr.getValues().isEmpty())
+        {
             writer.write("(");
             List<AnnotationValue> values = expr.getValues();
-            if (values.size() == 1 && "value".equals(values.get(0).getName())) {
+            if (values.size() == 1 && "value".equals(values.get(0).getName()))
+            {
                 values.get(0).getValue().accept(this);
-            } else {
-                for (int i = 0; i < values.size(); i++) {
+            }
+            else
+            {
+                for (int i = 0; i < values.size(); i++)
+                {
                     if (i > 0) writer.write(", ");
                     AnnotationValue av = values.get(i);
                     writer.write(av.getName());
@@ -466,26 +597,34 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    private void emitAnnotations(List<AnnotationExpr> annotations) {
-        for (AnnotationExpr ann : annotations) {
+    private void emitAnnotations(List<AnnotationExpr> annotations)
+    {
+        for (AnnotationExpr ann : annotations)
+        {
             visitAnnotationExpr(ann);
             writer.newLine();
         }
     }
 
-    private void emitModifiers(Set<Modifier> modifiers) {
-        for (Modifier mod : Modifier.values()) {
-            if (modifiers.contains(mod)) {
+    private void emitModifiers(Set<Modifier> modifiers)
+    {
+        for (Modifier mod : Modifier.values())
+        {
+            if (modifiers.contains(mod))
+            {
                 writer.write(mod.getKeyword());
                 writer.write(" ");
             }
         }
     }
 
-    private void emitTypeParameters(List<SourceType> typeParams) {
-        if (!typeParams.isEmpty()) {
+    private void emitTypeParameters(List<SourceType> typeParams)
+    {
+        if (!typeParams.isEmpty())
+        {
             writer.write("<");
-            for (int i = 0; i < typeParams.size(); i++) {
+            for (int i = 0; i < typeParams.size(); i++)
+            {
                 if (i > 0) writer.write(", ");
                 writer.write(typeParams.get(i).toJavaSource());
             }
@@ -493,37 +632,48 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
     }
 
-    private void emitTypeList(List<SourceType> types) {
-        for (int i = 0; i < types.size(); i++) {
+    private void emitTypeList(List<SourceType> types)
+    {
+        for (int i = 0; i < types.size(); i++)
+        {
             if (i > 0) writer.write(", ");
             writer.write(types.get(i).toJavaSource());
         }
     }
 
-    private void emitParameters(List<ParameterDecl> params) {
-        for (int i = 0; i < params.size(); i++) {
+    private void emitParameters(List<ParameterDecl> params)
+    {
+        for (int i = 0; i < params.size(); i++)
+        {
             if (i > 0) writer.write(", ");
             visitParameterDecl(params.get(i));
         }
     }
 
     @Override
-    public Void visitBlock(BlockStmt stmt) {
+    public Void visitBlock(BlockStmt stmt)
+    {
         recordLine(stmt);
         List<Statement> stmts = stmt.getStatements();
-        if (stmts.isEmpty()) {
+        if (stmts.isEmpty())
+        {
             writer.writeLine("{}");
             return null;
         }
         writer.writeLine("{");
         writer.indent();
-        for (Statement s : stmts) {
-            if (s instanceof BlockStmt) {
+        for (Statement s : stmts)
+        {
+            if (s instanceof BlockStmt)
+            {
                 BlockStmt nestedBlock = (BlockStmt) s;
-                for (Statement nested : nestedBlock.getStatements()) {
+                for (Statement nested : nestedBlock.getStatements())
+                {
                     nested.accept(this);
                 }
-            } else {
+            }
+            else
+            {
                 s.accept(this);
             }
         }
@@ -533,11 +683,13 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitIf(IfStmt stmt) {
+    public Void visitIf(IfStmt stmt)
+    {
         recordLine(stmt);
         boolean thenEmpty = isEmptyBlock(stmt.getThenBranch());
         boolean elseEmpty = stmt.getElseBranch() == null || isEmptyBlock(stmt.getElseBranch());
-        if (thenEmpty && elseEmpty) {
+        if (thenEmpty && elseEmpty)
+        {
             return null;
         }
 
@@ -545,34 +697,47 @@ public class SourceEmitter implements SourceVisitor<Void> {
         stmt.getCondition().accept(this);
         writer.write(") ");
 
-        if (stmt.getThenBranch() instanceof BlockStmt) {
+        if (stmt.getThenBranch() instanceof BlockStmt)
+        {
             stmt.getThenBranch().accept(this);
-        } else if (config.isAlwaysUseBraces()) {
+        }
+        else if (config.isAlwaysUseBraces())
+        {
             writer.writeLine("{");
             writer.indent();
             stmt.getThenBranch().accept(this);
             writer.dedent();
             writer.writeLine("}");
-        } else {
+        }
+        else
+        {
             writer.newLine();
             writer.indent();
             stmt.getThenBranch().accept(this);
             writer.dedent();
         }
 
-        if (stmt.getElseBranch() != null && !isEmptyBlock(stmt.getElseBranch())) {
+        if (stmt.getElseBranch() != null && !isEmptyBlock(stmt.getElseBranch()))
+        {
             writer.write("else ");
-            if (stmt.getElseBranch() instanceof IfStmt) {
+            if (stmt.getElseBranch() instanceof IfStmt)
+            {
                 stmt.getElseBranch().accept(this);
-            } else if (stmt.getElseBranch() instanceof BlockStmt) {
+            }
+            else if (stmt.getElseBranch() instanceof BlockStmt)
+            {
                 stmt.getElseBranch().accept(this);
-            } else if (config.isAlwaysUseBraces()) {
+            }
+            else if (config.isAlwaysUseBraces())
+            {
                 writer.writeLine("{");
                 writer.indent();
                 stmt.getElseBranch().accept(this);
                 writer.dedent();
                 writer.writeLine("}");
-            } else {
+            }
+            else
+            {
                 writer.newLine();
                 writer.indent();
                 stmt.getElseBranch().accept(this);
@@ -583,8 +748,13 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitWhile(WhileStmt stmt) {
+    public Void visitWhile(WhileStmt stmt)
+    {
         recordLine(stmt);
+        if (stmt.getLabel() != null)
+        {
+            writer.write(stmt.getLabel() + ": ");
+        }
         writer.write("while (");
         stmt.getCondition().accept(this);
         writer.write(") ");
@@ -593,7 +763,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitDoWhile(DoWhileStmt stmt) {
+    public Void visitDoWhile(DoWhileStmt stmt)
+    {
         recordLine(stmt);
         writer.write("do ");
         emitBody(stmt.getBody());
@@ -604,19 +775,29 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitFor(ForStmt stmt) {
+    public Void visitFor(ForStmt stmt)
+    {
         recordLine(stmt);
+        if (stmt.getLabel() != null)
+        {
+            writer.write(stmt.getLabel() + ": ");
+        }
         writer.write("for (");
 
         List<Statement> init = stmt.getInit();
-        if (!init.isEmpty()) {
-            for (int i = 0; i < init.size(); i++) {
+        if (!init.isEmpty())
+        {
+            for (int i = 0; i < init.size(); i++)
+            {
                 if (i > 0) writer.write(", ");
                 Statement s = init.get(i);
-                if (s instanceof VarDeclStmt) {
+                if (s instanceof VarDeclStmt)
+                {
                     VarDeclStmt vds = (VarDeclStmt) s;
                     emitVarDeclNoSemicolon(vds);
-                } else if (s instanceof ExprStmt) {
+                }
+                else if (s instanceof ExprStmt)
+                {
                     ExprStmt es = (ExprStmt) s;
                     es.getExpression().accept(this);
                 }
@@ -624,13 +805,15 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
         writer.write("; ");
 
-        if (stmt.getCondition() != null) {
+        if (stmt.getCondition() != null)
+        {
             stmt.getCondition().accept(this);
         }
         writer.write("; ");
 
         List<Expression> update = stmt.getUpdate();
-        for (int i = 0; i < update.size(); i++) {
+        for (int i = 0; i < update.size(); i++)
+        {
             if (i > 0) writer.write(", ");
             update.get(i).accept(this);
         }
@@ -641,7 +824,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitForEach(ForEachStmt stmt) {
+    public Void visitForEach(ForEachStmt stmt)
+    {
         recordLine(stmt);
         writer.write("for (");
         VarDeclStmt var = stmt.getVariable();
@@ -656,7 +840,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSwitch(SwitchStmt stmt) {
+    public Void visitSwitch(SwitchStmt stmt)
+    {
         recordLine(stmt);
         writer.write("switch (");
         stmt.getSelector().accept(this);
@@ -664,32 +849,47 @@ public class SourceEmitter implements SourceVisitor<Void> {
         writer.indent();
 
         List<SwitchCase> cases = stmt.getCases();
-        for (SwitchCase switchCase : cases) {
-            if (switchCase.isDefault()) {
-                writer.writeLine("default:");
-            } else if (switchCase.hasExpressionLabels()) {
-                for (Expression label : switchCase.expressionLabels()) {
+        for (SwitchCase switchCase : cases)
+        {
+            if (switchCase.hasExpressionLabels())
+            {
+                for (Expression label : switchCase.expressionLabels())
+                {
                     writer.write("case ");
-                    if (label instanceof FieldAccessExpr) {
+                    if (label instanceof FieldAccessExpr)
+                    {
                         // An enum-constant case label must be the bare constant name; javac rejects a
                         // qualified name (Enum.CONST) in a switch label.
                         writer.write(((FieldAccessExpr) label).getFieldName());
-                    } else {
+                    }
+                    else
+                    {
                         label.accept(this);
                     }
                     writer.writeLine(":");
                 }
-            } else {
-                for (Integer label : switchCase.labels()) {
+            }
+            else
+            {
+                for (Integer label : switchCase.labels())
+                {
                     writer.writeLine("case " + label + ":");
                 }
             }
+            // Labels and `default:` are not exclusive: a default whose target coincides with a value
+            // case carries that case's labels and both label sets print (`case 6: default:`).
+            if (switchCase.isDefault())
+            {
+                writer.writeLine("default:");
+            }
             writer.indent();
             List<Statement> stmts = switchCase.statements();
-            for (Statement s : stmts) {
+            for (Statement s : stmts)
+            {
                 s.accept(this);
             }
-            if (!stmts.isEmpty() && !switchCase.fallsThrough() && needsBreak(stmts)) {
+            if (!stmts.isEmpty() && !switchCase.fallsThrough() && needsBreak(stmts))
+            {
                 writer.writeLine("break;");
             }
             writer.dedent();
@@ -700,20 +900,25 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    private boolean needsBreak(List<Statement> statements) {
-        if (statements.isEmpty()) {
+    private boolean needsBreak(List<Statement> statements)
+    {
+        if (statements.isEmpty())
+        {
             return false;
         }
         Statement last = statements.get(statements.size() - 1);
         // A case ending in an unconditional continue/return/throw/break already terminates the case's flow, so
         // an appended `break` would be unreachable (`continue; break;` - invalid Java). continue was missing.
         if (last instanceof ReturnStmt || last instanceof ThrowStmt || last instanceof BreakStmt
-                || last instanceof ContinueStmt) {
+                || last instanceof ContinueStmt)
+        {
             return false;
         }
-        if (last instanceof BlockStmt) {
+        if (last instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) last;
-            if (!block.getStatements().isEmpty()) {
+            if (!block.getStatements().isEmpty())
+            {
                 return needsBreak(block.getStatements());
             }
         }
@@ -721,14 +926,17 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitTryCatch(TryCatchStmt stmt) {
+    public Void visitTryCatch(TryCatchStmt stmt)
+    {
         recordLine(stmt);
         writer.write("try ");
 
-        if (!stmt.getResources().isEmpty()) {
+        if (!stmt.getResources().isEmpty())
+        {
             writer.write("(");
             List<Expression> resources = stmt.getResources();
-            for (int i = 0; i < resources.size(); i++) {
+            for (int i = 0; i < resources.size(); i++)
+            {
                 if (i > 0) writer.write("; ");
                 resources.get(i).accept(this);
             }
@@ -737,10 +945,12 @@ public class SourceEmitter implements SourceVisitor<Void> {
 
         stmt.getTryBlock().accept(this);
 
-        for (CatchClause catchClause : stmt.getCatches()) {
+        for (CatchClause catchClause : stmt.getCatches())
+        {
             writer.write("catch (");
             List<SourceType> types = catchClause.exceptionTypes();
-            for (int i = 0; i < types.size(); i++) {
+            for (int i = 0; i < types.size(); i++)
+            {
                 if (i > 0) writer.write(" | ");
                 types.get(i).accept(this);
             }
@@ -750,7 +960,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
             catchClause.body().accept(this);
         }
 
-        if (stmt.getFinallyBlock() != null) {
+        if (stmt.getFinallyBlock() != null)
+        {
             writer.write("finally ");
             stmt.getFinallyBlock().accept(this);
         }
@@ -759,24 +970,31 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitReturn(ReturnStmt stmt) {
+    public Void visitReturn(ReturnStmt stmt)
+    {
         recordLine(stmt);
-        if (stmt.getValue() == null) {
+        if (stmt.getValue() == null)
+        {
             writer.writeLine("return;");
-        } else {
+        }
+        else
+        {
             writer.write("return ");
             Expression value = stmt.getValue();
             SourceType retType = stmt.getMethodReturnType();
-            if (value instanceof LiteralExpr && retType != null) {
+            if (value instanceof LiteralExpr && retType != null)
+            {
                 LiteralExpr lit = (LiteralExpr) value;
                 Object val = lit.getValue();
-                if (val instanceof Integer && retType == PrimitiveSourceType.BOOLEAN) {
+                if (val instanceof Integer && retType == PrimitiveSourceType.BOOLEAN)
+                {
                     int intVal = (Integer) val;
                     writer.write(intVal != 0 ? "true" : "false");
                     writer.writeLine(";");
                     return null;
                 }
-                if (val instanceof Integer && retType == PrimitiveSourceType.CHAR) {
+                if (val instanceof Integer && retType == PrimitiveSourceType.CHAR)
+                {
                     int intVal = (Integer) val;
                     writer.write("'" + escapeChar((char) intVal) + "'");
                     writer.writeLine(";");
@@ -790,7 +1008,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitThrow(ThrowStmt stmt) {
+    public Void visitThrow(ThrowStmt stmt)
+    {
         recordLine(stmt);
         writer.write("throw ");
         stmt.getException().accept(this);
@@ -799,46 +1018,82 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVarDecl(VarDeclStmt stmt) {
+    public Void visitVarDecl(VarDeclStmt stmt)
+    {
         recordLine(stmt);
         emitVarDeclNoSemicolon(stmt);
         writer.writeLine(";");
         return null;
     }
 
-    private void emitVarDeclNoSemicolon(VarDeclStmt stmt) {
-        if (stmt.isFinal()) {
+    private void emitVarDeclNoSemicolon(VarDeclStmt stmt)
+    {
+        if (stmt.isFinal())
+        {
             writer.write("final ");
         }
 
-        if (stmt.isUseVarKeyword() && config.isUseVarKeyword()) {
+        if (stmt.isUseVarKeyword() && config.isUseVarKeyword())
+        {
             writer.write("var ");
-        } else {
+        }
+        else
+        {
             SourceType type = stmt.getType();
             type.accept(this);
             writer.write(" ");
         }
 
         writer.write(normalizer.normalize(stmt.getName(), IdentifierNormalizer.IdentifierType.VARIABLE));
-        if (stmt.getName() != null && stmt.getType() != null) {
+        if (stmt.getName() != null && stmt.getType() != null)
+        {
             declaredLocalTypes.put(stmt.getName(), stmt.getType());
         }
 
-        if (stmt.getInitializer() != null) {
+        if (stmt.getInitializer() != null)
+        {
             writer.write(" = ");
             stmt.getInitializer().accept(this);
         }
     }
 
     /**
-     * The type to use when deciding whether a member access on this receiver needs a downcast: the
-     * variable's DECLARED type when the receiver is a known local (so a merged {@code Object} slot
-     * is cast at each narrowed use), otherwise the receiver expression's own type.
+     * Resets per-method name scope: locals from prior methods are gone; parameters are in scope.
      */
-    private SourceType castReceiverType(Expression receiver) {
-        if (receiver instanceof VarRefExpr) {
+    private void beginMethodScope(java.util.List<ParameterDecl> parameters)
+    {
+        declaredLocalTypes.clear();
+        parameterNames.clear();
+        for (ParameterDecl p : parameters)
+        {
+            declaredLocalTypes.put(p.getName(), p.getType());
+            parameterNames.add(p.getName());
+        }
+    }
+
+    /**
+     * Seeds the shadow scope with the emitting method's parameter names (block-emission path).
+     *
+     * @param names the names to treat as already in scope, replacing any previous set
+     */
+    public void setParameterNames(java.util.Collection<String> names)
+    {
+        parameterNames.clear();
+        parameterNames.addAll(names);
+    }
+
+    private boolean isShadowed(String name)
+    {
+        return parameterNames.contains(name) || declaredLocalTypes.containsKey(name);
+    }
+
+    private SourceType castReceiverType(Expression receiver)
+    {
+        if (receiver instanceof VarRefExpr)
+        {
             SourceType declared = declaredLocalTypes.get(((VarRefExpr) receiver).getName());
-            if (declared != null) {
+            if (declared != null)
+            {
                 return declared;
             }
         }
@@ -846,7 +1101,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitExprStmt(ExprStmt stmt) {
+    public Void visitExprStmt(ExprStmt stmt)
+    {
         recordLine(stmt);
         stmt.getExpression().accept(this);
         writer.writeLine(";");
@@ -854,7 +1110,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitSynchronized(SynchronizedStmt stmt) {
+    public Void visitSynchronized(SynchronizedStmt stmt)
+    {
         recordLine(stmt);
         writer.write("synchronized (");
         stmt.getLock().accept(this);
@@ -864,7 +1121,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitLabeled(LabeledStmt stmt) {
+    public Void visitLabeled(LabeledStmt stmt)
+    {
         recordLine(stmt);
         writer.write(stmt.getLabel());
         writer.writeLine(":");
@@ -873,39 +1131,51 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitBreak(BreakStmt stmt) {
+    public Void visitBreak(BreakStmt stmt)
+    {
         recordLine(stmt);
-        if (stmt.getTargetLabel() != null) {
+        if (stmt.getTargetLabel() != null)
+        {
             writer.writeLine("break " + stmt.getTargetLabel() + ";");
-        } else {
+        }
+        else
+        {
             writer.writeLine("break;");
         }
         return null;
     }
 
     @Override
-    public Void visitContinue(ContinueStmt stmt) {
+    public Void visitContinue(ContinueStmt stmt)
+    {
         recordLine(stmt);
-        if (stmt.getTargetLabel() != null) {
+        if (stmt.getTargetLabel() != null)
+        {
             writer.writeLine("continue " + stmt.getTargetLabel() + ";");
-        } else {
+        }
+        else
+        {
             writer.writeLine("continue;");
         }
         return null;
     }
 
     @Override
-    public Void visitIRRegion(IRRegionStmt stmt) {
+    public Void visitIRRegion(IRRegionStmt stmt)
+    {
         recordLine(stmt);
         writer.writeLine("/* IR Region - irreducible control flow */");
         writer.writeLine("/* Blocks: " + stmt.getBlocks().size() + " */");
         // Emit block contents as comments for debugging
-        for (var block : stmt.getBlocks()) {
+        for (var block : stmt.getBlocks())
+        {
             writer.writeLine("// " + block.getName() + ":");
-            for (var phi : block.getPhiInstructions()) {
+            for (var phi : block.getPhiInstructions())
+            {
                 writer.writeLine("//   " + phi);
             }
-            for (var instr : block.getInstructions()) {
+            for (var instr : block.getInstructions())
+            {
                 writer.writeLine("//   " + instr);
             }
         }
@@ -913,153 +1183,184 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitLiteral(LiteralExpr expr) {
+    public Void visitLiteral(LiteralExpr expr)
+    {
         writer.write(formatLiteral(expr));
         return null;
     }
 
-    private String formatLiteral(LiteralExpr expr) {
+    private String formatLiteral(LiteralExpr expr)
+    {
         Object value = expr.getValue();
-        if (value == null) {
+        if (value == null)
+        {
             return "null";
         }
         SourceType type = expr.getType();
-        if (value instanceof Integer && type == PrimitiveSourceType.BOOLEAN) {
+        if (value instanceof Integer && type == PrimitiveSourceType.BOOLEAN)
+        {
             int intVal = (Integer) value;
             return intVal != 0 ? "true" : "false";
         }
-        if (value instanceof Integer && type == PrimitiveSourceType.CHAR) {
+        if (value instanceof Integer && type == PrimitiveSourceType.CHAR)
+        {
             int intVal = (Integer) value;
             return "'" + escapeChar((char) intVal) + "'";
         }
-        if (value instanceof String) {
+        if (value instanceof String)
+        {
             String s = (String) value;
             return "\"" + escapeString(s) + "\"";
         }
-        if (value instanceof Character) {
+        if (value instanceof Character)
+        {
             Character c = (Character) value;
             return "'" + escapeChar(c) + "'";
         }
-        if (value instanceof Long) {
+        if (value instanceof Long)
+        {
             Long l = (Long) value;
             String symbolic = getSymbolicConstant(l, true);
-            if (symbolic != null) {
-                return symbolic;
-            }
-            return l + "L";
+            return Objects.requireNonNullElseGet(symbolic, () -> l + "L");
         }
-        if (value instanceof Float) {
+        if (value instanceof Float)
+        {
             Float f = (Float) value;
             String symbolic = getSymbolicFloatConstant(f);
-            if (symbolic != null) {
-                return symbolic;
-            }
-            return f + "f";
+            return Objects.requireNonNullElseGet(symbolic, () -> f + "f");
         }
-        if (value instanceof Double) {
+        if (value instanceof Double)
+        {
             Double d = (Double) value;
             String symbolic = getSymbolicDoubleConstant(d);
-            if (symbolic != null) {
-                return symbolic;
-            }
-            return d + "d";
+            return Objects.requireNonNullElseGet(symbolic, () -> d + "d");
         }
-        if (value instanceof Boolean) {
+        if (value instanceof Boolean)
+        {
             Boolean b = (Boolean) value;
             return b.toString();
         }
-        if (value instanceof Integer) {
+        if (value instanceof Integer)
+        {
             Integer i = (Integer) value;
             String symbolic = getSymbolicConstant((long) i, false);
-            if (symbolic != null) {
+            if (symbolic != null)
+            {
                 return symbolic;
             }
         }
         return value.toString();
     }
 
-    private String getSymbolicConstant(long value, boolean isLong) {
-        if (value == Long.MAX_VALUE) {
+    private String getSymbolicConstant(long value, boolean isLong)
+    {
+        if (value == Long.MAX_VALUE)
+        {
             return "Long.MAX_VALUE";
         }
-        if (value == Long.MIN_VALUE) {
+        if (value == Long.MIN_VALUE)
+        {
             return "Long.MIN_VALUE";
         }
-        if (value == Integer.MAX_VALUE) {
+        if (value == Integer.MAX_VALUE)
+        {
             return isLong ? "(long) Integer.MAX_VALUE" : "Integer.MAX_VALUE";
         }
-        if (value == Integer.MIN_VALUE) {
+        if (value == Integer.MIN_VALUE)
+        {
             return isLong ? "(long) Integer.MIN_VALUE" : "Integer.MIN_VALUE";
         }
-        if (value == Short.MAX_VALUE) {
+        if (value == Short.MAX_VALUE)
+        {
             return isLong ? "(long) Short.MAX_VALUE" : "Short.MAX_VALUE";
         }
-        if (value == Short.MIN_VALUE) {
+        if (value == Short.MIN_VALUE)
+        {
             return isLong ? "(long) Short.MIN_VALUE" : "Short.MIN_VALUE";
         }
-        if (value == Byte.MAX_VALUE) {
+        if (value == Byte.MAX_VALUE)
+        {
             return isLong ? "(long) Byte.MAX_VALUE" : "Byte.MAX_VALUE";
         }
-        if (value == Byte.MIN_VALUE) {
+        if (value == Byte.MIN_VALUE)
+        {
             return isLong ? "(long) Byte.MIN_VALUE" : "Byte.MIN_VALUE";
         }
         return null;
     }
 
-    private String getSymbolicFloatConstant(float value) {
-        if (value == Float.MAX_VALUE) {
+    private String getSymbolicFloatConstant(float value)
+    {
+        if (value == Float.MAX_VALUE)
+        {
             return "Float.MAX_VALUE";
         }
-        if (value == Float.MIN_VALUE) {
+        if (value == Float.MIN_VALUE)
+        {
             return "Float.MIN_VALUE";
         }
-        if (value == Float.MIN_NORMAL) {
+        if (value == Float.MIN_NORMAL)
+        {
             return "Float.MIN_NORMAL";
         }
-        if (Float.isNaN(value)) {
+        if (Float.isNaN(value))
+        {
             return "Float.NaN";
         }
-        if (value == Float.POSITIVE_INFINITY) {
+        if (value == Float.POSITIVE_INFINITY)
+        {
             return "Float.POSITIVE_INFINITY";
         }
-        if (value == Float.NEGATIVE_INFINITY) {
+        if (value == Float.NEGATIVE_INFINITY)
+        {
             return "Float.NEGATIVE_INFINITY";
         }
         return null;
     }
 
-    private String getSymbolicDoubleConstant(double value) {
-        if (value == Double.MAX_VALUE) {
+    private String getSymbolicDoubleConstant(double value)
+    {
+        if (value == Double.MAX_VALUE)
+        {
             return "Double.MAX_VALUE";
         }
-        if (value == Double.MIN_VALUE) {
+        if (value == Double.MIN_VALUE)
+        {
             return "Double.MIN_VALUE";
         }
-        if (value == Double.MIN_NORMAL) {
+        if (value == Double.MIN_NORMAL)
+        {
             return "Double.MIN_NORMAL";
         }
-        if (Double.isNaN(value)) {
+        if (Double.isNaN(value))
+        {
             return "Double.NaN";
         }
-        if (value == Double.POSITIVE_INFINITY) {
+        if (value == Double.POSITIVE_INFINITY)
+        {
             return "Double.POSITIVE_INFINITY";
         }
-        if (value == Double.NEGATIVE_INFINITY) {
+        if (value == Double.NEGATIVE_INFINITY)
+        {
             return "Double.NEGATIVE_INFINITY";
         }
         return null;
     }
 
-    private String escapeString(String s) {
+    private String escapeString(String s)
+    {
         StringBuilder sb = new StringBuilder();
-        for (char c : s.toCharArray()) {
+        for (char c : s.toCharArray())
+        {
             sb.append(escapeChar(c));
         }
         return sb.toString();
     }
 
-    private String escapeChar(char c) {
-        switch (c) {
+    private String escapeChar(char c)
+    {
+        switch (c)
+        {
             case '\n':
                 return "\\n";
             case '\r':
@@ -1078,19 +1379,18 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVarRef(VarRefExpr expr) {
+    public Void visitVarRef(VarRefExpr expr)
+    {
         writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.VARIABLE));
         return null;
     }
 
     /**
-     * Whether an expression must be parenthesized when used as the receiver of a
-     * {@code .}/{@code []} (or similar postfix) operation. Casts, binary ops,
-     * {@code instanceof}, ternaries, and prefix unaries all bind looser than the
-     * postfix operator, so {@code (Foo) x.bar()} would otherwise mis-parse as
-     * {@code (Foo) (x.bar())}.
+     * Whether an expression must be parenthesized when used as the receiver of a {@code .}/{@code []} (or similar
+     * postfix) operation.
      */
-    private boolean needsParensAsReceiver(Expression e) {
+    private boolean needsParensAsReceiver(Expression e)
+    {
         return e instanceof CastExpr
             || e instanceof BinaryExpr
             || e instanceof InstanceOfExpr
@@ -1098,7 +1398,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
             || (e instanceof UnaryExpr && ((UnaryExpr) e).getOperator().isPrefix());
     }
 
-    private void emitReceiver(Expression e) {
+    private void emitReceiver(Expression e)
+    {
         boolean parens = needsParensAsReceiver(e);
         if (parens) writer.write("(");
         e.accept(this);
@@ -1106,18 +1407,32 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitFieldAccess(FieldAccessExpr expr) {
-        if (expr.isStatic()) {
+    public Void visitFieldAccess(FieldAccessExpr expr)
+    {
+        if (expr.isStatic())
+        {
             String ownerClass = expr.getOwnerClass();
             boolean isSelfReference = currentClassName != null &&
                 (currentClassName.equals(ownerClass) ||
                  currentClassName.replace('/', '.').equals(ownerClass) ||
                  currentClassName.equals(ownerClass.replace('.', '/')));
-            if (!isSelfReference) {
+            // A self-reference may drop its qualifier ONLY while no parameter or local shadows the
+            // field's simple name; a shadowed access must stay class-qualified to keep its meaning.
+            // The shadowed self-reference qualifies FULLY: the simple name can resolve to a
+            // same-named import (a sibling class also called LwjglContext, say) instead of this one.
+            if (isSelfReference && isShadowed(expr.getFieldName()))
+            {
+                writer.write(ownerClass.replace('/', '.').replace('$', '.'));
+                writer.write(".");
+            }
+            else if (!isSelfReference)
+            {
                 writer.write(formatClassName(ownerClass));
                 writer.write(".");
             }
-        } else if (expr.getReceiver() != null) {
+        }
+        else if (expr.getReceiver() != null)
+        {
             Expression receiver = expr.getReceiver();
             SourceType receiverType = castReceiverType(receiver);
             String ownerClass = expr.getOwnerClass();
@@ -1125,21 +1440,34 @@ public class SourceEmitter implements SourceVisitor<Void> {
             // A field declared on a subtype, accessed through a wider-typed receiver (e.g. an
             // Object-typed local that the verifier narrowed elsewhere), needs a downcast just like
             // a method call does (visitMethodCall). Without it the field access does not compile.
+            // An arraylength access (owner "[]") has no owner class to name; its downcast target is
+            // the receiver expression's own array type.
+            boolean isArrayLength = "[]".equals(ownerClass);
             boolean needsCast = false;
-            if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
+            if (isArrayLength)
+            {
+                needsCast = !(receiverType instanceof ArraySourceType)
+                        && receiver.getType() instanceof ArraySourceType;
+            }
+            else if (receiverType instanceof ReferenceSourceType && ownerClass != null)
+            {
                 String receiverClass = ((ReferenceSourceType) receiverType).getInternalName();
-                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass)) {
+                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass))
+                {
                     needsCast = true;
                 }
             }
 
-            if (needsCast) {
+            if (needsCast)
+            {
                 writer.write("((");
-                writer.write(formatClassName(ownerClass));
+                writer.write(isArrayLength ? receiver.getType().toJavaSource() : formatClassName(ownerClass));
                 writer.write(") ");
                 receiver.accept(this);
                 writer.write(")");
-            } else {
+            }
+            else
+            {
                 emitReceiver(receiver);
             }
             writer.write(".");
@@ -1149,7 +1477,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitArrayAccess(ArrayAccessExpr expr) {
+    public Void visitArrayAccess(ArrayAccessExpr expr)
+    {
         emitReceiver(expr.getArray());
         writer.write("[");
         expr.getIndex().accept(this);
@@ -1158,33 +1487,44 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitMethodCall(MethodCallExpr expr) {
-        if (expr.isStatic()) {
+    public Void visitMethodCall(MethodCallExpr expr)
+    {
+        if (expr.isStatic())
+        {
             writer.write(formatClassName(expr.getOwnerClass()));
             writer.write(".");
-        } else if (expr.isSuperCall() && expr.getReceiver() == null) {
+        }
+        else if (expr.isSuperCall() && expr.getReceiver() == null)
+        {
             writer.write("super.");
-        } else if (expr.getReceiver() != null) {
+        }
+        else if (expr.getReceiver() != null)
+        {
             Expression receiver = expr.getReceiver();
             SourceType receiverType = castReceiverType(receiver);
             String ownerClass = expr.getOwnerClass();
 
             boolean needsCast = false;
-            if (receiverType instanceof ReferenceSourceType && ownerClass != null) {
+            if (receiverType instanceof ReferenceSourceType && ownerClass != null)
+            {
                 ReferenceSourceType refType = (ReferenceSourceType) receiverType;
                 String receiverClass = refType.getInternalName();
-                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass)) {
+                if (!ownerClass.equals(receiverClass) && !"java/lang/Object".equals(ownerClass))
+                {
                     needsCast = true;
                 }
             }
 
-            if (needsCast) {
+            if (needsCast)
+            {
                 writer.write("((");
                 writer.write(formatClassName(ownerClass));
                 writer.write(") ");
                 receiver.accept(this);
                 writer.write(")");
-            } else {
+            }
+            else
+            {
                 emitReceiver(receiver);
             }
             writer.write(".");
@@ -1198,7 +1538,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitNew(NewExpr expr) {
+    public Void visitNew(NewExpr expr)
+    {
         writer.write("new ");
         writer.write(formatClassName(expr.getClassName()));
         writer.write("(");
@@ -1208,24 +1549,30 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitNewArray(NewArrayExpr expr) {
+    public Void visitNewArray(NewArrayExpr expr)
+    {
         writer.write("new ");
         SourceType elementType = expr.getElementType();
         int elementArrayDims = 0;
-        if (elementType instanceof ArraySourceType) {
+        if (elementType instanceof ArraySourceType)
+        {
             ArraySourceType arrayElement = (ArraySourceType) elementType;
             elementArrayDims = arrayElement.getTotalDimensions();
             elementType = arrayElement.getElementType();
         }
         elementType.accept(this);
 
-        if (expr.hasInitializer()) {
+        if (expr.hasInitializer())
+        {
             writer.write("[]");
             writeEmptyDimensions(elementArrayDims);
             writer.write(" ");
             expr.getInitializer().accept(this);
-        } else {
-            for (Expression dim : expr.getDimensions()) {
+        }
+        else
+        {
+            for (Expression dim : expr.getDimensions())
+            {
                 writer.write("[");
                 dim.accept(this);
                 writer.write("]");
@@ -1235,14 +1582,17 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    private void writeEmptyDimensions(int count) {
-        for (int i = 0; i < count; i++) {
+    private void writeEmptyDimensions(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
             writer.write("[]");
         }
     }
 
     @Override
-    public Void visitArrayInit(ArrayInitExpr expr) {
+    public Void visitArrayInit(ArrayInitExpr expr)
+    {
         writer.write("{");
         emitExpressionList(expr.getElements());
         writer.write("}");
@@ -1250,8 +1600,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitBinary(BinaryExpr expr) {
-        if (tryEmitIncrementDecrement(expr)) {
+    public Void visitBinary(BinaryExpr expr)
+    {
+        if (tryEmitIncrementDecrement(expr))
+        {
             return null;
         }
 
@@ -1268,34 +1620,40 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    private boolean tryEmitIncrementDecrement(BinaryExpr expr) {
+    private boolean tryEmitIncrementDecrement(BinaryExpr expr)
+    {
         BinaryOperator op = expr.getOperator();
         Expression left = expr.getLeft();
         Expression right = expr.getRight();
 
-        if (op == BinaryOperator.ADD_ASSIGN && isLiteralOne(right)) {
+        if (op == BinaryOperator.ADD_ASSIGN && isLiteralOne(right))
+        {
             left.accept(this);
             writer.write("++");
             return true;
         }
-        if (op == BinaryOperator.SUB_ASSIGN && isLiteralOne(right)) {
+        if (op == BinaryOperator.SUB_ASSIGN && isLiteralOne(right))
+        {
             left.accept(this);
             writer.write("--");
             return true;
         }
 
-        if (op == BinaryOperator.ASSIGN && right instanceof BinaryExpr) {
+        if (op == BinaryOperator.ASSIGN && right instanceof BinaryExpr)
+        {
             BinaryExpr rightBinary = (BinaryExpr) right;
             BinaryOperator rightOp = rightBinary.getOperator();
             Expression rightLeft = rightBinary.getLeft();
             Expression rightRight = rightBinary.getRight();
 
-            if (rightOp == BinaryOperator.ADD && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight)) {
+            if (rightOp == BinaryOperator.ADD && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight))
+            {
                 left.accept(this);
                 writer.write("++");
                 return true;
             }
-            if (rightOp == BinaryOperator.SUB && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight)) {
+            if (rightOp == BinaryOperator.SUB && expressionsEqual(left, rightLeft) && isLiteralOne(rightRight))
+            {
                 left.accept(this);
                 writer.write("--");
                 return true;
@@ -1305,68 +1663,86 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return false;
     }
 
-    private boolean isLiteralOne(Expression expr) {
-        if (!(expr instanceof LiteralExpr)) {
+    private boolean isLiteralOne(Expression expr)
+    {
+        if (!(expr instanceof LiteralExpr))
+        {
             return false;
         }
         Object value = ((LiteralExpr) expr).getValue();
-        if (value instanceof Number) {
+        if (value instanceof Number)
+        {
             return ((Number) value).intValue() == 1;
         }
         return false;
     }
 
-    private boolean expressionsEqual(Expression a, Expression b) {
-        if (a == null || b == null) {
+    private boolean expressionsEqual(Expression a, Expression b)
+    {
+        if (a == null || b == null)
+        {
             return false;
         }
-        if (a.getClass() != b.getClass()) {
+        if (a.getClass() != b.getClass())
+        {
             return false;
         }
-        if (a instanceof VarRefExpr && b instanceof VarRefExpr) {
+        if (a instanceof VarRefExpr && b instanceof VarRefExpr)
+        {
             return ((VarRefExpr) a).getName().equals(((VarRefExpr) b).getName());
         }
-        if (a instanceof FieldAccessExpr && b instanceof FieldAccessExpr) {
+        if (a instanceof FieldAccessExpr && b instanceof FieldAccessExpr)
+        {
             FieldAccessExpr fa = (FieldAccessExpr) a;
             FieldAccessExpr fb = (FieldAccessExpr) b;
-            if (!fa.getFieldName().equals(fb.getFieldName())) {
+            if (!fa.getFieldName().equals(fb.getFieldName()))
+            {
                 return false;
             }
-            if (fa.isStatic() && fb.isStatic()) {
+            if (fa.isStatic() && fb.isStatic())
+            {
                 return fa.getOwnerClass().equals(fb.getOwnerClass());
             }
             return expressionsEqual(fa.getReceiver(), fb.getReceiver());
         }
-        if (a instanceof ArrayAccessExpr && b instanceof ArrayAccessExpr) {
+        if (a instanceof ArrayAccessExpr && b instanceof ArrayAccessExpr)
+        {
             ArrayAccessExpr aa = (ArrayAccessExpr) a;
             ArrayAccessExpr ab = (ArrayAccessExpr) b;
             return expressionsEqual(aa.getArray(), ab.getArray()) &&
                    expressionsEqual(aa.getIndex(), ab.getIndex());
         }
-        if (a instanceof LiteralExpr && b instanceof LiteralExpr) {
+        if (a instanceof LiteralExpr && b instanceof LiteralExpr)
+        {
             Object va = ((LiteralExpr) a).getValue();
             Object vb = ((LiteralExpr) b).getValue();
-            return va == null ? vb == null : va.equals(vb);
+            return Objects.equals(va, vb);
         }
         return false;
     }
 
     @Override
-    public Void visitUnary(UnaryExpr expr) {
-        if (expr.getOperator().isPrefix()) {
+    public Void visitUnary(UnaryExpr expr)
+    {
+        if (expr.getOperator().isPrefix())
+        {
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
             Expression operand = expr.getOperand();
             boolean needsParens = operand instanceof BinaryExpr
                 || operand instanceof InstanceOfExpr
                 || operand instanceof TernaryExpr;
-            if (needsParens) {
+            if (needsParens)
+            {
                 writer.write("(");
             }
             expr.getOperand().accept(this);
-            if (needsParens) {
+            if (needsParens)
+            {
                 writer.write(")");
             }
-        } else {
+        }
+        else
+        {
             expr.getOperand().accept(this);
             writer.write(getUnaryOperatorSymbol(expr.getOperator()));
         }
@@ -1374,28 +1750,33 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitCast(CastExpr expr) {
+    public Void visitCast(CastExpr expr)
+    {
         writer.write("(");
         expr.getTargetType().accept(this);
         writer.write(") ");
         Expression inner = expr.getExpression();
         boolean needsParens = inner instanceof BinaryExpr || inner instanceof TernaryExpr;
-        if (needsParens) {
+        if (needsParens)
+        {
             writer.write("(");
         }
         inner.accept(this);
-        if (needsParens) {
+        if (needsParens)
+        {
             writer.write(")");
         }
         return null;
     }
 
     @Override
-    public Void visitInstanceOf(InstanceOfExpr expr) {
+    public Void visitInstanceOf(InstanceOfExpr expr)
+    {
         expr.getExpression().accept(this);
         writer.write(" instanceof ");
         expr.getCheckType().accept(this);
-        if (expr.getPatternVariable() != null) {
+        if (expr.getPatternVariable() != null)
+        {
             writer.write(" ");
             writer.write(expr.getPatternVariable());
         }
@@ -1403,7 +1784,8 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitTernary(TernaryExpr expr) {
+    public Void visitTernary(TernaryExpr expr)
+    {
         // Ternary binds looser than any non-assignment operator: as an operand of one it must be
         // parenthesized or the condition absorbs the surrounding expression.
         boolean needsParens = expr.getParent() instanceof UnaryExpr
@@ -1419,26 +1801,33 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    private static boolean isAssignmentOperator(BinaryOperator op) {
+    private static boolean isAssignmentOperator(BinaryOperator op)
+    {
         return op.getPrecedence() <= BinaryOperator.ASSIGN.getPrecedence();
     }
 
     @Override
-    public Void visitSwitchExpr(com.tonic.analysis.source.ast.expr.SwitchExpr expr) {
+    public Void visitSwitchExpr(SwitchExpr expr)
+    {
         writer.write("switch (");
         expr.getSelector().accept(this);
         writer.writeLine(") {");
         writer.indent();
-        for (com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm : expr.getArms()) {
-            if (arm.isDefault()) {
+        for (SwitchExpr.Arm arm : expr.getArms())
+        {
+            if (arm.isDefault())
+            {
                 writer.write("default -> ");
-            } else if (arm.isRecordDeconstruction()) {
+            }
+            else if (arm.isRecordDeconstruction())
+            {
                 writer.write("case ");
                 writer.write(arm.getPatternType().toJavaSource());
                 writer.write("(");
-                List<com.tonic.analysis.source.ast.expr.SwitchExpr.Component> comps =
+                List<SwitchExpr.Component> comps =
                         arm.getDeconstructionComponents();
-                for (int i = 0; i < comps.size(); i++) {
+                for (int i = 0; i < comps.size(); i++)
+                {
                     if (i > 0) writer.write(", ");
                     writer.write(comps.get(i).getType().toJavaSource());
                     writer.write(" ");
@@ -1447,19 +1836,25 @@ public class SourceEmitter implements SourceVisitor<Void> {
                 writer.write(")");
                 emitWhenGuard(arm);
                 writer.write(" -> ");
-            } else if (arm.isTypePattern()) {
+            }
+            else if (arm.isTypePattern())
+            {
                 writer.write("case ");
                 writer.write(arm.getPatternType().toJavaSource());
-                if (arm.getPatternBinding() != null) {
+                if (arm.getPatternBinding() != null)
+                {
                     writer.write(" ");
                     writer.write(arm.getPatternBinding());
                 }
                 emitWhenGuard(arm);
                 writer.write(" -> ");
-            } else {
+            }
+            else
+            {
                 writer.write("case ");
                 List<Expression> labels = arm.getLabels();
-                for (int i = 0; i < labels.size(); i++) {
+                for (int i = 0; i < labels.size(); i++)
+                {
                     if (i > 0) writer.write(", ");
                     labels.get(i).accept(this);
                 }
@@ -1473,27 +1868,39 @@ public class SourceEmitter implements SourceVisitor<Void> {
         return null;
     }
 
-    /** Emits {@code  when <guard>} for a guarded pattern arm. */
-    private void emitWhenGuard(com.tonic.analysis.source.ast.expr.SwitchExpr.Arm arm) {
-        if (arm.getGuard() != null) {
+    /**
+     * Emits {@code  when <guard>} for a guarded pattern arm.
+     */
+    private void emitWhenGuard(SwitchExpr.Arm arm)
+    {
+        if (arm.getGuard() != null)
+        {
             writer.write(" when ");
             arm.getGuard().accept(this);
         }
     }
 
     @Override
-    public Void visitLambda(LambdaExpr expr) {
+    public Void visitLambda(LambdaExpr expr)
+    {
         List<LambdaParameter> params = expr.getParameters();
-        if (params.isEmpty()) {
+        if (params.isEmpty())
+        {
             writer.write("()");
-        } else if (params.size() == 1 && params.get(0).type() == null) {
+        }
+        else if (params.size() == 1 && params.get(0).type() == null)
+        {
             writer.write(params.get(0).name());
-        } else {
+        }
+        else
+        {
             writer.write("(");
-            for (int i = 0; i < params.size(); i++) {
+            for (int i = 0; i < params.size(); i++)
+            {
                 if (i > 0) writer.write(", ");
                 LambdaParameter p = params.get(i);
-                if (p.type() != null) {
+                if (p.type() != null)
+                {
                     writer.write(p.type().toJavaSource());
                     writer.write(" ");
                 }
@@ -1508,31 +1915,46 @@ public class SourceEmitter implements SourceVisitor<Void> {
         // separate space); SUPPRESS when the impl method is unknown so we never poison the base map.
         String implKey = expr.getImplMethodKey();
         methodKeyStack.push(implKey != null ? implKey : SUPPRESS);
-        try {
-            if (expr.getBody() instanceof BlockStmt) {
+        try
+        {
+            if (expr.getBody() instanceof BlockStmt)
+            {
                 BlockStmt blockStmt = (BlockStmt) expr.getBody();
-                if (blockStmt.getStatements().isEmpty()) {
+                if (blockStmt.getStatements().isEmpty())
+                {
                     writer.write("{ }");
-                } else {
+                }
+                else
+                {
                     expr.getBody().accept(this);
                 }
-            } else if (expr.getBody() instanceof ExprStmt) {
+            }
+            else if (expr.getBody() instanceof ExprStmt)
+            {
                 ExprStmt exprStmt = (ExprStmt) expr.getBody();
                 exprStmt.getExpression().accept(this);
-            } else {
+            }
+            else
+            {
                 expr.getBody().accept(this);
             }
-        } finally {
+        }
+        finally
+        {
             methodKeyStack.pop();
         }
         return null;
     }
 
     @Override
-    public Void visitMethodRef(MethodRefExpr expr) {
-        if (expr.getReceiver() != null) {
+    public Void visitMethodRef(MethodRefExpr expr)
+    {
+        if (expr.getReceiver() != null)
+        {
             expr.getReceiver().accept(this);
-        } else {
+        }
+        else
+        {
             writer.write(formatClassName(expr.getOwnerClass()));
         }
         writer.write("::");
@@ -1541,34 +1963,41 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitThis(ThisExpr expr) {
+    public Void visitThis(ThisExpr expr)
+    {
         writer.write("this");
         return null;
     }
 
     @Override
-    public Void visitSuper(SuperExpr expr) {
+    public Void visitSuper(SuperExpr expr)
+    {
         writer.write("super");
         return null;
     }
 
     @Override
-    public Void visitClass(ClassExpr expr) {
+    public Void visitClass(ClassExpr expr)
+    {
         writer.write(expr.getClassType().toJavaSource());
         writer.write(".class");
         return null;
     }
 
     @Override
-    public Void visitDynamicConstant(DynamicConstantExpr expr) {
-        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner())) {
+    public Void visitDynamicConstant(DynamicConstantExpr expr)
+    {
+        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner()))
+        {
             // Emit as actual static method call: owner.bootstrapName()
             writer.write(formatClassName(expr.getBootstrapOwner()));
             writer.write(".");
             writer.write(normalizer.normalize(expr.getBootstrapName(), IdentifierNormalizer.IdentifierType.METHOD));
             writer.write("()");
             writer.write(" /* condy */");
-        } else {
+        }
+        else
+        {
             // Emit as a comment that shows the condy information
             writer.write("/* condy:\"");
             writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.CONSTANT));
@@ -1582,8 +2011,10 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitInvokeDynamic(InvokeDynamicExpr expr) {
-        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner())) {
+    public Void visitInvokeDynamic(InvokeDynamicExpr expr)
+    {
+        if (config.isResolveBootstrapMethods() && !"unknown".equals(expr.getBootstrapOwner()))
+        {
             // Emit as actual static method call: owner.bootstrapName(args)
             writer.write(formatClassName(expr.getBootstrapOwner()));
             writer.write(".");
@@ -1592,12 +2023,14 @@ public class SourceEmitter implements SourceVisitor<Void> {
             emitExpressionList(expr.getArguments());
             writer.write(")");
             writer.write(" /* indy */");
-        } else {
-            // Emit as invokedynamic pseudo-call with comment
+        }
+        else
+        {
             writer.write("invokedynamic(\"");
             writer.write(normalizer.normalize(expr.getName(), IdentifierNormalizer.IdentifierType.METHOD));
             writer.write("\"");
-            if (!expr.getArguments().isEmpty()) {
+            if (!expr.getArguments().isEmpty())
+            {
                 writer.write(", ");
                 emitExpressionList(expr.getArguments());
             }
@@ -1609,16 +2042,20 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitPrimitiveType(PrimitiveSourceType type) {
+    public Void visitPrimitiveType(PrimitiveSourceType type)
+    {
         writer.write(type.toJavaSource());
         return null;
     }
 
     @Override
-    public Void visitReferenceType(ReferenceSourceType type) {
+    public Void visitReferenceType(ReferenceSourceType type)
+    {
         recordTypeUsage(type.getInternalName());
-        for (SourceType typeArg : type.getTypeArguments()) {
-            if (typeArg instanceof ReferenceSourceType) {
+        for (SourceType typeArg : type.getTypeArguments())
+        {
+            if (typeArg instanceof ReferenceSourceType)
+            {
                 recordTypeUsage(((ReferenceSourceType) typeArg).getInternalName());
             }
         }
@@ -1627,9 +2064,11 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitArrayType(ArraySourceType type) {
+    public Void visitArrayType(ArraySourceType type)
+    {
         SourceType elemType = type.getElementType();
-        if (elemType instanceof ReferenceSourceType) {
+        if (elemType instanceof ReferenceSourceType)
+        {
             recordTypeUsage(((ReferenceSourceType) elemType).getInternalName());
         }
         writer.write(type.toJavaSource());
@@ -1637,32 +2076,42 @@ public class SourceEmitter implements SourceVisitor<Void> {
     }
 
     @Override
-    public Void visitVoidType(VoidSourceType type) {
+    public Void visitVoidType(VoidSourceType type)
+    {
         writer.write("void");
         return null;
     }
 
     /**
-     * Checks if a statement is an empty block (no statements inside).
+     * @param stmt the statement to test
+     * @return true if it is a block containing no statements
      */
-    private boolean isEmptyBlock(Statement stmt) {
-        if (stmt instanceof BlockStmt) {
+    private boolean isEmptyBlock(Statement stmt)
+    {
+        if (stmt instanceof BlockStmt)
+        {
             BlockStmt block = (BlockStmt) stmt;
             return block.getStatements().isEmpty();
         }
         return false;
     }
 
-    private void emitBody(Statement body) {
-        if (body instanceof BlockStmt) {
+    private void emitBody(Statement body)
+    {
+        if (body instanceof BlockStmt)
+        {
             body.accept(this);
-        } else if (config.isAlwaysUseBraces()) {
+        }
+        else if (config.isAlwaysUseBraces())
+        {
             writer.writeLine("{");
             writer.indent();
             body.accept(this);
             writer.dedent();
             writer.writeLine("}");
-        } else {
+        }
+        else
+        {
             writer.newLine();
             writer.indent();
             body.accept(this);
@@ -1670,35 +2119,68 @@ public class SourceEmitter implements SourceVisitor<Void> {
         }
     }
 
-    private void emitExpressionList(List<Expression> exprs) {
-        for (int i = 0; i < exprs.size(); i++) {
+    private void emitExpressionList(List<Expression> exprs)
+    {
+        for (int i = 0; i < exprs.size(); i++)
+        {
             if (i > 0) writer.write(", ");
             exprs.get(i).accept(this);
         }
     }
 
-    private String formatClassName(String internalName) {
+    private String formatClassName(String internalName)
+    {
         if (internalName == null) return "";
         recordTypeUsage(internalName);
         String formatted;
-        if (config.isUseFullyQualifiedNames() || internalName.contains("$")) {
+        if (config.isUseFullyQualifiedNames() || internalName.contains("$"))
+        {
             formatted = ClassNameUtil.toSourceNameWithInnerClasses(internalName);
-        } else {
+        }
+        else
+        {
             formatted = ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
         }
         return normalizer.normalizeClassName(formatted);
     }
 
-    private boolean needsParentheses(BinaryExpr expr) {
-        if (expr.getParent() instanceof BinaryExpr) {
-            BinaryExpr parent = (BinaryExpr) expr.getParent();
-            return expr.getOperator().getPrecedence() < parent.getOperator().getPrecedence();
+    /**
+     * Whether a binary expression must be parenthesized inside its parent binary expression to keep its grouping.
+     */
+    private boolean needsParentheses(BinaryExpr expr)
+    {
+        if (!(expr.getParent() instanceof BinaryExpr))
+        {
+            return false;
         }
-        return false;
+        BinaryExpr parent = (BinaryExpr) expr.getParent();
+        int childPrec = expr.getOperator().getPrecedence();
+        int parentPrec = parent.getOperator().getPrecedence();
+        if (childPrec != parentPrec)
+        {
+            return childPrec < parentPrec;
+        }
+        boolean onBindingSide = parent.getOperator().isLeftAssociative()
+                ? parent.getLeft() == expr
+                : parent.getRight() == expr;
+        if (onBindingSide)
+        {
+            return false;
+        }
+        return expr.getOperator() != parent.getOperator()
+                || !reassociationIsHarmless(expr.getOperator());
     }
 
-    private String getUnaryOperatorSymbol(UnaryOperator op) {
-        switch (op) {
+    private static boolean reassociationIsHarmless(BinaryOperator op)
+    {
+        return op == BinaryOperator.AND || op == BinaryOperator.OR
+                || op == BinaryOperator.BAND || op == BinaryOperator.BOR || op == BinaryOperator.BXOR;
+    }
+
+    private String getUnaryOperatorSymbol(UnaryOperator op)
+    {
+        switch (op)
+        {
             case NEG:
                 return "-";
             case POS:

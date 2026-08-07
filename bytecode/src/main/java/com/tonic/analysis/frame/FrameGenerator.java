@@ -19,15 +19,9 @@ import static com.tonic.util.Opcode.*;
 
 /**
  * Generates StackMapTable frames for a method.
- * Uses FULL_FRAME for all entries (simple and always valid).
- * <p>
- * Usage:
- * <pre>
- * FrameGenerator gen = new FrameGenerator(constPool);
- * List<StackMapFrame> frames = gen.computeFrames(methodEntry);
- * </pre>
  */
-public class FrameGenerator {
+public class FrameGenerator
+{
     private final ConstPool constPool;
     private final TypeInference typeInference;
     private int maxStackSlots;
@@ -40,28 +34,30 @@ public class FrameGenerator {
 
     /**
      * Constructs a FrameGenerator for the given constant pool.
-     *
      * @param constPool the constant pool
      */
-    public FrameGenerator(ConstPool constPool) {
+    public FrameGenerator(ConstPool constPool)
+    {
         this.constPool = constPool;
         this.typeInference = new TypeInference(constPool);
     }
 
     /**
      * Computes the StackMapTable frames for a method.
-     *
      * @param method The method to compute frames for
      * @return List of StackMapFrame entries (all FullFrame type)
      */
-    public List<StackMapFrame> computeFrames(MethodEntry method) {
+    public List<StackMapFrame> computeFrames(MethodEntry method)
+    {
         CodeAttribute codeAttr = method.getCodeAttribute();
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             return Collections.emptyList();
         }
 
         Set<Integer> frameTargets = findFrameTargets(method);
-        if (frameTargets.isEmpty()) {
+        if (frameTargets.isEmpty())
+        {
             return Collections.emptyList();
         }
 
@@ -72,17 +68,22 @@ public class FrameGenerator {
         Collections.sort(sortedTargets);
 
         int previousOffset = -1;
-        for (int target : sortedTargets) {
+        for (int target : sortedTargets)
+        {
             TypeState state = states.get(target);
-            if (state == null) {
+            if (state == null)
+            {
                 Logger.error("No type state computed for offset " + target);
                 continue;
             }
 
             int offsetDelta;
-            if (previousOffset == -1) {
+            if (previousOffset == -1)
+            {
                 offsetDelta = target;
-            } else {
+            }
+            else
+            {
                 offsetDelta = target - previousOffset - 1;
             }
 
@@ -95,15 +96,14 @@ public class FrameGenerator {
     }
 
     /**
-     * Computes the true {@code max_stack} over the method's control-flow graph: the peak operand-stack
-     * depth (in slots) across every reachable program point — including loop back-edges, join points,
-     * and exception-handler entry states. Unlike a linear textual scan this never under-reports.
-     *
+     * Computes the true {@code max_stack} over the method's control-flow graph.
      * @param method the method to analyze
      * @return the CFG-correct max_stack in slots (0 if the method has no code)
      */
-    public int computeMaxStack(MethodEntry method) {
-        if (method.getCodeAttribute() == null) {
+    public int computeMaxStack(MethodEntry method)
+    {
+        if (method.getCodeAttribute() == null)
+        {
             return 0;
         }
         computeTypeStates(method, findFrameTargets(method));
@@ -111,27 +111,30 @@ public class FrameGenerator {
     }
 
     /**
-     * The max operand-stack depth (slots) observed by the most recent {@link #computeFrames} /
-     * {@link #computeMaxStack} run. Valid only after the worklist has run (i.e. when the method had
-     * frame targets, or after {@link #computeMaxStack}).
+     * The max operand-stack depth (slots) observed by the most recent {@link #computeFrames} / {@link
+     * #computeMaxStack} run.
+     *
+     * @return the observed peak stack depth in slots
      */
-    public int getMaxStack() {
+    public int getMaxStack()
+    {
         return maxStackSlots;
     }
 
     /**
      * Finds all bytecode offsets that require a frame entry.
-     *
      * @param method the method to analyze
      * @return set of offsets requiring frames
      */
-    private Set<Integer> findFrameTargets(MethodEntry method) {
+    private Set<Integer> findFrameTargets(MethodEntry method)
+    {
         Set<Integer> targets = new TreeSet<>();
         CodeAttribute codeAttr = method.getCodeAttribute();
 
         CodeWriter codeWriter = new CodeWriter(method);
         Instruction prev = null;
-        for (Instruction instr : codeWriter.getInstructions()) {
+        for (Instruction instr : codeWriter.getInstructions())
+        {
             int offset = instr.getOffset();
 
             // An instruction that follows an unconditional transfer (return/throw/goto/switch) cannot be
@@ -139,60 +142,75 @@ public class FrameGenerator {
             // branch target - e.g. a stray nop a structural edit leaves after a return. Without a frame the
             // JVM verifier reports "Expected a stack map frame" there (computeTypeStates gives it a state via
             // the dead-code fill-in below).
-            if (isUnconditionalTransfer(prev)) {
+            if (isUnconditionalTransfer(prev))
+            {
                 targets.add(offset);
             }
             prev = instr;
 
-            if (instr instanceof ConditionalBranchInstruction) {
+            if (instr instanceof ConditionalBranchInstruction)
+            {
                 ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
                 int target = offset + branch.getBranchOffset();
-                if (target > 0) {
+                // A target of 0 is only reachable as a back edge to the method entry (an infinite loop whose
+                // header sits at bci 0); the verifier still requires a stackmap frame there. A forward branch
+                // never targets 0, so >= 0 adds a frame only for that genuine back-edge case.
+                if (target >= 0)
+                {
                     targets.add(target);
                 }
             }
 
-            if (instr instanceof GotoInstruction) {
+            if (instr instanceof GotoInstruction)
+            {
                 GotoInstruction gotoInstr =
                     (GotoInstruction) instr;
                 int target = offset + gotoBranchOffset(gotoInstr);
-                if (target > 0) {
+                if (target >= 0)
+                {
                     targets.add(target);
                 }
             }
 
-            if (instr instanceof TableSwitchInstruction) {
+            if (instr instanceof TableSwitchInstruction)
+            {
                 TableSwitchInstruction tableSwitch = (TableSwitchInstruction) instr;
                 int defaultTarget = offset + tableSwitch.getDefaultOffset();
                 if (defaultTarget > 0) targets.add(defaultTarget);
 
-                for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
+                for (int jumpOffset : tableSwitch.getJumpOffsets().values())
+                {
                     int target = offset + jumpOffset;
                     if (target > 0) targets.add(target);
                 }
             }
 
-            if (instr instanceof LookupSwitchInstruction) {
+            if (instr instanceof LookupSwitchInstruction)
+            {
                 LookupSwitchInstruction lookupSwitch = (LookupSwitchInstruction) instr;
                 int defaultTarget = offset + lookupSwitch.getDefaultOffset();
                 if (defaultTarget > 0) targets.add(defaultTarget);
 
-                for (int jumpOffset : lookupSwitch.getMatchOffsets().values()) {
+                for (int jumpOffset : lookupSwitch.getMatchOffsets().values())
+                {
                     int target = offset + jumpOffset;
                     if (target > 0) targets.add(target);
                 }
             }
 
-            if (instr instanceof JsrInstruction) {
+            if (instr instanceof JsrInstruction)
+            {
                 JsrInstruction jsr = (JsrInstruction) instr;
                 int target = offset + jsr.getBranchOffset();
                 if (target > 0) targets.add(target);
             }
         }
 
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable())
+        {
             int handlerPc = entry.getHandlerPc();
-            if (handlerPc > 0) {
+            if (handlerPc > 0)
+            {
                 targets.add(handlerPc);
             }
         }
@@ -201,11 +219,12 @@ public class FrameGenerator {
     }
 
     /**
-     * Whether this instruction transfers control unconditionally, so the following instruction cannot be
-     * reached by fall-through and begins a new basic block (requiring a frame).
+     * Whether this instruction transfers control unconditionally, so the following instruction cannot be reached
+     * by fall-through and begins a new basic block.
      */
-    private boolean isUnconditionalTransfer(Instruction instr) {
-        return instr instanceof ReturnInstruction
+    private boolean isUnconditionalTransfer(Instruction instr)
+    {
+        return instr instanceof MethodReturnInstruction
                 || instr instanceof ATHROWInstruction
                 || instr instanceof GotoInstruction
                 || instr instanceof TableSwitchInstruction
@@ -214,12 +233,12 @@ public class FrameGenerator {
 
     /**
      * Computes type states at all required offsets by simulating bytecode execution.
-     *
      * @param method the method to analyze
      * @param frameTargets offsets requiring frames
      * @return map of offset to type state
      */
-    private Map<Integer, TypeState> computeTypeStates(MethodEntry method, Set<Integer> frameTargets) {
+    private Map<Integer, TypeState> computeTypeStates(MethodEntry method, Set<Integer> frameTargets)
+    {
         Map<Integer, TypeState> states = new HashMap<>();
         CodeAttribute codeAttr = method.getCodeAttribute();
 
@@ -228,18 +247,21 @@ public class FrameGenerator {
 
         handlerBaseLocals = new HashMap<>();
         protectedRegions = new ArrayList<>();
-        for (ExceptionTableEntry e : codeAttr.getExceptionTable()) {
+        for (ExceptionTableEntry e : codeAttr.getExceptionTable())
+        {
             protectedRegions.add(new int[]{e.getStartPc(), e.getEndPc(), e.getHandlerPc()});
         }
 
         CodeWriter codeWriter = new CodeWriter(method);
         List<Instruction> instructionList = new ArrayList<>();
-        for (Instruction instr : codeWriter.getInstructions()) {
+        for (Instruction instr : codeWriter.getInstructions())
+        {
             instructionList.add(instr);
         }
 
         Map<Integer, Integer> offsetToIndex = new HashMap<>();
-        for (int i = 0; i < instructionList.size(); i++) {
+        for (int i = 0; i < instructionList.size(); i++)
+        {
             offsetToIndex.put(instructionList.get(i).getOffset(), i);
         }
 
@@ -248,39 +270,65 @@ public class FrameGenerator {
         worklist.add(new WorkItem(0, initialState));
 
         Set<Integer> handlerPcSet = new HashSet<>();
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
+        for (ExceptionTableEntry entry : codeAttr.getExceptionTable())
+        {
             handlerPcSet.add(entry.getHandlerPc());
         }
 
         processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
                 instructionList, offsetToIndex, constPool);
 
-        for (ExceptionTableEntry entry : codeAttr.getExceptionTable()) {
-            int handlerPc = entry.getHandlerPc();
+        // Set up and scan each handler in turn, ordered by the start of the code it protects. A handler nested in
+        // another handler's code (try-with-resources closes its resource in an exception path that is itself
+        // protected) only learns its entry locals once the enclosing handler's code has been scanned, so the
+        // enclosing handler - which protects earlier code and therefore has the lower protected-region start - must
+        // be processed first. A one-shot merge lattice cannot recover a slot once a handler was defaulted to empty
+        // and that empty propagated, so the order, not a re-merge, is what keeps the nested handler's locals live.
+        List<ExceptionTableEntry> orderedHandlers = new ArrayList<>(codeAttr.getExceptionTable());
+        orderedHandlers.sort(java.util.Comparator.comparingInt(ExceptionTableEntry::getStartPc));
+        // A handler's own continuation can flow back into the code it protects (a catch inside a loop), widening
+        // the in-range local states after the handler's entry frame was formed; iterate the handler scans to a
+        // fixpoint so the entry frame reflects every state the protected range is reached with. The merges only
+        // widen, so this preserves the start-order guarantee for a handler nested in another handler's code.
+        for (int round = 0; round < 16; round++)
+        {
+            boolean widened = false;
+            for (ExceptionTableEntry entry : orderedHandlers)
+            {
+                int handlerPc = entry.getHandlerPc();
 
-            // Handler entry locals = the local state merged across the protected region (accumulated during the scan),
-            // merged with any normal-flow reach of the handler PC. Falls back to initialState only if the region was
-            // never reached.
-            TypeState baseLocals = handlerBaseLocals.get(handlerPc);
-            if (states.containsKey(handlerPc)) {
-                baseLocals = (baseLocals == null) ? states.get(handlerPc)
-                        : baseLocals.merge(states.get(handlerPc), constPool);
-            }
-            if (baseLocals == null) {
-                baseLocals = initialState;
-            }
+                // Handler entry locals = the local state merged across the protected region (accumulated during the
+                // scan), merged with any normal-flow reach of the handler PC. Falls back to initialState only if the
+                // region was never reached.
+                TypeState baseLocals = handlerBaseLocals.get(handlerPc);
+                if (states.containsKey(handlerPc))
+                {
+                    baseLocals = (baseLocals == null) ? states.get(handlerPc)
+                            : baseLocals.merge(states.get(handlerPc), constPool);
+                }
+                if (baseLocals == null)
+                {
+                    baseLocals = initialState;
+                }
 
-            TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
-            if (states.containsKey(handlerPc)) {
-                states.put(handlerPc, states.get(handlerPc).merge(handlerState, constPool));
-            } else {
-                states.put(handlerPc, handlerState);
+                TypeState handlerState = createExceptionHandlerState(baseLocals, entry.getCatchType());
+                TypeState previous = states.get(handlerPc);
+                TypeState merged = previous == null ? handlerState : previous.merge(handlerState, constPool);
+                boolean grew = !merged.equals(previous);
+                if (round == 0 || grew)
+                {
+                    states.put(handlerPc, merged);
+                    worklist.add(new WorkItem(handlerPc, handlerState));
+                    processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
+                            instructionList, offsetToIndex, constPool);
+                    widened |= grew;
+                }
             }
-            worklist.add(new WorkItem(handlerPc, handlerState));
+            if (round > 0 && !widened)
+            {
+                break;
+            }
         }
-
-        processWorklist(worklist, visitedStates, states, frameTargets, handlerPcSet,
-                instructionList, offsetToIndex, constPool);
 
         // Dead-code frame targets: an unreachable block start (e.g. a nop a structural edit leaves after a
         // return) still requires a frame, but the worklist never reaches it so it has no simulated state. It
@@ -289,15 +337,19 @@ public class FrameGenerator {
         // (or the method-entry state if nothing follows) - a valid, self-consistent frame for dead code.
         List<Integer> sortedTargets = new ArrayList<>(frameTargets);
         Collections.sort(sortedTargets);
-        for (int i = 0; i < sortedTargets.size(); i++) {
+        for (int i = 0; i < sortedTargets.size(); i++)
+        {
             int target = sortedTargets.get(i);
-            if (states.containsKey(target)) {
+            if (states.containsKey(target))
+            {
                 continue;
             }
             TypeState fill = null;
-            for (int j = i + 1; j < sortedTargets.size(); j++) {
+            for (int j = i + 1; j < sortedTargets.size(); j++)
+            {
                 TypeState next = states.get(sortedTargets.get(j));
-                if (next != null) {
+                if (next != null)
+                {
                     fill = next;
                     break;
                 }
@@ -310,16 +362,19 @@ public class FrameGenerator {
 
     /**
      * Creates a TypeState for an exception handler entry point.
-     *
      * @param baseState the base state to derive from
      * @param catchType the constant pool index of the exception type
      * @return new state with exception on stack
      */
-    private TypeState createExceptionHandlerState(TypeState baseState, int catchType) {
+    private TypeState createExceptionHandlerState(TypeState baseState, int catchType)
+    {
         VerificationType exceptionType;
-        if (catchType == 0) {
+        if (catchType == 0)
+        {
             exceptionType = VerificationType.object(constPool.findOrAddClass("java/lang/Throwable").getIndex(constPool));
-        } else {
+        }
+        else
+        {
             exceptionType = VerificationType.object(catchType);
         }
 
@@ -328,12 +383,12 @@ public class FrameGenerator {
 
     /**
      * Creates a FullFrame from the given offset delta and type state.
-     *
      * @param offsetDelta the offset delta for the frame
      * @param state the type state
      * @return FullFrame instance
      */
-    private FullFrame createFullFrame(int offsetDelta, TypeState state) {
+    private FullFrame createFullFrame(int offsetDelta, TypeState state)
+    {
         List<VerificationTypeInfo> locals = state.localsToVerificationTypeInfo();
         List<VerificationTypeInfo> stack = state.stackToVerificationTypeInfo();
 
@@ -342,11 +397,11 @@ public class FrameGenerator {
 
     /**
      * Checks if an opcode represents an unconditional jump.
-     *
      * @param opcode the instruction opcode
      * @return true if unconditional jump
      */
-    private boolean isUnconditionalJump(int opcode) {
+    private boolean isUnconditionalJump(int opcode)
+    {
         return opcode == GOTO.getCode()
             || opcode == GOTO_W.getCode()
             || opcode == JSR.getCode()
@@ -355,11 +410,11 @@ public class FrameGenerator {
 
     /**
      * Checks if an opcode terminates the current execution path.
-     *
      * @param opcode the instruction opcode
      * @return true if terminator
      */
-    private boolean isTerminator(int opcode) {
+    private boolean isTerminator(int opcode)
+    {
         return (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode())
             || opcode == ATHROW.getCode()
             || opcode == RET.getCode();
@@ -367,60 +422,66 @@ public class FrameGenerator {
 
     /**
      * Gets the target offset of a jump instruction.
-     *
      * @param gotoInstr the jump instruction
      * @return target offset or -1 if not a jump
      */
-    private static int gotoBranchOffset(GotoInstruction gotoInstr) {
+    private static int gotoBranchOffset(GotoInstruction gotoInstr)
+    {
         return gotoInstr.getType() == GotoInstruction.GotoType.GOTO_WIDE
                 ? gotoInstr.getBranchOffsetWide() : gotoInstr.getBranchOffset();
     }
 
-    private int getJumpTarget(Instruction instr) {
-        if (instr instanceof GotoInstruction) {
+    private int getJumpTarget(Instruction instr)
+    {
+        if (instr instanceof GotoInstruction)
+        {
             GotoInstruction gotoInstr = (GotoInstruction) instr;
             return instr.getOffset() + gotoBranchOffset(gotoInstr);
         }
-        if (instr instanceof JsrInstruction) {
+        if (instr instanceof JsrInstruction)
+        {
             JsrInstruction jsrInstr = (JsrInstruction) instr;
             return instr.getOffset() + jsrInstr.getBranchOffset();
         }
         return -1;
     }
 
-    private void processWorklist(
-            Queue<WorkItem> worklist,
-            Map<Integer, TypeState> visitedStates,
-            Map<Integer, TypeState> states,
-            Set<Integer> frameTargets,
-            Set<Integer> handlerPcSet,
-            List<Instruction> instructionList,
-            Map<Integer, Integer> offsetToIndex,
-            ConstPool constPool) {
+    private void processWorklist(Queue<WorkItem> worklist, Map<Integer, TypeState> visitedStates, Map<Integer, TypeState> states, Set<Integer> frameTargets, Set<Integer> handlerPcSet, List<Instruction> instructionList, Map<Integer, Integer> offsetToIndex, ConstPool constPool)
+    {
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             WorkItem item = worklist.poll();
             int offset = item.offset;
             TypeState currentState = item.state;
 
-            if (visitedStates.containsKey(offset)) {
+            if (visitedStates.containsKey(offset))
+            {
                 TypeState existing = visitedStates.get(offset);
                 TypeState merged = existing.merge(currentState, constPool);
-                if (merged.equals(existing)) {
+                if (merged.equals(existing))
+                {
                     continue;
                 }
                 visitedStates.put(offset, merged);
                 currentState = merged;
-                if (frameTargets.contains(offset)) {
-                    if (states.containsKey(offset)) {
+                if (frameTargets.contains(offset))
+                {
+                    if (states.containsKey(offset))
+                    {
                         states.put(offset, states.get(offset).merge(merged, constPool));
-                    } else {
+                    }
+                    else
+                    {
                         states.put(offset, merged);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 visitedStates.put(offset, currentState);
-                if (frameTargets.contains(offset) && states.containsKey(offset)) {
+                if (frameTargets.contains(offset) && states.containsKey(offset))
+                {
                     states.put(offset, states.get(offset).merge(currentState, constPool));
                 }
             }
@@ -428,31 +489,39 @@ public class FrameGenerator {
             maxStackSlots = Math.max(maxStackSlots, currentState.stackSlots());
 
             Integer index = offsetToIndex.get(offset);
-            if (index == null) {
+            if (index == null)
+            {
                 continue;
             }
 
-            for (int i = index; i < instructionList.size(); i++) {
+            for (int i = index; i < instructionList.size(); i++)
+            {
                 Instruction instr = instructionList.get(i);
                 int instrOffset = instr.getOffset();
 
-                if (frameTargets.contains(instrOffset)) {
+                if (frameTargets.contains(instrOffset))
+                {
                     TypeState stateToRecord = currentState;
-                    if (states.containsKey(instrOffset)) {
+                    if (states.containsKey(instrOffset))
+                    {
                         stateToRecord = states.get(instrOffset).merge(stateToRecord, constPool);
                     }
                     states.put(instrOffset, stateToRecord);
                 }
 
-                if (i > index && handlerPcSet.contains(instrOffset)) {
+                if (i > index && handlerPcSet.contains(instrOffset))
+                {
                     break;
                 }
 
                 // Before applying this (possibly throwing) instruction, fold its local state into the base of every
                 // handler whose protected region covers it - the handler can be entered with these locals.
-                if (!protectedRegions.isEmpty()) {
-                    for (int[] region : protectedRegions) {
-                        if (instrOffset >= region[0] && instrOffset < region[1]) {
+                if (!protectedRegions.isEmpty())
+                {
+                    for (int[] region : protectedRegions)
+                    {
+                        if (instrOffset >= region[0] && instrOffset < region[1])
+                        {
                             TypeState localsOnly = currentState.clearStack();
                             TypeState existing = handlerBaseLocals.get(region[2]);
                             handlerBaseLocals.put(region[2],
@@ -461,9 +530,12 @@ public class FrameGenerator {
                     }
                 }
 
-                try {
+                try
+                {
                     currentState = typeInference.apply(currentState, instr);
-                } catch (IllegalStateException e) {
+                }
+                catch (IllegalStateException e)
+                {
                     throw new IllegalStateException(
                             "Frame error at offset " + instrOffset + " for instruction "
                                     + instr + ": " + e.getMessage(), e);
@@ -472,27 +544,33 @@ public class FrameGenerator {
 
                 int opcode = instr.getOpcode();
 
-                if (isUnconditionalJump(opcode)) {
+                if (isUnconditionalJump(opcode))
+                {
                     int target = getJumpTarget(instr);
-                    if (target >= 0) {
+                    if (target >= 0)
+                    {
                         worklist.add(new WorkItem(target, currentState));
                     }
                     break;
                 }
 
-                if (isTerminator(opcode)) {
+                if (isTerminator(opcode))
+                {
                     break;
                 }
 
-                if (instr instanceof ConditionalBranchInstruction) {
+                if (instr instanceof ConditionalBranchInstruction)
+                {
                     ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
                     int target = instrOffset + branch.getBranchOffset();
                     worklist.add(new WorkItem(target, currentState));
                 }
 
-                if (instr instanceof TableSwitchInstruction) {
+                if (instr instanceof TableSwitchInstruction)
+                {
                     TableSwitchInstruction tableSwitch = (TableSwitchInstruction) instr;
-                    for (int jumpOffset : tableSwitch.getJumpOffsets().values()) {
+                    for (int jumpOffset : tableSwitch.getJumpOffsets().values())
+                    {
                         int target = instrOffset + jumpOffset;
                         worklist.add(new WorkItem(target, currentState));
                     }
@@ -501,9 +579,11 @@ public class FrameGenerator {
                     break;
                 }
 
-                if (instr instanceof LookupSwitchInstruction) {
+                if (instr instanceof LookupSwitchInstruction)
+                {
                     LookupSwitchInstruction lookupSwitch = (LookupSwitchInstruction) instr;
-                    for (int jumpOffset : lookupSwitch.getMatchOffsets().values()) {
+                    for (int jumpOffset : lookupSwitch.getMatchOffsets().values())
+                    {
                         int target = instrOffset + jumpOffset;
                         worklist.add(new WorkItem(target, currentState));
                     }
@@ -518,11 +598,13 @@ public class FrameGenerator {
     /**
      * Work item for the worklist algorithm.
      */
-    private static class WorkItem {
+    private static class WorkItem
+    {
         final int offset;
         final TypeState state;
 
-        WorkItem(int offset, TypeState state) {
+        WorkItem(int offset, TypeState state)
+        {
             this.offset = offset;
             this.state = state;
         }
@@ -530,33 +612,39 @@ public class FrameGenerator {
 
     /**
      * Convenience method to compute and update the StackMapTable for a method.
-     *
      * @param method The method to update
      */
-    public void updateStackMapTable(MethodEntry method) {
+    public void updateStackMapTable(MethodEntry method)
+    {
         List<StackMapFrame> frames = computeFrames(method);
         CodeAttribute codeAttr = method.getCodeAttribute();
 
-        if (codeAttr == null) {
+        if (codeAttr == null)
+        {
             return;
         }
 
         StackMapTableAttribute stackMapTable = null;
-        for (Attribute attr : codeAttr.getAttributes()) {
-            if (attr instanceof StackMapTableAttribute) {
+        for (Attribute attr : codeAttr.getAttributes())
+        {
+            if (attr instanceof StackMapTableAttribute)
+            {
                 stackMapTable = (StackMapTableAttribute) attr;
                 break;
             }
         }
 
-        if (frames.isEmpty()) {
-            if (stackMapTable != null) {
+        if (frames.isEmpty())
+        {
+            if (stackMapTable != null)
+            {
                 codeAttr.getAttributes().remove(stackMapTable);
             }
             return;
         }
 
-        if (stackMapTable == null) {
+        if (stackMapTable == null)
+        {
             int nameIndex = constPool.findOrAddUtf8("StackMapTable").getIndex(constPool);
             stackMapTable = new StackMapTableAttribute("StackMapTable", method, nameIndex, 0);
             codeAttr.getAttributes().add(stackMapTable);

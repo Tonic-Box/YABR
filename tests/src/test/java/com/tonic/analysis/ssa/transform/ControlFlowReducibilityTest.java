@@ -14,24 +14,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ControlFlowReducibility transform.
  * Verifies that irreducible control flow is transformed to reducible form.
  */
-class ControlFlowReducibilityTest {
+class ControlFlowReducibilityTest
+{
 
     private ControlFlowReducibility transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new ControlFlowReducibility();
     }
 
     @Test
-    void getNameReturnsControlFlowReducibility() {
+    void getNameReturnsControlFlowReducibility()
+    {
         assertEquals("ControlFlowReducibility", transform.getName());
     }
 
     @Test
-    void returnsFalseForAlreadyReducibleFlow() {
+    void returnsFalseForAlreadyReducibleFlow()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -56,7 +60,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void returnsFalseForEmptyMethod() {
+    void returnsFalseForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
 
         boolean changed = transform.run(method);
@@ -65,7 +70,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void returnsFalseForSingleBlock() {
+    void returnsFalseForSingleBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -79,7 +85,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void handlesSimpleLoop() {
+    void handlesSimpleLoop()
+    {
         IRMethod method = new IRMethod("com/test/Test", "loop", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock loop = new IRBlock("loop");
@@ -108,7 +115,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void transformsIrreducibleControlFlow() {
+    void transformsIrreducibleControlFlow()
+    {
         IRMethod method = new IRMethod("com/test/Test", "irreducible", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -142,7 +150,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void respectsMaxIterations() {
+    void respectsMaxIterations()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -157,7 +166,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void handlesBranchWithMultiplePredecessors() {
+    void handlesBranchWithMultiplePredecessors()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -190,7 +200,8 @@ class ControlFlowReducibilityTest {
     }
 
     @Test
-    void handlesEntryBlockCorrectly() {
+    void handlesEntryBlockCorrectly()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");

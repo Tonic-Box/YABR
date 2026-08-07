@@ -3,7 +3,6 @@ package com.tonic.analysis.pattern;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
-import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -22,14 +21,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for the SearchResult class.
  * Tests cover construction, property access, location formatting, equality, and edge cases.
  */
-class SearchResultTest {
+class SearchResultTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private MethodEntry method;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/TestClass", access);
@@ -37,39 +38,45 @@ class SearchResultTest {
         method = classFile.createNewMethod(methodAccess, "testMethod", "V");
     }
 
-    // ========== Test Data Factory Methods ==========
+    // Test Data Factory Methods
 
-    private IRInstruction createMockInstruction() {
+    private IRInstruction createMockInstruction()
+    {
         // Create a simple invoke instruction as mock
         return new InvokeInstruction(
             InvokeType.VIRTUAL,
             "java/lang/Object",
             "toString",
             "()Ljava/lang/String;",
-            Collections.<Value>emptyList()
+            Collections.emptyList()
         );
     }
 
-    private SearchResult createFullResult(String description) {
+    private SearchResult createFullResult(String description)
+    {
         IRInstruction instruction = createMockInstruction();
         return new SearchResult(classFile, method, instruction, 42, description);
     }
 
-    private SearchResult createMethodResult(String description) {
+    private SearchResult createMethodResult(String description)
+    {
         return new SearchResult(classFile, method, description);
     }
 
-    private SearchResult createClassResult(String description) {
+    private SearchResult createClassResult(String description)
+    {
         return new SearchResult(classFile, description);
     }
 
-    // ========== Construction Tests ==========
+    // Construction Tests
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void constructWithAllParameters() {
+        void constructWithAllParameters()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 42, "Test description");
 
@@ -82,7 +89,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithClassMethodAndDescription() {
+        void constructWithClassMethodAndDescription()
+        {
             SearchResult result = new SearchResult(classFile, method, "Method level result");
 
             assertNotNull(result);
@@ -94,7 +102,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithClassAndDescription() {
+        void constructWithClassAndDescription()
+        {
             SearchResult result = new SearchResult(classFile, "Class level result");
 
             assertNotNull(result);
@@ -106,7 +115,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithZeroOffset() {
+        void constructWithZeroOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 0, "Zero offset");
 
@@ -114,7 +124,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithNegativeOffset() {
+        void constructWithNegativeOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, -5, "Negative offset");
 
@@ -122,7 +133,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithLargeOffset() {
+        void constructWithLargeOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 65535, "Large offset");
 
@@ -130,7 +142,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithNullInstruction() {
+        void constructWithNullInstruction()
+        {
             SearchResult result = new SearchResult(classFile, method, null, 10, "Null instruction");
 
             assertNull(result.getInstruction());
@@ -138,7 +151,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithNullClassFile() {
+        void constructWithNullClassFile()
+        {
             SearchResult result = new SearchResult(null, method, "Null classFile");
 
             assertNull(result.getClassFile());
@@ -146,7 +160,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithNullMethod() {
+        void constructWithNullMethod()
+        {
             SearchResult result = new SearchResult(classFile, null, "Null method");
 
             assertEquals(classFile, result.getClassFile());
@@ -154,7 +169,8 @@ class SearchResultTest {
         }
 
         @Test
-        void constructWithAllNullsExceptDescription() {
+        void constructWithAllNullsExceptDescription()
+        {
             SearchResult result = new SearchResult(null, null, null, -1, "All nulls");
 
             assertNull(result.getClassFile());
@@ -165,27 +181,31 @@ class SearchResultTest {
         }
     }
 
-    // ========== Property Access Tests ==========
+    // Property Access Tests
 
     @Nested
-    class PropertyAccessTests {
+    class PropertyAccessTests
+    {
 
         @Test
-        void getClassFileReturnsCorrectValue() {
+        void getClassFileReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals(classFile, result.getClassFile());
         }
 
         @Test
-        void getMethodReturnsCorrectValue() {
+        void getMethodReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals(method, result.getMethod());
         }
 
         @Test
-        void getInstructionReturnsCorrectValue() {
+        void getInstructionReturnsCorrectValue()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 10, "Test");
 
@@ -193,83 +213,95 @@ class SearchResultTest {
         }
 
         @Test
-        void getBytecodeOffsetReturnsCorrectValue() {
+        void getBytecodeOffsetReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals(42, result.getBytecodeOffset());
         }
 
         @Test
-        void getDescriptionReturnsCorrectValue() {
+        void getDescriptionReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Custom description");
 
             assertEquals("Custom description", result.getDescription());
         }
 
         @Test
-        void getDescriptionWithEmptyString() {
+        void getDescriptionWithEmptyString()
+        {
             SearchResult result = new SearchResult(classFile, method, "");
 
             assertEquals("", result.getDescription());
         }
 
         @Test
-        void getDescriptionWithNullDescription() {
+        void getDescriptionWithNullDescription()
+        {
             SearchResult result = new SearchResult(classFile, method, null);
 
             assertNull(result.getDescription());
         }
     }
 
-    // ========== Derived Property Tests ==========
+    // Derived Property Tests
 
     @Nested
-    class DerivedPropertyTests {
+    class DerivedPropertyTests
+    {
 
         @Test
-        void getClassNameReturnsCorrectValue() {
+        void getClassNameReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals("com/test/TestClass", result.getClassName());
         }
 
         @Test
-        void getClassNameWithNullClassFile() {
+        void getClassNameWithNullClassFile()
+        {
             SearchResult result = new SearchResult(null, method, "Test");
 
             assertNull(result.getClassName());
         }
 
         @Test
-        void getMethodNameReturnsCorrectValue() {
+        void getMethodNameReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals("testMethod", result.getMethodName());
         }
 
         @Test
-        void getMethodNameWithNullMethod() {
+        void getMethodNameWithNullMethod()
+        {
             SearchResult result = createClassResult("Test");
 
             assertNull(result.getMethodName());
         }
 
         @Test
-        void getMethodDescriptorReturnsCorrectValue() {
+        void getMethodDescriptorReturnsCorrectValue()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals("()V", result.getMethodDescriptor());
         }
 
         @Test
-        void getMethodDescriptorWithNullMethod() {
+        void getMethodDescriptorWithNullMethod()
+        {
             SearchResult result = createClassResult("Test");
 
             assertNull(result.getMethodDescriptor());
         }
 
         @Test
-        void getMethodDescriptorWithComplexSignature() throws IOException {
+        void getMethodDescriptorWithComplexSignature() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry complexMethod = classFile.createNewMethodWithDescriptor(access, "complex",
                 "(ILjava/lang/String;)Ljava/util/List;");
@@ -279,13 +311,15 @@ class SearchResultTest {
         }
     }
 
-    // ========== Location Formatting Tests ==========
+    // Location Formatting Tests
 
     @Nested
-    class LocationFormattingTests {
+    class LocationFormattingTests
+    {
 
         @Test
-        void getLocationWithFullInformation() {
+        void getLocationWithFullInformation()
+        {
             SearchResult result = createFullResult("Test");
 
             String location = result.getLocation();
@@ -299,7 +333,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithClassAndMethod() {
+        void getLocationWithClassAndMethod()
+        {
             SearchResult result = createMethodResult("Test");
 
             String location = result.getLocation();
@@ -311,7 +346,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithClassOnly() {
+        void getLocationWithClassOnly()
+        {
             SearchResult result = createClassResult("Test");
 
             String location = result.getLocation();
@@ -320,7 +356,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithNullClassFile() {
+        void getLocationWithNullClassFile()
+        {
             SearchResult result = new SearchResult(null, method, "Test");
 
             String location = result.getLocation();
@@ -330,7 +367,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithNullMethod() {
+        void getLocationWithNullMethod()
+        {
             SearchResult result = new SearchResult(classFile, null, "Test");
 
             String location = result.getLocation();
@@ -339,7 +377,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithZeroOffset() {
+        void getLocationWithZeroOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 0, "Test");
 
@@ -349,7 +388,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithNegativeOffsetDoesNotIncludeAt() {
+        void getLocationWithNegativeOffsetDoesNotIncludeAt()
+        {
             SearchResult result = createMethodResult("Test");
 
             String location = result.getLocation();
@@ -358,7 +398,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithAllNulls() {
+        void getLocationWithAllNulls()
+        {
             SearchResult result = new SearchResult(null, null, "Test");
 
             String location = result.getLocation();
@@ -368,7 +409,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithConstructorMethod() throws IOException {
+        void getLocationWithConstructorMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry constructor = classFile.createNewMethod(access, "<init>", "V");
             SearchResult result = new SearchResult(classFile, constructor, "Constructor");
@@ -379,7 +421,8 @@ class SearchResultTest {
         }
 
         @Test
-        void getLocationWithStaticInitializer() throws IOException {
+        void getLocationWithStaticInitializer() throws IOException
+        {
             int access = new AccessBuilder().setStatic().build();
             MethodEntry clinit = classFile.createNewMethod(access, "<clinit>", "V");
             SearchResult result = new SearchResult(classFile, clinit, "Static init");
@@ -390,13 +433,15 @@ class SearchResultTest {
         }
     }
 
-    // ========== ToString Tests ==========
+    // ToString Tests
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsLocationAndDescription() {
+        void toStringContainsLocationAndDescription()
+        {
             SearchResult result = createFullResult("Found method call");
 
             String str = result.toString();
@@ -409,7 +454,8 @@ class SearchResultTest {
         }
 
         @Test
-        void toStringWithClassResult() {
+        void toStringWithClassResult()
+        {
             SearchResult result = createClassResult("Class-level finding");
 
             String str = result.toString();
@@ -419,7 +465,8 @@ class SearchResultTest {
         }
 
         @Test
-        void toStringWithMethodResult() {
+        void toStringWithMethodResult()
+        {
             SearchResult result = createMethodResult("Method-level finding");
 
             String str = result.toString();
@@ -429,7 +476,8 @@ class SearchResultTest {
         }
 
         @Test
-        void toStringWithNullDescription() {
+        void toStringWithNullDescription()
+        {
             SearchResult result = new SearchResult(classFile, method, null);
 
             String str = result.toString();
@@ -439,7 +487,8 @@ class SearchResultTest {
         }
 
         @Test
-        void toStringWithEmptyDescription() {
+        void toStringWithEmptyDescription()
+        {
             SearchResult result = new SearchResult(classFile, method, "");
 
             String str = result.toString();
@@ -449,7 +498,8 @@ class SearchResultTest {
         }
 
         @Test
-        void toStringFormatMatchesExpectedPattern() {
+        void toStringFormatMatchesExpectedPattern()
+        {
             SearchResult result = createFullResult("Test description");
 
             String str = result.toString();
@@ -459,20 +509,23 @@ class SearchResultTest {
         }
     }
 
-    // ========== Equality Tests ==========
+    // Equality Tests
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalsSameInstance() {
+        void equalsSameInstance()
+        {
             SearchResult result = createFullResult("Test");
 
             assertEquals(result, result);
         }
 
         @Test
-        void equalsIdenticalResults() {
+        void equalsIdenticalResults()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 42, "Test");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 42, "Test");
@@ -481,7 +534,8 @@ class SearchResultTest {
         }
 
         @Test
-        void equalsWithDifferentDescriptions() {
+        void equalsWithDifferentDescriptions()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 42, "Description 1");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 42, "Description 2");
@@ -491,7 +545,8 @@ class SearchResultTest {
         }
 
         @Test
-        void equalsWithNullDescriptions() {
+        void equalsWithNullDescriptions()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 42, null);
             SearchResult result2 = new SearchResult(classFile, method, instruction, 42, null);
@@ -500,7 +555,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsDifferentClassFile() throws IOException {
+        void notEqualsDifferentClassFile() throws IOException
+        {
             ClassFile otherClassFile = pool.createNewClass("com/test/OtherClass",
                 new AccessBuilder().setPublic().build());
             SearchResult result1 = new SearchResult(classFile, method, "Test");
@@ -510,7 +566,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsDifferentMethod() throws IOException {
+        void notEqualsDifferentMethod() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry otherMethod = classFile.createNewMethod(access, "otherMethod", "V");
             SearchResult result1 = new SearchResult(classFile, method, "Test");
@@ -520,7 +577,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsDifferentInstruction() {
+        void notEqualsDifferentInstruction()
+        {
             IRInstruction instruction1 = createMockInstruction();
             IRInstruction instruction2 = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction1, 42, "Test");
@@ -531,7 +589,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsDifferentOffset() {
+        void notEqualsDifferentOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 42, "Test");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 50, "Test");
@@ -540,14 +599,16 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsNull() {
+        void notEqualsNull()
+        {
             SearchResult result = createFullResult("Test");
 
             assertNotEquals(null, result);
         }
 
         @Test
-        void notEqualsDifferentType() {
+        void notEqualsDifferentType()
+        {
             SearchResult result = createFullResult("Test");
             String notASearchResult = "Not a SearchResult";
 
@@ -555,7 +616,8 @@ class SearchResultTest {
         }
 
         @Test
-        void equalsWithNullClassFiles() {
+        void equalsWithNullClassFiles()
+        {
             SearchResult result1 = new SearchResult(null, method, "Test");
             SearchResult result2 = new SearchResult(null, method, "Test");
 
@@ -563,7 +625,8 @@ class SearchResultTest {
         }
 
         @Test
-        void equalsWithNullMethods() {
+        void equalsWithNullMethods()
+        {
             SearchResult result1 = new SearchResult(classFile, null, "Test");
             SearchResult result2 = new SearchResult(classFile, null, "Test");
 
@@ -571,7 +634,8 @@ class SearchResultTest {
         }
 
         @Test
-        void equalsWithNullInstructions() {
+        void equalsWithNullInstructions()
+        {
             SearchResult result1 = new SearchResult(classFile, method, null, 10, "Test");
             SearchResult result2 = new SearchResult(classFile, method, null, 10, "Test");
 
@@ -579,7 +643,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsOneNullClassFile() {
+        void notEqualsOneNullClassFile()
+        {
             SearchResult result1 = new SearchResult(classFile, method, "Test");
             SearchResult result2 = new SearchResult(null, method, "Test");
 
@@ -587,7 +652,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsOneNullMethod() {
+        void notEqualsOneNullMethod()
+        {
             SearchResult result1 = new SearchResult(classFile, method, "Test");
             SearchResult result2 = new SearchResult(classFile, null, "Test");
 
@@ -595,7 +661,8 @@ class SearchResultTest {
         }
 
         @Test
-        void notEqualsOneNullInstruction() {
+        void notEqualsOneNullInstruction()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 10, "Test");
             SearchResult result2 = new SearchResult(classFile, method, null, 10, "Test");
@@ -604,13 +671,15 @@ class SearchResultTest {
         }
     }
 
-    // ========== HashCode Tests ==========
+    // HashCode Tests
 
     @Nested
-    class HashCodeTests {
+    class HashCodeTests
+    {
 
         @Test
-        void hashCodeConsistentWithEquals() {
+        void hashCodeConsistentWithEquals()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 42, "Test");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 42, "Different description");
@@ -620,7 +689,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeStableAcrossMultipleCalls() {
+        void hashCodeStableAcrossMultipleCalls()
+        {
             SearchResult result = createFullResult("Test");
 
             int hash1 = result.hashCode();
@@ -630,7 +700,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeDifferentForDifferentOffsets() {
+        void hashCodeDifferentForDifferentOffsets()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 10, "Test");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 20, "Test");
@@ -639,7 +710,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeWithNullClassFile() {
+        void hashCodeWithNullClassFile()
+        {
             SearchResult result1 = new SearchResult(null, method, "Test");
             SearchResult result2 = new SearchResult(null, method, "Test");
 
@@ -647,7 +719,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeWithNullMethod() {
+        void hashCodeWithNullMethod()
+        {
             SearchResult result1 = new SearchResult(classFile, null, "Test");
             SearchResult result2 = new SearchResult(classFile, null, "Test");
 
@@ -655,7 +728,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeWithNullInstruction() {
+        void hashCodeWithNullInstruction()
+        {
             SearchResult result1 = new SearchResult(classFile, method, null, 10, "Test");
             SearchResult result2 = new SearchResult(classFile, method, null, 10, "Test");
 
@@ -663,7 +737,8 @@ class SearchResultTest {
         }
 
         @Test
-        void hashCodeWithAllNulls() {
+        void hashCodeWithAllNulls()
+        {
             SearchResult result1 = new SearchResult(null, null, null, -1, "Test");
             SearchResult result2 = new SearchResult(null, null, null, -1, "Different");
 
@@ -671,13 +746,15 @@ class SearchResultTest {
         }
     }
 
-    // ========== Edge Cases and Complex Scenarios ==========
+    // Edge Cases and Complex Scenarios
 
     @Nested
-    class EdgeCasesAndComplexScenarios {
+    class EdgeCasesAndComplexScenarios
+    {
 
         @Test
-        void multipleResultsFromSameClass() {
+        void multipleResultsFromSameClass()
+        {
             SearchResult result1 = createMethodResult("Finding 1");
             SearchResult result2 = createMethodResult("Finding 2");
 
@@ -686,9 +763,9 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithInnerClass() throws IOException {
-            ClassFile innerClass = pool.createNewClass("com/test/Outer$Inner",
-                new AccessBuilder().setPublic().build());
+        void resultWithInnerClass() throws IOException
+        {
+            ClassFile innerClass = pool.createNewClass("com/test/Outer$Inner", new AccessBuilder().setPublic().build());
             SearchResult result = new SearchResult(innerClass, "Inner class finding");
 
             assertTrue(result.getClassName().contains("$"));
@@ -696,7 +773,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithAnonymousClass() throws IOException {
+        void resultWithAnonymousClass() throws IOException
+        {
             ClassFile anonymousClass = pool.createNewClass("com/test/MyClass$1",
                 new AccessBuilder().setPublic().build());
             SearchResult result = new SearchResult(anonymousClass, "Anonymous class finding");
@@ -706,7 +784,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithLambdaGeneratedClass() throws IOException {
+        void resultWithLambdaGeneratedClass() throws IOException
+        {
             ClassFile lambdaClass = pool.createNewClass("com/test/Lambda$$Lambda$1",
                 new AccessBuilder().setPublic().build());
             SearchResult result = new SearchResult(lambdaClass, "Lambda finding");
@@ -715,7 +794,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithComplexPackageStructure() throws IOException {
+        void resultWithComplexPackageStructure() throws IOException
+        {
             ClassFile deepClass = pool.createNewClass("com/example/project/module/submodule/DeepClass",
                 new AccessBuilder().setPublic().build());
             SearchResult result = new SearchResult(deepClass, "Deep package finding");
@@ -725,7 +805,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithOverloadedMethods() throws IOException {
+        void resultWithOverloadedMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method1 = classFile.createNewMethod(access, "process", "V");
             MethodEntry method2 = classFile.createNewMethod(access, "process", "(I)V");
@@ -745,11 +826,11 @@ class SearchResultTest {
         }
 
         @Test
-        void resultIntegrityAfterConstruction() {
+        void resultIntegrityAfterConstruction()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, 100, "Integrity test");
 
-            // Verify all properties remain consistent
             assertEquals(classFile, result.getClassFile());
             assertEquals(method, result.getMethod());
             assertEquals(instruction, result.getInstruction());
@@ -761,7 +842,8 @@ class SearchResultTest {
         }
 
         @Test
-        void multipleResultsAtDifferentOffsetsInSameMethod() {
+        void multipleResultsAtDifferentOffsetsInSameMethod()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result1 = new SearchResult(classFile, method, instruction, 10, "First call");
             SearchResult result2 = new SearchResult(classFile, method, instruction, 20, "Second call");
@@ -775,7 +857,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithVeryLongDescription() {
+        void resultWithVeryLongDescription()
+        {
             String longDescription = "This is a very long description that contains a lot of information " +
                 "about the search result and what was found during the pattern matching process. " +
                 "It may include details about the specific code pattern, the context in which it was found, " +
@@ -788,7 +871,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithSpecialCharactersInDescription() {
+        void resultWithSpecialCharactersInDescription()
+        {
             String specialDesc = "Found: <init>(){} @ line: 42 [special chars: $#@!%]";
             SearchResult result = new SearchResult(classFile, method, specialDesc);
 
@@ -797,7 +881,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithUnicodeInDescription() {
+        void resultWithUnicodeInDescription()
+        {
             String unicodeDesc = "Found method call \u4E2D\u6587 (Chinese) \u65E5\u672C\u8A9E (Japanese)";
             SearchResult result = new SearchResult(classFile, method, unicodeDesc);
 
@@ -805,7 +890,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultComparisonSymmetry() {
+        void resultComparisonSymmetry()
+        {
             SearchResult result1 = createMethodResult("Test");
             SearchResult result2 = createMethodResult("Test");
 
@@ -814,7 +900,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultComparisonTransitivity() {
+        void resultComparisonTransitivity()
+        {
             SearchResult result1 = createMethodResult("Test");
             SearchResult result2 = createMethodResult("Test");
             SearchResult result3 = createMethodResult("Test");
@@ -825,7 +912,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithMaxIntOffset() {
+        void resultWithMaxIntOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, Integer.MAX_VALUE, "Max offset");
 
@@ -834,7 +922,8 @@ class SearchResultTest {
         }
 
         @Test
-        void resultWithMinIntOffset() {
+        void resultWithMinIntOffset()
+        {
             IRInstruction instruction = createMockInstruction();
             SearchResult result = new SearchResult(classFile, method, instruction, Integer.MIN_VALUE, "Min offset");
 

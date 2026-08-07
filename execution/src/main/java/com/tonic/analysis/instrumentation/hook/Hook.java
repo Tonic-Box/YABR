@@ -9,33 +9,36 @@ import java.util.List;
 /**
  * Base interface for all hook configurations.
  */
-public interface Hook {
+public interface Hook
+{
 
     /**
-     * Gets the target type of this hook.
+     * @return the target type of this hook
      */
     InstrumentationTarget getTarget();
 
     /**
-     * Gets the hook method descriptor.
+     * @return the hook method descriptor
      */
     HookDescriptor getHookDescriptor();
 
     /**
-     * Gets the filters determining where this hook applies.
+     * @return the filters determining where this hook applies
      */
     List<InstrumentationFilter> getFilters();
 
     /**
-     * Checks if this hook is enabled.
+     * @return true if this hook is enabled
      */
     boolean isEnabled();
 
     /**
      * Gets the priority for ordering multiple hooks at the same point.
-     * Lower values execute first.
+     *
+     * @return the ordering priority
      */
-    default int getPriority() {
+    default int getPriority()
+    {
         return 100;
     }
 }

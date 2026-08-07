@@ -3,15 +3,19 @@ package com.tonic.analysis.ssa.llvm.lift;
 import com.tonic.analysis.ssa.type.*;
 
 /**
- * Maps LLVM IR type strings back to {@link IRType}. Inverse of {@link com.tonic.analysis.ssa.llvm.LlvmType#render()}.
+ * Maps LLVM IR type strings back to {@link IRType}.
  */
-final class TypeParser {
+final class TypeParser
+{
 
-    private TypeParser() {
+    private TypeParser()
+    {
     }
 
-    static IRType parse(String llvmType) {
-        switch (llvmType.trim()) {
+    static IRType parse(String llvmType)
+    {
+        switch (llvmType.trim())
+        {
             case "i32":    return PrimitiveType.INT;
             case "i64":    return PrimitiveType.LONG;
             case "float":  return PrimitiveType.FLOAT;

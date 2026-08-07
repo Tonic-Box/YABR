@@ -2,7 +2,6 @@ package com.tonic.analysis.ssa;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
@@ -19,24 +18,28 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * End-to-end round-trip tests for SSA lift/lower operations.
  *
- * Tests that bytecode → lift → lower → bytecode preserves semantics.
+ * Tests that bytecode -> lift -> lower -> bytecode preserves semantics.
  * Each test creates bytecode, lifts to IR, lowers back, then executes
  * both versions to verify identical behavior.
  */
-class LiftLowerRoundTripTest {
+class LiftLowerRoundTripTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    // ========== Simple Arithmetic Round Trips ==========
+    // Simple Arithmetic Round Trips
 
     @Nested
-    class ArithmeticRoundTripTests {
+    class ArithmeticRoundTripTests
+    {
 
         @Test
-        void roundTripIntAddition() throws Exception {
+        void roundTripIntAddition() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtAdd")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -47,12 +50,10 @@ class LiftLowerRoundTripTest {
 
             MethodEntry method = findMethod(cf, "add");
 
-            // Execute before transform
             Class<?> before = TestUtils.loadAndVerify(cf);
             Method mBefore = before.getMethod("add", int.class, int.class);
             int expected = (int) mBefore.invoke(null, 10, 20);
 
-            // Create fresh class and transform
             ClassFile cf2 = BytecodeBuilder.forClass("com/test/RtAdd2")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -75,7 +76,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripIntSubtraction() throws Exception {
+        void roundTripIntSubtraction() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtSub")
                 .publicStaticMethod("sub", "(II)I")
                     .iload(0)
@@ -97,7 +99,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripIntMultiplication() throws Exception {
+        void roundTripIntMultiplication() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtMul")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -119,7 +122,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripIntDivision() throws Exception {
+        void roundTripIntDivision() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtDiv")
                 .publicStaticMethod("div", "(II)I")
                     .iload(0)
@@ -141,7 +145,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripIntRemainder() throws Exception {
+        void roundTripIntRemainder() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtRem")
                 .publicStaticMethod("rem", "(II)I")
                     .iload(0)
@@ -163,7 +168,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripComplexExpression() throws Exception {
+        void roundTripComplexExpression() throws Exception
+        {
             // (a + b) * (a - b) = a^2 - b^2
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtComplex")
                 .publicStaticMethod("compute", "(II)I")
@@ -190,13 +196,15 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== Bitwise Operations Round Trips ==========
+    // Bitwise Operations Round Trips
 
     @Nested
-    class BitwiseRoundTripTests {
+    class BitwiseRoundTripTests
+    {
 
         @Test
-        void roundTripBitwiseAnd() throws Exception {
+        void roundTripBitwiseAnd() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtAnd")
                 .publicStaticMethod("and", "(II)I")
                     .iload(0)
@@ -217,7 +225,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripBitwiseOr() throws Exception {
+        void roundTripBitwiseOr() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtOr")
                 .publicStaticMethod("or", "(II)I")
                     .iload(0)
@@ -238,7 +247,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripBitwiseXor() throws Exception {
+        void roundTripBitwiseXor() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtXor")
                 .publicStaticMethod("xor", "(II)I")
                     .iload(0)
@@ -259,7 +269,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripLeftShift() throws Exception {
+        void roundTripLeftShift() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtShl")
                 .publicStaticMethod("shl", "(II)I")
                     .iload(0)
@@ -281,7 +292,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripRightShift() throws Exception {
+        void roundTripRightShift() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtShr")
                 .publicStaticMethod("shr", "(II)I")
                     .iload(0)
@@ -303,13 +315,15 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== Constant Loading Round Trips ==========
+    // Constant Loading Round Trips
 
     @Nested
-    class ConstantRoundTripTests {
+    class ConstantRoundTripTests
+    {
 
         @Test
-        void roundTripSmallConstants() throws Exception {
+        void roundTripSmallConstants() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtConst")
                 .publicStaticMethod("const5", "()I")
                     .iconst(5)
@@ -328,7 +342,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripBipushConstant() throws Exception {
+        void roundTripBipushConstant() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtBipush")
                 .publicStaticMethod("const100", "()I")
                     .iconst(100)
@@ -347,7 +362,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripNegativeConstant() throws Exception {
+        void roundTripNegativeConstant() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtNeg")
                 .publicStaticMethod("constNeg", "()I")
                     .iconst(-42)
@@ -366,7 +382,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripLargeConstant() throws Exception {
+        void roundTripLargeConstant() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtLarge")
                 .publicStaticMethod("constLarge", "()I")
                     .iconst(50000)
@@ -385,13 +402,15 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== Control Flow Round Trips ==========
+    // Control Flow Round Trips
 
     @Nested
-    class ControlFlowRoundTripTests {
+    class ControlFlowRoundTripTests
+    {
 
         @Test
-        void roundTripSimpleReturn() throws Exception {
+        void roundTripSimpleReturn() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtReturn")
                 .publicStaticMethod("identity", "(I)I")
                     .iload(0)
@@ -411,7 +430,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripVoidReturn() throws Exception {
+        void roundTripVoidReturn() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtVoid")
                 .publicStaticMethod("noop", "()V")
                     .vreturn()
@@ -430,13 +450,15 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== Local Variable Round Trips ==========
+    // Local Variable Round Trips
 
     @Nested
-    class LocalVariableRoundTripTests {
+    class LocalVariableRoundTripTests
+    {
 
         @Test
-        void roundTripLocalVariableSwap() throws Exception {
+        void roundTripLocalVariableSwap() throws Exception
+        {
             // Compute: a + b where we store and reload from locals
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtLocals")
                 .publicStaticMethod("swap", "(II)I")
@@ -465,8 +487,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripMultipleLocals() throws Exception {
-            // Use multiple local variables
+        void roundTripMultipleLocals() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtMulti")
                 .publicStaticMethod("multi", "(III)I")
                     .iload(0)
@@ -492,13 +514,15 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== IR Structure Verification ==========
+    // IR Structure Verification
 
     @Nested
-    class IRStructureTests {
+    class IRStructureTests
+    {
 
         @Test
-        void liftPreservesBlockStructure() throws IOException {
+        void liftPreservesBlockStructure() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/IRStruct")
                 .publicStaticMethod("simple", "()I")
                     .iconst(42)
@@ -514,7 +538,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void liftPreservesInstructions() throws IOException {
+        void liftPreservesInstructions() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/IRInstr")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -530,14 +555,16 @@ class LiftLowerRoundTripTest {
 
             // Count instructions
             int instrCount = 0;
-            for (IRBlock block : ir.getBlocks()) {
+            for (IRBlock block : ir.getBlocks())
+            {
                 instrCount += block.getAllInstructions().size();
             }
             assertTrue(instrCount >= 1, "Should have at least one instruction");
         }
 
         @Test
-        void lowerProducesValidBytecode() throws Exception {
+        void lowerProducesValidBytecode() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/IRValid")
                 .publicStaticMethod("test", "()I")
                     .iconst(1)
@@ -555,19 +582,20 @@ class LiftLowerRoundTripTest {
             Class<?> clazz = TestUtils.loadAndVerify(cf);
             assertNotNull(clazz);
 
-            // Execute to confirm valid
             Method m = clazz.getMethod("test");
             assertEquals(3, (int) m.invoke(null));
         }
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void roundTripZeroParameters() throws Exception {
+        void roundTripZeroParameters() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtZero")
                 .publicStaticMethod("zero", "()I")
                     .iconst(0)
@@ -586,7 +614,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripManyParameters() throws Exception {
+        void roundTripManyParameters() throws Exception
+        {
             // Method with 5 int parameters
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtMany")
                 .publicStaticMethod("sum5", "(IIIII)I")
@@ -614,7 +643,8 @@ class LiftLowerRoundTripTest {
         }
 
         @Test
-        void roundTripIntNegation() throws Exception {
+        void roundTripIntNegation() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RtIneg")
                 .publicStaticMethod("neg", "(I)I")
                     .iload(0)
@@ -635,11 +665,14 @@ class LiftLowerRoundTripTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }

@@ -11,12 +11,15 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ForLoopInlineTest {
+class ForLoopInlineTest
+{
 
     @Test
-    void testForLoopDeclarationIsInlined() throws IOException {
+    void testForLoopDeclarationIsInlined() throws IOException
+    {
         Path fixtureFile = Path.of("build/classes/java/test/com/tonic/fixtures/ControlFlow.class");
-        if (!Files.exists(fixtureFile)) {
+        if (!Files.exists(fixtureFile))
+        {
             System.err.println("Fixture file not found at: " + fixtureFile.toAbsolutePath());
             System.err.println("Skipping test - run 'gradle compileTestJava' first");
             return;

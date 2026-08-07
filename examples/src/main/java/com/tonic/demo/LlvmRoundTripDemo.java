@@ -10,36 +10,40 @@ import com.tonic.analysis.ssa.llvm.lift.LlvmLifter;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
-
 import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Demo: LLVM IR round-trip.
- *
- * <p>Usage (two modes):
- * <pre>
- *   LlvmRoundTripDemo                    # uses a built-in loop method
- *   LlvmRoundTripDemo MyClass.class      # lifts all methods from a class file
- * </pre>
- *
- * Prints the original {@code .ll}, optionally runs {@code opt -O2 -S} (if available), lifts back
- * to SSA, then re-lowers and asserts the two {@code .ll} texts are equal.
+ * Demo showing an LLVM IR round trip: lower to .ll, lift back to SSA, re-lower, and assert equal text.
  */
-public final class LlvmRoundTripDemo {
+public final class LlvmRoundTripDemo
+{
 
-    public static void main(String[] args) throws Exception {
-        if (args.length > 0) {
+    /**
+     * Round-trips the given class file's methods, or a built-in hand-made method when no path is given.
+     * @param args optional class file path
+     * @throws Exception if reading, lowering, or lifting fails or the round trip is not equal
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length > 0)
+        {
             roundTripClass(args[0]);
-        } else {
+        }
+        else
+        {
             roundTripBuiltIn();
         }
     }
 
-    /** Builds a simple {@code int add(int a, int b) { return a + b; }} IR method by hand. */
-    private static void roundTripBuiltIn() throws Exception {
+    /**
+     * Builds a simple {@code int add(int a, int b) { return a + b; }} IR method by hand.
+     */
+    private static void roundTripBuiltIn() throws Exception
+    {
         SSAValue.resetIdCounter();
         IRBlock.resetIdCounter();
         IRInstruction.resetIdCounter();
@@ -63,24 +67,31 @@ public final class LlvmRoundTripDemo {
         roundTrip("Demo.add(II)I", method);
     }
 
-    private static void roundTripClass(String classFile) throws Exception {
-        ClassFile cf = com.tonic.parser.ClassPool.getDefault()
+    private static void roundTripClass(String classFile) throws Exception
+    {
+        ClassFile cf = ClassPool.getDefault()
             .loadClass(new FileInputStream(classFile));
         SSA ssa = new SSA(cf.getConstPool());
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getCodeAttribute() == null) {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getCodeAttribute() == null)
+            {
                 continue;
             }
-            try {
+            try
+            {
                 IRMethod ir = ssa.lift(m);
                 roundTrip(m.getName() + m.getDesc(), ir);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.out.println("// skip " + m.getName() + ": " + e.getMessage());
             }
         }
     }
 
-    private static void roundTrip(String label, IRMethod original) throws Exception {
+    private static void roundTrip(String label, IRMethod original) throws Exception
+    {
         System.out.println("\n==== " + label + " ====");
         LlvmLowering lowering = new LlvmLowering();
         String ll1 = lowering.lower(original);
@@ -88,7 +99,9 @@ public final class LlvmRoundTripDemo {
 
         // Optionally run opt
         String toOptimize = ll1;
-        if (toolAvailable("opt")) {
+        boolean optimized = false;
+        if (toolAvailable("opt"))
+        {
             Path tmp = Files.createTempFile("roundtrip_", ".ll");
             Files.writeString(tmp, ll1);
             ProcessBuilder pb = new ProcessBuilder("opt", "-O2", "-S", tmp.toString(), "-o", "-");
@@ -96,8 +109,10 @@ public final class LlvmRoundTripDemo {
             Process p = pb.start();
             byte[] out = p.getInputStream().readAllBytes();
             p.waitFor();
-            if (out.length > 0) {
+            if (out.length > 0)
+            {
                 toOptimize = new String(out);
+                optimized = true;
                 System.out.println("\n-- after opt -O2 --\n" + toOptimize);
             }
             Files.deleteIfExists(tmp);
@@ -107,17 +122,21 @@ public final class LlvmRoundTripDemo {
         IRMethod lifted = lifter.lift(toOptimize);
         System.out.println("\n-- lifted IR --\n" + IRPrinter.format(lifted));
 
-        if (toOptimize == ll1) {
+        if (!optimized)
+        {
             // Pure round-trip: re-lower and compare
-            com.tonic.analysis.ssa.value.SSAValue.resetIdCounter();
-            com.tonic.analysis.ssa.cfg.IRBlock.resetIdCounter();
-            com.tonic.analysis.ssa.ir.IRInstruction.resetIdCounter();
+            SSAValue.resetIdCounter();
+            IRBlock.resetIdCounter();
+            IRInstruction.resetIdCounter();
             LlvmLifter lifter2 = new LlvmLifter();
             IRMethod lifted2 = lifter2.lift(ll1);
             String ll2 = lowering.lower(lifted2);
-            if (ll1.equals(ll2)) {
+            if (ll1.equals(ll2))
+            {
                 System.out.println("\n✓ round-trip identical");
-            } else {
+            }
+            else
+            {
                 System.out.println("\n✗ round-trip DIFFERS");
                 System.out.println("  original:\n" + ll1);
                 System.out.println("  re-lowered:\n" + ll2);
@@ -125,12 +144,16 @@ public final class LlvmRoundTripDemo {
         }
     }
 
-    private static boolean toolAvailable(String tool) {
-        try {
+    private static boolean toolAvailable(String tool)
+    {
+        try
+        {
             Process p = new ProcessBuilder(tool, "--version").redirectErrorStream(true).start();
             p.getInputStream().readAllBytes();
             return p.waitFor() == 0;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return false;
         }
     }

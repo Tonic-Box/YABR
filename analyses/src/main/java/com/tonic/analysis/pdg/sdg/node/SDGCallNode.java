@@ -12,7 +12,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class SDGCallNode extends PDGNode {
+/**
+ * System dependence graph node for a call site, holding the actual-in nodes for its arguments,
+ * an optional actual-out node, and a link to the callee entry once resolved.
+ */
+public class SDGCallNode extends PDGNode
+{
 
     private final InvokeInstruction invokeInstruction;
     private final CallSite callSite;
@@ -20,94 +25,173 @@ public class SDGCallNode extends PDGNode {
     private SDGActualOutNode actualOut;
     private SDGEntryNode targetEntry;
 
-    public SDGCallNode(int id, InvokeInstruction invokeInstruction, CallSite callSite, IRBlock block) {
+    /**
+     * Creates a call-site node with no actual-in, actual-out or callee link yet.
+     * @param id node id
+     * @param invokeInstruction the invoke this node stands for
+     * @param callSite call graph entry for the same invoke
+     * @param block block containing the invoke
+     */
+    public SDGCallNode(int id, InvokeInstruction invokeInstruction, CallSite callSite, IRBlock block)
+    {
         super(id, PDGNodeType.CALL_SITE, block);
         this.invokeInstruction = invokeInstruction;
         this.callSite = callSite;
     }
 
-    public InvokeInstruction getInvokeInstruction() {
+    /**
+     * @return the invoke instruction
+     */
+    public InvokeInstruction getInvokeInstruction()
+    {
         return invokeInstruction;
     }
 
-    public CallSite getCallSite() {
+    /**
+     * @return the call site
+     */
+    public CallSite getCallSite()
+    {
         return callSite;
     }
 
-    public SDGActualOutNode getActualOut() {
+    /**
+     * @return the actual out
+     */
+    public SDGActualOutNode getActualOut()
+    {
         return actualOut;
     }
 
-    public void setActualOut(SDGActualOutNode actualOut) {
+    /**
+     * Attaches the node standing for the value this call returns.
+     * @param actualOut actual-out node, or null for a void call
+     */
+    public void setActualOut(SDGActualOutNode actualOut)
+    {
         this.actualOut = actualOut;
     }
 
-    public SDGEntryNode getTargetEntry() {
+    /**
+     * @return the target entry
+     */
+    public SDGEntryNode getTargetEntry()
+    {
         return targetEntry;
     }
 
-    public void setTargetEntry(SDGEntryNode targetEntry) {
+    /**
+     * Links this call to the entry node of the resolved callee.
+     * @param targetEntry callee entry node
+     */
+    public void setTargetEntry(SDGEntryNode targetEntry)
+    {
         this.targetEntry = targetEntry;
     }
 
-    public void addActualIn(SDGActualInNode actualIn) {
+    /**
+     * Appends an argument node; no check is made for a duplicate parameter index.
+     * @param actualIn node for one argument of this call
+     */
+    public void addActualIn(SDGActualInNode actualIn)
+    {
         actualIns.add(actualIn);
     }
 
-    public SDGActualInNode getActualIn(int parameterIndex) {
-        for (SDGActualInNode actualIn : actualIns) {
-            if (actualIn.getParameterIndex() == parameterIndex) {
+    /**
+     * Looks up an attached actual-in node by the parameter position it feeds.
+     * @param parameterIndex parameter position to find
+     * @return the matching node, or null if none was added for that position
+     */
+    public SDGActualInNode getActualIn(int parameterIndex)
+    {
+        for (SDGActualInNode actualIn : actualIns)
+        {
+            if (actualIn.getParameterIndex() == parameterIndex)
+            {
                 return actualIn;
             }
         }
         return null;
     }
 
-    public int getActualInCount() {
+    /**
+     * @return the number of actual-in nodes attached
+     */
+    public int getActualInCount()
+    {
         return actualIns.size();
     }
 
-    public List<SDGActualInNode> getActualIns() {
+    /**
+     * @return an unmodifiable view of the actual-in nodes in the order they were added
+     */
+    public List<SDGActualInNode> getActualIns()
+    {
         return Collections.unmodifiableList(actualIns);
     }
 
-    public boolean hasActualOut() {
+    /**
+     * @return true if the call has a node for its returned value
+     */
+    public boolean hasActualOut()
+    {
         return actualOut != null;
     }
 
-    public boolean hasTargetEntry() {
+    /**
+     * @return true once the call has been linked to a callee entry node
+     */
+    public boolean hasTargetEntry()
+    {
         return targetEntry != null;
     }
 
-    public String getTargetOwner() {
+    /**
+     * @return the owner of the invoked method
+     */
+    public String getTargetOwner()
+    {
         return invokeInstruction.getOwner();
     }
 
-    public String getTargetName() {
+    /**
+     * @return the name of the invoked method
+     */
+    public String getTargetName()
+    {
         return invokeInstruction.getName();
     }
 
-    public String getTargetDescriptor() {
+    /**
+     * @return the descriptor of the invoked method
+     */
+    public String getTargetDescriptor()
+    {
         return invokeInstruction.getDescriptor();
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         return "CALL:" + invokeInstruction.getName();
     }
 
     @Override
-    public List<Value> getUsedValues() {
+    public List<Value> getUsedValues()
+    {
         return invokeInstruction.getOperands();
     }
 
     @Override
-    public SSAValue getDefinedValue() {
+    public SSAValue getDefinedValue()
+    {
         return invokeInstruction.getResult();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("SDGCall[%d: %s.%s, %d args]",
             getId(), getTargetOwner(), getTargetName(), actualIns.size());
     }

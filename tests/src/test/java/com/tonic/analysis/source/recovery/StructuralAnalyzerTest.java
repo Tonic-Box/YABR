@@ -23,18 +23,21 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for StructuralAnalyzer.
  * Covers region detection for all control flow patterns.
  */
-class StructuralAnalyzerTest {
+class StructuralAnalyzerTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Functionality Tests ==========
+    // Basic Functionality Tests
 
     @Test
-    void analyzeEmptyMethod() {
+    void analyzeEmptyMethod()
+    {
         IRMethod method = createSimpleMethod();
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
@@ -49,7 +52,8 @@ class StructuralAnalyzerTest {
     }
 
     @Test
-    void gettersReturnCorrectValues() {
+    void gettersReturnCorrectValues()
+    {
         IRMethod method = createSimpleMethod();
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
@@ -65,7 +69,8 @@ class StructuralAnalyzerTest {
     }
 
     @Test
-    void postDominatorTreeCreatedAfterAnalyze() {
+    void postDominatorTreeCreatedAfterAnalyze()
+    {
         IRMethod method = createSimpleMethod();
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();
@@ -81,13 +86,15 @@ class StructuralAnalyzerTest {
         assertNotNull(analyzer.getPostDominatorTree());
     }
 
-    // ========== IF_THEN Tests ==========
+    // IF_THEN Tests
 
     @Nested
-    class IfThenTests {
+    class IfThenTests
+    {
 
         @Test
-        void detectsSimpleIfThen() {
+        void detectsSimpleIfThen()
+        {
             // entry -> header -true-> then -> merge
             //                  -false-> merge
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -102,17 +109,13 @@ class StructuralAnalyzerTest {
             method.addBlock(merge);
             method.setEntryBlock(entry);
 
-            // Setup control flow
             entry.addSuccessor(header);
             header.addSuccessor(thenBlock);
             header.addSuccessor(merge);
             thenBlock.addSuccessor(merge);
 
-            // Add branch instruction
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, thenBlock, merge
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, thenBlock, merge);
             header.addInstruction(branch);
 
             merge.addInstruction(new ReturnInstruction(null));
@@ -134,7 +137,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsIfThenWithEarlyReturn() {
+        void detectsIfThenWithEarlyReturn()
+        {
             // entry -> header -true-> returnBlock (return)
             //                  -false-> continue
             IRMethod method = new IRMethod("com/test/Test", "test", "()I", true);
@@ -154,9 +158,7 @@ class StructuralAnalyzerTest {
             header.addSuccessor(continueBlock);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.EQ, condition, null, returnBlock, continueBlock
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, condition, null, returnBlock, continueBlock);
             header.addInstruction(branch);
 
             returnBlock.addInstruction(new ReturnInstruction(IntConstant.of(0)));
@@ -177,7 +179,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsIfThenWithGotoToSharedExitBlock() {
+        void detectsIfThenWithGotoToSharedExitBlock()
+        {
             // Tests early exit detection with goto to shared exit block
             IRMethod method = new IRMethod("com/test/Test", "test", "()I", true);
             IRBlock entry = new IRBlock("entry");
@@ -199,9 +202,7 @@ class StructuralAnalyzerTest {
             gotoBlock.addSuccessor(sharedExit);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.EQ, condition, null, gotoBlock, continueBlock
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, condition, null, gotoBlock, continueBlock);
             header.addInstruction(branch);
 
             // gotoBlock only has a goto to sharedExit
@@ -226,7 +227,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsIfThenWhenTrueTargetIsMerge() {
+        void detectsIfThenWhenTrueTargetIsMerge()
+        {
             // if false branch goes to merge directly
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -246,9 +248,7 @@ class StructuralAnalyzerTest {
             thenBlock.addSuccessor(merge);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, merge, thenBlock
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, merge, thenBlock);
             header.addInstruction(branch);
 
             merge.addInstruction(new ReturnInstruction(null));
@@ -268,7 +268,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsIfThenWhenFalseTargetIsReachableFromTrue() {
+        void detectsIfThenWhenFalseTargetIsReachableFromTrue()
+        {
             // Pattern where false target is reached from true target
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -305,18 +306,19 @@ class StructuralAnalyzerTest {
 
             RegionInfo info = analyzer.getRegionInfo(header);
             assertNotNull(info);
-            // Should recognize this as IF_THEN pattern
             assertEquals(StructuredRegion.IF_THEN, info.getType());
         }
     }
 
-    // ========== IF_THEN_ELSE Tests ==========
+    // IF_THEN_ELSE Tests
 
     @Nested
-    class IfThenElseTests {
+    class IfThenElseTests
+    {
 
         @Test
-        void detectsSimpleIfThenElse() {
+        void detectsSimpleIfThenElse()
+        {
             // entry -> header -true-> thenBlock -> merge
             //                  -false-> elseBlock -> merge
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -365,7 +367,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsIfThenElseWhenMergeIsExitBlock() {
+        void detectsIfThenElseWhenMergeIsExitBlock()
+        {
             // Test alternative merge point finding when post-dominator is exit block
             IRMethod method = new IRMethod("com/test/Test", "test", "()I", true);
             IRBlock entry = new IRBlock("entry");
@@ -423,12 +426,12 @@ class StructuralAnalyzerTest {
             RegionInfo info = analyzer.getRegionInfo(header);
             assertNotNull(info);
             // Should still detect as IF_THEN_ELSE with proper merge finding
-            assertTrue(info.getType() == StructuredRegion.IF_THEN_ELSE ||
-                      info.getType() == StructuredRegion.IF_THEN);
+            assertTrue(info.getType() == StructuredRegion.IF_THEN_ELSE || info.getType() == StructuredRegion.IF_THEN);
         }
 
         @Test
-        void detectsFlatIfChainPattern() {
+        void detectsFlatIfChainPattern()
+        {
             // Tests dispatch table pattern: if (x == 1) A; else if (x == 2) B; ...
             IRMethod method = new IRMethod("com/test/Test", "test", "(I)V", true);
             IRBlock entry = new IRBlock("entry");
@@ -457,15 +460,12 @@ class StructuralAnalyzerTest {
             action2.addSuccessor(merge);
             defaultAction.addSuccessor(merge);
 
-            // Load the same variable in entry
             SSAValue x = new SSAValue(PrimitiveType.INT, "x");
             LoadLocalInstruction load = new LoadLocalInstruction(x, 0);
             entry.addInstruction(load);
 
             // check1: if (x == 1) goto action1 else goto check2
-            BranchInstruction branch1 = new BranchInstruction(
-                CompareOp.NE, x, IntConstant.of(1), check2, action1
-            );
+            BranchInstruction branch1 = new BranchInstruction(CompareOp.NE, x, IntConstant.of(1), check2, action1);
             check1.addInstruction(branch1);
 
             // check2: if (x == 2) goto action2 else goto defaultAction
@@ -486,19 +486,19 @@ class StructuralAnalyzerTest {
 
             RegionInfo info1 = analyzer.getRegionInfo(check1);
             assertNotNull(info1);
-            // Should detect flat if-chain pattern
-            assertTrue(info1.getType() == StructuredRegion.IF_THEN ||
-                      info1.getType() == StructuredRegion.IF_THEN_ELSE);
+            assertTrue(info1.getType() == StructuredRegion.IF_THEN || info1.getType() == StructuredRegion.IF_THEN_ELSE);
         }
     }
 
-    // ========== WHILE_LOOP Tests ==========
+    // WHILE_LOOP Tests
 
     @Nested
-    class WhileLoopTests {
+    class WhileLoopTests
+    {
 
         @Test
-        void detectsSimpleWhileLoop() {
+        void detectsSimpleWhileLoop()
+        {
             // entry -> header -true-> body -> header
             //                  -false-> exit
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -519,9 +519,7 @@ class StructuralAnalyzerTest {
             body.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, IntConstant.of(0), body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, IntConstant.of(0), body, exit);
             header.addInstruction(branch);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -544,7 +542,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void whileLoopConditionNegatedCorrectly() {
+        void whileLoopConditionNegatedCorrectly()
+        {
             // Test that condition negation is tracked correctly
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -564,9 +563,7 @@ class StructuralAnalyzerTest {
             body.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.EQ, condition, IntConstant.of(0), exit, body
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, condition, IntConstant.of(0), exit, body);
             header.addInstruction(branch);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -586,7 +583,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void whileLoopWithBothTargetsInLoop() {
+        void whileLoopWithBothTargetsInLoop()
+        {
             // Edge case: both branch targets are inside loop
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -607,9 +605,7 @@ class StructuralAnalyzerTest {
             body2.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.GT, condition, IntConstant.of(0), body1, body2
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.GT, condition, IntConstant.of(0), body1, body2);
             header.addInstruction(branch);
 
             DominatorTree domTree = new DominatorTree(method);
@@ -622,14 +618,14 @@ class StructuralAnalyzerTest {
 
             RegionInfo info = analyzer.getRegionInfo(header);
             assertNotNull(info);
-            // Should recognize this pattern
             assertTrue(info.getType() == StructuredRegion.WHILE_LOOP ||
                       info.getType() == StructuredRegion.DO_WHILE_LOOP);
             // Both targets in loop - exitBlock may vary based on analysis
         }
 
         @Test
-        void irreducibleLoopDetected() {
+        void irreducibleLoopDetected()
+        {
             // Edge case: neither target is in loop (irreducible)
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -648,9 +644,7 @@ class StructuralAnalyzerTest {
             header.addSuccessor(exit2);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, exit1, exit2
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, exit1, exit2);
             header.addInstruction(branch);
 
             exit1.addInstruction(new ReturnInstruction(null));
@@ -670,13 +664,15 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== DO_WHILE_LOOP Tests ==========
+    // DO_WHILE_LOOP Tests
 
     @Nested
-    class DoWhileLoopTests {
+    class DoWhileLoopTests
+    {
 
         @Test
-        void detectsDoWhileLoop() {
+        void detectsDoWhileLoop()
+        {
             // entry -> body -> header -true-> body
             //                          -false-> exit
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -697,9 +693,7 @@ class StructuralAnalyzerTest {
             header.addSuccessor(exit);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.GT, condition, IntConstant.of(0), body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.GT, condition, IntConstant.of(0), body, exit);
             header.addInstruction(branch);
 
             exit.addInstruction(new ReturnInstruction(null));
@@ -716,20 +710,23 @@ class StructuralAnalyzerTest {
             assertNotNull(info);
             // Note: Analyzer may classify do-while loops differently
             // The structure is valid, just verify it's recognized
-            if (info.getType() == StructuredRegion.DO_WHILE_LOOP) {
+            if (info.getType() == StructuredRegion.DO_WHILE_LOOP)
+            {
                 assertEquals(header, info.getHeader());
             }
         }
 
     }
 
-    // ========== FOR_LOOP Tests ==========
+    // FOR_LOOP Tests
 
     @Nested
-    class ForLoopTests {
+    class ForLoopTests
+    {
 
         @Test
-        void detectsForLoopWithIncrement() {
+        void detectsForLoopWithIncrement()
+        {
             // entry -> header -true-> body -> increment -> header
             //                  -false-> exit
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -753,12 +750,9 @@ class StructuralAnalyzerTest {
             increment.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.LT, condition, IntConstant.of(10), body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.LT, condition, IntConstant.of(10), body, exit);
             header.addInstruction(branch);
 
-            // Add increment instruction
             SSAValue i = new SSAValue(PrimitiveType.INT, "i");
             SSAValue one = new SSAValue(PrimitiveType.INT, "one");
             SSAValue iNext = new SSAValue(PrimitiveType.INT, "i_next");
@@ -784,7 +778,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void forLoopWithDecrementDetected() {
+        void forLoopWithDecrementDetected()
+        {
             // Test that SUB operation is also recognized as increment pattern
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -807,12 +802,9 @@ class StructuralAnalyzerTest {
             decrement.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.GT, condition, IntConstant.of(0), body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.GT, condition, IntConstant.of(0), body, exit);
             header.addInstruction(branch);
 
-            // Add decrement instruction
             SSAValue i = new SSAValue(PrimitiveType.INT, "i");
             SSAValue one = new SSAValue(PrimitiveType.INT, "one");
             SSAValue iNext = new SSAValue(PrimitiveType.INT, "i_next");
@@ -835,7 +827,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void loopWithoutIncrementIsNotForLoop() {
+        void loopWithoutIncrementIsNotForLoop()
+        {
             // Loop without ADD/SUB should be classified as WHILE, not FOR
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -858,9 +851,7 @@ class StructuralAnalyzerTest {
             noIncrement.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, body, exit);
             header.addInstruction(branch);
 
             // No increment instruction in noIncrement block
@@ -879,18 +870,19 @@ class StructuralAnalyzerTest {
 
             RegionInfo info = analyzer.getRegionInfo(header);
             assertNotNull(info);
-            // Should be WHILE_LOOP, not FOR_LOOP
             assertEquals(StructuredRegion.WHILE_LOOP, info.getType());
         }
     }
 
-    // ========== SWITCH Tests ==========
+    // SWITCH Tests
 
     @Nested
-    class SwitchTests {
+    class SwitchTests
+    {
 
         @Test
-        void detectsSimpleSwitch() {
+        void detectsSimpleSwitch()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "(I)V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock switchBlock = new IRBlock("switch");
@@ -943,7 +935,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void switchWithNoCasesOnlyDefault() {
+        void switchWithNoCasesOnlyDefault()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "(I)V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock switchBlock = new IRBlock("switch");
@@ -982,13 +975,15 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void switchWithManyCases() {
+        void switchWithManyCases()
+        {
             // Test switch with many cases to ensure all are captured
             IRMethod method = new IRMethod("com/test/Test", "test", "(I)V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock switchBlock = new IRBlock("switch");
             IRBlock[] cases = new IRBlock[5];
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++)
+            {
                 cases[i] = new IRBlock("case" + i);
                 method.addBlock(cases[i]);
             }
@@ -1002,7 +997,8 @@ class StructuralAnalyzerTest {
             method.setEntryBlock(entry);
 
             entry.addSuccessor(switchBlock);
-            for (IRBlock caseBlock : cases) {
+            for (IRBlock caseBlock : cases)
+            {
                 switchBlock.addSuccessor(caseBlock);
                 caseBlock.addSuccessor(exit);
             }
@@ -1011,7 +1007,8 @@ class StructuralAnalyzerTest {
 
             SSAValue selector = new SSAValue(PrimitiveType.INT, "selector");
             SwitchInstruction switchInstr = new SwitchInstruction(selector, defaultBlock);
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 5; i++)
+            {
                 switchInstr.addCase(i * 10, cases[i]);
             }
             switchBlock.addInstruction(switchInstr);
@@ -1033,13 +1030,15 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== SEQUENCE Tests ==========
+    // SEQUENCE Tests
 
     @Nested
-    class SequenceTests {
+    class SequenceTests
+    {
 
         @Test
-        void detectsSequenceForSimpleBlock() {
+        void detectsSequenceForSimpleBlock()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
 
@@ -1062,7 +1061,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void gotoInLoopMarkedAsSequenceWithContinue() {
+        void gotoInLoopMarkedAsSequenceWithContinue()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock header = new IRBlock("header");
@@ -1084,9 +1084,7 @@ class StructuralAnalyzerTest {
             continueBlock.addSuccessor(header);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, body, exit
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, body, exit);
             header.addInstruction(branch);
 
             SimpleInstruction gotoInstr = SimpleInstruction.createGoto(header);
@@ -1109,7 +1107,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void gotoOutsideLoopMarkedAsSequence() {
+        void gotoOutsideLoopMarkedAsSequence()
+        {
             // Goto not in a loop should still be SEQUENCE
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -1144,13 +1143,15 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== Nested Region Tests ==========
+    // Nested Region Tests
 
     @Nested
-    class NestedRegionTests {
+    class NestedRegionTests
+    {
 
         @Test
-        void detectsNestedIfInLoop() {
+        void detectsNestedIfInLoop()
+        {
             // while (cond1) {
             //   if (cond2) { ... }
             // }
@@ -1179,9 +1180,7 @@ class StructuralAnalyzerTest {
             loopContinue.addSuccessor(loopHeader);
 
             SSAValue loopCond = new SSAValue(PrimitiveType.INT, "loopCond");
-            BranchInstruction loopBranch = new BranchInstruction(
-                CompareOp.NE, loopCond, null, ifHeader, exit
-            );
+            BranchInstruction loopBranch = new BranchInstruction(CompareOp.NE, loopCond, null, ifHeader, exit);
             loopHeader.addInstruction(loopBranch);
 
             SSAValue ifCond = new SSAValue(PrimitiveType.INT, "ifCond");
@@ -1200,19 +1199,18 @@ class StructuralAnalyzerTest {
             StructuralAnalyzer analyzer = new StructuralAnalyzer(method, domTree, loopAnalysis);
             analyzer.analyze();
 
-            // Check loop region
             RegionInfo loopInfo = analyzer.getRegionInfo(loopHeader);
             assertNotNull(loopInfo);
             assertEquals(StructuredRegion.WHILE_LOOP, loopInfo.getType());
 
-            // Check nested if region
             RegionInfo ifInfo = analyzer.getRegionInfo(ifHeader);
             assertNotNull(ifInfo);
             assertEquals(StructuredRegion.IF_THEN, ifInfo.getType());
         }
 
         @Test
-        void detectsNestedLoops() {
+        void detectsNestedLoops()
+        {
             // while (outer) { while (inner) { ... } }
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -1239,9 +1237,7 @@ class StructuralAnalyzerTest {
             outerContinue.addSuccessor(outerHeader);
 
             SSAValue outerCond = new SSAValue(PrimitiveType.INT, "outerCond");
-            BranchInstruction outerBranch = new BranchInstruction(
-                CompareOp.NE, outerCond, null, innerHeader, exit
-            );
+            BranchInstruction outerBranch = new BranchInstruction(CompareOp.NE, outerCond, null, innerHeader, exit);
             outerHeader.addInstruction(outerBranch);
 
             SSAValue innerCond = new SSAValue(PrimitiveType.INT, "innerCond");
@@ -1270,7 +1266,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void detectsDeeplyNestedIfStatements() {
+        void detectsDeeplyNestedIfStatements()
+        {
             // if (c1) { if (c2) { if (c3) { ... } } }
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -1304,21 +1301,15 @@ class StructuralAnalyzerTest {
             merge2.addSuccessor(merge1);
 
             SSAValue c1 = new SSAValue(PrimitiveType.INT, "c1");
-            BranchInstruction b1 = new BranchInstruction(
-                CompareOp.NE, c1, null, if2, merge1
-            );
+            BranchInstruction b1 = new BranchInstruction(CompareOp.NE, c1, null, if2, merge1);
             if1.addInstruction(b1);
 
             SSAValue c2 = new SSAValue(PrimitiveType.INT, "c2");
-            BranchInstruction b2 = new BranchInstruction(
-                CompareOp.NE, c2, null, if3, merge2
-            );
+            BranchInstruction b2 = new BranchInstruction(CompareOp.NE, c2, null, if3, merge2);
             if2.addInstruction(b2);
 
             SSAValue c3 = new SSAValue(PrimitiveType.INT, "c3");
-            BranchInstruction b3 = new BranchInstruction(
-                CompareOp.NE, c3, null, innermost, merge3
-            );
+            BranchInstruction b3 = new BranchInstruction(CompareOp.NE, c3, null, innermost, merge3);
             if3.addInstruction(b3);
 
             merge1.addInstruction(new ReturnInstruction(null));
@@ -1346,13 +1337,15 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== Edge Cases ==========
+    // Edge Cases
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void blockWithNoTerminator() {
+        void blockWithNoTerminator()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
 
@@ -1373,7 +1366,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void getRegionInfoReturnsNullForUnanalyzedBlock() {
+        void getRegionInfoReturnsNullForUnanalyzedBlock()
+        {
             IRMethod method = createSimpleMethod();
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
@@ -1388,7 +1382,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void multiplePathsToSameBlock() {
+        void multiplePathsToSameBlock()
+        {
             // Test diamond pattern: entry -> A -> B -> merge
             //                              -> C -> D -> merge
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
@@ -1415,9 +1410,7 @@ class StructuralAnalyzerTest {
             d.addSuccessor(merge);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.NE, condition, null, a, c
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.NE, condition, null, a, c);
             entry.addInstruction(branch);
 
             merge.addInstruction(new ReturnInstruction(null));
@@ -1433,12 +1426,12 @@ class StructuralAnalyzerTest {
             RegionInfo info = analyzer.getRegionInfo(entry);
             assertNotNull(info);
             // Should detect some form of conditional structure
-            assertTrue(info.getType() == StructuredRegion.IF_THEN ||
-                      info.getType() == StructuredRegion.IF_THEN_ELSE);
+            assertTrue(info.getType() == StructuredRegion.IF_THEN || info.getType() == StructuredRegion.IF_THEN_ELSE);
         }
 
         @Test
-        void earlyExitBlockWithMultiplePredecessors() {
+        void earlyExitBlockWithMultiplePredecessors()
+        {
             // Tests that blocks with multiple predecessors are not considered early exits
             IRMethod method = new IRMethod("com/test/Test", "test", "()I", true);
             IRBlock entry = new IRBlock("entry");
@@ -1461,15 +1454,11 @@ class StructuralAnalyzerTest {
             if2.addSuccessor(continueBlock);
 
             SSAValue c1 = new SSAValue(PrimitiveType.INT, "c1");
-            BranchInstruction b1 = new BranchInstruction(
-                CompareOp.EQ, c1, null, sharedReturn, if2
-            );
+            BranchInstruction b1 = new BranchInstruction(CompareOp.EQ, c1, null, sharedReturn, if2);
             if1.addInstruction(b1);
 
             SSAValue c2 = new SSAValue(PrimitiveType.INT, "c2");
-            BranchInstruction b2 = new BranchInstruction(
-                CompareOp.EQ, c2, null, sharedReturn, continueBlock
-            );
+            BranchInstruction b2 = new BranchInstruction(CompareOp.EQ, c2, null, sharedReturn, continueBlock);
             if2.addInstruction(b2);
 
             sharedReturn.addInstruction(new ReturnInstruction(IntConstant.of(0)));
@@ -1494,7 +1483,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void blockWithNonTrivialInstructionsBeforeGoto() {
+        void blockWithNonTrivialInstructionsBeforeGoto()
+        {
             // Tests hasNonTrivialInstructions logic
             IRMethod method = new IRMethod("com/test/Test", "test", "()I", true);
             IRBlock entry = new IRBlock("entry");
@@ -1521,7 +1511,6 @@ class StructuralAnalyzerTest {
             );
             header.addInstruction(branch);
 
-            // Add non-trivial instruction before goto
             SSAValue result = new SSAValue(PrimitiveType.INT, "result");
             SSAValue a = new SSAValue(PrimitiveType.INT, "a");
             SSAValue b = new SSAValue(PrimitiveType.INT, "b");
@@ -1548,7 +1537,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void blockWithThrowInstruction() {
+        void blockWithThrowInstruction()
+        {
             // Tests ThrowInstruction as terminator
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -1567,9 +1557,7 @@ class StructuralAnalyzerTest {
             header.addSuccessor(continueBlock);
 
             SSAValue condition = new SSAValue(PrimitiveType.INT, "cond");
-            BranchInstruction branch = new BranchInstruction(
-                CompareOp.EQ, condition, null, throwBlock, continueBlock
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, condition, null, throwBlock, continueBlock);
             header.addInstruction(branch);
 
             SSAValue exception = new SSAValue(PrimitiveType.INT, "exception");
@@ -1592,7 +1580,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void mergePointIsSameAsHeader() {
+        void mergePointIsSameAsHeader()
+        {
             // Edge case where merge point equals header (self-reference)
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -1620,13 +1609,15 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== RegionInfo Tests ==========
+    // RegionInfo Tests
 
     @Nested
-    class RegionInfoTests {
+    class RegionInfoTests
+    {
 
         @Test
-        void regionInfoGettersWork() {
+        void regionInfoGettersWork()
+        {
             IRBlock header = new IRBlock("header");
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, header);
 
@@ -1635,7 +1626,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void regionInfoSettersWork() {
+        void regionInfoSettersWork()
+        {
             IRBlock header = new IRBlock("header");
             IRBlock thenBlock = new IRBlock("then");
             IRBlock elseBlock = new IRBlock("else");
@@ -1654,7 +1646,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void loopRegionInfoSettersWork() {
+        void loopRegionInfoSettersWork()
+        {
             IRMethod method = createSimpleMethod();
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
@@ -1677,7 +1670,8 @@ class StructuralAnalyzerTest {
         }
 
         @Test
-        void switchRegionInfoSettersWork() {
+        void switchRegionInfoSettersWork()
+        {
             IRBlock header = new IRBlock("header");
             IRBlock case1 = new IRBlock("case1");
             IRBlock defaultBlock = new IRBlock("default");
@@ -1694,9 +1688,10 @@ class StructuralAnalyzerTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private IRMethod createSimpleMethod() {
+    private IRMethod createSimpleMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "simple", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);

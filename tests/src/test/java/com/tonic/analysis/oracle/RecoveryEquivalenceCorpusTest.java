@@ -18,25 +18,30 @@ import java.util.stream.Stream;
  * NOT_EQUIVALENT is either a real recovery bug or an oracle false positive - both need investigation,
  * not a red build); the controlled positive/negative tests live in {@link RecoveryEquivalenceTest}.
  */
-class RecoveryEquivalenceCorpusTest {
+class RecoveryEquivalenceCorpusTest
+{
 
     private static final String DIR = "C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main";
 
     @Test
-    void reportEquivalenceOverDemoCorpus() throws Exception {
+    void reportEquivalenceOverDemoCorpus() throws Exception
+    {
         Path root = Path.of(DIR);
-        if (!Files.exists(root)) {
+        if (!Files.exists(root))
+        {
             System.out.println("[oracle corpus] demo dir absent - skipped");
             return;
         }
         List<Path> classFiles;
-        try (Stream<Path> s = Files.walk(root)) {
+        try (Stream<Path> s = Files.walk(root))
+        {
             classFiles = s.filter(p -> p.toString().endsWith(".class")).sorted().collect(Collectors.toList());
         }
 
         ClassPool pool = new ClassPool();
         List<ClassFile> cfs = new ArrayList<>();
-        for (Path p : classFiles) {
+        for (Path p : classFiles)
+        {
             cfs.add(pool.loadClass(new ByteArrayInputStream(Files.readAllBytes(p))));
         }
 
@@ -46,14 +51,18 @@ class RecoveryEquivalenceCorpusTest {
         int equivalent = 0, notEquivalent = 0, inconclusive = 0;
         List<String> counterexamples = new ArrayList<>();
 
-        for (ClassFile cf : cfs) {
-            for (RecoveryEquivalenceOracle.MethodVerdict mv : oracle.checkClass(cf, pool)) {
-                switch (mv.verdict.kind) {
+        for (ClassFile cf : cfs)
+        {
+            for (RecoveryEquivalenceOracle.MethodVerdict mv : oracle.checkClass(cf, pool))
+            {
+                switch (mv.verdict.kind)
+                {
                     case EQUIVALENT: equivalent++; break;
                     case INCONCLUSIVE: inconclusive++; break;
                     case NOT_EQUIVALENT:
                         notEquivalent++;
-                        if (counterexamples.size() < 40) {
+                        if (counterexamples.size() < 40)
+                        {
                             counterexamples.add(cf.getClassName() + "#" + mv.method + " -> " + mv.verdict.detail);
                         }
                         break;
@@ -67,7 +76,8 @@ class RecoveryEquivalenceCorpusTest {
                 + "  EQUIVALENT=" + equivalent + "  NOT_EQUIVALENT=" + notEquivalent
                 + "  INCONCLUSIVE=" + inconclusive
                 + "  cache(hits=" + cache.hits() + ",misses=" + cache.misses() + ")");
-        for (String c : counterexamples) {
+        for (String c : counterexamples)
+        {
             System.out.println("  NOT_EQUIVALENT: " + c);
         }
     }

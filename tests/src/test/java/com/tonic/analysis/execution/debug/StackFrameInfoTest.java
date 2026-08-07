@@ -1,16 +1,17 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class StackFrameInfoTest {
+class StackFrameInfoTest
+{
 
     @Test
-    void testConstructionFromStackFrame() {
+    void testConstructionFromStackFrame()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.method()V");
         when(frame.getPC()).thenReturn(10);
@@ -24,7 +25,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testGetMethodSignature() {
+    void testGetMethodSignature()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.test()I");
         when(frame.getPC()).thenReturn(0);
@@ -35,7 +37,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testGetPC() {
+    void testGetPC()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.method()V");
         when(frame.getPC()).thenReturn(123);
@@ -46,7 +49,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testGetLineNumber() {
+    void testGetLineNumber()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.method()V");
         when(frame.getPC()).thenReturn(0);
@@ -57,12 +61,14 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testNullFrameThrows() {
+    void testNullFrameThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> new StackFrameInfo(null));
     }
 
     @Test
-    void testEquality() {
+    void testEquality()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         when(frame1.getMethodSignature()).thenReturn("Test.method()V");
         when(frame1.getPC()).thenReturn(10);
@@ -81,7 +87,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testInequality() {
+    void testInequality()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         when(frame1.getMethodSignature()).thenReturn("Test.method()V");
         when(frame1.getPC()).thenReturn(10);
@@ -99,7 +106,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.method()V");
         when(frame.getPC()).thenReturn(10);
@@ -114,7 +122,8 @@ class StackFrameInfoTest {
     }
 
     @Test
-    void testUnknownLineNumber() {
+    void testUnknownLineNumber()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.method()V");
         when(frame.getPC()).thenReturn(0);

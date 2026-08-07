@@ -5,8 +5,16 @@ import com.tonic.parser.ClassFile;
 
 import static com.tonic.type.AccessFlags.*;
 
+/**
+ * Demo showing ClassBuilder assembling a hello-world class that is then defined and run.
+ */
 public class ScratchTest
 {
+    /**
+     * Builds a hello-world class with ClassBuilder, defines it, and invokes its main method.
+     * @param args unused
+     * @throws Exception if class definition or reflective invocation fails
+     */
     public static void main(String[] args) throws Exception
     {
         ClassFile cf = ClassBuilder.create("com/tonic/HelloWorld")
@@ -24,7 +32,8 @@ public class ScratchTest
         byte[] bytes = cf.write();
 
         Class<?> clazz = new ClassLoader() {
-            Class<?> define(byte[] b) {
+            Class<?> define(byte[] b)
+            {
                 return defineClass(null, b, 0, b.length);
             }
         }.define(bytes);

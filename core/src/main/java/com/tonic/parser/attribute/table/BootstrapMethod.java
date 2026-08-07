@@ -4,33 +4,42 @@ import java.util.List;
 
 /**
  * Represents a bootstrap method entry in the BootstrapMethods attribute.
- * Used for invokedynamic instructions and constant dynamic constants.
  */
-public class BootstrapMethod {
+public class BootstrapMethod
+{
     private final int bootstrapMethodRef;
     private final List<Integer> bootstrapArguments;
 
     /**
      * Constructs a bootstrap method entry.
-     *
      * @param bootstrapMethodRef constant pool index to the method handle
      * @param bootstrapArguments list of constant pool indices for arguments
      */
-    public BootstrapMethod(int bootstrapMethodRef, List<Integer> bootstrapArguments) {
+    public BootstrapMethod(int bootstrapMethodRef, List<Integer> bootstrapArguments)
+    {
         this.bootstrapMethodRef = bootstrapMethodRef;
         this.bootstrapArguments = bootstrapArguments;
     }
 
-    public int getBootstrapMethodRef() {
+    /**
+     * @return the bootstrap method ref
+     */
+    public int getBootstrapMethodRef()
+    {
         return bootstrapMethodRef;
     }
 
-    public List<Integer> getBootstrapArguments() {
+    /**
+     * @return the bootstrap arguments
+     */
+    public List<Integer> getBootstrapArguments()
+    {
         return bootstrapArguments;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "BootstrapMethod{" +
                 "bootstrapMethodRef=" + bootstrapMethodRef +
                 ", bootstrapArguments=" + bootstrapArguments +

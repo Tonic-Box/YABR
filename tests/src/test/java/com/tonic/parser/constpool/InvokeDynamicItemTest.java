@@ -14,13 +14,15 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InvokeDynamicItemTest {
+class InvokeDynamicItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = BytecodeBuilder.forClass("com/test/InvokeDynamicTest")
             .publicStaticMethod("test", "()V")
                 .vreturn()
@@ -29,17 +31,20 @@ class InvokeDynamicItemTest {
     }
 
     @Nested
-    class ConstructionTests {
+    class ConstructionTests
+    {
 
         @Test
-        void defaultConstructor() {
+        void defaultConstructor()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
             assertNotNull(item);
             assertEquals(Item.ITEM_INVOKEDYNAMIC, item.getType());
         }
 
         @Test
-        void constructorWithParameters() {
+        void constructorWithParameters()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 5, 10);
 
             assertNotNull(item);
@@ -49,7 +54,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void constructorSetsConstPool() {
+        void constructorSetsConstPool()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 3, 7);
 
             assertNotNull(item.getValue());
@@ -57,24 +63,28 @@ class InvokeDynamicItemTest {
     }
 
     @Nested
-    class ResolutionTests {
+    class ResolutionTests
+    {
 
         @Test
-        void getNameReturnsNullWhenConstPoolNotSet() {
+        void getNameReturnsNullWhenConstPoolNotSet()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
 
             assertNull(item.getName());
         }
 
         @Test
-        void getDescriptorReturnsNullWhenConstPoolNotSet() {
+        void getDescriptorReturnsNullWhenConstPoolNotSet()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
 
             assertNull(item.getDescriptor());
         }
 
         @Test
-        void getNameWithConstPool() throws IOException {
+        void getNameWithConstPool() throws IOException
+        {
             int natIndex = constPool.addNameAndType("apply", "()Ljava/util/function/Function;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -86,7 +96,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getDescriptorWithConstPool() throws IOException {
+        void getDescriptorWithConstPool() throws IOException
+        {
             int natIndex = constPool.addNameAndType("run", "()Ljava/lang/Runnable;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -98,7 +109,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getDescriptorForComplexSignature() throws IOException {
+        void getDescriptorForComplexSignature() throws IOException
+        {
             int natIndex = constPool.addNameAndType("lambda", "(Ljava/lang/String;I)Ljava/util/function/BiConsumer;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -112,17 +124,20 @@ class InvokeDynamicItemTest {
     }
 
     @Nested
-    class ParameterAnalysisTests {
+    class ParameterAnalysisTests
+    {
 
         @Test
-        void getParameterCountThrowsWhenConstPoolNotSet() {
+        void getParameterCountThrowsWhenConstPoolNotSet()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
 
             assertThrows(IllegalStateException.class, item::getParameterCount);
         }
 
         @Test
-        void getParameterCountForNoParameters() throws IOException {
+        void getParameterCountForNoParameters() throws IOException
+        {
             int natIndex = constPool.addNameAndType("run", "()Ljava/lang/Runnable;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -132,7 +147,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getParameterCountForOneParameter() throws IOException {
+        void getParameterCountForOneParameter() throws IOException
+        {
             int natIndex = constPool.addNameAndType("accept", "(Ljava/lang/Object;)Ljava/util/function/Consumer;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -142,7 +158,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getParameterCountForMultipleParameters() throws IOException {
+        void getParameterCountForMultipleParameters() throws IOException
+        {
             int natIndex = constPool.addNameAndType("lambda", "(ILjava/lang/String;D)Ljava/util/function/Function;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -152,14 +169,16 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsThrowsWhenConstPoolNotSet() {
+        void getReturnTypeSlotsThrowsWhenConstPoolNotSet()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
 
             assertThrows(IllegalStateException.class, item::getReturnTypeSlots);
         }
 
         @Test
-        void getReturnTypeSlotsForVoidReturn() throws IOException {
+        void getReturnTypeSlotsForVoidReturn() throws IOException
+        {
             int natIndex = constPool.addNameAndType("action", "()V");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -169,7 +188,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForIntReturn() throws IOException {
+        void getReturnTypeSlotsForIntReturn() throws IOException
+        {
             int natIndex = constPool.addNameAndType("getValue", "()I");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -179,7 +199,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForLongReturn() throws IOException {
+        void getReturnTypeSlotsForLongReturn() throws IOException
+        {
             int natIndex = constPool.addNameAndType("getLong", "()J");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -189,7 +210,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForDoubleReturn() throws IOException {
+        void getReturnTypeSlotsForDoubleReturn() throws IOException
+        {
             int natIndex = constPool.addNameAndType("getDouble", "()D");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -199,7 +221,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void getReturnTypeSlotsForObjectReturn() throws IOException {
+        void getReturnTypeSlotsForObjectReturn() throws IOException
+        {
             int natIndex = constPool.addNameAndType("get", "()Ljava/lang/Object;");
             int indyIndex = constPool.addInvokeDynamic(0, natIndex);
 
@@ -211,10 +234,12 @@ class InvokeDynamicItemTest {
         }
 
     @Nested
-    class SerializationTests {
+    class SerializationTests
+    {
 
         @Test
-        void writeInvokeDynamic() throws IOException {
+        void writeInvokeDynamic() throws IOException
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 0x0002, 0x0008);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -230,7 +255,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void writeInvokeDynamicWithZeroIndices() throws IOException {
+        void writeInvokeDynamicWithZeroIndices() throws IOException
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 0, 0);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -239,13 +265,15 @@ class InvokeDynamicItemTest {
 
             byte[] bytes = baos.toByteArray();
             assertEquals(4, bytes.length);
-            for (byte b : bytes) {
+            for (byte b : bytes)
+            {
                 assertEquals(0x00, b & 0xFF);
             }
         }
 
         @Test
-        void writeInvokeDynamicWithLargeIndices() throws IOException {
+        void writeInvokeDynamicWithLargeIndices() throws IOException
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 0xABCD, 0x1234);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -262,10 +290,12 @@ class InvokeDynamicItemTest {
     }
 
     @Nested
-    class TypeTests {
+    class TypeTests
+    {
 
         @Test
-        void getTypeReturnsInvokeDynamicConstant() {
+        void getTypeReturnsInvokeDynamicConstant()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem();
             assertEquals(Item.ITEM_INVOKEDYNAMIC, item.getType());
             assertEquals(0x12, item.getType());
@@ -273,10 +303,12 @@ class InvokeDynamicItemTest {
     }
 
     @Nested
-    class ValueTests {
+    class ValueTests
+    {
 
         @Test
-        void getValueReturnsInvokeDynamic() {
+        void getValueReturnsInvokeDynamic()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 5, 10);
 
             InvokeDynamic result = item.getValue();
@@ -286,7 +318,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void valueFromConstructorIsAccessible() {
+        void valueFromConstructorIsAccessible()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 7, 14);
 
             InvokeDynamic value = item.getValue();
@@ -296,7 +329,8 @@ class InvokeDynamicItemTest {
         }
 
         @Test
-        void invokeDynamicValuesAreImmutable() {
+        void invokeDynamicValuesAreImmutable()
+        {
             InvokeDynamicItem item = new InvokeDynamicItem(constPool, 100, 200);
 
             assertEquals(100, item.getValue().getBootstrapMethodAttrIndex());

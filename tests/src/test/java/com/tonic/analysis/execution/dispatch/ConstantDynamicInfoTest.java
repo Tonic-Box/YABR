@@ -5,12 +5,15 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConstantDynamicInfoTest {
+class ConstantDynamicInfoTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
         @Test
-        void shouldCreateWithAllParameters() {
+        void shouldCreateWithAllParameters()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(5, "myConstant", "Ljava/lang/String;", 42);
 
             assertEquals(5, info.getBootstrapMethodIndex());
@@ -20,151 +23,178 @@ class ConstantDynamicInfoTest {
         }
 
         @Test
-        void shouldHandleNullName() {
+        void shouldHandleNullName()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, null, "I", 1);
             assertNull(info.getName());
         }
 
         @Test
-        void shouldHandleNullDescriptor() {
+        void shouldHandleNullDescriptor()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "test", null, 1);
             assertNull(info.getDescriptor());
         }
     }
 
     @Nested
-    class WideTypeTests {
+    class WideTypeTests
+    {
         @Test
-        void shouldIdentifyLongAsWide() {
+        void shouldIdentifyLongAsWide()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "longConst", "J", 1);
             assertTrue(info.isWideType());
         }
 
         @Test
-        void shouldIdentifyDoubleAsWide() {
+        void shouldIdentifyDoubleAsWide()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "doubleConst", "D", 1);
             assertTrue(info.isWideType());
         }
 
         @Test
-        void shouldNotIdentifyIntAsWide() {
+        void shouldNotIdentifyIntAsWide()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "intConst", "I", 1);
             assertFalse(info.isWideType());
         }
 
         @Test
-        void shouldNotIdentifyFloatAsWide() {
+        void shouldNotIdentifyFloatAsWide()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "floatConst", "F", 1);
             assertFalse(info.isWideType());
         }
 
         @Test
-        void shouldNotIdentifyReferenceAsWide() {
+        void shouldNotIdentifyReferenceAsWide()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "refConst", "Ljava/lang/Object;", 1);
             assertFalse(info.isWideType());
         }
 
         @Test
-        void shouldHandleNullDescriptorForWideCheck() {
+        void shouldHandleNullDescriptorForWideCheck()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "test", null, 1);
             assertFalse(info.isWideType());
         }
     }
 
     @Nested
-    class PrimitiveTypeTests {
+    class PrimitiveTypeTests
+    {
         @Test
-        void shouldIdentifyIntAsPrimitive() {
+        void shouldIdentifyIntAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "I", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyLongAsPrimitive() {
+        void shouldIdentifyLongAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "J", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyFloatAsPrimitive() {
+        void shouldIdentifyFloatAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "F", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyDoubleAsPrimitive() {
+        void shouldIdentifyDoubleAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "D", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyBooleanAsPrimitive() {
+        void shouldIdentifyBooleanAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "Z", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyByteAsPrimitive() {
+        void shouldIdentifyByteAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "B", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyCharAsPrimitive() {
+        void shouldIdentifyCharAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "C", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldIdentifyShortAsPrimitive() {
+        void shouldIdentifyShortAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "S", 1);
             assertTrue(info.isPrimitive());
         }
 
         @Test
-        void shouldNotIdentifyReferenceAsPrimitive() {
+        void shouldNotIdentifyReferenceAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "Ljava/lang/String;", 1);
             assertFalse(info.isPrimitive());
         }
 
         @Test
-        void shouldNotIdentifyArrayAsPrimitive() {
+        void shouldNotIdentifyArrayAsPrimitive()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "[I", 1);
             assertFalse(info.isPrimitive());
         }
     }
 
     @Nested
-    class ReferenceTypeTests {
+    class ReferenceTypeTests
+    {
         @Test
-        void shouldIdentifyObjectAsReference() {
+        void shouldIdentifyObjectAsReference()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "Ljava/lang/Object;", 1);
             assertTrue(info.isReference());
         }
 
         @Test
-        void shouldIdentifyArrayAsReference() {
+        void shouldIdentifyArrayAsReference()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "[Ljava/lang/String;", 1);
             assertTrue(info.isReference());
         }
 
         @Test
-        void shouldIdentifyPrimitiveArrayAsReference() {
+        void shouldIdentifyPrimitiveArrayAsReference()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "[I", 1);
             assertTrue(info.isReference());
         }
 
         @Test
-        void shouldNotIdentifyPrimitiveAsReference() {
+        void shouldNotIdentifyPrimitiveAsReference()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(0, "c", "I", 1);
             assertFalse(info.isReference());
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
         @Test
-        void shouldFormatToString() {
+        void shouldFormatToString()
+        {
             ConstantDynamicInfo info = new ConstantDynamicInfo(3, "myConst", "I", 10);
             String result = info.toString();
 

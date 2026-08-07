@@ -3,15 +3,18 @@ package com.tonic.analysis.query.eval;
 import com.tonic.analysis.Bootstraps;
 import com.tonic.analysis.instruction.GetFieldInstruction;
 import com.tonic.analysis.instruction.Instruction;
-import com.tonic.analysis.instruction.Ldc2WInstruction;
-import com.tonic.analysis.instruction.LdcInstruction;
-import com.tonic.analysis.instruction.LdcWInstruction;
 import com.tonic.analysis.instruction.InvokeDynamicInstruction;
 import com.tonic.analysis.instruction.InvokeInsn;
 import com.tonic.analysis.instruction.InvokeInterfaceInstruction;
 import com.tonic.analysis.instruction.InvokeSpecialInstruction;
 import com.tonic.analysis.instruction.InvokeStaticInstruction;
+import com.tonic.analysis.instruction.Ldc2WInstruction;
+import com.tonic.analysis.instruction.LdcInstruction;
+import com.tonic.analysis.instruction.LdcWInstruction;
 import com.tonic.analysis.instruction.PutFieldInstruction;
+import com.tonic.analysis.query.ast.Step;
+import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
+import com.tonic.analysis.query.value.Value;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -32,11 +35,8 @@ import com.tonic.parser.constpool.MethodHandleItem;
 import com.tonic.parser.constpool.MethodTypeItem;
 import com.tonic.parser.constpool.StringRefItem;
 import com.tonic.parser.constpool.Utf8Item;
-import com.tonic.analysis.query.util.ArgumentTypeAnalyzer;
-import com.tonic.analysis.query.value.Value;
 import com.tonic.util.DescriptorUtil;
 import com.tonic.util.Opcode;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,15 +55,14 @@ import static com.tonic.analysis.query.eval.SubjectKind.METHOD;
 import static com.tonic.analysis.query.eval.SubjectKind.PARAM;
 
 /**
- * Registers the static (bytecode-level) query vocabulary. Each line is one queryable fact; the same
- * keyword ({@code name}, {@code type}, {@code owner}, {@code value}, {@code arity}, …) is registered
- * per subject kind with kind-appropriate behavior. This is the only file that grows as the vocabulary
- * expands — no new AST nodes or visitor methods.
+ * Registers the static (bytecode-level) query vocabulary.
  */
-public final class DefaultAttributes {
+public final class DefaultAttributes
+{
 
     private static final Map<Integer, String> MODIFIERS = new LinkedHashMap<>();
-    static {
+    static
+    {
         MODIFIERS.put(0x0001, "public");
         MODIFIERS.put(0x0002, "private");
         MODIFIERS.put(0x0004, "protected");
@@ -81,11 +80,18 @@ public final class DefaultAttributes {
         MODIFIERS.put(0x4000, "enum");
     }
 
-    private DefaultAttributes() {
+    private DefaultAttributes()
+    {
     }
 
-    /** Builds a registry populated with every static atom. */
-    public static AttributeRegistry create() {
+    /**
+     * Builds a registry populated with every static atom.
+     *
+     * @return a registry carrying the class, method, call, argument, parameter, instruction,
+     *         field access, dynamic, bootstrap argument, CFG and identity atoms
+     */
+    public static AttributeRegistry create()
+    {
         AttributeRegistry r = new AttributeRegistry();
         registerClass(r);
         registerMethod(r);
@@ -101,8 +107,11 @@ public final class DefaultAttributes {
         return r;
     }
 
-    /** Control-flow / SSA atoms. {@code recursive} is a static self-call scan; loop/block counts lift IR lazily. */
-    private static void registerCfg(AttributeRegistry r) {
+    /**
+     * Control-flow / SSA atoms.
+     */
+    private static void registerCfg(AttributeRegistry r)
+    {
         r.registerScalar(METHOD, "recursive", s -> Value.of(isRecursive(methodOf(s), s.context())));
         r.registerScalar(METHOD, "blocks", s -> {
             IRMethod ir = s.context().ir();
@@ -111,7 +120,8 @@ public final class DefaultAttributes {
         r.registerScalar(METHOD, "loops", s -> {
             IRMethod ir = s.context().ir();
             LoopAnalysis la = s.context().loopAnalysis();
-            if (ir == null || la == null) {
+            if (ir == null || la == null)
+            {
                 return Value.ABSENT;
             }
             long loops = ir.getBlocksInOrder().stream().filter(la::isLoopHeader).count();
@@ -126,24 +136,30 @@ public final class DefaultAttributes {
         r.registerScalar(INSTRUCTION, "loopDepth", s -> loopMembership(s.context(), insn(s).instruction().getOffset(), true));
     }
 
-    private static Value loopMembership(EvalContext ctx, int offset, boolean wantDepth) {
+    private static Value loopMembership(EvalContext ctx, int offset, boolean wantDepth)
+    {
         LoopAnalysis la = ctx.loopAnalysis();
         IRBlock block = ctx.blockForOffset(offset);
-        if (la == null || block == null) {
+        if (la == null || block == null)
+        {
             return Value.ABSENT;
         }
         return wantDepth ? Value.of(la.getLoopDepth(block)) : Value.of(la.isInLoop(block));
     }
 
-    private static boolean isRecursive(MethodEntry method, com.tonic.analysis.query.eval.EvalContext ctx) {
+    private static boolean isRecursive(MethodEntry method, EvalContext ctx)
+    {
         String owner = method.getOwnerName();
         String name = method.getName();
         String desc = method.getDesc();
-        for (Instruction insn : ctx.instructions()) {
-            if (insn instanceof InvokeInsn) {
+        for (Instruction insn : ctx.instructions())
+        {
+            if (insn instanceof InvokeInsn)
+            {
                 InvokeInsn call = (InvokeInsn) insn;
                 if (owner.equals(call.getOwnerClass()) && name.equals(call.getMethodName())
-                        && desc.equals(call.getMethodDescriptor())) {
+                        && desc.equals(call.getMethodDescriptor()))
+                {
                     return true;
                 }
             }
@@ -153,10 +169,11 @@ public final class DefaultAttributes {
 
     /**
      * Self-references so a redundant subject prefix reads naturally inside a quantifier body
-     * ({@code call.name}, {@code field.owner}, {@code method.descriptor}) — the keyword resolves to
+     * ({@code call.name}, {@code field.owner}, {@code method.descriptor}) - the keyword resolves to
      * the current subject of that kind.
      */
-    private static void registerIdentities(AttributeRegistry r) {
+    private static void registerIdentities(AttributeRegistry r)
+    {
         AttributeRegistry.Selector self = (s, step) -> Stream.of(s);
         registerStream(r, CLASS, self, "class");
         registerStream(r, METHOD, self, "method");
@@ -165,7 +182,8 @@ public final class DefaultAttributes {
         registerStream(r, INSTRUCTION, self, "insn", "instruction");
     }
 
-    private static void registerClass(AttributeRegistry r) {
+    private static void registerClass(AttributeRegistry r)
+    {
         r.registerScalar(CLASS, "name", s -> Value.of(classOf(s).getClassName()));
         r.registerScalar(CLASS, "modifiers", s -> classModifiers(classOf(s)));
         r.registerScalar(CLASS, "super", s -> superType(classOf(s)));
@@ -178,7 +196,8 @@ public final class DefaultAttributes {
         registerStream(r, CLASS, methods, "method", "methods");
     }
 
-    private static void registerMethod(AttributeRegistry r) {
+    private static void registerMethod(AttributeRegistry r)
+    {
         r.registerScalar(METHOD, "name", s -> Value.of(methodOf(s).getName()));
         r.registerScalar(METHOD, "owner", s -> Value.of(methodOf(s).getOwnerName()));
         r.registerScalar(METHOD, "descriptor", s -> Value.of(methodOf(s).getDesc()));
@@ -220,12 +239,14 @@ public final class DefaultAttributes {
         registerStream(r, METHOD, params, "param", "params");
     }
 
-    private static void registerParam(AttributeRegistry r) {
+    private static void registerParam(AttributeRegistry r)
+    {
         r.registerScalar(PARAM, "index", s -> Value.of(param(s).index()));
         r.registerScalar(PARAM, "type", s -> Value.ofType(param(s).type()));
     }
 
-    private static void registerCall(AttributeRegistry r) {
+    private static void registerCall(AttributeRegistry r)
+    {
         r.registerScalar(CALL, "owner", s -> {
             InvokeInsn iv = invoke(s);
             return iv == null ? Value.ABSENT : Value.of(iv.getOwnerClass());
@@ -256,27 +277,31 @@ public final class DefaultAttributes {
         registerStream(r, CALL, argSel, "arg", "args");
     }
 
-    private static void registerStream(AttributeRegistry r, SubjectKind kind,
-                                       AttributeRegistry.Selector selector, String... keywords) {
-        for (String kw : keywords) {
+    private static void registerStream(AttributeRegistry r, SubjectKind kind, AttributeRegistry.Selector selector, String... keywords)
+    {
+        for (String kw : keywords)
+        {
             r.registerStream(kind, kw, selector);
         }
     }
 
-    private static void registerArg(AttributeRegistry r) {
+    private static void registerArg(AttributeRegistry r)
+    {
         r.registerScalar(ARG, "index", s -> Value.of(arg(s).argIndex()));
         r.registerScalar(ARG, "type", s -> ArgValueResolver.declaredType(arg(s).call(), arg(s).argIndex()));
         r.registerScalar(ARG, "value", s -> ArgValueResolver.value(arg(s).call(), arg(s).argIndex()));
         r.registerScalar(ARG, "kind", s -> ArgValueResolver.kind(arg(s).call(), arg(s).argIndex()));
     }
 
-    private static void registerInstruction(AttributeRegistry r) {
+    private static void registerInstruction(AttributeRegistry r)
+    {
         r.registerScalar(INSTRUCTION, "opcode", s -> Value.of(mnemonic(insn(s).instruction())));
         r.registerScalar(INSTRUCTION, "index", s -> Value.of(insn(s).index()));
         r.registerScalar(INSTRUCTION, "line", s -> Value.of(s.context().lineForOffset(insn(s).instruction().getOffset())));
     }
 
-    private static void registerFieldAccess(AttributeRegistry r) {
+    private static void registerFieldAccess(AttributeRegistry r)
+    {
         r.registerScalar(FIELD_ACCESS, "owner", s -> Value.of(fieldOwner(field(s).instruction())));
         r.registerScalar(FIELD_ACCESS, "name", s -> Value.of(fieldName(field(s).instruction())));
         r.registerScalar(FIELD_ACCESS, "descriptor", s -> Value.of(fieldDescriptor(field(s).instruction())));
@@ -284,7 +309,8 @@ public final class DefaultAttributes {
                 s -> Value.of(field(s).instruction() instanceof PutFieldInstruction ? "write" : "read"));
     }
 
-    private static void registerDynamic(AttributeRegistry r) {
+    private static void registerDynamic(AttributeRegistry r)
+    {
         r.registerScalar(DYNAMIC, "name", s -> Value.of(dynamic(s).name()));
         r.registerScalar(DYNAMIC, "descriptor", s -> Value.of(dynamic(s).descriptor()));
         r.registerScalar(DYNAMIC, "site", s -> Value.of(dynamic(s).site()));
@@ -306,66 +332,78 @@ public final class DefaultAttributes {
         registerStream(r, DYNAMIC, bsmArgs, "bsmarg", "bsmargs");
     }
 
-    private static void registerBootstrapArg(AttributeRegistry r) {
+    private static void registerBootstrapArg(AttributeRegistry r)
+    {
         r.registerScalar(BOOTSTRAP_ARG, "kind", s -> Value.of(constantKind(bootstrapArg(s))));
         r.registerScalar(BOOTSTRAP_ARG, "value",
                 s -> Value.of(Bootstraps.constantValue(constPool(bootstrapArg(s).context()), bootstrapArg(s).cpIndex())));
     }
 
-    // ---- selector helpers -------------------------------------------------
+    // selector helpers
 
-    private interface InstructionMapper {
+    private interface InstructionMapper
+    {
         Subject map(Instruction insn, int index);
     }
 
-    private static Stream<Subject> instructionStream(Subject s, InstructionMapper mapper) {
+    private static Stream<Subject> instructionStream(Subject s, InstructionMapper mapper)
+    {
         List<Instruction> insns = s.context().instructions();
         List<Subject> out = new ArrayList<>();
-        for (int i = 0; i < insns.size(); i++) {
+        for (int i = 0; i < insns.size(); i++)
+        {
             Subject sub = mapper.map(insns.get(i), i);
-            if (sub != null) {
+            if (sub != null)
+            {
                 out.add(sub);
             }
         }
         return out.stream();
     }
 
-    private static Stream<Subject> args(Subject.CallSubject call, com.tonic.analysis.query.ast.Step step) {
+    private static Stream<Subject> args(Subject.CallSubject call, Step step)
+    {
         int arity = ArgumentTypeAnalyzer.countDescriptorArguments(invokeDescriptor(call.invoke()));
-        if (step.hasIndex()) {
+        if (step.hasIndex())
+        {
             int idx = step.index();
             return idx >= 0 && idx < arity ? Stream.of(new Subject.ArgSubject(call, idx)) : Stream.empty();
         }
         List<Subject> out = new ArrayList<>();
-        for (int i = 0; i < arity; i++) {
+        for (int i = 0; i < arity; i++)
+        {
             out.add(new Subject.ArgSubject(call, i));
         }
         return out.stream();
     }
 
-    private static Stream<Subject> params(MethodEntry method, EvalContext ctx,
-                                          com.tonic.analysis.query.ast.Step step) {
+    private static Stream<Subject> params(MethodEntry method, EvalContext ctx, Step step)
+    {
         List<String> types = DescriptorUtil.parseParameterDescriptors(method.getDesc());
-        if (step.hasIndex()) {
+        if (step.hasIndex())
+        {
             int idx = step.index();
             return idx >= 0 && idx < types.size()
                     ? Stream.of(new Subject.ParamSubject(method, idx, types.get(idx), ctx))
                     : Stream.empty();
         }
         List<Subject> out = new ArrayList<>();
-        for (int i = 0; i < types.size(); i++) {
+        for (int i = 0; i < types.size(); i++)
+        {
             out.add(new Subject.ParamSubject(method, i, types.get(i), ctx));
         }
         return out.stream();
     }
 
-    // ---- dynamic-site helpers ---------------------------------------------
+    // dynamic-site helpers
 
-    private static Subject.DynamicSubject indySubject(InvokeDynamicInstruction indy, EvalContext ctx) {
+    private static Subject.DynamicSubject indySubject(InvokeDynamicInstruction indy, EvalContext ctx)
+    {
         Item<?> item = ctx.classFile() == null ? null : constPool(ctx).getItem(indy.getCpIndex());
         String name = null;
         String descriptor = null;
-        if (item instanceof InvokeDynamicItem) {
+        if (item instanceof InvokeDynamicItem)
+        {
             name = ((InvokeDynamicItem) item).getName();
             descriptor = ((InvokeDynamicItem) item).getDescriptor();
         }
@@ -373,13 +411,16 @@ public final class DefaultAttributes {
         return new Subject.DynamicSubject(ref, name, descriptor, "indy", indy, ctx);
     }
 
-    private static Subject.DynamicSubject condySubject(Instruction insn, EvalContext ctx) {
+    private static Subject.DynamicSubject condySubject(Instruction insn, EvalContext ctx)
+    {
         int cpIndex = ldcCpIndex(insn);
-        if (cpIndex < 0 || ctx.classFile() == null) {
+        if (cpIndex < 0 || ctx.classFile() == null)
+        {
             return null;
         }
         Item<?> item = constPool(ctx).getItem(cpIndex);
-        if (!(item instanceof ConstantDynamicItem)) {
+        if (!(item instanceof ConstantDynamicItem))
+        {
             return null;
         }
         ConstantDynamicItem condy = (ConstantDynamicItem) item;
@@ -387,54 +428,66 @@ public final class DefaultAttributes {
         return new Subject.DynamicSubject(ref, condy.getName(), condy.getDescriptor(), "condy", insn, ctx);
     }
 
-    private static int ldcCpIndex(Instruction insn) {
+    private static int ldcCpIndex(Instruction insn)
+    {
         if (insn instanceof LdcInstruction) return ((LdcInstruction) insn).getCpIndex();
         if (insn instanceof LdcWInstruction) return ((LdcWInstruction) insn).getCpIndex();
         if (insn instanceof Ldc2WInstruction) return ((Ldc2WInstruction) insn).getCpIndex();
         return -1;
     }
 
-    private static Value bootstrapValue(Subject s, Function<Bootstraps.BootstrapRef, String> getter) {
+    private static Value bootstrapValue(Subject s, Function<Bootstraps.BootstrapRef, String> getter)
+    {
         Bootstraps.BootstrapRef ref = dynamic(s).bootstrap();
         return ref == null ? Value.ABSENT : Value.of(getter.apply(ref));
     }
 
-    private static Value recipe(Subject.DynamicSubject d) {
+    private static Value recipe(Subject.DynamicSubject d)
+    {
         Bootstraps.BootstrapRef ref = d.bootstrap();
-        if (ref == null || !"stringconcat".equals(ref.category()) || ref.getArgCpIndices().isEmpty()) {
+        if (ref == null || !"stringconcat".equals(ref.category()) || ref.getArgCpIndices().isEmpty())
+        {
             return Value.ABSENT;
         }
         ConstPool cp = constPool(d.context());
         Item<?> item = cp.getItem(ref.getArgCpIndices().get(0));
-        if (!(item instanceof StringRefItem)) {
+        if (!(item instanceof StringRefItem))
+        {
             return Value.ABSENT;
         }
         Utf8Item utf8 = (Utf8Item) cp.getItem(((StringRefItem) item).getValue());
         return Value.of(Bootstraps.readableRecipe(utf8.getValue()));
     }
 
-    private static Stream<Subject> bootstrapArgs(Subject.DynamicSubject d) {
+    private static Stream<Subject> bootstrapArgs(Subject.DynamicSubject d)
+    {
         Bootstraps.BootstrapRef ref = d.bootstrap();
-        if (ref == null) {
+        if (ref == null)
+        {
             return Stream.empty();
         }
         EvalContext ctx = d.context();
         ConstPool cp = constPool(ctx);
         List<Subject> out = new ArrayList<>();
-        for (int cpIndex : ref.getArgCpIndices()) {
+        for (int cpIndex : ref.getArgCpIndices())
+        {
             Item<?> item = cp.getItem(cpIndex);
-            if (item instanceof ConstantDynamicItem) {
+            if (item instanceof ConstantDynamicItem)
+            {
                 ConstantDynamicItem condy = (ConstantDynamicItem) item;
                 Bootstraps.BootstrapRef nested = Bootstraps.resolve(ctx.classFile(), condy.getBootstrapMethodAttrIndex());
                 out.add(new Subject.DynamicSubject(nested, condy.getName(), condy.getDescriptor(), "condy", null, ctx));
-            } else {
+            }
+            else
+            {
                 out.add(new Subject.BootstrapArgSubject(cpIndex, ctx));
             }
         }
         return out.stream();
     }
 
-    private static String constantKind(Subject.BootstrapArgSubject arg) {
+    private static String constantKind(Subject.BootstrapArgSubject arg)
+    {
         Item<?> item = constPool(arg.context()).getItem(arg.cpIndex());
         if (item instanceof IntegerItem) return "int";
         if (item instanceof LongItem) return "long";
@@ -447,11 +500,12 @@ public final class DefaultAttributes {
         return "other";
     }
 
-    private static ConstPool constPool(EvalContext ctx) {
+    private static ConstPool constPool(EvalContext ctx)
+    {
         return ctx.classFile().getConstPool();
     }
 
-    // ---- subject casts ----------------------------------------------------
+    // subject casts
 
     private static ClassFile classOf(Subject s) { return ((Subject.ClassSubject) s).classFile(); }
     private static MethodEntry methodOf(Subject s) { return ((Subject.MethodSubject) s).method(); }
@@ -463,17 +517,21 @@ public final class DefaultAttributes {
     private static Subject.DynamicSubject dynamic(Subject s) { return (Subject.DynamicSubject) s; }
     private static Subject.BootstrapArgSubject bootstrapArg(Subject s) { return (Subject.BootstrapArgSubject) s; }
 
-    private static InvokeInsn invoke(Subject s) {
+    private static InvokeInsn invoke(Subject s)
+    {
         Instruction i = call(s).invoke();
         return i instanceof InvokeInsn ? (InvokeInsn) i : null;
     }
 
-    // ---- value helpers ----------------------------------------------------
+    // value helpers
 
-    private static Value modifiers(int access) {
+    private static Value modifiers(int access)
+    {
         List<Value> names = new ArrayList<>();
-        for (Map.Entry<Integer, String> e : MODIFIERS.entrySet()) {
-            if ((access & e.getKey()) != 0) {
+        for (Map.Entry<Integer, String> e : MODIFIERS.entrySet())
+        {
+            if ((access & e.getKey()) != 0)
+            {
                 names.add(Value.of(e.getValue()));
             }
         }
@@ -481,54 +539,68 @@ public final class DefaultAttributes {
     }
 
     /**
-     * Class modifiers: the access-flag set (which already carries {@code enum}/{@code interface}/
-     * {@code annotation}/{@code abstract}) plus a synthetic {@code record} when the class carries a
-     * {@link RecordAttribute} (records have no access flag).
+     * Class modifiers.
      */
-    private static Value classModifiers(ClassFile cf) {
+    private static Value classModifiers(ClassFile cf)
+    {
         List<Value> names = new ArrayList<>();
-        for (Map.Entry<Integer, String> e : MODIFIERS.entrySet()) {
-            if ((cf.getAccess() & e.getKey()) != 0) {
+        for (Map.Entry<Integer, String> e : MODIFIERS.entrySet())
+        {
+            if ((cf.getAccess() & e.getKey()) != 0)
+            {
                 names.add(Value.of(e.getValue()));
             }
         }
-        if (isRecord(cf)) {
+        if (isRecord(cf))
+        {
             names.add(Value.of("record"));
         }
         return Value.ofSet(names);
     }
 
-    private static boolean isRecord(ClassFile cf) {
-        for (Attribute a : cf.getClassAttributes()) {
-            if (a instanceof RecordAttribute) {
+    private static boolean isRecord(ClassFile cf)
+    {
+        for (Attribute a : cf.getClassAttributes())
+        {
+            if (a instanceof RecordAttribute)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private static Value superType(ClassFile cf) {
+    private static Value superType(ClassFile cf)
+    {
         String name = cf.getSuperClassName();
         return name == null ? Value.ofNull() : Value.ofType(name);
     }
 
-    private static Value interfaceTypes(ClassFile cf) {
+    private static Value interfaceTypes(ClassFile cf)
+    {
         List<Value> names = new ArrayList<>();
-        for (String iface : cf.getInterfaceNames()) {
+        for (String iface : cf.getInterfaceNames())
+        {
             names.add(Value.ofType(iface));
         }
         return Value.ofSet(names);
     }
 
-    private static String mnemonic(Instruction instr) {
+    private static String mnemonic(Instruction instr)
+    {
         return Opcode.fromCode(instr.getOpcode()).getMnemonic();
     }
 
-    /** Space-joined opcode mnemonics of the method body, for the {@code opcodes matches /.../} shorthand. */
-    private static String joinedMnemonics(EvalContext ctx) {
+    /**
+     * Space-joined opcode mnemonics of the method body, for the {@code opcodes matches /.../} shorthand.
+     */
+    private static String joinedMnemonics(EvalContext ctx)
+    {
         StringBuilder sb = new StringBuilder();
-        for (Instruction instr : ctx.instructions()) {
-            if (sb.length() > 0) {
+        for (Instruction instr : ctx.instructions())
+        {
+            if (sb.length() > 0)
+            {
                 sb.append(' ');
             }
             sb.append(mnemonic(instr));
@@ -536,7 +608,8 @@ public final class DefaultAttributes {
         return sb.toString();
     }
 
-    private static String invokeKind(Instruction instr) {
+    private static String invokeKind(Instruction instr)
+    {
         if (instr instanceof InvokeStaticInstruction) return "static";
         if (instr instanceof InvokeSpecialInstruction) return "special";
         if (instr instanceof InvokeInterfaceInstruction) return "interface";
@@ -544,25 +617,30 @@ public final class DefaultAttributes {
         return "virtual";
     }
 
-    private static String invokeDescriptor(Instruction invoke) {
+    private static String invokeDescriptor(Instruction invoke)
+    {
         return invoke instanceof InvokeInsn ? ((InvokeInsn) invoke).getMethodDescriptor() : "()V";
     }
 
-    private static boolean isFieldAccess(Instruction insn) {
+    private static boolean isFieldAccess(Instruction insn)
+    {
         return insn instanceof GetFieldInstruction || insn instanceof PutFieldInstruction;
     }
 
-    private static String fieldOwner(Instruction insn) {
+    private static String fieldOwner(Instruction insn)
+    {
         return insn instanceof GetFieldInstruction ? ((GetFieldInstruction) insn).getOwnerClass()
                 : ((PutFieldInstruction) insn).getOwnerClass();
     }
 
-    private static String fieldName(Instruction insn) {
+    private static String fieldName(Instruction insn)
+    {
         return insn instanceof GetFieldInstruction ? ((GetFieldInstruction) insn).getFieldName()
                 : ((PutFieldInstruction) insn).getFieldName();
     }
 
-    private static String fieldDescriptor(Instruction insn) {
+    private static String fieldDescriptor(Instruction insn)
+    {
         return insn instanceof GetFieldInstruction ? ((GetFieldInstruction) insn).getFieldDescriptor()
                 : ((PutFieldInstruction) insn).getFieldDescriptor();
     }

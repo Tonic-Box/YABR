@@ -16,28 +16,49 @@ import java.util.*;
 
 import static com.tonic.util.Opcode.*;
 
-public class TypeVerifier {
+/**
+ * Abstract-interpretation type checker for a method body, walking the bytecode to a
+ * fixpoint and reporting stack, local and return type errors to a collector.
+ */
+public class TypeVerifier
+{
     private final ClassFile classFile;
     private final TypeConstraint typeConstraint;
 
-    public TypeVerifier(ClassFile classFile, ClassPool classPool) {
+    /**
+     * Creates a verifier for one class.
+     * @param classFile the class whose methods will be verified, its pool supplies type names
+     * @param classPool the pool used to answer assignability questions
+     */
+    public TypeVerifier(ClassFile classFile, ClassPool classPool)
+    {
         this.classFile = classFile;
         this.typeConstraint = new TypeConstraint(classPool);
     }
 
-    public void verify(MethodEntry method, ErrorCollector collector) {
+    /**
+     * Type checks a method body, doing nothing if it has no code, no constant pool or no
+     * bytecode, or if the code cannot be decoded.
+     * @param method the method to check
+     * @param collector receives the errors and warnings found, and can stop the walk early
+     */
+    public void verify(MethodEntry method, ErrorCollector collector)
+    {
         CodeAttribute code = method.getCodeAttribute();
-        if (code == null) {
+        if (code == null)
+        {
             return;
         }
 
         ConstPool constPool = classFile != null ? classFile.getConstPool() : null;
-        if (constPool == null) {
+        if (constPool == null)
+        {
             return;
         }
 
         byte[] bytecode = code.getCode();
-        if (bytecode == null || bytecode.length == 0) {
+        if (bytecode == null || bytecode.length == 0)
+        {
             return;
         }
 
@@ -45,9 +66,12 @@ public class TypeVerifier {
         int maxLocals = code.getMaxLocals();
 
         CodeWriter codeWriter;
-        try {
+        try
+        {
             codeWriter = new CodeWriter(method);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return;
         }
 
@@ -61,38 +85,47 @@ public class TypeVerifier {
         stateAtOffset.put(0, initialState);
         worklist.add(0);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             if (collector.shouldStop()) return;
 
             int offset = worklist.removeFirst();
-            if (visited.contains(offset)) {
+            if (visited.contains(offset))
+            {
                 continue;
             }
             visited.add(offset);
 
             TypeState state = stateAtOffset.get(offset);
-            if (state == null) {
+            if (state == null)
+            {
                 continue;
             }
 
             Instruction instr = codeWriter.getInstructions().iterator().next();
-            for (Instruction i : codeWriter.getInstructions()) {
-                if (i.getOffset() == offset) {
+            for (Instruction i : codeWriter.getInstructions())
+            {
+                if (i.getOffset() == offset)
+                {
                     instr = i;
                     break;
                 }
             }
 
-            if (instr.getOffset() != offset) {
-                for (Map.Entry<Integer, Instruction> entry : getInstructionsMap(codeWriter).entrySet()) {
-                    if (entry.getKey() == offset) {
+            if (instr.getOffset() != offset)
+            {
+                for (Map.Entry<Integer, Instruction> entry : getInstructionsMap(codeWriter).entrySet())
+                {
+                    if (entry.getKey() == offset)
+                    {
                         instr = entry.getValue();
                         break;
                     }
                 }
             }
 
-            if (state.getStackSize() > maxStack) {
+            if (state.getStackSize() > maxStack)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.STACK_OVERFLOW,
                         offset,
@@ -102,17 +135,23 @@ public class TypeVerifier {
             }
 
             TypeState nextState;
-            try {
+            try
+            {
                 nextState = inference.apply(state, instr);
-            } catch (IllegalStateException e) {
+            }
+            catch (IllegalStateException e)
+            {
                 String msg = e.getMessage();
-                if (msg != null && msg.contains("underflow")) {
+                if (msg != null && msg.contains("underflow"))
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.STACK_UNDERFLOW,
                             offset,
                             "Stack underflow at instruction " + instr.getClass().getSimpleName()
                     ));
-                } else {
+                }
+                else
+                {
                     collector.addError(new VerificationError(
                             VerificationErrorType.TYPE_MISMATCH,
                             offset,
@@ -131,14 +170,19 @@ public class TypeVerifier {
 
             List<Integer> successors = getSuccessors(instr, offset, bytecode);
 
-            for (int succ : successors) {
+            for (int succ : successors)
+            {
                 TypeState existing = stateAtOffset.get(succ);
-                if (existing == null) {
+                if (existing == null)
+                {
                     stateAtOffset.put(succ, nextState);
                     worklist.add(succ);
-                } else {
+                }
+                else
+                {
                     TypeState merged = existing.merge(nextState);
-                    if (!merged.equals(existing)) {
+                    if (!merged.equals(existing))
+                    {
                         stateAtOffset.put(succ, merged);
                         visited.remove(succ);
                         worklist.add(succ);
@@ -148,53 +192,76 @@ public class TypeVerifier {
         }
     }
 
-    private TypeState createInitialState(MethodEntry method, ConstPool constPool) {
-        if (method != null) {
+    private TypeState createInitialState(MethodEntry method, ConstPool constPool)
+    {
+        if (method != null)
+        {
             return TypeState.fromMethodEntry(method, constPool);
         }
         return TypeState.empty();
     }
 
-    private void verifyLocalAccess(Instruction instr, TypeState state, int maxLocals,
-                                   int offset, ErrorCollector collector) {
+    private void verifyLocalAccess(Instruction instr, TypeState state, int maxLocals, int offset, ErrorCollector collector)
+    {
         int localIndex = -1;
         boolean isStore = false;
         boolean isTwoSlot = false;
 
-        if (instr instanceof ILoadInstruction) {
+        if (instr instanceof ILoadInstruction)
+        {
             localIndex = ((ILoadInstruction) instr).getVarIndex();
-        } else if (instr instanceof LLoadInstruction) {
+        }
+        else if (instr instanceof LLoadInstruction)
+        {
             localIndex = ((LLoadInstruction) instr).getVarIndex();
             isTwoSlot = true;
-        } else if (instr instanceof FLoadInstruction) {
+        }
+        else if (instr instanceof FLoadInstruction)
+        {
             localIndex = ((FLoadInstruction) instr).getVarIndex();
-        } else if (instr instanceof DLoadInstruction) {
+        }
+        else if (instr instanceof DLoadInstruction)
+        {
             localIndex = ((DLoadInstruction) instr).getVarIndex();
             isTwoSlot = true;
-        } else if (instr instanceof ALoadInstruction) {
+        }
+        else if (instr instanceof ALoadInstruction)
+        {
             localIndex = ((ALoadInstruction) instr).getVarIndex();
-        } else if (instr instanceof IStoreInstruction) {
+        }
+        else if (instr instanceof IStoreInstruction)
+        {
             localIndex = ((IStoreInstruction) instr).getVarIndex();
             isStore = true;
-        } else if (instr instanceof LStoreInstruction) {
+        }
+        else if (instr instanceof LStoreInstruction)
+        {
             localIndex = ((LStoreInstruction) instr).getVarIndex();
             isStore = true;
             isTwoSlot = true;
-        } else if (instr instanceof FStoreInstruction) {
+        }
+        else if (instr instanceof FStoreInstruction)
+        {
             localIndex = ((FStoreInstruction) instr).getVarIndex();
             isStore = true;
-        } else if (instr instanceof DStoreInstruction) {
+        }
+        else if (instr instanceof DStoreInstruction)
+        {
             localIndex = ((DStoreInstruction) instr).getVarIndex();
             isStore = true;
             isTwoSlot = true;
-        } else if (instr instanceof AStoreInstruction) {
+        }
+        else if (instr instanceof AStoreInstruction)
+        {
             localIndex = ((AStoreInstruction) instr).getVarIndex();
             isStore = true;
         }
 
-        if (localIndex >= 0) {
+        if (localIndex >= 0)
+        {
             int maxIndex = isTwoSlot ? localIndex + 1 : localIndex;
-            if (maxIndex >= maxLocals) {
+            if (maxIndex >= maxLocals)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.LOCALS_OVERFLOW,
                         offset,
@@ -204,9 +271,11 @@ public class TypeVerifier {
                 ));
             }
 
-            if (!isStore && localIndex < state.getLocalsCount()) {
+            if (!isStore && localIndex < state.getLocalsCount())
+            {
                 VerificationType localType = state.getLocal(localIndex);
-                if (localType.equals(VerificationType.TOP)) {
+                if (localType.equals(VerificationType.TOP))
+                {
                     collector.addWarning(new VerificationError(
                             VerificationErrorType.UNINITIALIZED_LOCAL,
                             offset,
@@ -218,18 +287,21 @@ public class TypeVerifier {
         }
     }
 
-    private void verifyReturnType(Instruction instr, TypeState state, MethodEntry method,
-                                  int offset, ConstPool constPool, ErrorCollector collector) {
+    private void verifyReturnType(Instruction instr, TypeState state, MethodEntry method, int offset, ConstPool constPool, ErrorCollector collector)
+    {
         int opcode = instr.getOpcode();
-        if (opcode < IRETURN.getCode() || opcode > RETURN_.getCode()) {
+        if (opcode < IRETURN.getCode() || opcode > RETURN_.getCode())
+        {
             return;
         }
 
         String desc = method.getDesc();
         VerificationType expectedReturn = TypeState.getReturnType(desc, constPool);
 
-        if (opcode == RETURN_.getCode()) {
-            if (expectedReturn != null) {
+        if (opcode == RETURN_.getCode())
+        {
+            if (expectedReturn != null)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.INCOMPATIBLE_RETURN_TYPE,
                         offset,
@@ -239,7 +311,8 @@ public class TypeVerifier {
             return;
         }
 
-        if (expectedReturn == null) {
+        if (expectedReturn == null)
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INCOMPATIBLE_RETURN_TYPE,
                     offset,
@@ -248,7 +321,8 @@ public class TypeVerifier {
             return;
         }
 
-        if (state.isStackEmpty()) {
+        if (state.isStackEmpty())
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.STACK_UNDERFLOW,
                     offset,
@@ -260,8 +334,10 @@ public class TypeVerifier {
         // A long/double on the operand stack occupies two entries: {VALUE, TOP}. peek() returns the TOP
         // companion, so for a two-slot return the actual value is one entry below it.
         VerificationType actualReturn;
-        if (expectedReturn.isTwoSlot()) {
-            if (state.getStackSize() < 2) {
+        if (expectedReturn.isTwoSlot())
+        {
+            if (state.getStackSize() < 2)
+            {
                 collector.addError(new VerificationError(
                         VerificationErrorType.STACK_UNDERFLOW,
                         offset,
@@ -270,10 +346,13 @@ public class TypeVerifier {
                 return;
             }
             actualReturn = state.peek(1);
-        } else {
+        }
+        else
+        {
             actualReturn = state.peek();
         }
-        if (!typeConstraint.isAssignableTo(actualReturn, expectedReturn)) {
+        if (!typeConstraint.isAssignableTo(actualReturn, expectedReturn))
+        {
             collector.addError(new VerificationError(
                     VerificationErrorType.INCOMPATIBLE_RETURN_TYPE,
                     offset,
@@ -282,55 +361,67 @@ public class TypeVerifier {
         }
     }
 
-    private List<Integer> getSuccessors(Instruction instr, int offset, byte[] bytecode) {
+    private List<Integer> getSuccessors(Instruction instr, int offset, byte[] bytecode)
+    {
         List<Integer> successors = new ArrayList<>();
         int opcode = instr.getOpcode();
 
-        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode()) {
+        if (opcode >= IRETURN.getCode() && opcode <= RETURN_.getCode())
+        {
             return successors;
         }
-        if (opcode == ATHROW.getCode()) {
+        if (opcode == ATHROW.getCode())
+        {
             return successors;
         }
 
         int nextOffset = offset + instr.getLength();
 
-        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
-            if (instr instanceof GotoInstruction) {
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode())
+        {
+            if (instr instanceof GotoInstruction)
+            {
                 int target = offset + ((GotoInstruction) instr).getBranchOffset();
                 successors.add(target);
             }
             return successors;
         }
 
-        if (instr instanceof ConditionalBranchInstruction) {
+        if (instr instanceof ConditionalBranchInstruction)
+        {
             ConditionalBranchInstruction branch = (ConditionalBranchInstruction) instr;
             successors.add(offset + branch.getBranchOffset());
-            if (nextOffset < bytecode.length) {
+            if (nextOffset < bytecode.length)
+            {
                 successors.add(nextOffset);
             }
             return successors;
         }
 
-        if (instr instanceof TableSwitchInstruction) {
+        if (instr instanceof TableSwitchInstruction)
+        {
             TableSwitchInstruction ts = (TableSwitchInstruction) instr;
             successors.add(offset + ts.getDefaultOffset());
-            for (int jumpOffset : ts.getJumpOffsets().values()) {
+            for (int jumpOffset : ts.getJumpOffsets().values())
+            {
                 successors.add(offset + jumpOffset);
             }
             return successors;
         }
 
-        if (instr instanceof LookupSwitchInstruction) {
+        if (instr instanceof LookupSwitchInstruction)
+        {
             LookupSwitchInstruction ls = (LookupSwitchInstruction) instr;
             successors.add(offset + ls.getDefaultOffset());
-            for (int jumpOffset : ls.getMatchOffsets().values()) {
+            for (int jumpOffset : ls.getMatchOffsets().values())
+            {
                 successors.add(offset + jumpOffset);
             }
             return successors;
         }
 
-        if (nextOffset < bytecode.length) {
+        if (nextOffset < bytecode.length)
+        {
             successors.add(nextOffset);
         }
 
@@ -338,12 +429,16 @@ public class TypeVerifier {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<Integer, Instruction> getInstructionsMap(CodeWriter codeWriter) {
-        try {
+    private Map<Integer, Instruction> getInstructionsMap(CodeWriter codeWriter)
+    {
+        try
+        {
             java.lang.reflect.Field f = CodeWriter.class.getDeclaredField("instructions");
             f.setAccessible(true);
             return (Map<Integer, Instruction>) f.get(codeWriter);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             return new TreeMap<>();
         }
     }

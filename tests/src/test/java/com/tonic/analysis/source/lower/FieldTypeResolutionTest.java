@@ -19,10 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * defaults to Object -> invalid bytecode (e.g. {@code ifeq} on a reference -> VerifyError), as seen recompiling a
  * class that calls {@code this.<field>.someBooleanMethod()}.
  */
-public class FieldTypeResolutionTest {
+public class FieldTypeResolutionTest
+{
 
     @Test
-    void currentClassFieldOfSamePackageTypeResolvesToFqn() throws Exception {
+    void currentClassFieldOfSamePackageTypeResolvesToFqn() throws Exception
+    {
         ClassFile helper = TestUtils.compileSource("package test;\npublic class Helper {}\n", "test/Helper");
         ClassPool pool = new ClassPool();
         pool.loadClass(helper.write());

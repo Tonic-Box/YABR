@@ -6,23 +6,31 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents a CONSTANT_Utf8 entry in the constant pool.
+ * A CONSTANT_Utf8 entry in the constant pool, stored in JVMS modified UTF-8.
  */
-public class Utf8Item extends Item<String> {
+public class Utf8Item extends Item<String>
+{
 
     private String value;
 
-    public void setValue(String value) {
+    /**
+     * Replaces the string this entry holds.
+     * @param value the new string value
+     */
+    public void setValue(String value)
+    {
         this.value = value;
     }
 
     @Override
-    public void read(ClassFile classFile) {
+    public void read(ClassFile classFile)
+    {
         this.value = classFile.readUtf8();
     }
 
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         // CONSTANT_Utf8 uses JVMS 4.4.7 modified UTF-8 (U+0000 -> 0xC0 0x80, supplementary chars as a
         // surrogate-pair CESU-8 form), NOT standard UTF-8. DataOutputStream.writeUTF emits exactly that,
         // prefixed by the u2 byte length the entry requires.
@@ -30,12 +38,14 @@ public class Utf8Item extends Item<String> {
     }
 
     @Override
-    public byte getType() {
+    public byte getType()
+    {
         return ITEM_UTF_8;
     }
 
     @Override
-    public String getValue() {
+    public String getValue()
+    {
         return value;
     }
 }

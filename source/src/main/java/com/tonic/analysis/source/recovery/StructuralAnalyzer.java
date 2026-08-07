@@ -1,5 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
+import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.analysis.PostDominatorTree;
@@ -10,15 +11,13 @@ import com.tonic.analysis.ssa.value.Constant;
 import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
-import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
-
 import java.util.*;
 
 /**
- * Analyzes CFG structure to identify high-level control flow patterns.
- * Detects if-then-else, while, do-while, for, and switch constructs.
+ * CFG structural analysis identifying if-then-else, while, do-while, for and switch regions.
  */
-public class StructuralAnalyzer {
+public class StructuralAnalyzer
+{
 
     private final IRMethod method;
     private final DominatorTree dominatorTree;
@@ -29,81 +28,129 @@ public class StructuralAnalyzer {
 
     private final Map<IRBlock, RegionInfo> regionInfos = new HashMap<>();
 
-    public StructuralAnalyzer(IRMethod method, DominatorTree dominatorTree, LoopAnalysis loopAnalysis) {
+    /**
+     * Creates an analyzer; the post-dominator tree is built by analyze().
+     *
+     * @param method SSA method to analyze
+     * @param dominatorTree dominator tree over the same method
+     * @param loopAnalysis natural loops of the same method
+     */
+    public StructuralAnalyzer(IRMethod method, DominatorTree dominatorTree, LoopAnalysis loopAnalysis)
+    {
         this.method = method;
         this.dominatorTree = dominatorTree;
         this.loopAnalysis = loopAnalysis;
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public DominatorTree getDominatorTree() {
+    /**
+     * @return the dominator tree
+     */
+    public DominatorTree getDominatorTree()
+    {
         return dominatorTree;
     }
 
-    public LoopAnalysis getLoopAnalysis() {
+    /**
+     * @return the loop analysis
+     */
+    public LoopAnalysis getLoopAnalysis()
+    {
         return loopAnalysis;
     }
 
-    public PostDominatorTree getPostDominatorTree() {
+    /**
+     * @return the post dominator tree
+     */
+    public PostDominatorTree getPostDominatorTree()
+    {
         return postDominatorTree;
     }
 
-    public Map<IRBlock, Set<IRBlock>> getReachabilityCache() {
+    /**
+     * @return the reachability cache
+     */
+    public Map<IRBlock, Set<IRBlock>> getReachabilityCache()
+    {
         return reachabilityCache;
     }
 
-    /** Analysis results */
-    public Map<IRBlock, RegionInfo> getRegionInfos() {
+    /**
+     * @return the structured region identified for each block
+     */
+    public Map<IRBlock, RegionInfo> getRegionInfos()
+    {
         return regionInfos;
     }
 
     /**
      * Analyzes the method and identifies structured regions.
      */
-    public void analyze() {
+    public void analyze()
+    {
         postDominatorTree = new PostDominatorTree(method);
         postDominatorTree.compute();
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             analyzeBlock(block);
         }
     }
 
-    private void analyzeBlock(IRBlock block) {
+    private void analyzeBlock(IRBlock block)
+    {
         IRInstruction terminator = block.getTerminator();
-        if (terminator == null) {
+        if (terminator == null)
+        {
             regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
             return;
         }
 
-        if (terminator instanceof BranchInstruction) {
+        if (terminator instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) terminator;
             analyzeBranch(block, branch);
-        } else if (terminator instanceof SwitchInstruction) {
+        }
+        else if (terminator instanceof SwitchInstruction)
+        {
             SwitchInstruction sw = (SwitchInstruction) terminator;
             analyzeSwitch(block, sw);
-        } else if (terminator instanceof SimpleInstruction) {
+        }
+        else if (terminator instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) terminator;
-            if (simple.getOp() == SimpleOp.GOTO) {
+            if (simple.getOp() == SimpleOp.GOTO)
+            {
                 analyzeGoto(block);
-            } else {
+            }
+            else
+            {
                 regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
             }
-        } else {
+        }
+        else
+        {
             regionInfos.put(block, new RegionInfo(StructuredRegion.SEQUENCE, block));
         }
     }
 
-    private void analyzeBranch(IRBlock block, BranchInstruction branch) {
+    private void analyzeBranch(IRBlock block, BranchInstruction branch)
+    {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
-        if (loopAnalysis.isLoopHeader(block)) {
+        if (loopAnalysis.isLoopHeader(block))
+        {
             LoopAnalysis.Loop loop = findLoopWithHeader(block);
-            if (loop != null) {
+            if (loop != null)
+            {
                 RegionInfo info = analyzeLoop(block, loop, branch);
                 regionInfos.put(block, info);
                 return;
@@ -114,16 +161,18 @@ public class StructuralAnalyzer {
         regionInfos.put(block, info);
     }
 
-    private RegionInfo analyzeLoop(IRBlock header, LoopAnalysis.Loop loop, BranchInstruction branch) {
+    private RegionInfo analyzeLoop(IRBlock header, LoopAnalysis.Loop loop, BranchInstruction branch)
+    {
         IRBlock trueTarget = branch.getTrueTarget();
         IRBlock falseTarget = branch.getFalseTarget();
 
         // A unique conditional latch is the bottom test of a do-while regardless of where the
-        // header's own branch goes — inside the loop it is body control flow, outside it is a
+        // header's own branch goes - inside the loop it is body control flow, outside it is a
         // mid-body break. javac's top-tested loops always close with an unconditional back-edge,
         // so they never match. The header recovers as the plain conditional it is.
         IRBlock latch = findConditionalLatch(header, loop);
-        if (latch != null && (loop.contains(trueTarget) || loop.contains(falseTarget))) {
+        if (latch != null && (loop.contains(trueTarget) || loop.contains(falseTarget)))
+        {
             BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
             IRBlock latchExit = latchBranch.getTrueTarget() == header
                     ? latchBranch.getFalseTarget()
@@ -142,25 +191,33 @@ public class StructuralAnalyzer {
         IRBlock exitBlock;
         boolean conditionNegated;
 
-        if (loop.contains(trueTarget) && !loop.contains(falseTarget)) {
+        if (loop.contains(trueTarget) && !loop.contains(falseTarget))
+        {
             bodyBlock = trueTarget;
             exitBlock = falseTarget;
             conditionNegated = false;
-        } else if (loop.contains(falseTarget) && !loop.contains(trueTarget)) {
+        }
+        else if (loop.contains(falseTarget) && !loop.contains(trueTarget))
+        {
             bodyBlock = falseTarget;
             exitBlock = trueTarget;
             conditionNegated = true;
-        } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
+        }
+        else if (loop.contains(trueTarget) && loop.contains(falseTarget))
+        {
             bodyBlock = trueTarget;
             exitBlock = null;
             conditionNegated = false;
-        } else {
+        }
+        else
+        {
             return new RegionInfo(StructuredRegion.IRREDUCIBLE, header);
         }
 
         // A self-looping header (body, condition and back-edge in one block) is javac's shape for
         // do-while: the body precedes the bottom-tested condition. bodyBlock == header signals it.
-        if (bodyBlock == header || isDoWhilePattern(header, loop)) {
+        if (bodyBlock == header || isDoWhilePattern(header, loop))
+        {
             RegionInfo info = new RegionInfo(StructuredRegion.DO_WHILE_LOOP, header);
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
@@ -170,7 +227,8 @@ public class StructuralAnalyzer {
         }
 
         ForLoopInfo forLoopInfo = detectForLoopPattern(header, loop, branch);
-        if (forLoopInfo != null) {
+        if (forLoopInfo != null)
+        {
             RegionInfo info = new RegionInfo(StructuredRegion.FOR_LOOP, header);
             info.setLoopBody(bodyBlock);
             info.setLoopExit(exitBlock);
@@ -191,18 +249,19 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * True when every path into the loop reaches the header through the loop body, so the body
-     * runs before the condition is first tested — the shape of a do-while. The method entry block
-     * is excluded: control enters it directly rather than through the body, so its conditional
-     * terminator guards the first iteration (a pre-tested while) even though its only predecessor
-     * is the back-edge.
+     * True when every path into the loop reaches the header through the loop body, so the body runs before the
+     * condition is first tested - the shape of a do-while.
      */
-    private boolean isDoWhilePattern(IRBlock header, LoopAnalysis.Loop loop) {
-        if (header == method.getEntryBlock()) {
+    private boolean isDoWhilePattern(IRBlock header, LoopAnalysis.Loop loop)
+    {
+        if (header == method.getEntryBlock())
+        {
             return false;
         }
-        for (IRBlock pred : header.getPredecessors()) {
-            if (!loop.contains(pred)) {
+        for (IRBlock pred : header.getPredecessors())
+        {
+            if (!loop.contains(pred))
+            {
                 return false;
             }
         }
@@ -210,23 +269,26 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * The unique in-loop predecessor of the header whose conditional branch goes back to the
-     * header with its other target outside the loop — the bottom test of a do-while. Null when
-     * the back-edge structure is anything else.
+     * The unique in-loop predecessor of the header whose conditional branch goes back to the header with its other
+     * target outside the loop - the bottom test of a do-while.
      */
-    private IRBlock findConditionalLatch(IRBlock header, LoopAnalysis.Loop loop) {
+    private IRBlock findConditionalLatch(IRBlock header, LoopAnalysis.Loop loop)
+    {
         IRBlock latch = null;
-        for (IRBlock pred : header.getPredecessors()) {
-            if (!loop.contains(pred)) {
+        for (IRBlock pred : header.getPredecessors())
+        {
+            if (!loop.contains(pred))
+            {
                 continue;
             }
-            if (latch != null) {
+            if (latch != null)
+            {
                 return null;
             }
             latch = pred;
         }
-        if (latch == null || latch == header
-                || !(latch.getTerminator() instanceof BranchInstruction)) {
+        if (latch == null || latch == header || !(latch.getTerminator() instanceof BranchInstruction))
+        {
             return null;
         }
         BranchInstruction branch = (BranchInstruction) latch.getTerminator();
@@ -236,29 +298,36 @@ public class StructuralAnalyzer {
         return other != null && !loop.contains(other) ? latch : null;
     }
 
-    private static class ForLoopInfo {
+    private static class ForLoopInfo
+    {
         final SSAValue inductionVariable;
         final IRBlock incrementBlock;
         final int inductionLocalIndex;
 
-        ForLoopInfo(SSAValue inductionVariable, IRBlock incrementBlock, int inductionLocalIndex) {
+        ForLoopInfo(SSAValue inductionVariable, IRBlock incrementBlock, int inductionLocalIndex)
+        {
             this.inductionVariable = inductionVariable;
             this.incrementBlock = incrementBlock;
             this.inductionLocalIndex = inductionLocalIndex;
         }
     }
 
-    private ForLoopInfo detectForLoopPattern(IRBlock header, LoopAnalysis.Loop loop, BranchInstruction branch) {
+    private ForLoopInfo detectForLoopPattern(IRBlock header, LoopAnalysis.Loop loop, BranchInstruction branch)
+    {
         SSAValue conditionVar = extractConditionVariable(branch);
         Set<IRBlock> loopBlocks = loop.getBlocks();
 
-        for (IRBlock block : loopBlocks) {
+        for (IRBlock block : loopBlocks)
+        {
             if (block == header) continue;
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (succ == header) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (succ == header)
+                {
                     List<IncrementInfo> allIncrements = findAllIncrementsInBlock(block);
-                    if (!allIncrements.isEmpty()) {
+                    if (!allIncrements.isEmpty())
+                    {
                         // A latch updating two or more loop-carried counters (javac's `for (i = a,
                         // j = b; ...; i++, j++)`) cannot be represented by the single-induction
                         // for-header: selecting one counter drops the others' init and duplicates
@@ -269,12 +338,16 @@ public class StructuralAnalyzer {
                                 .filter(idx -> idx >= 0)
                                 .distinct()
                                 .count();
-                        if (distinctCounters >= 2) {
+                        if (distinctCounters >= 2)
+                        {
                             return null;
                         }
-                        if (conditionVar != null) {
-                            for (IncrementInfo incr : allIncrements) {
-                                if (usesLocal(conditionVar, incr.localIndex)) {
+                        if (conditionVar != null)
+                        {
+                            for (IncrementInfo incr : allIncrements)
+                            {
+                                if (usesLocal(conditionVar, incr.localIndex))
+                                {
                                     return new ForLoopInfo(conditionVar, block, incr.localIndex);
                                 }
                             }
@@ -288,39 +361,50 @@ public class StructuralAnalyzer {
         return null;
     }
 
-    private static class IncrementInfo {
+    private static class IncrementInfo
+    {
         final int localIndex;
         final SSAValue incrementedValue;
 
-        IncrementInfo(int localIndex, SSAValue incrementedValue) {
+        IncrementInfo(int localIndex, SSAValue incrementedValue)
+        {
             this.localIndex = localIndex;
             this.incrementedValue = incrementedValue;
         }
     }
 
-    private List<IncrementInfo> findAllIncrementsInBlock(IRBlock block) {
+    private List<IncrementInfo> findAllIncrementsInBlock(IRBlock block)
+    {
         List<IncrementInfo> increments = new ArrayList<>();
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr instanceof StoreLocalInstruction) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr instanceof StoreLocalInstruction)
+            {
                 StoreLocalInstruction store = (StoreLocalInstruction) instr;
                 Value stored = store.getValue();
-                if (stored instanceof SSAValue) {
+                if (stored instanceof SSAValue)
+                {
                     IRInstruction storeDef = ((SSAValue) stored).getDefinition();
-                    if (storeDef instanceof BinaryOpInstruction) {
+                    if (storeDef instanceof BinaryOpInstruction)
+                    {
                         BinaryOpInstruction binOp = (BinaryOpInstruction) storeDef;
                         BinaryOp op = binOp.getOp();
                         // Only a true induction step (local = local +/- constant) is a loop counter. A
                         // non-constant step like `total = total + x` is an accumulator, not the loop
                         // variable; treating it as one hoists it into the for-header out of scope.
-                        if ((op == BinaryOp.ADD || op == BinaryOp.SUB) && isConstantStep(binOp)) {
+                        if ((op == BinaryOp.ADD || op == BinaryOp.SUB) && isConstantStep(binOp))
+                        {
                             increments.add(new IncrementInfo(store.getLocalIndex(), (SSAValue) stored));
                         }
                     }
                 }
-            } else if (instr instanceof BinaryOpInstruction) {
+            }
+            else if (instr instanceof BinaryOpInstruction)
+            {
                 BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                 BinaryOp op = binOp.getOp();
-                if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                if (op == BinaryOp.ADD || op == BinaryOp.SUB)
+                {
                     SSAValue result = binOp.getResult();
                     increments.add(new IncrementInfo(-1, result));
                 }
@@ -329,44 +413,56 @@ public class StructuralAnalyzer {
         return increments;
     }
 
-    /** True when a binary op is a {@code v +/- constant} step — the shape of a loop induction update. */
-    private boolean isConstantStep(BinaryOpInstruction binOp) {
+    /**
+     * True when a binary op is a {@code v +/- constant} step - the shape of a loop induction update.
+     */
+    private boolean isConstantStep(BinaryOpInstruction binOp)
+    {
         return isConstantOperand(binOp.getLeft()) ^ isConstantOperand(binOp.getRight());
     }
 
-    private static boolean isConstantOperand(Value v) {
+    private static boolean isConstantOperand(Value v)
+    {
         return v instanceof Constant
-                || (v instanceof SSAValue
-                    && ((SSAValue) v).getDefinition() instanceof com.tonic.analysis.ssa.ir.ConstantInstruction);
+                || (v instanceof SSAValue && ((SSAValue) v).getDefinition() instanceof ConstantInstruction);
     }
 
-    private boolean usesLocal(SSAValue value, int localIndex) {
+    private boolean usesLocal(SSAValue value, int localIndex)
+    {
         return usesLocalRecursive(value, localIndex, new HashSet<>());
     }
 
-    private boolean usesLocalRecursive(SSAValue value, int localIndex, Set<SSAValue> visited) {
+    private boolean usesLocalRecursive(SSAValue value, int localIndex, Set<SSAValue> visited)
+    {
         if (visited.contains(value)) return false;
         visited.add(value);
 
         IRInstruction def = value.getDefinition();
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex() == localIndex;
         }
-        if (def instanceof PhiInstruction) {
+        if (def instanceof PhiInstruction)
+        {
             PhiInstruction phi = (PhiInstruction) def;
-            for (Value incoming : phi.getIncomingValues().values()) {
-                if (incoming instanceof SSAValue) {
-                    if (usesLocalRecursive((SSAValue) incoming, localIndex, visited)) {
+            for (Value incoming : phi.getIncomingValues().values())
+            {
+                if (incoming instanceof SSAValue)
+                {
+                    if (usesLocalRecursive((SSAValue) incoming, localIndex, visited))
+                    {
                         return true;
                     }
                 }
             }
         }
-        if (def instanceof BinaryOpInstruction) {
+        if (def instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) def;
             Value left = binOp.getLeft();
             Value right = binOp.getRight();
-            if (left instanceof SSAValue && usesLocalRecursive((SSAValue) left, localIndex, visited)) {
+            if (left instanceof SSAValue && usesLocalRecursive((SSAValue) left, localIndex, visited))
+            {
                 return true;
             }
             return right instanceof SSAValue && usesLocalRecursive((SSAValue) right, localIndex, visited);
@@ -374,28 +470,34 @@ public class StructuralAnalyzer {
         return false;
     }
 
-    private SSAValue extractConditionVariable(BranchInstruction branch) {
+    private SSAValue extractConditionVariable(BranchInstruction branch)
+    {
         Value left = branch.getLeft();
         Value right = branch.getRight();
 
-        if (left instanceof SSAValue && (right == null || right instanceof Constant)) {
+        if (left instanceof SSAValue && (right == null || right instanceof Constant))
+        {
             return (SSAValue) left;
         }
-        if (right instanceof SSAValue && left instanceof Constant) {
+        if (right instanceof SSAValue && left instanceof Constant)
+        {
             return (SSAValue) right;
         }
-        if (left instanceof SSAValue && right instanceof SSAValue) {
+        if (left instanceof SSAValue && right instanceof SSAValue)
+        {
             return (SSAValue) left;
         }
         return null;
     }
 
-    private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+    private RegionInfo analyzeConditional(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
+    {
         // A chain of equality comparisons on one value against constants is a switch,
         // regardless of how it would otherwise be structured. Detect it here so it
         // lowers through the existing switch-region recovery.
         RegionInfo chainSwitch = detectComparisonChainSwitch(block);
-        if (chainSwitch != null) {
+        if (chainSwitch != null)
+        {
             return chainSwitch;
         }
 
@@ -404,20 +506,23 @@ public class StructuralAnalyzer {
         // boolean expression as one, instead of mis-reading a shared exit as the merge (which drops
         // terms, duplicates the post-if tail, or absorbs the sibling code after the if).
         RegionInfo compound = detectCompoundCondition(block);
-        if (compound != null) {
+        if (compound != null)
+        {
             return compound;
         }
 
         IRBlock mergePoint = findMergePoint(block);
 
-        if (mergePoint == null || mergePoint == block) {
+        if (mergePoint == null || mergePoint == block)
+        {
             // The post-dominator tree yields no merge when the branch block has extra (e.g.
-            // exception) successors, even though the two arms genuinely reconverge — as for a
+            // exception) successors, even though the two arms genuinely reconverge - as for a
             // boolean-value diamond whose join carries the method continuation. Fall back to the
             // arms' actual convergence before giving up, or the continuation would be duplicated
             // into both branches instead of bounded by the merge.
             IRBlock converge = findImmediateMergePoint(trueTarget, falseTarget);
-            if (converge == null) {
+            if (converge == null)
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, block);
                 info.setThenBlock(trueTarget);
                 info.setElseBlock(falseTarget);
@@ -429,13 +534,16 @@ public class StructuralAnalyzer {
         // Try to find an immediate merge point - a block that both branches reach quickly
         // This handles cases where the post-dominator is far away but there's a closer merge
         IRBlock immediateMerge = findImmediateMergePoint(trueTarget, falseTarget);
-        if (immediateMerge != null && immediateMerge != mergePoint) {
+        if (immediateMerge != null && immediateMerge != mergePoint)
+        {
             mergePoint = immediateMerge;
         }
 
-        if (isExitBlock(mergePoint)) {
+        if (isExitBlock(mergePoint))
+        {
             IRBlock altMerge = findAlternativeMergePoint(trueTarget, falseTarget, mergePoint);
-            if (altMerge != null && altMerge != mergePoint) {
+            if (altMerge != null && altMerge != mergePoint)
+            {
                 mergePoint = altMerge;
             }
         }
@@ -443,14 +551,16 @@ public class StructuralAnalyzer {
         // Check for guard clause chain pattern BEFORE standard if-then detection
         // Guard clause: one branch is early-exit, other leads to another conditional
         RegionInfo guardInfo = detectGuardClauseChain(block, trueTarget, falseTarget);
-        if (guardInfo != null) {
+        if (guardInfo != null)
+        {
             return guardInfo;
         }
 
         boolean falseIsEarlyExit = isEarlyExitBlock(falseTarget);
         boolean trueIsEarlyExit = isEarlyExitBlock(trueTarget);
 
-        if (falseIsEarlyExit && !trueIsEarlyExit) {
+        if (falseIsEarlyExit && !trueIsEarlyExit)
+        {
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(falseTarget);
             info.setMergeBlock(trueTarget);
@@ -458,7 +568,8 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget)) {
+        if (isEarlyExitBlock(trueTarget) && !isEarlyExitBlock(falseTarget))
+        {
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(trueTarget);
             info.setMergeBlock(falseTarget);
@@ -466,8 +577,10 @@ public class StructuralAnalyzer {
             return info;
         }
 
-        if (trueTarget == mergePoint) {
-            if (!isIndirectReturnBlock(trueTarget)) {
+        if (trueTarget == mergePoint)
+        {
+            if (!isIndirectReturnBlock(trueTarget))
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
                 info.setThenBlock(falseTarget);
                 info.setMergeBlock(mergePoint);
@@ -476,8 +589,10 @@ public class StructuralAnalyzer {
             }
         }
 
-        if (falseTarget == mergePoint) {
-            if (!isIndirectReturnBlock(falseTarget)) {
+        if (falseTarget == mergePoint)
+        {
+            if (!isIndirectReturnBlock(falseTarget))
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
                 info.setThenBlock(trueTarget);
                 info.setMergeBlock(mergePoint);
@@ -493,10 +608,12 @@ public class StructuralAnalyzer {
         // return is an OR condition pattern, not a merge after conditional logic.
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
         if (reachableFromFalse.contains(trueTarget) && trueTarget.getPredecessors().size() > 1
-                && (postDominatorTree == null || postDominatorTree.postDominates(trueTarget, block))) {
+                && (postDominatorTree == null || postDominatorTree.postDominates(trueTarget, block)))
+        {
             boolean indirect = isIndirectReturnBlock(trueTarget);
             boolean shortCircuit = isShortCircuitValueBlock(trueTarget);
-            if (!indirect && !shortCircuit) {
+            if (!indirect && !shortCircuit)
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
                 info.setThenBlock(falseTarget);
                 info.setMergeBlock(trueTarget);
@@ -507,8 +624,10 @@ public class StructuralAnalyzer {
 
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
         if (reachableFromTrue.contains(falseTarget) && falseTarget.getPredecessors().size() > 1
-                && (postDominatorTree == null || postDominatorTree.postDominates(falseTarget, block))) {
-            if (!isIndirectReturnBlock(falseTarget) && !isShortCircuitValueBlock(falseTarget)) {
+                && (postDominatorTree == null || postDominatorTree.postDominates(falseTarget, block)))
+        {
+            if (!isIndirectReturnBlock(falseTarget) && !isShortCircuitValueBlock(falseTarget))
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
                 info.setThenBlock(trueTarget);
                 info.setMergeBlock(falseTarget);
@@ -520,7 +639,8 @@ public class StructuralAnalyzer {
         // Check for flat if-chain pattern (dispatch table pattern)
         // This is where sequential if-statements check the same variable against different constants,
         // and the false branch is the NEXT check, not a nested else.
-        if (isFlatIfChainPattern(block, trueTarget, falseTarget)) {
+        if (isFlatIfChainPattern(block, trueTarget, falseTarget))
+        {
             RegionInfo info = new RegionInfo(StructuredRegion.IF_THEN, block);
             info.setThenBlock(trueTarget);
             info.setMergeBlock(falseTarget);  // The next if-check becomes the merge point
@@ -532,7 +652,8 @@ public class StructuralAnalyzer {
         Set<IRBlock> falseReachableNoLoop = getReachableBlocksExcluding(falseTarget, block);
         boolean trueReachesMerge = trueTarget == mergePoint || trueReachableNoLoop.contains(mergePoint);
         boolean falseReachesMerge = falseTarget == mergePoint || falseReachableNoLoop.contains(mergePoint);
-        if (!trueReachesMerge || !falseReachesMerge) {
+        if (!trueReachesMerge || !falseReachesMerge)
+        {
             mergePoint = null;
         }
 
@@ -540,8 +661,10 @@ public class StructuralAnalyzer {
         // indirect return block, don't use it as a merge point. This handles the case
         // where both branches converge on a shared return statement (OR condition pattern).
         // When this happens, using it as merge point causes the branch to be empty.
-        if (mergePoint != null && (mergePoint == trueTarget || mergePoint == falseTarget)) {
-            if (isIndirectReturnBlock(mergePoint)) {
+        if (mergePoint != null && (mergePoint == trueTarget || mergePoint == falseTarget))
+        {
+            if (isIndirectReturnBlock(mergePoint))
+            {
                 mergePoint = null;
             }
         }
@@ -554,16 +677,65 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Detects a short-circuit compound condition (`A && B`, `A || B`, or any mix, e.g.
-     * {@code (A || B) && C}) guarding an if/else. Such a condition is a DAG of two-way branch blocks
-     * that all decide between exactly two exits; grows that region, confirms it is a clean
-     * series-parallel short-circuit chain, and returns an IF_THEN / IF_THEN_ELSE region carrying the
-     * condition blocks so recovery can reconstruct the whole boolean expression (see
-     * {@link CompoundConditionBuilder}). Returns null for a single-condition if (no compound to
-     * reconstruct) or any shape that is not a clean two-exit short-circuit condition.
+     * Grows the condition region from {@code header} over condition-only successors whose predecessors are
+     * all inside it, optionally refusing any step that would leave more than two exits.
      */
-    private RegionInfo detectCompoundCondition(IRBlock header) {
-        if (!(header.getTerminator() instanceof BranchInstruction)) {
+    private Set<IRBlock> growConditionRegion(IRBlock header, boolean bounded)
+    {
+        Set<IRBlock> region = new LinkedHashSet<>();
+        region.add(header);
+        boolean grew = true;
+        while (grew)
+        {
+            grew = false;
+            for (IRBlock b : new ArrayList<>(region))
+            {
+                for (IRBlock s : b.getSuccessors())
+                {
+                    if (region.contains(s) || s == header)
+                    {
+                        continue;
+                    }
+                    if (!isConditionOnlyBlock(s) || !region.containsAll(s.getPredecessors()))
+                    {
+                        continue;
+                    }
+                    Set<IRBlock> trial = new LinkedHashSet<>(region);
+                    trial.add(s);
+                    if (!bounded || countExits(trial) <= 2)
+                    {
+                        region.add(s);
+                        grew = true;
+                    }
+                }
+            }
+        }
+        return region;
+    }
+
+    /**
+     * The blocks a condition region branches to from outside itself.
+     */
+    private Set<IRBlock> conditionRegionExits(Set<IRBlock> region)
+    {
+        Set<IRBlock> exits = new LinkedHashSet<>();
+        for (IRBlock b : region)
+        {
+            for (IRBlock s : b.getSuccessors())
+            {
+                if (!region.contains(s))
+                {
+                    exits.add(s);
+                }
+            }
+        }
+        return exits;
+    }
+
+    private RegionInfo detectCompoundCondition(IRBlock header)
+    {
+        if (!(header.getTerminator() instanceof BranchInstruction))
+        {
             return null;
         }
         // Grow the condition region: absorb a two-way-branch, condition-only successor whose every
@@ -572,42 +744,19 @@ public class StructuralAnalyzer {
         // is the guard body (one of the two exits), not a condition continuation - absorbing it would
         // explode the exit set. Bounding growth by the exit count keeps genuine terms (e.g. the `C` of
         // `(A || B) && C`, reached from two blocks but still two-exit) while stopping at the body.
-        Set<IRBlock> region = new LinkedHashSet<>();
-        region.add(header);
-        boolean grew = true;
-        while (grew) {
-            grew = false;
-            for (IRBlock b : new ArrayList<>(region)) {
-                for (IRBlock s : b.getSuccessors()) {
-                    if (region.contains(s) || s == header) {
-                        continue;
-                    }
-                    if (!isConditionOnlyBlock(s) || !region.containsAll(s.getPredecessors())) {
-                        continue;
-                    }
-                    Set<IRBlock> trial = new LinkedHashSet<>(region);
-                    trial.add(s);
-                    if (countExits(trial) <= 2) {
-                        region.add(s);
-                        grew = true;
-                    }
-                }
-            }
-        }
-        if (region.size() < 2) {
+        // The per-step bound stops at the body, but it also blocks a region that only becomes two-exit once
+        // a later term is absorbed: the `B` of `A && (B || C)` exposes C as a third exit until C joins too.
+        // Retry unbounded when the bounded region is not a valid condition; the exit count and
+        // reconstructibility below still decide, so the relaxed growth cannot admit a body.
+        Set<IRBlock> region = growConditionRegion(header, true);
+        Set<IRBlock> exits = conditionRegionExits(region);
+        if (region.size() < 2)
+        {
             return null; // a single condition - the standard if recovery handles it
         }
-
         // The condition must decide between exactly two exits (then-entry and else-entry).
-        Set<IRBlock> exits = new LinkedHashSet<>();
-        for (IRBlock b : region) {
-            for (IRBlock s : b.getSuccessors()) {
-                if (!region.contains(s)) {
-                    exits.add(s);
-                }
-            }
-        }
-        if (exits.size() != 2) {
+        if (exits.size() != 2)
+        {
             return null;
         }
         Iterator<IRBlock> it = exits.iterator();
@@ -618,44 +767,54 @@ public class StructuralAnalyzer {
         // body and the continuation happen to reach (e.g. several guards that all `return 0`). Treating
         // it as the merge would fold the continuation into the condition and invert the guard clause, so
         // ignore it and let the guard-clause handling below pick the body by which exit actually exits.
-        if (arms != null && isSingleEarlyExitBlock(arms)) {
+        if (arms != null && isSingleEarlyExitBlock(arms))
+        {
             arms = null;
         }
 
         RegionInfo info;
-        if (arms == x || arms == y) {
+        if (arms == x || arms == y)
+        {
             // One exit flows into the other: the sink is the merge, so this is an if-then and the
             // condition is true exactly when it reaches the body (the other exit).
             IRBlock body = arms == y ? x : y;
-            if (!CompoundConditionBuilder.isReconstructible(header, body, arms, region)) {
+            if (!CompoundConditionBuilder.isReconstructible(header, body, arms, region))
+            {
                 return null;
             }
             info = new RegionInfo(StructuredRegion.IF_THEN, header);
             info.setThenBlock(body);
             info.setMergeBlock(arms);
-        } else if (arms != null) {
+        }
+        else if (arms != null)
+        {
             // Distinct arms reconverging at a real merge: an if/else. Either exit is a valid true-arm;
             // recovery picks the polarity that reads with fewer negations. Only require reconstructibility.
-            if (!CompoundConditionBuilder.isReconstructible(header, x, y, region)) {
+            if (!CompoundConditionBuilder.isReconstructible(header, x, y, region))
+            {
                 return null;
             }
             info = new RegionInfo(StructuredRegion.IF_THEN_ELSE, header);
             info.setThenBlock(x);
             info.setElseBlock(y);
             info.setMergeBlock(arms);
-        } else {
+        }
+        else
+        {
             // The exits never reconverge. If exactly one is an early exit, this is a guard clause
             // (`if (cond) return; cont`): recover it as an if-then whose body is the exiting arm and
             // whose merge is the continuation, so the whole condition stays un-negated and round-trips
             // stably. If both or neither exit, there is no clean guard shape - defer to standard recovery.
             boolean xExit = isSingleEarlyExitBlock(x);
             boolean yExit = isSingleEarlyExitBlock(y);
-            if (xExit == yExit) {
+            if (xExit == yExit)
+            {
                 return null;
             }
             IRBlock body = xExit ? x : y;
             IRBlock merge = xExit ? y : x;
-            if (!CompoundConditionBuilder.isReconstructible(header, body, merge, region)) {
+            if (!CompoundConditionBuilder.isReconstructible(header, body, merge, region))
+            {
                 return null;
             }
             info = new RegionInfo(StructuredRegion.IF_THEN, header);
@@ -666,12 +825,18 @@ public class StructuralAnalyzer {
         return info;
     }
 
-    /** The number of distinct blocks reached from {@code region} that lie outside it. */
-    private int countExits(Set<IRBlock> region) {
+    /**
+     * The number of distinct blocks reached from {@code region} that lie outside it.
+     */
+    private int countExits(Set<IRBlock> region)
+    {
         Set<IRBlock> exits = new LinkedHashSet<>();
-        for (IRBlock b : region) {
-            for (IRBlock s : b.getSuccessors()) {
-                if (!region.contains(s)) {
+        for (IRBlock b : region)
+        {
+            for (IRBlock s : b.getSuccessors())
+            {
+                if (!region.contains(s))
+                {
                     exits.add(s);
                 }
             }
@@ -680,35 +845,41 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * A block that contributes only to a condition: it ends in a two-way branch and every other
-     * instruction produces a value used solely within the block (feeding that branch). Blocks with a
-     * side effect (a store, a void call, a monitor) or a value consumed by other code do real work and
-     * are not part of a pure short-circuit condition.
+     * A block that contributes only to a condition.
      */
-    private boolean isConditionOnlyBlock(IRBlock b) {
-        if (!(b.getTerminator() instanceof BranchInstruction)) {
+    private boolean isConditionOnlyBlock(IRBlock b)
+    {
+        if (!(b.getTerminator() instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction branch = (BranchInstruction) b.getTerminator();
-        if (branch.getTrueTarget() == null || branch.getFalseTarget() == null) {
+        if (branch.getTrueTarget() == null || branch.getFalseTarget() == null)
+        {
             return false;
         }
-        for (IRInstruction instr : b.getInstructions()) {
-            if (instr.isTerminator()) {
+        for (IRInstruction instr : b.getInstructions())
+        {
+            if (instr.isTerminator())
+            {
                 continue;
             }
             SSAValue result = instr.getResult();
-            if (result == null) {
+            if (result == null)
+            {
                 return false; // a void instruction (store, void call, monitor) is real work
             }
-            if (result.getUses().isEmpty() && isSideEffecting(instr)) {
+            if (result.getUses().isEmpty() && isSideEffecting(instr))
+            {
                 // A discarded-result side effect (e.g. a `set.add(x)` whose boolean return is dropped)
                 // is a statement, not part of a pure condition. A dead pure load (a `load this` the IR
                 // never consumes) is harmless and must not disqualify the block.
                 return false;
             }
-            for (IRInstruction use : result.getUses()) {
-                if (use.getBlock() != b) {
+            for (IRInstruction use : result.getUses())
+            {
+                if (use.getBlock() != b)
+                {
                     return false;
                 }
             }
@@ -716,46 +887,55 @@ public class StructuralAnalyzer {
         return true;
     }
 
-    /** Whether an instruction has a side effect (a call or allocation) beyond producing its value. */
-    private boolean isSideEffecting(IRInstruction instr) {
+    /**
+     * Whether an instruction has a side effect (a call or allocation) beyond producing its value.
+     */
+    private boolean isSideEffecting(IRInstruction instr)
+    {
         return instr instanceof InvokeInstruction
                 || instr instanceof NewInstruction
                 || instr instanceof NewArrayInstruction;
     }
 
     /**
-     * A block that recovers to a single early-exit statement: it ends in a return or throw and does no
-     * other work (every instruction feeds that exit's value). Unlike {@link #isEarlyExitBlock} this does
-     * not require a single predecessor, so a shared {@code return} target still qualifies - the property
-     * that distinguishes a guard clause's body from the method continuation, which carries real statements.
+     * A block that recovers to a single early-exit statement.
      */
-    private boolean isSingleEarlyExitBlock(IRBlock b) {
+    private boolean isSingleEarlyExitBlock(IRBlock b)
+    {
         IRInstruction terminator = b.getTerminator();
         boolean exits = terminator instanceof ReturnInstruction
                 || (terminator instanceof SimpleInstruction && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW);
-        if (!exits) {
+        if (!exits)
+        {
             return false;
         }
-        for (IRInstruction instr : b.getInstructions()) {
-            if (instr.isTerminator()) {
+        for (IRInstruction instr : b.getInstructions())
+        {
+            if (instr.isTerminator())
+            {
                 continue;
             }
-            if (instr instanceof InvokeInstruction && "<init>".equals(((InvokeInstruction) instr).getName())) {
+            if (instr instanceof InvokeInstruction && "<init>".equals(((InvokeInstruction) instr).getName()))
+            {
                 // A constructor call is void but is part of building the thrown/returned value
                 // (`throw new X(msg)`), not independent work.
                 continue;
             }
             SSAValue result = instr.getResult();
-            if (result == null) {
+            if (result == null)
+            {
                 return false; // a void instruction (store, void call, monitor) is real work
             }
-            if (result.getUses().isEmpty() && isSideEffecting(instr)) {
+            if (result.getUses().isEmpty() && isSideEffecting(instr))
+            {
                 // A discarded-result side effect (e.g. `sb.append(x)` whose return is dropped) is an
                 // independent statement, so the block does more than exit.
                 return false;
             }
-            for (IRInstruction use : result.getUses()) {
-                if (use.getBlock() != b) {
+            for (IRInstruction use : result.getUses())
+            {
+                if (use.getBlock() != b)
+                {
                     return false;
                 }
             }
@@ -765,20 +945,13 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block is an early exit block (contains only return or throw).
-     * Early exit blocks are simple blocks that immediately exit the method
-     * without any other control flow.
-     * <p>
-     * IMPORTANT: An early exit block must NOT be a merge point (multiple predecessors),
-     * because a merge point represents a common destination that should be visited
-     * after either branch, not skipped as an "early" exit.
-     * <p>
-     * Also handles blocks that GOTO to a shared exit block (common in obfuscated code
-     * where all returns go through a single block).
      */
-    private boolean isEarlyExitBlock(IRBlock block) {
+    private boolean isEarlyExitBlock(IRBlock block)
+    {
         if (block == null) return false;
 
-        if (block.getPredecessors().size() > 1) {
+        if (block.getPredecessors().size() > 1)
+        {
             return false;
         }
 
@@ -786,22 +959,27 @@ public class StructuralAnalyzer {
         if (terminator == null) return false;
 
         boolean isExit = terminator instanceof ReturnInstruction;
-        if (!isExit && terminator instanceof SimpleInstruction) {
+        if (!isExit && terminator instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) terminator;
             isExit = (simple.getOp() == SimpleOp.ATHROW);
         }
-        if (isExit && block.getSuccessors().isEmpty()) {
+        if (isExit && block.getSuccessors().isEmpty())
+        {
             return true;
         }
 
         boolean isGoto = terminator instanceof SimpleInstruction &&
                          ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO;
 
-        if (isGoto) {
+        if (isGoto)
+        {
             Set<IRBlock> successors = block.getSuccessors();
-            if (successors.size() == 1) {
+            if (successors.size() == 1)
+            {
                 IRBlock target = successors.iterator().next();
-                if (isExitBlock(target)) {
+                if (isExitBlock(target))
+                {
                     return !hasNonTrivialInstructions(block);
                 }
             }
@@ -812,14 +990,15 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block is an exit block (ends with return or throw).
-     * Unlike isEarlyExitBlock, this doesn't check predecessor count.
      */
-    private boolean isExitBlock(IRBlock block) {
+    private boolean isExitBlock(IRBlock block)
+    {
         if (block == null) return false;
         IRInstruction terminator = block.getTerminator();
         if (terminator == null) return false;
         boolean isExit = terminator instanceof ReturnInstruction;
-        if (!isExit && terminator instanceof SimpleInstruction) {
+        if (!isExit && terminator instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) terminator;
             isExit = (simple.getOp() == SimpleOp.ATHROW);
         }
@@ -827,29 +1006,32 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Checks if a block is a PURE exit: a throw, a void return, or a trivial goto to such a
-     * block. A pure exit is terminal and carries no merged value, so it can never be a
-     * control-flow join and must not be adopted as a region's merge block — doing so makes
-     * inner branches that jump to it collapse to empty and silently vanish.
-     * <p>
-     * A value-returning return is NOT a pure exit: its (possibly phi-merged) value must still
-     * be emitted once at a real merge point, so such blocks remain valid merges.
+     * Checks if a block is a PURE exit: a throw, a void return, or a trivial goto to such a block.
+     *
+     * @param block block to test
+     * @return true if the block is a pure exit
      */
-    public boolean isPureExitBlock(IRBlock block) {
+    public boolean isPureExitBlock(IRBlock block)
+    {
         return isPureExitBlock(block, new HashSet<>());
     }
 
-    private boolean isPureExitBlock(IRBlock block, Set<IRBlock> visited) {
-        if (block == null || !visited.add(block)) {
+    private boolean isPureExitBlock(IRBlock block, Set<IRBlock> visited)
+    {
+        if (block == null || !visited.add(block))
+        {
             return false;
         }
         IRInstruction terminator = block.getTerminator();
-        if (terminator == null) {
+        if (terminator == null)
+        {
             return false;
         }
-        if (block.getSuccessors().isEmpty()) {
+        if (block.getSuccessors().isEmpty())
+        {
             if (terminator instanceof SimpleInstruction
-                    && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW) {
+                    && ((SimpleInstruction) terminator).getOp() == SimpleOp.ATHROW)
+            {
                 return true;
             }
             return terminator instanceof ReturnInstruction
@@ -861,29 +1043,31 @@ public class StructuralAnalyzer {
         if (terminator instanceof SimpleInstruction
                 && ((SimpleInstruction) terminator).getOp() == SimpleOp.GOTO
                 && block.getSuccessors().size() == 1
-                && !hasNonTrivialInstructions(block)) {
+                && !hasNonTrivialInstructions(block))
+        {
             return isPureExitBlock(block.getSuccessors().iterator().next(), visited);
         }
         return false;
     }
 
     /**
-     * Detects guard clause chain pattern where one branch is an early exit
-     * and the other leads to another conditional that's also a guard.
-     * This enables flat recovery like: if (bad) return; if (bad2) return; main_logic
-     * instead of: if (good) { if (good2) { main_logic } return; } return;
+     * Detects guard clause chain pattern where one branch is an early exit and the other leads to another
+     * conditional that's also a guard.
      */
-    private RegionInfo detectGuardClauseChain(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+    private RegionInfo detectGuardClauseChain(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
+    {
         // Use isGuardExitBlock which allows multiple predecessors (multiple guards can share exit blocks)
         boolean falseIsGuardExit = isGuardExitBlock(falseTarget);
         boolean trueIsGuardExit = isGuardExitBlock(trueTarget);
 
         // Pattern 1: false branch is early-exit, true branch continues
         // This includes both "next guard in chain" AND "last guard before main logic"
-        if (falseIsGuardExit && !trueIsGuardExit) {
+        if (falseIsGuardExit && !trueIsGuardExit)
+        {
             // Check if continuation is another guard OR if this block is part of a guard chain
             // (reached via single predecessor that's also a conditional)
-            if (isGuardChainCandidate(block, trueTarget)) {
+            if (isGuardChainCandidate(block, trueTarget))
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(falseTarget);  // Early exit
                 info.setElseBlock(trueTarget);   // Next guard or main logic
@@ -893,8 +1077,10 @@ public class StructuralAnalyzer {
         }
 
         // Pattern 2: true branch is early-exit, false branch continues
-        if (trueIsGuardExit && !falseIsGuardExit) {
-            if (isGuardChainCandidate(block, falseTarget)) {
+        if (trueIsGuardExit && !falseIsGuardExit)
+        {
+            if (isGuardChainCandidate(block, falseTarget))
+            {
                 RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                 info.setThenBlock(trueTarget);   // Early exit
                 info.setElseBlock(falseTarget);  // Next guard or main logic
@@ -909,14 +1095,17 @@ public class StructuralAnalyzer {
         // like: if (a == null) { return x; } if (a.isEmpty()) { return x; } return y;
         // where both a==null and isEmpty share the same exit block for return x,
         // but return y is exclusive to the isEmpty-false path.
-        if (trueIsGuardExit && falseIsGuardExit) {
+        if (trueIsGuardExit && falseIsGuardExit)
+        {
             int truePredCount = trueTarget.getPredecessors().size();
             int falsePredCount = falseTarget.getPredecessors().size();
 
-            if (truePredCount > 1 && falsePredCount == 1) {
+            if (truePredCount > 1 && falsePredCount == 1)
+            {
                 // True branch is shared guard exit, false is exclusive
                 // This block is part of guard chain - emit as: if (cond) { sharedExit }
-                if (isPartOfGuardChain(block)) {
+                if (isPartOfGuardChain(block))
+                {
                     RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                     info.setThenBlock(trueTarget);   // Shared exit
                     info.setElseBlock(falseTarget);  // Exclusive continuation
@@ -925,9 +1114,11 @@ public class StructuralAnalyzer {
                 }
             }
 
-            if (falsePredCount > 1 && truePredCount == 1) {
+            if (falsePredCount > 1 && truePredCount == 1)
+            {
                 // False branch is shared guard exit, true is exclusive
-                if (isPartOfGuardChain(block)) {
+                if (isPartOfGuardChain(block))
+                {
                     RegionInfo info = new RegionInfo(StructuredRegion.GUARD_CLAUSE, block);
                     info.setThenBlock(falseTarget);  // Shared exit
                     info.setElseBlock(trueTarget);   // Exclusive continuation
@@ -940,13 +1131,16 @@ public class StructuralAnalyzer {
         return null;
     }
 
-    private boolean isPartOfGuardChain(IRBlock block) {
+    private boolean isPartOfGuardChain(IRBlock block)
+    {
         Set<IRBlock> preds = block.getPredecessors();
-        if (preds.size() != 1) {
+        if (preds.size() != 1)
+        {
             return false;
         }
         IRBlock pred = preds.iterator().next();
-        if (!isConditionalBlock(pred)) {
+        if (!isConditionalBlock(pred))
+        {
             return false;
         }
         BranchInstruction predBranch = (BranchInstruction) pred.getTerminator();
@@ -960,18 +1154,22 @@ public class StructuralAnalyzer {
                (predFalseIsExit && predTrue == block);
     }
 
-    private boolean isGuardChainCandidate(IRBlock currentBlock, IRBlock continuationBlock) {
+    private boolean isGuardChainCandidate(IRBlock currentBlock, IRBlock continuationBlock)
+    {
         // Case 1: Continuation is another guard (conditional that leads to exit)
-        if (isConditionalBlock(continuationBlock) && isGuardChainContinuation(continuationBlock)) {
+        if (isConditionalBlock(continuationBlock) && isGuardChainContinuation(continuationBlock))
+        {
             return true;
         }
 
         // Case 2: This block is part of a guard chain (predecessor was also a guard)
         // This handles the "last guard" case where continuation is main logic, not a conditional
         Set<IRBlock> preds = currentBlock.getPredecessors();
-        if (preds.size() == 1) {
+        if (preds.size() == 1)
+        {
             IRBlock pred = preds.iterator().next();
-            if (isConditionalBlock(pred)) {
+            if (isConditionalBlock(pred))
+            {
                 // Predecessor is a conditional - check if it looks like a guard
                 BranchInstruction predBranch = (BranchInstruction) pred.getTerminator();
                 IRBlock predTrue = predBranch.getTrueTarget();
@@ -991,58 +1189,68 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block is a valid guard clause exit block.
-     * Unlike isEarlyExitBlock, this allows multiple predecessors because
-     * multiple guard conditions can share the same exit block (e.g., both
-     * x < 0 and x > 100 can jump to the same "return -1" block).
-     * <p>
-     * However, to distinguish from nested if merge points, we require that
-     * ALL predecessors of the exit block are conditional blocks (guards).
-     * If any predecessor is a non-conditional merge block, this is likely
-     * a nested if structure, not a guard clause chain.
      */
-    private boolean isGuardExitBlock(IRBlock block) {
+    private boolean isGuardExitBlock(IRBlock block)
+    {
         if (block == null) return false;
 
         // Check if it's an exit block or goto to exit
         IRBlock exitTarget = block;
-        if (!isExitBlock(block)) {
+        if (!isExitBlock(block))
+        {
             // Check if it's a simple goto to an exit block
             IRInstruction terminator = block.getTerminator();
-            if (terminator instanceof SimpleInstruction) {
+            if (terminator instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) terminator;
-                if (simple.getOp() == SimpleOp.GOTO) {
+                if (simple.getOp() == SimpleOp.GOTO)
+                {
                     Set<IRBlock> successors = block.getSuccessors();
-                    if (successors.size() == 1) {
+                    if (successors.size() == 1)
+                    {
                         IRBlock target = successors.iterator().next();
-                        if (isExitBlock(target)) {
-                            if (hasNonTrivialInstructions(block)) {
+                        if (isExitBlock(target))
+                        {
+                            if (hasNonTrivialInstructions(block))
+                            {
                                 return false;
                             }
                             exitTarget = target;
-                        } else {
+                        }
+                        else
+                        {
                             return false;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         return false;
                     }
-                } else {
+                }
+                else
+                {
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 return false;
             }
         }
 
         // For single predecessor, always allow (classic early exit)
-        if (exitTarget.getPredecessors().size() <= 1) {
+        if (exitTarget.getPredecessors().size() <= 1)
+        {
             return true;
         }
 
         // For multiple predecessors, verify ALL are conditional blocks
         // This distinguishes guard clauses (all conditional predecessors)
         // from nested if merge points (mixed conditional/merge predecessors)
-        for (IRBlock pred : exitTarget.getPredecessors()) {
-            if (!isConditionalBlock(pred)) {
+        for (IRBlock pred : exitTarget.getPredecessors())
+        {
+            if (!isConditionalBlock(pred))
+            {
                 return false;
             }
         }
@@ -1053,7 +1261,8 @@ public class StructuralAnalyzer {
     /**
      * Checks if a block ends with a conditional branch.
      */
-    private boolean isConditionalBlock(IRBlock block) {
+    private boolean isConditionalBlock(IRBlock block)
+    {
         if (block == null) return false;
         IRInstruction terminator = block.getTerminator();
         return terminator instanceof BranchInstruction;
@@ -1061,10 +1270,9 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a conditional block is part of a guard chain continuation.
-     * A guard chain continuation is a conditional where one branch is an early exit
-     * (forming another guard in the chain) OR leads to the main logic.
      */
-    private boolean isGuardChainContinuation(IRBlock block) {
+    private boolean isGuardChainContinuation(IRBlock block)
+    {
         if (!isConditionalBlock(block)) return false;
 
         BranchInstruction branch = (BranchInstruction) block.getTerminator();
@@ -1078,7 +1286,8 @@ public class StructuralAnalyzer {
         boolean falseIsExit = isGuardExitBlock(falseTarget);
 
         // If at least one is exit, it's a guard continuation
-        if (trueIsExit || falseIsExit) {
+        if (trueIsExit || falseIsExit)
+        {
             return true;
         }
 
@@ -1089,13 +1298,9 @@ public class StructuralAnalyzer {
 
     /**
      * Finds an alternative merge point when the post-dominator is an exit block.
-     * Looks for a block that is reachable from both branches and has multiple predecessors,
-     * indicating it's a true merge point where multiple paths converge.
-     * <p>
-     * Example: if (a) { B } else { C; if (d) return; E } F
-     * Post-dominator might be the inner return, but F is the real merge for paths that don't return.
      */
-    private IRBlock findAlternativeMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock exitMerge) {
+    private IRBlock findAlternativeMergePoint(IRBlock trueTarget, IRBlock falseTarget, IRBlock exitMerge)
+    {
         Set<IRBlock> reachableFromTrue = getReachableBlocks(trueTarget);
         Set<IRBlock> reachableFromFalse = getReachableBlocks(falseTarget);
 
@@ -1103,21 +1308,24 @@ public class StructuralAnalyzer {
         common.retainAll(reachableFromFalse);
         common.remove(exitMerge);
 
-        if (common.isEmpty()) {
+        if (common.isEmpty())
+        {
             return null;
         }
 
         IRBlock bestMerge = null;
         int maxPreds = 1;
 
-        for (IRBlock candidate : common) {
+        for (IRBlock candidate : common)
+        {
             int predCount = candidate.getPredecessors().size();
 
             if (isExitBlock(candidate) && predCount <= 1) continue;
 
             if (hasNonTrivialInstructions(candidate) && !isExitBlock(candidate)) continue;
 
-            if (predCount > maxPreds) {
+            if (predCount > maxPreds)
+            {
                 maxPreds = predCount;
                 bestMerge = candidate;
             }
@@ -1128,12 +1336,14 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block has non-trivial instructions (more than just jumps/returns).
-     * Blocks with actual computation are likely shared action blocks, not merge points.
      */
-    private boolean hasNonTrivialInstructions(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
+    private boolean hasNonTrivialInstructions(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
             if (instr.isTerminator()) continue;
-            if (instr instanceof SimpleInstruction) {
+            if (instr instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) instr;
                 if (simple.getOp() == SimpleOp.GOTO) continue;
             }
@@ -1145,23 +1355,25 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block only has return-value setup instructions before a GOTO to a return block.
-     * In try-finally, return statements become: load value, store local, GOTO finally handler.
-     * We should treat these blocks as guard exits since they're effectively returns.
      */
-    private boolean hasOnlyReturnSetupInstructions(IRBlock block) {
-        for (IRInstruction instr : block.getInstructions()) {
+    private boolean hasOnlyReturnSetupInstructions(IRBlock block)
+    {
+        for (IRInstruction instr : block.getInstructions())
+        {
             if (instr.isTerminator()) continue;
             if (instr instanceof LoadLocalInstruction) continue;
             if (instr instanceof StoreLocalInstruction) continue;
             if (instr instanceof FieldAccessInstruction) continue;
             if (instr instanceof ConstantInstruction) continue;
             if (instr instanceof CopyInstruction) continue;
-            if (instr instanceof SimpleInstruction) {
+            if (instr instanceof SimpleInstruction)
+            {
                 SimpleInstruction simple = (SimpleInstruction) instr;
                 SimpleOp op = simple.getOp();
                 // A synchronized return releases the monitor (monitorexit) before returning, so a return
                 // setup block inside a synchronized region carries one; it is still an indirect return.
-                if (op == SimpleOp.GOTO || op == SimpleOp.MONITOREXIT) {
+                if (op == SimpleOp.GOTO || op == SimpleOp.MONITOREXIT)
+                {
                     continue;
                 }
             }
@@ -1172,9 +1384,9 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block is part of an indirect return pattern (in try-finally).
-     * An indirect return block sets up a return value and GOTOs to a shared handler.
      */
-    private boolean isIndirectReturnBlock(IRBlock block) {
+    private boolean isIndirectReturnBlock(IRBlock block)
+    {
         if (block == null) return false;
         IRInstruction terminator = block.getTerminator();
         if (!(terminator instanceof SimpleInstruction)) return false;
@@ -1186,12 +1398,15 @@ public class StructuralAnalyzer {
         return isExitBlock(target) && hasOnlyReturnSetupInstructions(block);
     }
 
-    private boolean isShortCircuitValueBlock(IRBlock block) {
+    private boolean isShortCircuitValueBlock(IRBlock block)
+    {
         if (block == null) return false;
         boolean hasConstant = false;
-        for (IRInstruction instr : block.getInstructions()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
             if (instr.isTerminator()) continue;
-            if (instr instanceof ConstantInstruction) {
+            if (instr instanceof ConstantInstruction)
+            {
                 hasConstant = true;
                 continue;
             }
@@ -1207,36 +1422,27 @@ public class StructuralAnalyzer {
 
     /**
      * Finds the merge point for a conditional branch using post-dominator analysis.
-     * The merge point is the immediate post-dominator of the branch block -
-     * the first block that all paths from the branch must pass through.
-     *
      * @param branchBlock the block containing the conditional branch
      * @return the merge point block, or null if not found
      */
-    private IRBlock findMergePoint(IRBlock branchBlock) {
-        if (postDominatorTree == null) {
+    private IRBlock findMergePoint(IRBlock branchBlock)
+    {
+        if (postDominatorTree == null)
+        {
             return findMergePointFallback(branchBlock);
         }
         return postDominatorTree.getImmediatePostDominator(branchBlock);
     }
 
     /**
-     * Finds the immediate merge point for an if-then-else by looking at where both branches
-     * actually converge, rather than relying solely on post-dominator analysis.
-     * <p>
-     * This handles cases where:
-     * - True branch: A → B → C
-     * - False branch: D → E → C
-     * Both reach C, so C is the immediate merge point.
-     * <p>
-     * The post-dominator might find a block much further downstream if there are
-     * multiple exit paths (e.g., shared return blocks).
-     *
+     * Finds the immediate merge point for an if-then-else by looking at where both branches actually converge,
+     * rather than relying solely on post-dominator analysis.
      * @param trueTarget the true branch target
      * @param falseTarget the false branch target
      * @return the immediate merge point, or null if not found
      */
-    private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget) {
+    private IRBlock findImmediateMergePoint(IRBlock trueTarget, IRBlock falseTarget)
+    {
         Set<IRBlock> reachableFromTrue = new HashSet<>();
         Set<IRBlock> reachableFromFalse = new HashSet<>();
         Queue<IRBlock> trueQueue = new LinkedList<>();
@@ -1248,40 +1454,51 @@ public class StructuralAnalyzer {
         int maxDepth = 20;
         int depth = 0;
 
-        while (depth < maxDepth && (!trueQueue.isEmpty() || !falseQueue.isEmpty())) {
+        while (depth < maxDepth && (!trueQueue.isEmpty() || !falseQueue.isEmpty()))
+        {
             int trueSize = trueQueue.size();
-            for (int i = 0; i < trueSize; i++) {
+            for (int i = 0; i < trueSize; i++)
+            {
                 IRBlock block = trueQueue.poll();
                 if (block == null || reachableFromTrue.contains(block)) continue;
                 reachableFromTrue.add(block);
 
-                if (reachableFromFalse.contains(block)) {
-                    if (isValidMergePoint(block, trueTarget, falseTarget)) {
+                if (reachableFromFalse.contains(block))
+                {
+                    if (isValidMergePoint(block, trueTarget, falseTarget))
+                    {
                         return block;
                     }
                 }
 
-                for (IRBlock succ : block.getSuccessors()) {
-                    if (!reachableFromTrue.contains(succ)) {
+                for (IRBlock succ : block.getSuccessors())
+                {
+                    if (!reachableFromTrue.contains(succ))
+                    {
                         trueQueue.add(succ);
                     }
                 }
             }
 
             int falseSize = falseQueue.size();
-            for (int i = 0; i < falseSize; i++) {
+            for (int i = 0; i < falseSize; i++)
+            {
                 IRBlock block = falseQueue.poll();
                 if (block == null || reachableFromFalse.contains(block)) continue;
                 reachableFromFalse.add(block);
 
-                if (reachableFromTrue.contains(block)) {
-                    if (isValidMergePoint(block, trueTarget, falseTarget)) {
+                if (reachableFromTrue.contains(block))
+                {
+                    if (isValidMergePoint(block, trueTarget, falseTarget))
+                    {
                         return block;
                     }
                 }
 
-                for (IRBlock succ : block.getSuccessors()) {
-                    if (!reachableFromFalse.contains(succ)) {
+                for (IRBlock succ : block.getSuccessors())
+                {
+                    if (!reachableFromFalse.contains(succ))
+                    {
                         falseQueue.add(succ);
                     }
                 }
@@ -1295,32 +1512,36 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if a block is a valid merge point for an if-then-else.
-     * A valid merge point should be reached by both branches and not be:
-     * - A shared exit block with only one meaningful predecessor path
-     * - A block that's part of a loop back-edge
      */
-    private boolean isValidMergePoint(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
-        if (block.getPredecessors().size() < 2) {
+    private boolean isValidMergePoint(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
+    {
+        if (block.getPredecessors().size() < 2)
+        {
             return false;
         }
 
-        if (isShortCircuitValueBlock(block)) {
+        if (isShortCircuitValueBlock(block))
+        {
             return false;
         }
 
-        if (block.getInstructions().size() == 1) {
+        if (block.getInstructions().size() == 1)
+        {
             IRInstruction instr = block.getInstructions().get(0);
             boolean isGotoInstr = instr instanceof SimpleInstruction &&
                                   ((SimpleInstruction) instr).getOp() == SimpleOp.GOTO;
-            if (isGotoInstr) {
+            if (isGotoInstr)
+            {
                 Set<IRBlock> succs = block.getSuccessors();
-                if (succs.size() == 1 && isExitBlock(succs.iterator().next())) {
+                if (succs.size() == 1 && isExitBlock(succs.iterator().next()))
+                {
                     return false;
                 }
             }
         }
 
-        if (dominatorTree.dominates(trueTarget, block) && trueTarget != block) {
+        if (dominatorTree.dominates(trueTarget, block) && trueTarget != block)
+        {
             return false;
         }
 
@@ -1329,10 +1550,11 @@ public class StructuralAnalyzer {
 
     /**
      * Fallback merge point finder using forward reachability.
-     * Less accurate than post-dominator but works when post-dominator unavailable.
      */
-    private IRBlock findMergePointFallback(IRBlock branchBlock) {
-        if (branchBlock.getSuccessors().size() != 2) {
+    private IRBlock findMergePointFallback(IRBlock branchBlock)
+    {
+        if (branchBlock.getSuccessors().size() != 2)
+        {
             return null;
         }
 
@@ -1345,22 +1567,27 @@ public class StructuralAnalyzer {
 
         reachable1.retainAll(reachable2);
 
-        if (reachable1.isEmpty()) {
+        if (reachable1.isEmpty())
+        {
             return null;
         }
 
         IRBlock earliest = null;
-        for (IRBlock candidate : reachable1) {
-            if (earliest == null || dominatorTree.strictlyDominates(candidate, earliest)) {
+        for (IRBlock candidate : reachable1)
+        {
+            if (earliest == null || dominatorTree.strictlyDominates(candidate, earliest))
+            {
                 earliest = candidate;
             }
         }
         return earliest;
     }
 
-    private Set<IRBlock> getReachableBlocks(IRBlock start) {
+    private Set<IRBlock> getReachableBlocks(IRBlock start)
+    {
         Set<IRBlock> cached = reachabilityCache.get(start);
-        if (cached != null) {
+        if (cached != null)
+        {
             return new HashSet<>(cached);
         }
         Set<IRBlock> reachable = computeReachableBlocks(start);
@@ -1368,18 +1595,22 @@ public class StructuralAnalyzer {
         return new HashSet<>(reachable);
     }
 
-    private Set<IRBlock> computeReachableBlocks(IRBlock start) {
+    private Set<IRBlock> computeReachableBlocks(IRBlock start)
+    {
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(start);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.poll();
             if (reachable.contains(block)) continue;
             reachable.add(block);
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!reachable.contains(succ)) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!reachable.contains(succ))
+                {
                     worklist.add(succ);
                 }
             }
@@ -1387,18 +1618,22 @@ public class StructuralAnalyzer {
         return reachable;
     }
 
-    private Set<IRBlock> getReachableBlocksExcluding(IRBlock start, IRBlock excluded) {
+    private Set<IRBlock> getReachableBlocksExcluding(IRBlock start, IRBlock excluded)
+    {
         Set<IRBlock> reachable = new HashSet<>();
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(start);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.poll();
             if (reachable.contains(block) || block == excluded) continue;
             reachable.add(block);
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!reachable.contains(succ) && succ != excluded) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!reachable.contains(succ) && succ != excluded)
+                {
                     worklist.add(succ);
                 }
             }
@@ -1407,54 +1642,46 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Detects a flat if-chain pattern where sequential if-statements check the same variable
-     * against different constants. In bytecode, this appears as:
-     * <p>
-     *   if (var != const1) goto L2
-     *   ... action for const1 ...
-     *   goto merge
-     * L2:
-     *   if (var != const2) goto L3
-     *   ... action for const2 ...
-     *   goto merge
-     * L3:
-     *   ...
-     * <p>
-     * The key insight is that the false target (L2) is the NEXT sequential check,
-     * not an else branch. The true branch doesn't fall through to L2.
-     *
+     * Detects a flat if-chain pattern where sequential if-statements check the same variable against different
+     * constants.
      * @param block the current conditional block
      * @param trueTarget the true branch target
      * @param falseTarget the false branch target
      * @return true if this is a flat if-chain pattern
      */
-    private boolean isFlatIfChainPattern(IRBlock block, IRBlock trueTarget, IRBlock falseTarget) {
+    private boolean isFlatIfChainPattern(IRBlock block, IRBlock trueTarget, IRBlock falseTarget)
+    {
         IRInstruction terminator = block.getTerminator();
-        if (!(terminator instanceof BranchInstruction)) {
+        if (!(terminator instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction branch = (BranchInstruction) terminator;
 
         SSAValue conditionVar = extractComparisonVariable(branch);
-        if (conditionVar == null) {
+        if (conditionVar == null)
+        {
             return false;
         }
 
         // Check if false target is also a conditional block
         IRInstruction falseTerm = falseTarget.getTerminator();
-        if (!(falseTerm instanceof BranchInstruction)) {
+        if (!(falseTerm instanceof BranchInstruction))
+        {
             return false;
         }
         BranchInstruction falseBranch = (BranchInstruction) falseTerm;
 
         // Check if the false target's condition uses the same variable
         SSAValue falseCondVar = extractComparisonVariable(falseBranch);
-        if (falseCondVar == null) {
+        if (falseCondVar == null)
+        {
             return false;
         }
 
         // The variables must be the same (same SSA value or same definition)
-        if (!isSameVariable(conditionVar, falseCondVar)) {
+        if (!isSameVariable(conditionVar, falseCondVar))
+        {
             return false;
         }
 
@@ -1466,20 +1693,19 @@ public class StructuralAnalyzer {
         return !reachableFromTrue.contains(falseTarget);
     }
 
-    /** Minimum distinct case constants before a comparison chain is folded into a switch. */
+    /**
+     * Minimum distinct case constants before a comparison chain is folded into a switch.
+     */
     private static final int MIN_SWITCH_CASES = 3;
 
     /**
-     * Detects a comparison-chain switch: a chain of blocks each branching on
-     * {@code selector == const} / {@code selector != const} against the same value,
-     * and lowers it into a SWITCH region (case const -&gt; handler, plus default).
-     * Handles every source encoding (nested-else, no-else guards, sequential guards)
-     * uniformly because it works on the CFG. Returns null when the structure is not a
-     * clean dispatch, so the caller falls back to ordinary conditional analysis.
+     * Detects a comparison-chain switch.
      */
-    private RegionInfo detectComparisonChainSwitch(IRBlock header) {
+    private RegionInfo detectComparisonChainSwitch(IRBlock header)
+    {
         SwitchStep first = matchSwitchStep(header);
-        if (first == null) {
+        if (first == null)
+        {
             return null;
         }
         SSAValue selector = first.selector;
@@ -1489,33 +1715,39 @@ public class StructuralAnalyzer {
         IRBlock current = header;
         IRBlock defaultTarget;
 
-        while (true) {
+        while (true)
+        {
             SwitchStep step = (current == header) ? first : matchSwitchStep(current);
             // The chain continues only while the SAME SSA value is compared (strict
             // identity guarantees the selector is not redefined between comparisons,
             // which precisely excludes value-mutating sequential chains), and any
             // intermediate spine block does no real work (it is bypassed on lowering).
-            if (step == null || step.selector != selector
-                    || (current != header && !isPureComparisonBlock(current))) {
+            if (step == null || step.selector != selector || (current != header && !isPureComparisonBlock(current)))
+            {
                 defaultTarget = current;
                 break;
             }
-            if (cases.containsKey(step.constant)) {
+            if (cases.containsKey(step.constant))
+            {
                 return null; // duplicate label -> not a clean switch
             }
             cases.put(step.constant, step.handler);
             spine.add(current);
-            if (spine.contains(step.continuation)) {
+            if (spine.contains(step.continuation))
+            {
                 return null; // cycle in the dispatch spine
             }
             current = step.continuation;
         }
 
-        if (cases.size() < MIN_SWITCH_CASES) {
+        if (cases.size() < MIN_SWITCH_CASES)
+        {
             return null;
         }
-        for (IRBlock handler : cases.values()) {
-            if (spine.contains(handler)) {
+        for (IRBlock handler : cases.values())
+        {
+            if (spine.contains(handler))
+            {
                 return null; // a case body is part of the dispatch spine
             }
         }
@@ -1528,14 +1760,18 @@ public class StructuralAnalyzer {
         return info;
     }
 
-    /** One comparison in a chain: {@code selector == constant} dispatching to handler/continuation. */
-    private static final class SwitchStep {
+    /**
+     * One comparison in a chain: {@code selector == constant} dispatching to handler/continuation.
+     */
+    private static final class SwitchStep
+    {
         final SSAValue selector;
         final int constant;
         final IRBlock handler;       // taken when selector == constant
         final IRBlock continuation;  // taken when selector != constant
 
-        SwitchStep(SSAValue selector, int constant, IRBlock handler, IRBlock continuation) {
+        SwitchStep(SSAValue selector, int constant, IRBlock handler, IRBlock continuation)
+        {
             this.selector = selector;
             this.constant = constant;
             this.handler = handler;
@@ -1544,24 +1780,25 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Matches a block whose terminator branches on {@code selector == const} /
-     * {@code selector != const} (one operand an SSA value, the other an int constant,
-     * including constants materialized by a {@link ConstantInstruction}). Returns null
-     * if the block is not such a comparison.
+     * Matches a block whose terminator branches on {@code selector == const} / {@code selector != const}.
      */
-    private SwitchStep matchSwitchStep(IRBlock block) {
+    private SwitchStep matchSwitchStep(IRBlock block)
+    {
         IRInstruction term = block.getTerminator();
-        if (!(term instanceof BranchInstruction)) {
+        if (!(term instanceof BranchInstruction))
+        {
             return null;
         }
         BranchInstruction br = (BranchInstruction) term;
         CompareOp op = br.getCondition();
-        if (op != CompareOp.EQ && op != CompareOp.NE) {
+        if (op != CompareOp.EQ && op != CompareOp.NE)
+        {
             return null;
         }
         Value left = br.getLeft();
         Value right = br.getRight();
-        if (right == null) {
+        if (right == null)
+        {
             return null;
         }
         Integer leftConst = asIntConstant(left);
@@ -1569,13 +1806,18 @@ public class StructuralAnalyzer {
 
         SSAValue selector;
         int constant;
-        if (leftConst != null && rightConst == null && right instanceof SSAValue) {
+        if (leftConst != null && rightConst == null && right instanceof SSAValue)
+        {
             selector = (SSAValue) right;
             constant = leftConst;
-        } else if (rightConst != null && leftConst == null && left instanceof SSAValue) {
+        }
+        else if (rightConst != null && leftConst == null && left instanceof SSAValue)
+        {
             selector = (SSAValue) left;
             constant = rightConst;
-        } else {
+        }
+        else
+        {
             return null; // both/neither constant -> not a dispatch comparison
         }
 
@@ -1585,16 +1827,23 @@ public class StructuralAnalyzer {
         return new SwitchStep(selector, constant, handler, continuation);
     }
 
-    /** The int value of a Value that is an int constant — inline or produced by a ConstantInstruction. */
-    private Integer asIntConstant(Value v) {
-        if (v instanceof IntConstant) {
+    /**
+     * The int value of a Value that is an int constant - inline or produced by a ConstantInstruction.
+     */
+    private Integer asIntConstant(Value v)
+    {
+        if (v instanceof IntConstant)
+        {
             return ((IntConstant) v).getValue();
         }
-        if (v instanceof SSAValue) {
+        if (v instanceof SSAValue)
+        {
             IRInstruction def = ((SSAValue) v).getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 Constant c = ((ConstantInstruction) def).getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     return ((IntConstant) c).getValue();
                 }
             }
@@ -1603,19 +1852,23 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * True if the block does no work beyond evaluating its comparison — i.e. its only
-     * non-terminator instructions are local loads / constant materializations. Such
-     * intermediate dispatch blocks can be safely bypassed when lowering to a switch.
+     * True if the block does no work beyond evaluating its comparison - i.e. its only non-terminator instructions
+     * are local loads / constant materializations.
      */
-    private boolean isPureComparisonBlock(IRBlock block) {
-        if (!block.getPhiInstructions().isEmpty()) {
+    private boolean isPureComparisonBlock(IRBlock block)
+    {
+        if (!block.getPhiInstructions().isEmpty())
+        {
             return false;
         }
-        for (IRInstruction instr : block.getInstructions()) {
-            if (instr == block.getTerminator()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
+            if (instr == block.getTerminator())
+            {
                 continue;
             }
-            if (!(instr instanceof LoadLocalInstruction) && !(instr instanceof ConstantInstruction)) {
+            if (!(instr instanceof LoadLocalInstruction) && !(instr instanceof ConstantInstruction))
+            {
                 return false;
             }
         }
@@ -1624,23 +1877,25 @@ public class StructuralAnalyzer {
 
     /**
      * Extracts the variable being compared in a branch instruction.
-     * For comparisons like (var == const) or (const == var), returns the variable.
-     * Returns null if neither operand is a constant, or if both are constants.
      */
-    private SSAValue extractComparisonVariable(BranchInstruction branch) {
+    private SSAValue extractComparisonVariable(BranchInstruction branch)
+    {
         CompareOp op = branch.getCondition();
 
         // Must be an equality or inequality comparison
-        if (op != CompareOp.EQ && op != CompareOp.NE) {
+        if (op != CompareOp.EQ && op != CompareOp.NE)
+        {
             return null;
         }
 
         Value left = branch.getLeft();
         Value right = branch.getRight();
 
-        if (right == null) {
+        if (right == null)
+        {
             // Unary comparison (e.g., IFEQ/IFNE) - left is the variable
-            if (left instanceof SSAValue) {
+            if (left instanceof SSAValue)
+            {
                 return (SSAValue) left;
             }
             return null;
@@ -1650,10 +1905,12 @@ public class StructuralAnalyzer {
         boolean leftIsConst = left instanceof Constant;
         boolean rightIsConst = right instanceof Constant;
 
-        if (leftIsConst && !rightIsConst && right instanceof SSAValue) {
+        if (leftIsConst && !rightIsConst && right instanceof SSAValue)
+        {
             return (SSAValue) right;
         }
-        if (!leftIsConst && rightIsConst && left instanceof SSAValue) {
+        if (!leftIsConst && rightIsConst && left instanceof SSAValue)
+        {
             return (SSAValue) left;
         }
 
@@ -1663,17 +1920,19 @@ public class StructuralAnalyzer {
 
     /**
      * Checks if two SSA values represent the same variable.
-     * This handles cases where the same local variable has different SSA versions.
      */
-    private boolean isSameVariable(SSAValue v1, SSAValue v2) {
-        if (v1 == v2) {
+    private boolean isSameVariable(SSAValue v1, SSAValue v2)
+    {
+        if (v1 == v2)
+        {
             return true;
         }
 
         // Check if both come from the same local variable slot
         int local1 = getLocalIndex(v1);
         int local2 = getLocalIndex(v2);
-        if (local1 >= 0 && local1 == local2) {
+        if (local1 >= 0 && local1 == local2)
+        {
             return true;
         }
 
@@ -1686,22 +1945,30 @@ public class StructuralAnalyzer {
     /**
      * Gets the local variable index for an SSA value, if it was loaded from a local.
      */
-    private int getLocalIndex(SSAValue value) {
+    private int getLocalIndex(SSAValue value)
+    {
         IRInstruction def = value.getDefinition();
-        if (def instanceof LoadLocalInstruction) {
+        if (def instanceof LoadLocalInstruction)
+        {
             return ((LoadLocalInstruction) def).getLocalIndex();
         }
         // Also check phi instructions - they might all come from same local
-        if (def instanceof PhiInstruction) {
+        if (def instanceof PhiInstruction)
+        {
             PhiInstruction phi = (PhiInstruction) def;
             int commonIndex = -1;
-            for (Value incoming : phi.getIncomingValues().values()) {
-                if (incoming instanceof SSAValue) {
+            for (Value incoming : phi.getIncomingValues().values())
+            {
+                if (incoming instanceof SSAValue)
+                {
                     int idx = getLocalIndex((SSAValue) incoming);
                     if (idx < 0) return -1;
-                    if (commonIndex < 0) {
+                    if (commonIndex < 0)
+                    {
                         commonIndex = idx;
-                    } else if (commonIndex != idx) {
+                    }
+                    else if (commonIndex != idx)
+                    {
                         return -1;
                     }
                 }
@@ -1711,21 +1978,25 @@ public class StructuralAnalyzer {
         return -1;
     }
 
-    private void analyzeSwitch(IRBlock block, SwitchInstruction sw) {
+    private void analyzeSwitch(IRBlock block, SwitchInstruction sw)
+    {
         RegionInfo info = new RegionInfo(StructuredRegion.SWITCH, block);
         info.setSwitchCases(new LinkedHashMap<>(sw.getCases()));
         info.setDefaultTarget(sw.getDefaultTarget());
         regionInfos.put(block, info);
     }
 
-    private void analyzeGoto(IRBlock block) {
+    private void analyzeGoto(IRBlock block)
+    {
         // A goto-terminated loop header is a bottom-tested loop whose body simply starts here
         // (e.g. the header only seeds a local before deeper body structure); the loop test lives
         // in the latch, exactly as in the branch-headed do-while case.
-        if (loopAnalysis.isLoopHeader(block)) {
+        if (loopAnalysis.isLoopHeader(block))
+        {
             LoopAnalysis.Loop loop = findLoopWithHeader(block);
             IRBlock latch = loop != null ? findConditionalLatch(block, loop) : null;
-            if (latch != null) {
+            if (latch != null)
+            {
                 BranchInstruction latchBranch = (BranchInstruction) latch.getTerminator();
                 IRBlock latchExit = latchBranch.getTrueTarget() == block
                         ? latchBranch.getFalseTarget()
@@ -1741,12 +2012,43 @@ public class StructuralAnalyzer {
             }
         }
 
-        if (loopAnalysis.isInLoop(block)) {
+        // A goto-terminated loop header with a back edge but NO conditional latch is an infinite loop
+        // whose exits are internal breaks/returns (`while (true) { ...; return; }`, a grow-and-retry). It
+        // is a genuine loop, not a SEQUENCE; classifying it as one leaves the body walked flat and the
+        // back edge dropped. Recover it as a `while (true)` whose body starts at the in-loop goto target.
+        if (loopAnalysis.isLoopHeader(block))
+        {
+            LoopAnalysis.Loop loop = findLoopWithHeader(block);
+            IRBlock bodyStart = null;
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (loop != null && loop.getBlocks().contains(succ) && succ != block)
+                {
+                    bodyStart = succ;
+                    break;
+                }
+            }
+            if (loop != null && bodyStart != null)
+            {
+                RegionInfo info = new RegionInfo(StructuredRegion.WHILE_LOOP, block);
+                info.setLoopBody(bodyStart);
+                info.setLoopExit(null);
+                info.setLoop(loop);
+                info.setConditionNegated(false);
+                regionInfos.put(block, info);
+                return;
+            }
+        }
+
+        if (loopAnalysis.isInLoop(block))
+        {
             LoopAnalysis.Loop loop = loopAnalysis.getLoop(block);
             IRBlock header = loop.getHeader();
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (succ == header) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (succ == header)
+                {
                     RegionInfo info = new RegionInfo(StructuredRegion.SEQUENCE, block);
                     info.setContinueTarget(header);
                     regionInfos.put(block, info);
@@ -1760,11 +2062,13 @@ public class StructuralAnalyzer {
 
     /**
      * Finds the loop whose header is the specified block.
-     * This is different from getLoop() which returns any loop containing the block.
      */
-    private LoopAnalysis.Loop findLoopWithHeader(IRBlock block) {
-        for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
-            if (loop.getHeader() == block) {
+    private LoopAnalysis.Loop findLoopWithHeader(IRBlock block)
+    {
+        for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+        {
+            if (loop.getHeader() == block)
+            {
                 return loop;
             }
         }
@@ -1772,19 +2076,24 @@ public class StructuralAnalyzer {
     }
 
     /**
-     * Gets the region info for a block.
+     * @param block block to look up
+     * @return the region recorded for the block, or null when analysis identified none
      */
-    public RegionInfo getRegionInfo(IRBlock block) {
+    public RegionInfo getRegionInfo(IRBlock block)
+    {
         return regionInfos.get(block);
     }
 
     /**
-     * Gets all FOR_LOOP regions identified in the method.
+     * @return every FOR_LOOP region identified in the method
      */
-    public List<RegionInfo> getForLoopRegions() {
+    public List<RegionInfo> getForLoopRegions()
+    {
         List<RegionInfo> forLoops = new ArrayList<>();
-        for (RegionInfo info : regionInfos.values()) {
-            if (info.getType() == StructuredRegion.FOR_LOOP) {
+        for (RegionInfo info : regionInfos.values())
+        {
+            if (info.getType() == StructuredRegion.FOR_LOOP)
+            {
                 forLoops.add(info);
             }
         }
@@ -1794,7 +2103,8 @@ public class StructuralAnalyzer {
     /**
      * Information about a structured region.
      */
-    public static class RegionInfo {
+    public static class RegionInfo
+    {
         private final StructuredRegion type;
         private final IRBlock header;
 
@@ -1824,164 +2134,315 @@ public class StructuralAnalyzer {
         private IRBlock incrementBlock;
         private int inductionLocalIndex = -1;
 
-        public RegionInfo(StructuredRegion type, IRBlock header) {
+        public RegionInfo(StructuredRegion type, IRBlock header)
+        {
             this.type = type;
             this.header = header;
         }
 
-        public StructuredRegion getType() {
+        /**
+         * @return the type
+         */
+        public StructuredRegion getType()
+        {
             return type;
         }
 
-        public IRBlock getHeader() {
+        /**
+         * @return the header
+         */
+        public IRBlock getHeader()
+        {
             return header;
         }
 
-        public IRBlock getThenBlock() {
+        /**
+         * @return the then block
+         */
+        public IRBlock getThenBlock()
+        {
             return thenBlock;
         }
 
-        public IRBlock getElseBlock() {
+        /**
+         * @return the else block
+         */
+        public IRBlock getElseBlock()
+        {
             return elseBlock;
         }
 
-        public IRBlock getMergeBlock() {
+        /**
+         * @return the merge block
+         */
+        public IRBlock getMergeBlock()
+        {
             return mergeBlock;
         }
 
-        public Set<IRBlock> getConditionBlocks() {
+        /**
+         * @return the condition blocks
+         */
+        public Set<IRBlock> getConditionBlocks()
+        {
             return conditionBlocks;
         }
 
-        public void setConditionBlocks(Set<IRBlock> conditionBlocks) {
+        /**
+         * @param conditionBlocks blocks making up a short-circuit condition spine
+         */
+        public void setConditionBlocks(Set<IRBlock> conditionBlocks)
+        {
             this.conditionBlocks = conditionBlocks;
         }
 
-        public boolean isConditionNegated() {
+        /**
+         * @return whether condition negated
+         */
+        public boolean isConditionNegated()
+        {
             return conditionNegated;
         }
 
-        public IRBlock getLoopBody() {
+        /**
+         * @return the loop body
+         */
+        public IRBlock getLoopBody()
+        {
             return loopBody;
         }
 
-        public IRBlock getLoopExit() {
+        /**
+         * @return the loop exit
+         */
+        public IRBlock getLoopExit()
+        {
             return loopExit;
         }
 
-        public LoopAnalysis.Loop getLoop() {
+        /**
+         * @return the loop
+         */
+        public LoopAnalysis.Loop getLoop()
+        {
             return loop;
         }
 
-        public IRBlock getContinueTarget() {
+        /**
+         * @return the continue target
+         */
+        public IRBlock getContinueTarget()
+        {
             return continueTarget;
         }
 
-        /** Bottom-test block of a do-while whose header carries body control flow; null otherwise. */
-        public IRBlock getLatchBlock() {
+        /**
+         * @return the bottom-test block of a do-while whose header carries body control flow, else null
+         */
+        public IRBlock getLatchBlock()
+        {
             return latchBlock;
         }
 
-        public void setLatchBlock(IRBlock latchBlock) {
+        /**
+         * @param latchBlock bottom-test block of a do-while whose header carries body control flow
+         */
+        public void setLatchBlock(IRBlock latchBlock)
+        {
             this.latchBlock = latchBlock;
         }
 
-        /** The header's own conditional region when the loop test lives in the latch. */
-        public RegionInfo getHeaderConditional() {
+        /**
+         * @return the header's own conditional region when the loop test lives in the latch, else null
+         */
+        public RegionInfo getHeaderConditional()
+        {
             return headerConditional;
         }
 
-        public void setHeaderConditional(RegionInfo headerConditional) {
+        /**
+         * @param headerConditional the header's own conditional region when the test lives in the latch
+         */
+        public void setHeaderConditional(RegionInfo headerConditional)
+        {
             this.headerConditional = headerConditional;
         }
 
-        public Map<Integer, IRBlock> getSwitchCases() {
+        /**
+         * @return the switch cases
+         */
+        public Map<Integer, IRBlock> getSwitchCases()
+        {
             return switchCases;
         }
 
-        public IRBlock getDefaultTarget() {
+        /**
+         * @return the default target
+         */
+        public IRBlock getDefaultTarget()
+        {
             return defaultTarget;
         }
 
-        /** Selector for a comparison-chain switch (header terminator is a branch, not a SwitchInstruction). */
-        public SSAValue getSwitchSelector() {
+        /**
+         * @return the selector of a comparison-chain switch, whose header terminator is a branch rather
+         *         than a SwitchInstruction
+         */
+        public SSAValue getSwitchSelector()
+        {
             return switchSelector;
         }
 
-        /** Comparison blocks forming the dispatch spine; used as stop blocks so case bodies cannot bleed into them. */
-        public Set<IRBlock> getSwitchSpineBlocks() {
+        /**
+         * @return the comparison blocks forming the dispatch spine, used as stop blocks so case bodies
+         *         cannot bleed into them
+         */
+        public Set<IRBlock> getSwitchSpineBlocks()
+        {
             return switchSpineBlocks;
         }
 
-        public SSAValue getInductionVariable() {
+        /**
+         * @return the induction variable
+         */
+        public SSAValue getInductionVariable()
+        {
             return inductionVariable;
         }
 
-        public IRBlock getIncrementBlock() {
+        /**
+         * @return the increment block
+         */
+        public IRBlock getIncrementBlock()
+        {
             return incrementBlock;
         }
 
-        public int getInductionLocalIndex() {
+        /**
+         * @return the induction local index
+         */
+        public int getInductionLocalIndex()
+        {
             return inductionLocalIndex;
         }
 
-        public void setThenBlock(IRBlock thenBlock) {
+        /**
+         * @param thenBlock first block of the then arm
+         */
+        public void setThenBlock(IRBlock thenBlock)
+        {
             this.thenBlock = thenBlock;
         }
 
-        public void setElseBlock(IRBlock elseBlock) {
+        /**
+         * @param elseBlock first block of the else arm, or null when there is none
+         */
+        public void setElseBlock(IRBlock elseBlock)
+        {
             this.elseBlock = elseBlock;
         }
 
-        public void setMergeBlock(IRBlock mergeBlock) {
+        /**
+         * @param mergeBlock block where the arms rejoin
+         */
+        public void setMergeBlock(IRBlock mergeBlock)
+        {
             this.mergeBlock = mergeBlock;
         }
 
-        public void setLoopBody(IRBlock loopBody) {
+        /**
+         * @param loopBody first block of the loop body
+         */
+        public void setLoopBody(IRBlock loopBody)
+        {
             this.loopBody = loopBody;
         }
 
-        public void setLoopExit(IRBlock loopExit) {
+        /**
+         * @param loopExit first block after the loop
+         */
+        public void setLoopExit(IRBlock loopExit)
+        {
             this.loopExit = loopExit;
         }
 
-        public void setLoop(LoopAnalysis.Loop loop) {
+        /**
+         * @param loop the natural loop this region structures
+         */
+        public void setLoop(LoopAnalysis.Loop loop)
+        {
             this.loop = loop;
         }
 
-        public void setContinueTarget(IRBlock continueTarget) {
+        /**
+         * @param continueTarget block a continue in this loop jumps to
+         */
+        public void setContinueTarget(IRBlock continueTarget)
+        {
             this.continueTarget = continueTarget;
         }
 
-        public void setSwitchCases(Map<Integer, IRBlock> switchCases) {
+        /**
+         * @param switchCases case key to the block that arm enters
+         */
+        public void setSwitchCases(Map<Integer, IRBlock> switchCases)
+        {
             this.switchCases = switchCases;
         }
 
-        public void setDefaultTarget(IRBlock defaultTarget) {
+        /**
+         * @param defaultTarget block the default arm enters
+         */
+        public void setDefaultTarget(IRBlock defaultTarget)
+        {
             this.defaultTarget = defaultTarget;
         }
 
-        public void setSwitchSelector(SSAValue switchSelector) {
+        /**
+         * @param switchSelector value tested by a comparison-chain switch
+         */
+        public void setSwitchSelector(SSAValue switchSelector)
+        {
             this.switchSelector = switchSelector;
         }
 
-        public void setSwitchSpineBlocks(Set<IRBlock> switchSpineBlocks) {
+        /**
+         * @param switchSpineBlocks comparison blocks forming the dispatch chain, used as stop blocks
+         */
+        public void setSwitchSpineBlocks(Set<IRBlock> switchSpineBlocks)
+        {
             this.switchSpineBlocks = switchSpineBlocks;
         }
 
-        public void setConditionNegated(boolean conditionNegated) {
+        /**
+         * @param conditionNegated whether the source condition is the negation of the branch test
+         */
+        public void setConditionNegated(boolean conditionNegated)
+        {
             this.conditionNegated = conditionNegated;
         }
 
-        public void setInductionVariable(SSAValue inductionVariable) {
+        /**
+         * @param inductionVariable the counter a for loop advances
+         */
+        public void setInductionVariable(SSAValue inductionVariable)
+        {
             this.inductionVariable = inductionVariable;
         }
 
-        public void setIncrementBlock(IRBlock incrementBlock) {
+        /**
+         * @param incrementBlock block holding the for-loop update
+         */
+        public void setIncrementBlock(IRBlock incrementBlock)
+        {
             this.incrementBlock = incrementBlock;
         }
 
-        public void setInductionLocalIndex(int inductionLocalIndex) {
+        /**
+         * @param inductionLocalIndex local slot holding the induction variable, or -1 if unknown
+         */
+        public void setInductionLocalIndex(int inductionLocalIndex)
+        {
             this.inductionLocalIndex = inductionLocalIndex;
         }
 

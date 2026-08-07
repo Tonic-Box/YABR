@@ -10,35 +10,59 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the MethodParameters attribute.
- * Provides information about method parameters.
+ * The MethodParameters attribute: names and flags of a method's formal parameters.
  */
-public class MethodParametersAttribute extends Attribute {
+public class MethodParametersAttribute extends Attribute
+{
     private List<MethodParameter> parameters;
 
-    public MethodParametersAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public MethodParametersAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public MethodParametersAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public MethodParametersAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public List<MethodParameter> getParameters() {
+    /**
+     * @return the parameters
+     */
+    public List<MethodParameter> getParameters()
+    {
         return parameters;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length < 1) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length < 1)
+        {
             throw new IllegalArgumentException("MethodParameters attribute length must be at least 1, found: " + length);
         }
         int parametersCount = classFile.readUnsignedByte();
-        if (length != 1 + 4 * parametersCount) {
+        if (length != 1 + 4 * parametersCount)
+        {
             throw new IllegalArgumentException("Invalid MethodParameters attribute length. Expected: " + (1 + 4 * parametersCount) + ", Found: " + length);
         }
         this.parameters = new ArrayList<>(parametersCount);
-        for (int i = 0; i < parametersCount; i++) {
+        for (int i = 0; i < parametersCount; i++)
+        {
             int nameIndex = classFile.readUnsignedShort();
             int accessFlags = classFile.readUnsignedShort();
             parameters.add(new MethodParameter(getClassFile().getConstPool(), nameIndex, accessFlags));
@@ -46,26 +70,32 @@ public class MethodParametersAttribute extends Attribute {
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(parameters.size());
-        for (MethodParameter param : parameters) {
+        for (MethodParameter param : parameters)
+        {
             dos.writeShort(param.getNameIndex());
             dos.writeShort(param.getAccessFlags());
         }
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = 1 + (parameters.size() * 4);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("MethodParametersAttribute{parameters=[");
-        for (MethodParameter param : parameters) {
+        for (MethodParameter param : parameters)
+        {
             sb.append(param).append(", ");
         }
-        if (!parameters.isEmpty()) {
+        if (!parameters.isEmpty())
+        {
             sb.setLength(sb.length() - 2);
         }
         sb.append("]}");

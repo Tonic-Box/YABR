@@ -9,9 +9,9 @@ import java.util.List;
 
 /**
  * Configuration for exception interception.
- * Hooks are called in exception handlers.
  */
-public class ExceptionHook implements Hook {
+public class ExceptionHook implements Hook
+{
 
     private final HookDescriptor hookDescriptor;
     private final List<InstrumentationFilter> filters;
@@ -23,7 +23,8 @@ public class ExceptionHook implements Hook {
     private final boolean passClassName;
     private final boolean canSuppress;
 
-    private ExceptionHook(Builder builder) {
+    private ExceptionHook(Builder builder)
+    {
         this.hookDescriptor = builder.hookDescriptor;
         this.filters = builder.filters;
         this.enabled = builder.enabled;
@@ -35,76 +36,128 @@ public class ExceptionHook implements Hook {
         this.canSuppress = builder.canSuppress;
     }
 
-    public HookDescriptor getHookDescriptor() {
+    /**
+     * @return the hook descriptor
+     */
+    public HookDescriptor getHookDescriptor()
+    {
         return hookDescriptor;
     }
 
-    public List<InstrumentationFilter> getFilters() {
+    /**
+     * @return the filters
+     */
+    public List<InstrumentationFilter> getFilters()
+    {
         return filters;
     }
 
-    public boolean isEnabled() {
+    /**
+     * @return whether enabled
+     */
+    public boolean isEnabled()
+    {
         return enabled;
     }
 
-    public int getPriority() {
+    /**
+     * @return the priority
+     */
+    public int getPriority()
+    {
         return priority;
     }
 
-    /** Returns the exception type to intercept (internal name), or null for all types. */
-    public String getExceptionType() {
+    /**
+     * @return the exception type to intercept (internal name), or null for all types
+     */
+    public String getExceptionType()
+    {
         return exceptionType;
     }
 
-    /** Returns whether the exception object is passed to the hook. */
-    public boolean isPassException() {
+    /**
+     * @return whether the exception object is passed to the hook
+     */
+    public boolean isPassException()
+    {
         return passException;
     }
 
-    /** Returns whether the name of the method where the exception occurred is passed to the hook. */
-    public boolean isPassMethodName() {
+    /**
+     * @return whether the name of the method where the exception occurred is passed to the hook
+     */
+    public boolean isPassMethodName()
+    {
         return passMethodName;
     }
 
-    /** Returns whether the name of the class where the exception occurred is passed to the hook. */
-    public boolean isPassClassName() {
+    /**
+     * @return whether the name of the class where the exception occurred is passed to the hook
+     */
+    public boolean isPassClassName()
+    {
         return passClassName;
     }
 
-    /** Returns whether the hook can suppress the exception (by returning true). */
-    public boolean isCanSuppress() {
+    /**
+     * @return whether the hook can suppress the exception by returning true
+     */
+    public boolean isCanSuppress()
+    {
         return canSuppress;
     }
 
     @Override
-    public InstrumentationTarget getTarget() {
+    public InstrumentationTarget getTarget()
+    {
         return InstrumentationTarget.EXCEPTION_HANDLER;
     }
 
     /**
-     * Creates a simple exception hook.
+     * Creates an exception hook that invokes the given static hook method for all exception types.
+     * @param hookOwner the hook method's owning class (internal name)
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the new hook
      */
-    public static ExceptionHook simple(String hookOwner, String hookName, String hookDescriptor) {
+    public static ExceptionHook simple(String hookOwner, String hookName, String hookDescriptor)
+    {
         return ExceptionHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
     }
 
     /**
-     * Creates a hook for a specific exception type.
+     * Creates an exception hook restricted to a specific exception type.
+     * @param exceptionType the exception type to intercept (internal name)
+     * @param hookOwner the hook method's owning class (internal name)
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the new hook
      */
-    public static ExceptionHook forType(String exceptionType, String hookOwner, String hookName, String hookDescriptor) {
+    public static ExceptionHook forType(String exceptionType, String hookOwner, String hookName, String hookDescriptor)
+    {
         return ExceptionHook.builder()
                 .exceptionType(exceptionType)
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a builder for an exception hook.
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Fluent builder for {@link ExceptionHook} instances.
+     */
+    public static class Builder
+    {
         private HookDescriptor hookDescriptor;
         private List<InstrumentationFilter> filters = new ArrayList<>();
         private boolean enabled = true;
@@ -115,52 +168,111 @@ public class ExceptionHook implements Hook {
         private boolean passClassName = false;
         private boolean canSuppress = false;
 
-        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+        /**
+         * Sets the hook method invoked in each instrumented exception handler.
+         * @param hookDescriptor the hook method descriptor
+         * @return this builder
+         */
+        public Builder hookDescriptor(HookDescriptor hookDescriptor)
+        {
             this.hookDescriptor = hookDescriptor;
             return this;
         }
 
-        public Builder filters(List<InstrumentationFilter> filters) {
+        /**
+         * Sets the filters that restrict which code is instrumented.
+         * @param filters the instrumentation filters
+         * @return this builder
+         */
+        public Builder filters(List<InstrumentationFilter> filters)
+        {
             this.filters = filters;
             return this;
         }
 
-        public Builder enabled(boolean enabled) {
+        /**
+         * Sets whether the hook is active.
+         * @param enabled true to enable the hook
+         * @return this builder
+         */
+        public Builder enabled(boolean enabled)
+        {
             this.enabled = enabled;
             return this;
         }
 
-        public Builder priority(int priority) {
+        /**
+         * Sets the ordering priority relative to other hooks.
+         * @param priority the priority value
+         * @return this builder
+         */
+        public Builder priority(int priority)
+        {
             this.priority = priority;
             return this;
         }
 
-        public Builder exceptionType(String exceptionType) {
+        /**
+         * Sets the exception type to intercept; null intercepts all types.
+         * @param exceptionType the exception type (internal name)
+         * @return this builder
+         */
+        public Builder exceptionType(String exceptionType)
+        {
             this.exceptionType = exceptionType;
             return this;
         }
 
-        public Builder passException(boolean passException) {
+        /**
+         * Sets whether the exception object is passed to the hook.
+         * @param passException true to pass the exception
+         * @return this builder
+         */
+        public Builder passException(boolean passException)
+        {
             this.passException = passException;
             return this;
         }
 
-        public Builder passMethodName(boolean passMethodName) {
+        /**
+         * Sets whether the enclosing method name is passed to the hook.
+         * @param passMethodName true to pass the method name
+         * @return this builder
+         */
+        public Builder passMethodName(boolean passMethodName)
+        {
             this.passMethodName = passMethodName;
             return this;
         }
 
-        public Builder passClassName(boolean passClassName) {
+        /**
+         * Sets whether the enclosing class name is passed to the hook.
+         * @param passClassName true to pass the class name
+         * @return this builder
+         */
+        public Builder passClassName(boolean passClassName)
+        {
             this.passClassName = passClassName;
             return this;
         }
 
-        public Builder canSuppress(boolean canSuppress) {
+        /**
+         * Sets whether the hook can suppress the exception by returning true.
+         * @param canSuppress true to let the hook suppress the exception
+         * @return this builder
+         */
+        public Builder canSuppress(boolean canSuppress)
+        {
             this.canSuppress = canSuppress;
             return this;
         }
 
-        public ExceptionHook build() {
+        /**
+         * Builds the configured exception hook.
+         * @return the new hook
+         */
+        public ExceptionHook build()
+        {
             return new ExceptionHook(this);
         }
     }

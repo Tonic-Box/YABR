@@ -21,12 +21,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Demo application for decompiling Java class files to source code.
+ * Demo showing decompilation of a single class file to Java source with configurable presets.
  */
-public class Decompile {
+public class Decompile
+{
 
-    public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
+    /**
+     * Decompiles the given class file and prints the recovered source.
+     * @param args class file path plus optional --simple, --fqn, and --preset=NAME flags
+     * @throws Exception if the class file cannot be read or decompilation fails
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 1)
+        {
             System.out.println("Usage: Decompile <path-to-class-file> [options]");
             System.out.println();
             System.out.println("Options:");
@@ -36,25 +44,27 @@ public class Decompile {
             return;
         }
 
-        // Parse options
         String classPath = null;
         TransformPreset preset = TransformPreset.NONE;
 
-        for (String arg : args) {
-            if (!arg.startsWith("--")) {
+        for (String arg : args)
+        {
+            if (!arg.startsWith("--"))
+            {
                 classPath = arg;
             }
         }
 
-        if (classPath == null) {
+        if (classPath == null)
+        {
             System.err.println("Error: No class file specified");
             return;
         }
 
-        // Load the class file
         ClassFile cf = ClassPool.getDefault().loadClass(new FileInputStream(classPath));
 
-        for (MethodEntry method : cf.getMethods()) {
+        for (MethodEntry method : cf.getMethods())
+        {
             if (method.getCodeAttribute() == null) continue;
 
             SSA ssa = new SSA(cf.getConstPool());
@@ -64,9 +74,11 @@ public class Decompile {
             boolean has1000L = irMethod.getBlocks().stream()
                     .flatMap(b -> b.getInstructions().stream())
                     .anyMatch(insn -> {
-                        if (insn instanceof ConstantInstruction) {
+                        if (insn instanceof ConstantInstruction)
+                        {
                             ConstantInstruction ci = (ConstantInstruction) insn;
-                            if (ci.getConstant() instanceof LongConstant) {
+                            if (ci.getConstant() instanceof LongConstant)
+                            {
                                 LongConstant lc = (LongConstant) ci.getConstant();
                                 return lc.getValue().equals(1000L);
                             }
@@ -74,7 +86,8 @@ public class Decompile {
                         return false;
                     });
 
-            if (has1000L) {
+            if (has1000L)
+            {
                 System.out.println("# Found: " + method.getName() + method.getDesc());
                 BlockStmt ast = MethodRecoverer.recoverMethod(irMethod, method);
                 System.out.println(SourceEmitter.emit(ast));

@@ -11,75 +11,115 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the RuntimeVisibleAnnotations or RuntimeInvisibleAnnotations attribute.
- * Stores annotations that are either visible or invisible at runtime.
+ * The RuntimeVisibleAnnotations or RuntimeInvisibleAnnotations attribute, distinguished by a
+ * visibility flag.
  */
-public class RuntimeVisibleAnnotationsAttribute extends Attribute {
+public class RuntimeVisibleAnnotationsAttribute extends Attribute
+{
     private List<Annotation> annotations;
     private final boolean visible;
 
-    public RuntimeVisibleAnnotationsAttribute(String name, MemberEntry parent, boolean visible, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param visible true for RuntimeVisibleAnnotations, false for RuntimeInvisibleAnnotations
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public RuntimeVisibleAnnotationsAttribute(String name, MemberEntry parent, boolean visible, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
         this.visible = visible;
     }
 
-    public RuntimeVisibleAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param visible true for RuntimeVisibleAnnotations, false for RuntimeInvisibleAnnotations
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public RuntimeVisibleAnnotationsAttribute(String name, ClassFile parent, boolean visible, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
         this.visible = visible;
     }
 
-    public List<Annotation> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public List<Annotation> getAnnotations()
+    {
         return annotations;
     }
 
-    public boolean isVisible() {
+    /**
+     * @return whether visible
+     */
+    public boolean isVisible()
+    {
         return visible;
     }
 
-    public void setAnnotations(List<Annotation> annotations) {
+    /**
+     * @param annotations the annotation list
+     */
+    public void setAnnotations(List<Annotation> annotations)
+    {
         this.annotations = annotations;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
+    public void read(ClassFile classFile, int length)
+    {
         int startIndex = classFile.getIndex();
 
-        if (length < 2) {
+        if (length < 2)
+        {
             throw new IllegalArgumentException("Annotations attribute length must be at least 2, found: " + length);
         }
         int numAnnotations = classFile.readUnsignedShort();
         this.annotations = new ArrayList<>(numAnnotations);
-        for (int i = 0; i < numAnnotations; i++) {
+        for (int i = 0; i < numAnnotations; i++)
+        {
             Annotation annotation = Annotation.readAnnotation(classFile, getClassFile().getConstPool());
             annotations.add(annotation);
         }
 
         int bytesRead = classFile.getIndex() - startIndex;
-        if (bytesRead != length) {
+        if (bytesRead != length)
+        {
             Logger.error("Warning: " + (visible ? "RuntimeVisible" : "RuntimeInvisible") +
                     "AnnotationsAttribute read mismatch. Expected: " + length + ", Read: " + bytesRead);
         }
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(annotations.size());
-        for (Annotation ann : annotations) {
+        for (Annotation ann : annotations)
+        {
             ann.write(dos);
         }
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         int size = 2;
-        for (Annotation ann : annotations) {
+        for (Annotation ann : annotations)
+        {
             size += ann.getLength();
         }
         this.length = size;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return (visible ? "RuntimeVisibleAnnotationsAttribute" : "RuntimeInvisibleAnnotationsAttribute") +
                 "{annotations=" + annotations + "}";
     }

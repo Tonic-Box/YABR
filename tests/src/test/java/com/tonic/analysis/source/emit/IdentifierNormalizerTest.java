@@ -5,14 +5,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for IdentifierNormalizer - handling of obfuscated/non-standard identifiers.
+ * * Tests for IdentifierNormalizer - handling of obfuscated/non-standard identifiers.
  */
-class IdentifierNormalizerTest {
+class IdentifierNormalizerTest
+{
 
-    // ========== RAW Mode Tests ==========
+    // RAW Mode Tests
 
     @Test
-    void rawModeKeepsIdentifiersUnchanged() {
+    void rawModeKeepsIdentifiersUnchanged()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         assertEquals("validName", normalizer.normalize("validName", IdentifierNormalizer.IdentifierType.METHOD));
@@ -21,17 +23,19 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void rawModeKeepsClassNamesUnchanged() {
+    void rawModeKeepsClassNamesUnchanged()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         assertEquals("com/test/MyClass", normalizer.normalizeClassName("com/test/MyClass"));
         assertEquals("x/???/Test", normalizer.normalizeClassName("x/???/Test"));
     }
 
-    // ========== Unicode Escape Mode Tests ==========
+    // Unicode Escape Mode Tests
 
     @Test
-    void unicodeEscapeModeKeepsValidIdentifiers() {
+    void unicodeEscapeModeKeepsValidIdentifiers()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         assertEquals("validName", normalizer.normalize("validName", IdentifierNormalizer.IdentifierType.METHOD));
@@ -40,7 +44,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void unicodeEscapeModeEscapesInvalidStartChar() {
+    void unicodeEscapeModeEscapesInvalidStartChar()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         String result = normalizer.normalize("1startWithNumber", IdentifierNormalizer.IdentifierType.FIELD);
@@ -49,7 +54,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void unicodeEscapeModeEscapesSpecialChars() {
+    void unicodeEscapeModeEscapesSpecialChars()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         String result = normalizer.normalize("name?with?question", IdentifierNormalizer.IdentifierType.METHOD);
@@ -59,7 +65,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void unicodeEscapeModeEscapesInvalidChars() {
+    void unicodeEscapeModeEscapesInvalidChars()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         // Test with characters that are not valid Java identifier parts
@@ -73,7 +80,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void unicodeEscapeModeHandlesClassNameParts() {
+    void unicodeEscapeModeHandlesClassNameParts()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         String result = normalizer.normalizeClassName("x/test?pkg/MyClass");
@@ -82,10 +90,11 @@ class IdentifierNormalizerTest {
         assertTrue(result.contains("MyClass"));
     }
 
-    // ========== Semantic Rename Mode Tests ==========
+    // Semantic Rename Mode Tests
 
     @Test
-    void semanticRenameModeKeepsValidIdentifiers() {
+    void semanticRenameModeKeepsValidIdentifiers()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         assertEquals("validMethod", normalizer.normalize("validMethod", IdentifierNormalizer.IdentifierType.METHOD));
@@ -93,7 +102,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeRenamesInvalidMethodNames() {
+    void semanticRenameModeRenamesInvalidMethodNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalize("???invalid", IdentifierNormalizer.IdentifierType.METHOD);
@@ -101,7 +111,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeRenamesInvalidFieldNames() {
+    void semanticRenameModeRenamesInvalidFieldNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalize("123field", IdentifierNormalizer.IdentifierType.FIELD);
@@ -109,7 +120,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeRenamesInvalidClassNames() {
+    void semanticRenameModeRenamesInvalidClassNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalize("???Class", IdentifierNormalizer.IdentifierType.CLASS);
@@ -117,7 +129,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeRenamesInvalidVariableNames() {
+    void semanticRenameModeRenamesInvalidVariableNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalize("@var", IdentifierNormalizer.IdentifierType.VARIABLE);
@@ -125,7 +138,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeRenamesInvalidConstantNames() {
+    void semanticRenameModeRenamesInvalidConstantNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalize("!!!const", IdentifierNormalizer.IdentifierType.CONSTANT);
@@ -133,7 +147,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeIsConsistent() {
+    void semanticRenameModeIsConsistent()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String first = normalizer.normalize("???same", IdentifierNormalizer.IdentifierType.METHOD);
@@ -143,7 +158,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeIncrementsCounters() {
+    void semanticRenameModeIncrementsCounters()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String first = normalizer.normalize("???a", IdentifierNormalizer.IdentifierType.METHOD);
@@ -155,7 +171,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void semanticRenameModeHandlesClassNameParts() {
+    void semanticRenameModeHandlesClassNameParts()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String result = normalizer.normalizeClassName("x/pkg/???Invalid");
@@ -164,10 +181,11 @@ class IdentifierNormalizerTest {
         assertTrue(result.contains("Class_")); // The class name part gets renamed
     }
 
-    // ========== Valid Identifier Detection Tests ==========
+    // Valid Identifier Detection Tests
 
     @Test
-    void isValidJavaIdentifierForValidNames() {
+    void isValidJavaIdentifierForValidNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         assertTrue(normalizer.isValidJavaIdentifier("validName"));
@@ -178,7 +196,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void isValidJavaIdentifierForInvalidNames() {
+    void isValidJavaIdentifierForInvalidNames()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         assertFalse(normalizer.isValidJavaIdentifier("123startWithNumber"));
@@ -189,7 +208,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void isValidJavaIdentifierRejectsKeywords() {
+    void isValidJavaIdentifierRejectsKeywords()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         assertFalse(normalizer.isValidJavaIdentifier("class"));
@@ -201,10 +221,11 @@ class IdentifierNormalizerTest {
         assertFalse(normalizer.isValidJavaIdentifier("null"));
     }
 
-    // ========== Reset Tests ==========
+    // Reset Tests
 
     @Test
-    void resetClearsCountersAndCache() {
+    void resetClearsCountersAndCache()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.SEMANTIC_RENAME);
 
         String beforeReset = normalizer.normalize("???test", IdentifierNormalizer.IdentifierType.METHOD);
@@ -215,40 +236,45 @@ class IdentifierNormalizerTest {
         assertEquals(beforeReset, afterReset);
     }
 
-    // ========== Null and Edge Case Tests ==========
+    // Null and Edge Case Tests
 
     @Test
-    void handlesNullIdentifier() {
+    void handlesNullIdentifier()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         assertNull(normalizer.normalize(null, IdentifierNormalizer.IdentifierType.METHOD));
     }
 
     @Test
-    void handlesEmptyIdentifier() {
+    void handlesEmptyIdentifier()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         assertEquals("", normalizer.normalize("", IdentifierNormalizer.IdentifierType.METHOD));
     }
 
     @Test
-    void handlesNullClassName() {
+    void handlesNullClassName()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         assertNull(normalizer.normalizeClassName(null));
     }
 
     @Test
-    void handlesEmptyClassName() {
+    void handlesEmptyClassName()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.UNICODE_ESCAPE);
 
         assertEquals("", normalizer.normalizeClassName(""));
     }
 
-    // ========== escapeToUnicode Direct Tests ==========
+    // escapeToUnicode Direct Tests
 
     @Test
-    void escapeToUnicodeHandlesInvalidChars() {
+    void escapeToUnicodeHandlesInvalidChars()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         // Space is not valid in Java identifiers
@@ -257,7 +283,8 @@ class IdentifierNormalizerTest {
     }
 
     @Test
-    void escapeToUnicodePreservesValidChars() {
+    void escapeToUnicodePreservesValidChars()
+    {
         IdentifierNormalizer normalizer = new IdentifierNormalizer(IdentifierMode.RAW);
 
         String result = normalizer.escapeToUnicode("validName123");

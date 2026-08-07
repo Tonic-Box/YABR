@@ -1,10 +1,8 @@
 package com.tonic.analysis.ssa.cfg;
 
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,78 +15,90 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for IRBlock - basic blocks in SSA form.
  * Covers instructions, phi nodes, terminators, and CFG edges.
  */
-class IRBlockTest {
+class IRBlockTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         // Reset block ID counter for predictable test results
         IRBlock.resetIdCounter();
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void defaultConstructorCreatesAutoName() {
+    void defaultConstructorCreatesAutoName()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.getName().startsWith("B"));
     }
 
     @Test
-    void namedConstructorSetsName() {
+    void namedConstructorSetsName()
+    {
         IRBlock block = new IRBlock("entry");
         assertEquals("entry", block.getName());
     }
 
     @Test
-    void blockHasUniqueId() {
+    void blockHasUniqueId()
+    {
         IRBlock b1 = new IRBlock();
         IRBlock b2 = new IRBlock();
         assertNotEquals(b1.getId(), b2.getId());
     }
 
     @Test
-    void newBlockHasEmptyInstructions() {
+    void newBlockHasEmptyInstructions()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.getInstructions().isEmpty());
     }
 
     @Test
-    void newBlockHasEmptyPhiInstructions() {
+    void newBlockHasEmptyPhiInstructions()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.getPhiInstructions().isEmpty());
     }
 
     @Test
-    void newBlockHasNoPredecessors() {
+    void newBlockHasNoPredecessors()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.getPredecessors().isEmpty());
     }
 
     @Test
-    void newBlockHasNoSuccessors() {
+    void newBlockHasNoSuccessors()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.getSuccessors().isEmpty());
     }
 
     @Test
-    void newBlockHasNegativeBytecodeOffset() {
+    void newBlockHasNegativeBytecodeOffset()
+    {
         IRBlock block = new IRBlock();
         assertEquals(-1, block.getBytecodeOffset());
     }
 
-    // ========== Name Tests ==========
+    // Name Tests
 
     @Test
-    void setNameChangesName() {
+    void setNameChangesName()
+    {
         IRBlock block = new IRBlock();
         block.setName("renamed");
         assertEquals("renamed", block.getName());
     }
 
-    // ========== Phi Instruction Tests ==========
+    // Phi Instruction Tests
 
     @Test
-    void addPhiAddsToList() {
+    void addPhiAddsToList()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(result);
@@ -100,7 +110,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addPhiSetsBlock() {
+    void addPhiSetsBlock()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(result);
@@ -111,7 +122,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addPhiInstructionAlias() {
+    void addPhiInstructionAlias()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(result);
@@ -122,7 +134,8 @@ class IRBlockTest {
     }
 
     @Test
-    void removePhiRemovesFromList() {
+    void removePhiRemovesFromList()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(result);
@@ -133,10 +146,11 @@ class IRBlockTest {
         assertTrue(block.getPhiInstructions().isEmpty());
     }
 
-    // ========== Instruction Tests ==========
+    // Instruction Tests
 
     @Test
-    void addInstructionAddsToEnd() {
+    void addInstructionAddsToEnd()
+    {
         IRBlock block = new IRBlock();
         IRInstruction instr = new ReturnInstruction();
 
@@ -147,7 +161,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addInstructionSetsBlock() {
+    void addInstructionSetsBlock()
+    {
         IRBlock block = new IRBlock();
         IRInstruction instr = new ReturnInstruction();
 
@@ -157,7 +172,8 @@ class IRBlockTest {
     }
 
     @Test
-    void insertInstructionAtIndex() {
+    void insertInstructionAtIndex()
+    {
         IRBlock block = new IRBlock();
         IRBlock targetBlock = new IRBlock("target");
         IRInstruction first = SimpleInstruction.createGoto(targetBlock);
@@ -172,7 +188,8 @@ class IRBlockTest {
     }
 
     @Test
-    void removeInstructionRemovesFromList() {
+    void removeInstructionRemovesFromList()
+    {
         IRBlock block = new IRBlock();
         IRInstruction instr = new ReturnInstruction();
         block.addInstruction(instr);
@@ -182,10 +199,11 @@ class IRBlockTest {
         assertTrue(block.getInstructions().isEmpty());
     }
 
-    // ========== Successor/Predecessor Tests ==========
+    // Successor/Predecessor Tests
 
     @Test
-    void addSuccessorAddsToList() {
+    void addSuccessorAddsToList()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
 
@@ -196,7 +214,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addSuccessorAddsPredecessor() {
+    void addSuccessorAddsPredecessor()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
 
@@ -207,7 +226,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addSuccessorWithEdgeType() {
+    void addSuccessorWithEdgeType()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
 
@@ -217,7 +237,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addDuplicateSuccessorDoesNotDuplicate() {
+    void addDuplicateSuccessorDoesNotDuplicate()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
 
@@ -228,7 +249,8 @@ class IRBlockTest {
     }
 
     @Test
-    void removeSuccessorRemovesFromList() {
+    void removeSuccessorRemovesFromList()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
         b1.addSuccessor(b2);
@@ -239,7 +261,8 @@ class IRBlockTest {
     }
 
     @Test
-    void removeSuccessorRemovesPredecessor() {
+    void removeSuccessorRemovesPredecessor()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
         b1.addSuccessor(b2);
@@ -250,7 +273,8 @@ class IRBlockTest {
     }
 
     @Test
-    void getEdgeTypeDefaultsToNormal() {
+    void getEdgeTypeDefaultsToNormal()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
         b1.addSuccessor(b2);
@@ -259,7 +283,8 @@ class IRBlockTest {
     }
 
     @Test
-    void addPredecessorDirectly() {
+    void addPredecessorDirectly()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
 
@@ -269,7 +294,8 @@ class IRBlockTest {
     }
 
     @Test
-    void removePredecessorDirectly() {
+    void removePredecessorDirectly()
+    {
         IRBlock b1 = new IRBlock("b1");
         IRBlock b2 = new IRBlock("b2");
         b2.addPredecessor(b1);
@@ -279,16 +305,18 @@ class IRBlockTest {
         assertTrue(b2.getPredecessors().isEmpty());
     }
 
-    // ========== Terminator Tests ==========
+    // Terminator Tests
 
     @Test
-    void getTerminatorReturnsNullForEmptyBlock() {
+    void getTerminatorReturnsNullForEmptyBlock()
+    {
         IRBlock block = new IRBlock();
         assertNull(block.getTerminator());
     }
 
     @Test
-    void getTerminatorReturnsLastIfTerminator() {
+    void getTerminatorReturnsLastIfTerminator()
+    {
         IRBlock block = new IRBlock();
         ReturnInstruction ret = new ReturnInstruction();
         block.addInstruction(ret);
@@ -297,7 +325,8 @@ class IRBlockTest {
     }
 
     @Test
-    void getTerminatorReturnsNullIfLastNotTerminator() {
+    void getTerminatorReturnsNullIfLastNotTerminator()
+    {
         IRBlock block = new IRBlock();
         // Use a non-terminator instruction - MonitorEnter is not a terminator
         SSAValue obj = new SSAValue(ReferenceType.OBJECT, "obj");
@@ -308,7 +337,8 @@ class IRBlockTest {
     }
 
     @Test
-    void hasTerminatorReturnsTrueWithTerminator() {
+    void hasTerminatorReturnsTrueWithTerminator()
+    {
         IRBlock block = new IRBlock();
         block.addInstruction(new ReturnInstruction());
 
@@ -316,13 +346,15 @@ class IRBlockTest {
     }
 
     @Test
-    void hasTerminatorReturnsFalseWithoutTerminator() {
+    void hasTerminatorReturnsFalseWithoutTerminator()
+    {
         IRBlock block = new IRBlock();
         assertFalse(block.hasTerminator());
     }
 
     @Test
-    void setTerminatorReplacesExisting() {
+    void setTerminatorReplacesExisting()
+    {
         IRBlock block = new IRBlock();
         ReturnInstruction ret1 = new ReturnInstruction();
         ReturnInstruction ret2 = new ReturnInstruction();
@@ -334,10 +366,11 @@ class IRBlockTest {
         assertEquals(ret2, block.getTerminator());
     }
 
-    // ========== Exception Handler Tests ==========
+    // Exception Handler Tests
 
     @Test
-    void addExceptionHandlerAddsToList() {
+    void addExceptionHandlerAddsToList()
+    {
         IRBlock block = new IRBlock("try");
         IRBlock end = new IRBlock("end");
         IRBlock handler = new IRBlock("handler");
@@ -348,10 +381,11 @@ class IRBlockTest {
         assertEquals(1, block.getExceptionHandlers().size());
     }
 
-    // ========== getAllInstructions Tests ==========
+    // getAllInstructions Tests
 
     @Test
-    void getAllInstructionsCombinesPhisAndRegular() {
+    void getAllInstructionsCombinesPhisAndRegular()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         PhiInstruction phi = new PhiInstruction(result);
@@ -367,16 +401,18 @@ class IRBlockTest {
         assertEquals(ret, all.get(1));
     }
 
-    // ========== isEmpty Tests ==========
+    // isEmpty Tests
 
     @Test
-    void isEmptyTrueForNewBlock() {
+    void isEmptyTrueForNewBlock()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.isEmpty());
     }
 
     @Test
-    void isEmptyFalseWithPhi() {
+    void isEmptyFalseWithPhi()
+    {
         IRBlock block = new IRBlock();
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
         block.addPhi(new PhiInstruction(result));
@@ -385,17 +421,19 @@ class IRBlockTest {
     }
 
     @Test
-    void isEmptyFalseWithInstruction() {
+    void isEmptyFalseWithInstruction()
+    {
         IRBlock block = new IRBlock();
         block.addInstruction(new ReturnInstruction());
 
         assertFalse(block.isEmpty());
     }
 
-    // ========== isEntry/isExit Tests ==========
+    // isEntry/isExit Tests
 
     @Test
-    void isEntryTrueForEntryBlock() {
+    void isEntryTrueForEntryBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock("entry");
         method.addBlock(block);
@@ -405,7 +443,8 @@ class IRBlockTest {
     }
 
     @Test
-    void isEntryFalseForNonEntryBlock() {
+    void isEntryFalseForNonEntryBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock other = new IRBlock("other");
@@ -418,13 +457,15 @@ class IRBlockTest {
     }
 
     @Test
-    void isExitTrueForBlockWithNoSuccessors() {
+    void isExitTrueForBlockWithNoSuccessors()
+    {
         IRBlock block = new IRBlock();
         assertTrue(block.isExit());
     }
 
     @Test
-    void isExitFalseForBlockWithSuccessors() {
+    void isExitFalseForBlockWithSuccessors()
+    {
         IRBlock b1 = new IRBlock();
         IRBlock b2 = new IRBlock();
         b1.addSuccessor(b2);
@@ -432,20 +473,22 @@ class IRBlockTest {
         assertFalse(b1.isExit());
     }
 
-    // ========== Bytecode Offset Tests ==========
+    // Bytecode Offset Tests
 
     @Test
-    void setBytecodeOffsetSetsIt() {
+    void setBytecodeOffsetSetsIt()
+    {
         IRBlock block = new IRBlock();
         block.setBytecodeOffset(100);
 
         assertEquals(100, block.getBytecodeOffset());
     }
 
-    // ========== setMethod Tests ==========
+    // setMethod Tests
 
     @Test
-    void setMethodSetsIt() {
+    void setMethodSetsIt()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock block = new IRBlock();
 
@@ -454,38 +497,43 @@ class IRBlockTest {
         assertEquals(method, block.getMethod());
     }
 
-    // ========== equals/hashCode Tests ==========
+    // equals/hashCode Tests
 
     @Test
-    void equalsReturnsTrueForSameBlock() {
+    void equalsReturnsTrueForSameBlock()
+    {
         IRBlock block = new IRBlock();
         assertEquals(block, block);
     }
 
     @Test
-    void equalsReturnsFalseForDifferentBlocks() {
+    void equalsReturnsFalseForDifferentBlocks()
+    {
         IRBlock b1 = new IRBlock();
         IRBlock b2 = new IRBlock();
         assertNotEquals(b1, b2);
     }
 
     @Test
-    void hashCodeBasedOnId() {
+    void hashCodeBasedOnId()
+    {
         IRBlock b1 = new IRBlock();
         IRBlock b2 = new IRBlock();
         assertNotEquals(b1.hashCode(), b2.hashCode());
     }
 
-    // ========== toString Tests ==========
+    // toString Tests
 
     @Test
-    void toStringContainsBlockName() {
+    void toStringContainsBlockName()
+    {
         IRBlock block = new IRBlock("myBlock");
         assertTrue(block.toString().contains("myBlock"));
     }
 
     @Test
-    void toStringIncludesInstructions() {
+    void toStringIncludesInstructions()
+    {
         IRBlock block = new IRBlock("entry");
         block.addInstruction(new ReturnInstruction());
 
@@ -494,10 +542,11 @@ class IRBlockTest {
         assertTrue(str.contains("entry"));
     }
 
-    // ========== resetIdCounter Tests ==========
+    // resetIdCounter Tests
 
     @Test
-    void resetIdCounterResetsIds() {
+    void resetIdCounterResetsIds()
+    {
         new IRBlock(); // Creates B0
         new IRBlock(); // Creates B1
 

@@ -4,34 +4,38 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.value.SSAValue;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class DeadVariableEliminatorTest {
+class DeadVariableEliminatorTest
+{
 
     private DeadVariableEliminator eliminator;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         eliminator = new DeadVariableEliminator();
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("DeadVariableEliminator", eliminator.getName());
     }
 
     @Test
-    void transformEmptyBlockReturnsFalse() {
+    void transformEmptyBlockReturnsFalse()
+    {
         BlockStmt block = new BlockStmt();
 
         boolean changed = eliminator.transform(block);
@@ -40,12 +44,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void basicUnusedVariableRemoval() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "unused",
-            LiteralExpr.ofInt(42)
-        );
+    void basicUnusedVariableRemoval()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -60,12 +61,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void preserveUsedVariable() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void preserveUsedVariable()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -79,24 +77,13 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void cascadingDeadVariables() {
-        VarDeclStmt declA = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "a",
-            LiteralExpr.ofInt(5)
-        );
+    void cascadingDeadVariables()
+    {
+        VarDeclStmt declA = new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(5));
 
-        VarDeclStmt declB = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "b",
-            new VarRefExpr("a", PrimitiveSourceType.INT)
-        );
+        VarDeclStmt declB = new VarDeclStmt(PrimitiveSourceType.INT, "b", new VarRefExpr("a", PrimitiveSourceType.INT));
 
-        VarDeclStmt declC = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "c",
-            new VarRefExpr("b", PrimitiveSourceType.INT)
-        );
+        VarDeclStmt declC = new VarDeclStmt(PrimitiveSourceType.INT, "c", new VarRefExpr("b", PrimitiveSourceType.INT));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(declA);
@@ -113,12 +100,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void compoundAssignmentIsRead() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void compoundAssignmentIsRead()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         BinaryExpr compoundAssign = new BinaryExpr(
             BinaryOperator.ADD_ASSIGN,
@@ -140,12 +124,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void writeOnlyVariableRemoved() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void writeOnlyVariableRemoved()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         BinaryExpr assign = new BinaryExpr(
             BinaryOperator.ASSIGN,
@@ -167,7 +148,8 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void writeOnlyAssignmentInsideSwitchCaseRemoved() {
+    void writeOnlyAssignmentInsideSwitchCaseRemoved()
+    {
         BinaryExpr deadAssign = new BinaryExpr(
             BinaryOperator.ASSIGN,
             new VarRefExpr("dead", PrimitiveSourceType.INT),
@@ -197,14 +179,11 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void fieldStoreReceiverIsNotTreatedAsDead() {
-        VarDeclStmt decl = new VarDeclStmt(
-            new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder"),
-            "h",
-            LiteralExpr.ofNull()
-        );
+    void fieldStoreReceiverIsNotTreatedAsDead()
+    {
+        VarDeclStmt decl = new VarDeclStmt(new ReferenceSourceType("Holder"), "h", LiteralExpr.ofNull());
         FieldAccessExpr field = FieldAccessExpr.instanceField(
-            new VarRefExpr("h", new com.tonic.analysis.source.ast.type.ReferenceSourceType("Holder")),
+            new VarRefExpr("h", new ReferenceSourceType("Holder")),
             "value",
             "Holder",
             PrimitiveSourceType.INT
@@ -230,7 +209,8 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void preserveSideEffectsInInitializer() {
+    void preserveSideEffectsInInitializer()
+    {
         MethodCallExpr sideEffect = new MethodCallExpr(
             null,
             "compute",
@@ -240,11 +220,7 @@ class DeadVariableEliminatorTest {
             PrimitiveSourceType.INT
         );
 
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "unused",
-            sideEffect
-        );
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", sideEffect);
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -261,12 +237,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void preserveSideEffectsInAssignment() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void preserveSideEffectsInAssignment()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         MethodCallExpr sideEffect = new MethodCallExpr(
             null,
@@ -298,12 +271,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void handleNestedBlocks() {
-        VarDeclStmt innerDecl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "y",
-            LiteralExpr.ofInt(10)
-        );
+    void handleNestedBlocks()
+    {
+        VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(10));
 
         List<Statement> innerStmts = new ArrayList<>();
         innerStmts.add(innerDecl);
@@ -320,22 +290,16 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void removeUnusedInIfBranch() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "unused",
-            LiteralExpr.ofInt(5)
-        );
+    void removeUnusedInIfBranch()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(5));
 
         List<Statement> thenStmts = new ArrayList<>();
         thenStmts.add(decl);
         thenStmts.add(new ReturnStmt());
         BlockStmt thenBlock = new BlockStmt(thenStmts);
 
-        IfStmt ifStmt = new IfStmt(
-            LiteralExpr.ofBoolean(true),
-            thenBlock
-        );
+        IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), thenBlock);
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(ifStmt);
@@ -347,12 +311,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void preserveVariableUsedInCondition() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void preserveVariableUsedInCondition()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         BinaryExpr condition = new BinaryExpr(
             BinaryOperator.GT,
@@ -361,10 +322,7 @@ class DeadVariableEliminatorTest {
             PrimitiveSourceType.BOOLEAN
         );
 
-        IfStmt ifStmt = new IfStmt(
-            condition,
-            new ReturnStmt(LiteralExpr.ofInt(1))
-        );
+        IfStmt ifStmt = new IfStmt(condition, new ReturnStmt(LiteralExpr.ofInt(1)));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -379,24 +337,13 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void multipleUnusedVariables() {
-        VarDeclStmt declA = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "a",
-            LiteralExpr.ofInt(1)
-        );
+    void multipleUnusedVariables()
+    {
+        VarDeclStmt declA = new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1));
 
-        VarDeclStmt declB = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "b",
-            LiteralExpr.ofInt(2)
-        );
+        VarDeclStmt declB = new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2));
 
-        VarDeclStmt declC = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "c",
-            LiteralExpr.ofInt(3)
-        );
+        VarDeclStmt declC = new VarDeclStmt(PrimitiveSourceType.INT, "c", LiteralExpr.ofInt(3));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(declA);
@@ -412,18 +359,11 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void partiallyUsedVariables() {
-        VarDeclStmt declX = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(10)
-        );
+    void partiallyUsedVariables()
+    {
+        VarDeclStmt declX = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(10));
 
-        VarDeclStmt declY = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "y",
-            LiteralExpr.ofInt(20)
-        );
+        VarDeclStmt declY = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(20));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(declX);
@@ -440,12 +380,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void idempotentTransformation() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "unused",
-            LiteralExpr.ofInt(42)
-        );
+    void idempotentTransformation()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -460,12 +397,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void noChangeWhenAllVariablesUsed() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(5)
-        );
+    void noChangeWhenAllVariablesUsed()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(5));
 
         List<Statement> stmts = new ArrayList<>();
         stmts.add(decl);
@@ -479,12 +413,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void handleIncrementDecrement() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "x",
-            LiteralExpr.ofInt(0)
-        );
+    void handleIncrementDecrement()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
         UnaryExpr increment = new UnaryExpr(
             UnaryOperator.POST_INC,
@@ -505,12 +436,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void variableUsedInArrayAccess() {
-        VarDeclStmt decl = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "index",
-            LiteralExpr.ofInt(0)
-        );
+    void variableUsedInArrayAccess()
+    {
+        VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "index", LiteralExpr.ofInt(0));
 
         ArrayAccessExpr arrayAccess = new ArrayAccessExpr(
             new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT)),
@@ -530,12 +458,9 @@ class DeadVariableEliminatorTest {
     }
 
     @Test
-    void removeDeadVariableChain() {
-        VarDeclStmt declA = new VarDeclStmt(
-            PrimitiveSourceType.INT,
-            "a",
-            LiteralExpr.ofInt(1)
-        );
+    void removeDeadVariableChain()
+    {
+        VarDeclStmt declA = new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1));
 
         VarDeclStmt declB = new VarDeclStmt(
             PrimitiveSourceType.INT,

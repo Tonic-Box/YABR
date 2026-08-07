@@ -9,35 +9,51 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents an element value in an annotation.
+ * An annotation element value: a tag character and its tag-dependent payload.
  */
-public class ElementValue {
+public class ElementValue
+{
     private final int tag;
     private final Object value;
 
-    public ElementValue(int tag, Object value) {
+    /**
+     * Creates an element value.
+     * @param tag the element_value tag character
+     * @param value the payload, whose type depends on the tag
+     */
+    public ElementValue(int tag, Object value)
+    {
         this.tag = tag;
         this.value = value;
     }
 
-    public int getTag() {
+    /**
+     * @return the tag
+     */
+    public int getTag()
+    {
         return tag;
     }
 
-    public Object getValue() {
+    /**
+     * @return the value
+     */
+    public Object getValue()
+    {
         return value;
     }
 
     /**
      * Writes this element value to the output stream.
-     *
      * @param dos the output stream
      * @throws IOException if an I/O error occurs
      */
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(tag);
 
-        switch (tag) {
+        switch (tag)
+        {
             case 'B':
             case 'C':
             case 'D':
@@ -46,35 +62,35 @@ public class ElementValue {
             case 'J':
             case 'S':
             case 'Z':
-            case 's': {
+            case 's':
+
+            case 'c': {
                 int constValueIndex = (Integer) value;
                 dos.writeShort(constValueIndex);
                 break;
             }
 
-            case 'e': {
+            case 'e':
+            {
                 EnumConst enumConst = (EnumConst) value;
                 dos.writeShort(enumConst.getTypeNameIndex());
                 dos.writeShort(enumConst.getConstNameIndex());
                 break;
             }
 
-            case 'c': {
-                int classInfoIndex = (Integer) value;
-                dos.writeShort(classInfoIndex);
-                break;
-            }
-
-            case '@': {
+            case '@':
+            {
                 Annotation annotation = (Annotation) value;
                 annotation.write(dos);
                 break;
             }
 
-            case '[': {
+            case '[':
+            {
                 List<ElementValue> values = (List<ElementValue>) value;
                 dos.writeShort(values.size());
-                for (ElementValue ev : values) {
+                for (ElementValue ev : values)
+                {
                     ev.write(dos);
                 }
                 break;
@@ -87,13 +103,14 @@ public class ElementValue {
 
     /**
      * Calculates the total length of this element value in bytes.
-     *
      * @return the length in bytes
      */
-    public int getLength() {
+    public int getLength()
+    {
         int size = 1;
 
-        switch (tag) {
+        switch (tag)
+        {
             case 'B':
             case 'C':
             case 'D':
@@ -103,6 +120,8 @@ public class ElementValue {
             case 'S':
             case 'Z':
             case 's':
+
+            case 'c':
                 size += 2;
                 break;
 
@@ -110,20 +129,19 @@ public class ElementValue {
                 size += 4;
                 break;
 
-            case 'c':
-                size += 2;
-                break;
-
-            case '@': {
+            case '@':
+            {
                 Annotation annotation = (Annotation) value;
                 size += annotation.getLength();
                 break;
             }
 
-            case '[': {
+            case '[':
+            {
                 List<ElementValue> values = (List<ElementValue>) value;
                 size += 2;
-                for (ElementValue ev : values) {
+                for (ElementValue ev : values)
+                {
                     size += ev.getLength();
                 }
                 break;
@@ -137,14 +155,15 @@ public class ElementValue {
 
     /**
      * Reads an element value from the class file.
-     *
      * @param classFile the class file to read from
      * @param constPool the constant pool
      * @return the parsed element value
      */
-    public static ElementValue readElementValue(ClassFile classFile, ConstPool constPool) {
+    public static ElementValue readElementValue(ClassFile classFile, ConstPool constPool)
+    {
         int tag = classFile.readUnsignedByte();
-        switch (tag) {
+        switch (tag)
+        {
             case 'B':
             case 'C':
             case 'D':
@@ -154,6 +173,7 @@ public class ElementValue {
             case 'S':
             case 'Z':
             case 's':
+            case 'c':
                 int constValueIndex = classFile.readUnsignedShort();
                 return new ElementValue(tag, constValueIndex);
 
@@ -162,10 +182,6 @@ public class ElementValue {
                 int constNameIndex = classFile.readUnsignedShort();
                 return new ElementValue(tag, new EnumConst(constPool, typeNameIndex, constNameIndex));
 
-            case 'c':
-                int classInfoIndex = classFile.readUnsignedShort();
-                return new ElementValue(tag, classInfoIndex);
-
             case '@':
                 Annotation annotation = Annotation.readAnnotation(classFile, constPool);
                 return new ElementValue(tag, annotation);
@@ -173,7 +189,8 @@ public class ElementValue {
             case '[':
                 int numValues = classFile.readUnsignedShort();
                 List<ElementValue> values = new ArrayList<>(numValues);
-                for (int i = 0; i < numValues; i++) {
+                for (int i = 0; i < numValues; i++)
+                {
                     values.add(readElementValue(classFile, constPool));
                 }
                 return new ElementValue(tag, values);
@@ -184,7 +201,8 @@ public class ElementValue {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ElementValue{" +
                 "tag=" + (char) tag +
                 ", value=" + value +

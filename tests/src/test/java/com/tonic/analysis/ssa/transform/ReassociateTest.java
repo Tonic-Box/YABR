@@ -14,22 +14,26 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for Reassociate optimization transform.
  * Tests reassociation of expressions for better constant folding.
  */
-class ReassociateTest {
+class ReassociateTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void getName_ReturnsReassociate() {
+    void getName_ReturnsReassociate()
+    {
         Reassociate reassociate = new Reassociate();
         assertEquals("Reassociate", reassociate.getName());
     }
 
     @Test
-    void run_WithEmptyMethod_ReturnsFalse() {
+    void run_WithEmptyMethod_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         Reassociate reassociate = new Reassociate();
 
@@ -37,7 +41,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_ReassociatesCommutativeOperations() {
+    void run_ReassociatesCommutativeOperations()
+    {
         // Create method with: v0 = 5 + x (constant on left, should swap to x + 5)
         IRMethod method = new IRMethod("Test", "reassociate", "(I)I", true);
 
@@ -50,9 +55,7 @@ class ReassociateTest {
 
         // v0 = 5 + x (constant on left, variable on right)
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction addInstr = new BinaryOpInstruction(
-            result, BinaryOp.ADD, new IntConstant(5), param
-        );
+        BinaryOpInstruction addInstr = new BinaryOpInstruction(result, BinaryOp.ADD, new IntConstant(5), param);
         addInstr.setBlock(entry);
         entry.addInstruction(addInstr);
 
@@ -66,7 +69,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_CanonicalizesMultiplication() {
+    void run_CanonicalizesMultiplication()
+    {
         // Create method with: v0 = 10 * x
         IRMethod method = new IRMethod("Test", "multiply", "(I)I", true);
 
@@ -78,9 +82,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction mulInstr = new BinaryOpInstruction(
-            result, BinaryOp.MUL, new IntConstant(10), param
-        );
+        BinaryOpInstruction mulInstr = new BinaryOpInstruction(result, BinaryOp.MUL, new IntConstant(10), param);
         mulInstr.setBlock(entry);
         entry.addInstruction(mulInstr);
 
@@ -93,7 +95,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_WithNonCommutativeOp_ReturnsFalse() {
+    void run_WithNonCommutativeOp_ReturnsFalse()
+    {
         // Create method with: v0 = x - 5 (subtraction is not commutative)
         IRMethod method = new IRMethod("Test", "subtract", "(I)I", true);
 
@@ -105,9 +108,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction subInstr = new BinaryOpInstruction(
-            result, BinaryOp.SUB, param, new IntConstant(5)
-        );
+        BinaryOpInstruction subInstr = new BinaryOpInstruction(result, BinaryOp.SUB, param, new IntConstant(5));
         subInstr.setBlock(entry);
         entry.addInstruction(subInstr);
 
@@ -121,7 +122,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_WithAlreadyCanonicalized_ReturnsFalse() {
+    void run_WithAlreadyCanonicalized_ReturnsFalse()
+    {
         // Create method with: v0 = x + 5 (already in canonical form)
         IRMethod method = new IRMethod("Test", "canonical", "(I)I", true);
 
@@ -133,9 +135,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction addInstr = new BinaryOpInstruction(
-            result, BinaryOp.ADD, param, new IntConstant(5)
-        );
+        BinaryOpInstruction addInstr = new BinaryOpInstruction(result, BinaryOp.ADD, param, new IntConstant(5));
         addInstr.setBlock(entry);
         entry.addInstruction(addInstr);
 
@@ -149,7 +149,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_HandlesAndOperation() {
+    void run_HandlesAndOperation()
+    {
         // Create method with: v0 = 0xFF & x
         IRMethod method = new IRMethod("Test", "bitwiseAnd", "(I)I", true);
 
@@ -161,9 +162,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction andInstr = new BinaryOpInstruction(
-            result, BinaryOp.AND, new IntConstant(0xFF), param
-        );
+        BinaryOpInstruction andInstr = new BinaryOpInstruction(result, BinaryOp.AND, new IntConstant(0xFF), param);
         andInstr.setBlock(entry);
         entry.addInstruction(andInstr);
 
@@ -172,12 +171,12 @@ class ReassociateTest {
         Reassociate reassociate = new Reassociate();
         boolean changed = reassociate.run(method);
 
-        // Should canonicalize AND operation
         assertTrue(changed);
     }
 
     @Test
-    void run_HandlesOrOperation() {
+    void run_HandlesOrOperation()
+    {
         // Create method with: v0 = 1 | x
         IRMethod method = new IRMethod("Test", "bitwiseOr", "(I)I", true);
 
@@ -189,9 +188,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction orInstr = new BinaryOpInstruction(
-            result, BinaryOp.OR, new IntConstant(1), param
-        );
+        BinaryOpInstruction orInstr = new BinaryOpInstruction(result, BinaryOp.OR, new IntConstant(1), param);
         orInstr.setBlock(entry);
         entry.addInstruction(orInstr);
 
@@ -204,7 +201,8 @@ class ReassociateTest {
     }
 
     @Test
-    void run_HandlesXorOperation() {
+    void run_HandlesXorOperation()
+    {
         // Create method with: v0 = 0x5A ^ x
         IRMethod method = new IRMethod("Test", "bitwiseXor", "(I)I", true);
 
@@ -216,9 +214,7 @@ class ReassociateTest {
         method.setEntryBlock(entry);
 
         SSAValue result = new SSAValue(PrimitiveType.INT, "v0");
-        BinaryOpInstruction xorInstr = new BinaryOpInstruction(
-            result, BinaryOp.XOR, new IntConstant(0x5A), param
-        );
+        BinaryOpInstruction xorInstr = new BinaryOpInstruction(result, BinaryOp.XOR, new IntConstant(0x5A), param);
         xorInstr.setBlock(entry);
         entry.addInstruction(xorInstr);
 

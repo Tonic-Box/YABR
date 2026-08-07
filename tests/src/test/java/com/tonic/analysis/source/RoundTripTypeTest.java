@@ -24,14 +24,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class RoundTripTypeTest {
+public class RoundTripTypeTest
+{
 
     private JavaParser parser;
     private ClassPool pool;
     private static int testCounter = 0;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         parser = JavaParser.create();
         pool = ClassPool.getDefault();
         TestUtils.resetSSACounters();
@@ -39,7 +41,8 @@ public class RoundTripTypeTest {
     }
 
     @Test
-    void methodChainPreservesTypes() throws Exception {
+    void methodChainPreservesTypes() throws Exception
+    {
         String className = "RoundTripLogger" + testCounter;
         String source =
             "package test;\n" +
@@ -67,7 +70,8 @@ public class RoundTripTypeTest {
     }
 
     @Test
-    void stringConcatPreservesTypes() throws Exception {
+    void stringConcatPreservesTypes() throws Exception
+    {
         String className = "RoundTripConcat" + testCounter;
         String source =
             "package test;\n" +
@@ -88,7 +92,8 @@ public class RoundTripTypeTest {
         assertFalse(decompiled.contains("Object local"), "Should not have Object-typed locals");
     }
 
-    private ClassFile compileSource(String source, String className) throws Exception {
+    private ClassFile compileSource(String source, String className) throws Exception
+    {
         CompilationUnit cu = parser.parse(source);
         assertNotNull(cu);
 
@@ -101,13 +106,16 @@ public class RoundTripTypeTest {
         lowerer.setCurrentClassDecl(classDecl);
         lowerer.setImports(cu.getImports());
 
-        for (MethodDecl methodDecl : classDecl.getMethods()) {
-            if (methodDecl.getBody() == null) {
+        for (MethodDecl methodDecl : classDecl.getMethods())
+        {
+            if (methodDecl.getBody() == null)
+            {
                 continue;
             }
 
             List<SourceType> params = new ArrayList<>();
-            for (ParameterDecl p : methodDecl.getParameters()) {
+            for (ParameterDecl p : methodDecl.getParameters())
+            {
                 params.add(p.getType());
             }
             SourceType returnType = methodDecl.getReturnType();
@@ -135,9 +143,11 @@ public class RoundTripTypeTest {
         return cf;
     }
 
-    private String buildDescriptor(List<SourceType> params, SourceType returnType) {
+    private String buildDescriptor(List<SourceType> params, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SourceType p : params) {
+        for (SourceType p : params)
+        {
             sb.append(p.toIRType().getDescriptor());
         }
         sb.append(")");

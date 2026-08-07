@@ -8,106 +8,158 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.List;
 
 /**
- * Represents a block of statements: { stmt1; stmt2; ... }
+ * A brace-delimited sequence of statements.
  */
-public final class BlockStmt implements Statement {
+public final class BlockStmt implements Statement
+{
 
     private final NodeList<Statement> statements;
     private SourceLocation location;
     private ASTNode parent;
 
-    public BlockStmt(List<Statement> statements, SourceLocation location) {
+    /**
+     * Creates a block containing the given statements, skipping null entries.
+     * @param statements initial statements, or null for none
+     * @param location source location, or null for unknown
+     */
+    public BlockStmt(List<Statement> statements, SourceLocation location)
+    {
         this.statements = new NodeList<>(this);
         this.location = location != null ? location : SourceLocation.UNKNOWN;
-        if (statements != null) {
-            for (Statement stmt : statements) {
-                if (stmt != null) {
+        if (statements != null)
+        {
+            for (Statement stmt : statements)
+            {
+                if (stmt != null)
+                {
                     this.statements.add(stmt);
                 }
             }
         }
     }
 
-    public BlockStmt(List<Statement> statements) {
+    /**
+     * Creates a block containing the given statements with an unknown location.
+     * @param statements initial statements, or null for none
+     */
+    public BlockStmt(List<Statement> statements)
+    {
         this(statements, SourceLocation.UNKNOWN);
     }
 
-    public BlockStmt() {
+    /**
+     * Creates an empty block.
+     */
+    public BlockStmt()
+    {
         this(List.of(), SourceLocation.UNKNOWN);
     }
 
-    public NodeList<Statement> getStatements() {
+    /**
+     * @return the statements
+     */
+    public NodeList<Statement> getStatements()
+    {
         return statements;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
     /**
-     * Adds a statement to the end of this block.
+     * Appends a statement to this block, ignoring null.
+     * @param stmt the statement to append
      */
-    public void addStatement(Statement stmt) {
-        if (stmt != null) {
+    public void addStatement(Statement stmt)
+    {
+        if (stmt != null)
+        {
             statements.add(stmt);
         }
     }
 
     /**
-     * Inserts a statement at the specified index.
+     * Inserts a statement at the given index, ignoring null.
+     * @param index position at which to insert
+     * @param stmt the statement to insert
      */
-    public void insertStatement(int index, Statement stmt) {
-        if (stmt != null) {
+    public void insertStatement(int index, Statement stmt)
+    {
+        if (stmt != null)
+        {
             statements.add(index, stmt);
         }
     }
 
     /**
      * Removes a statement from this block.
+     * @param stmt the statement to remove
+     * @return true if the statement was present
      */
-    public boolean removeStatement(Statement stmt) {
+    public boolean removeStatement(Statement stmt)
+    {
         return statements.remove(stmt);
     }
 
     /**
-     * Checks if this block is empty.
+     * @return true if this block has no statements
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return statements.isEmpty();
     }
 
     /**
-     * Gets the number of statements in this block.
+     * @return the number of statements in this block
      */
-    public int size() {
+    public int size()
+    {
         return statements.size();
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         return new java.util.ArrayList<>(statements);
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitBlock(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "{ " + statements.size() + " statements }";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

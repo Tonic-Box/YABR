@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,19 +15,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for VariableRenamer.
  * Covers SSA variable renaming through dominator tree traversal.
  */
-class VariableRenamerTest {
+class VariableRenamerTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         IRInstruction.resetIdCounter();
     }
 
-    // ========== Parameter Initialization Tests ==========
+    // Parameter Initialization Tests
 
     @Test
-    void initializeSingleParameter() {
+    void initializeSingleParameter()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)V", false);
         SSAValue param = new SSAValue(PrimitiveType.INT, "param0");
         method.addParameter(param);
@@ -50,7 +52,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void initializeMultipleParameters() {
+    void initializeMultipleParameters()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)V", true);
         SSAValue param0 = new SSAValue(PrimitiveType.INT, "param0");
         SSAValue param1 = new SSAValue(PrimitiveType.INT, "param1");
@@ -72,7 +75,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void twoSlotParametersSkipIndex() {
+    void twoSlotParametersSkipIndex()
+    {
         // Long parameter should skip an index (occupies two slots)
         IRMethod method = new IRMethod("com/test/Test", "foo", "(JI)V", true);
         SSAValue param0 = new SSAValue(PrimitiveType.LONG, "param0");
@@ -103,7 +107,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void doubleParameterTwoSlot() {
+    void doubleParameterTwoSlot()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(D)V", true);
         SSAValue param0 = new SSAValue(PrimitiveType.DOUBLE, "param0");
         method.addParameter(param0);
@@ -122,16 +127,16 @@ class VariableRenamerTest {
         assertTrue(param0.getType().isTwoSlot());
     }
 
-    // ========== Phi Result Renaming Tests ==========
+    // Phi Result Renaming Tests
 
     @Test
-    void phiResultRenamedToV0_0() {
+    void phiResultRenamedToV0_0()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
         method.setEntryBlock(entry);
 
-        // Create a phi with "phi_0" name
         SSAValue phiResult = new SSAValue(PrimitiveType.INT, "phi_0");
         PhiInstruction phi = new PhiInstruction(phiResult);
         entry.addPhi(phi);
@@ -148,7 +153,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void multiplePhisGetIncrementingNames() {
+    void multiplePhisGetIncrementingNames()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock branch = new IRBlock("branch");
@@ -158,7 +164,6 @@ class VariableRenamerTest {
 
         entry.addSuccessor(branch);
 
-        // Create two phis for variable 0
         SSAValue phi1Result = new SSAValue(PrimitiveType.INT, "phi_0");
         SSAValue phi2Result = new SSAValue(PrimitiveType.INT, "phi_0");
         PhiInstruction phi1 = new PhiInstruction(phi1Result);
@@ -179,7 +184,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void phiSetResultUpdatesDefinition() {
+    void phiSetResultUpdatesDefinition()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -201,7 +207,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void multipleVariablePhis() {
+    void multipleVariablePhis()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -230,10 +237,11 @@ class VariableRenamerTest {
         assertEquals("v2_0", phiInstr2.getResult().getName());
     }
 
-    // ========== Use Renaming Tests (LoadLocalInstruction) ==========
+    // Use Renaming Tests (LoadLocalInstruction)
 
     @Test
-    void loadLocalReplacedWithStackValue() {
+    void loadLocalReplacedWithStackValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)V", false);
         SSAValue param = new SSAValue(PrimitiveType.INT, "param0");
         method.addParameter(param);
@@ -242,7 +250,6 @@ class VariableRenamerTest {
         method.addBlock(entry);
         method.setEntryBlock(entry);
 
-        // Load from local 0 (parameter)
         SSAValue loadResult = new SSAValue(PrimitiveType.INT, "tmp");
         LoadLocalInstruction load = new LoadLocalInstruction(loadResult, 0);
         entry.addInstruction(load);
@@ -259,7 +266,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void loadAfterStoreUsesStoredValue() {
+    void loadAfterStoreUsesStoredValue()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)V", false);
         SSAValue param = new SSAValue(PrimitiveType.INT, "param0");
         method.addParameter(param);
@@ -273,7 +281,6 @@ class VariableRenamerTest {
         StoreLocalInstruction store = new StoreLocalInstruction(1, newValue);
         entry.addInstruction(store);
 
-        // Load from local 1
         SSAValue loadResult = new SSAValue(PrimitiveType.INT, "loaded");
         LoadLocalInstruction load = new LoadLocalInstruction(loadResult, 1);
         entry.addInstruction(load);
@@ -285,12 +292,12 @@ class VariableRenamerTest {
         VariableRenamer renamer = new VariableRenamer(domTree);
         renamer.rename(method);
 
-        // Load should use the stored value
-        assertTrue(newValue.getUses().size() > 0);
+        assertFalse(newValue.getUses().isEmpty());
     }
 
     @Test
-    void loadFromUndefinedVariableHandled() {
+    void loadFromUndefinedVariableHandled()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -311,10 +318,11 @@ class VariableRenamerTest {
         assertDoesNotThrow(() -> renamer.rename(method));
     }
 
-    // ========== Definition Handling Tests (StoreLocalInstruction) ==========
+    // Definition Handling Tests (StoreLocalInstruction)
 
     @Test
-    void storeLocalPushesValueToStack() {
+    void storeLocalPushesValueToStack()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -350,12 +358,13 @@ class VariableRenamerTest {
         renamer.rename(method);
 
         // Both values should have uses
-        assertTrue(value1.getUses().size() > 0);
-        assertTrue(value2.getUses().size() > 0);
+        assertFalse(value1.getUses().isEmpty());
+        assertFalse(value2.getUses().isEmpty());
     }
 
     @Test
-    void multipleStoresUpdateStack() {
+    void multipleStoresUpdateStack()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -380,13 +389,14 @@ class VariableRenamerTest {
         renamer.rename(method);
 
         // Only v3 (last store) should be used by the load
-        assertTrue(v3.getUses().size() > 0);
+        assertFalse(v3.getUses().isEmpty());
     }
 
-    // ========== Dominator Tree Traversal Tests ==========
+    // Dominator Tree Traversal Tests
 
     @Test
-    void childBlocksSeesParentDefinitions() {
+    void childBlocksSeesParentDefinitions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock child = new IRBlock("child");
@@ -415,11 +425,12 @@ class VariableRenamerTest {
         renamer.rename(method);
 
         // Child should use parent's value
-        assertTrue(value.getUses().size() > 0);
+        assertFalse(value.getUses().isEmpty());
     }
 
     @Test
-    void stackScopeRestoredAfterProcessingChildren() {
+    void stackScopeRestoredAfterProcessingChildren()
+    {
         // Diamond CFG: entry -> (left | right) -> merge
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -463,7 +474,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void nestedDominatorTreeTraversal() {
+    void nestedDominatorTreeTraversal()
+    {
         // entry -> child1 -> child2
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -487,7 +499,6 @@ class VariableRenamerTest {
         child1.addInstruction(new StoreLocalInstruction(0, v2));
         child1.addInstruction(SimpleInstruction.createGoto(child2));
 
-        // Load in child2 should get v2
         SSAValue loadResult = new SSAValue(PrimitiveType.INT, "result");
         child2.addInstruction(new LoadLocalInstruction(loadResult, 0));
         child2.addInstruction(new ReturnInstruction());
@@ -498,13 +509,14 @@ class VariableRenamerTest {
         VariableRenamer renamer = new VariableRenamer(domTree);
         renamer.rename(method);
 
-        assertTrue(v2.getUses().size() > 0);
+        assertFalse(v2.getUses().isEmpty());
     }
 
-    // ========== Phi Incoming Values Tests ==========
+    // Phi Incoming Values Tests
 
     @Test
-    void phiIncomingValuesAddedFromPredecessors() {
+    void phiIncomingValuesAddedFromPredecessors()
+    {
         // Diamond: entry -> (left | right) -> merge
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -552,7 +564,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void phiIncomingValueFromSinglePredecessor() {
+    void phiIncomingValueFromSinglePredecessor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock block = new IRBlock("block");
@@ -582,7 +595,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void phiWithRenamedResultGetsIncomingValues() {
+    void phiWithRenamedResultGetsIncomingValues()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock block = new IRBlock("block");
@@ -609,13 +623,14 @@ class VariableRenamerTest {
         renamer.rename(method);
 
         // Should still add incoming values for renamed phi
-        assertTrue(phi.getIncomingValues().size() > 0);
+        assertFalse(phi.getIncomingValues().isEmpty());
     }
 
-    // ========== Edge Cases and Integration Tests ==========
+    // Edge Cases and Integration Tests
 
     @Test
-    void emptyMethodHandled() {
+    void emptyMethodHandled()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -631,7 +646,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void methodWithNoEntryBlock() {
+    void methodWithNoEntryBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
 
         DominatorTree domTree = new DominatorTree(method);
@@ -643,7 +659,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void complexCFGWithMultipleVariables() {
+    void complexCFGWithMultipleVariables()
+    {
         // Loop with multiple variables
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)V", false);
         SSAValue param0 = new SSAValue(PrimitiveType.INT, "param0");
@@ -696,7 +713,8 @@ class VariableRenamerTest {
     }
 
     @Test
-    void mixedParametersAndLocalVariables() {
+    void mixedParametersAndLocalVariables()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", false);
         SSAValue param = new SSAValue(PrimitiveType.INT, "param0");
         method.addParameter(param);
@@ -705,7 +723,6 @@ class VariableRenamerTest {
         method.addBlock(entry);
         method.setEntryBlock(entry);
 
-        // Use parameter
         SSAValue load0 = new SSAValue(PrimitiveType.INT, "load0");
         entry.addInstruction(new LoadLocalInstruction(load0, 0));
 
@@ -713,7 +730,6 @@ class VariableRenamerTest {
         SSAValue val1 = new SSAValue(PrimitiveType.INT, "val1");
         entry.addInstruction(new StoreLocalInstruction(1, val1));
 
-        // Load from local 1
         SSAValue load1 = new SSAValue(PrimitiveType.INT, "load1");
         entry.addInstruction(new LoadLocalInstruction(load1, 1));
 
@@ -727,6 +743,6 @@ class VariableRenamerTest {
 
         // Both parameter and local variable should be properly set up
         // after renaming, the instructions remain
-        assertTrue(entry.getInstructions().size() > 0);
+        assertFalse(entry.getInstructions().isEmpty());
     }
 }

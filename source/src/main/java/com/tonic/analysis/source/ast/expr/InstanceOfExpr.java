@@ -9,10 +9,10 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.Objects;
 
 /**
- * Represents an instanceof expression: expression instanceof Type [patternVariable]
- * Supports Java 16+ pattern matching instanceof.
+ * An instanceof expression: expression instanceof Type, with an optional Java 16+ pattern variable.
  */
-public final class InstanceOfExpr implements Expression {
+public final class InstanceOfExpr implements Expression
+{
 
     private Expression expression;
     private final SourceType checkType;
@@ -23,8 +23,16 @@ public final class InstanceOfExpr implements Expression {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public InstanceOfExpr(Expression expression, SourceType checkType, String patternVariable,
-                          SourceLocation location) {
+    /**
+     * Creates an instanceof test and reparents the tested expression.
+     * @param expression the expression being tested
+     * @param checkType the type tested against
+     * @param patternVariable the pattern variable name, or null for classic instanceof
+     * @param location the source location, or null for unknown
+     * @throws NullPointerException if expression or checkType is null
+     */
+    public InstanceOfExpr(Expression expression, SourceType checkType, String patternVariable, SourceLocation location)
+    {
         this.expression = Objects.requireNonNull(expression, "expression cannot be null");
         this.checkType = Objects.requireNonNull(checkType, "checkType cannot be null");
         this.patternVariable = patternVariable;
@@ -33,85 +41,155 @@ public final class InstanceOfExpr implements Expression {
         expression.setParent(this);
     }
 
-    public InstanceOfExpr(Expression expression, SourceType checkType, String patternVariable) {
+    /**
+     * Creates an instanceof test with an unknown source location.
+     * @param expression the expression being tested
+     * @param checkType the type tested against
+     * @param patternVariable the pattern variable name, or null for classic instanceof
+     * @throws NullPointerException if expression or checkType is null
+     */
+    public InstanceOfExpr(Expression expression, SourceType checkType, String patternVariable)
+    {
         this(expression, checkType, patternVariable, SourceLocation.UNKNOWN);
     }
 
-    public InstanceOfExpr(Expression expression, SourceType checkType) {
+    /**
+     * Creates a classic instanceof test without a pattern variable.
+     * @param expression the expression being tested
+     * @param checkType the type tested against
+     * @throws NullPointerException if expression or checkType is null
+     */
+    public InstanceOfExpr(Expression expression, SourceType checkType)
+    {
         this(expression, checkType, null, SourceLocation.UNKNOWN);
     }
 
-    public Expression getExpression() {
+    /**
+     * @return the expression
+     */
+    public Expression getExpression()
+    {
         return expression;
     }
 
-    public void setExpression(Expression expression) {
-        this.expression = expression;
+    /**
+     * Replaces the tested expression, reparenting the new child.
+     * @param expression the new tested expression
+     */
+    public void setExpression(Expression expression)
+    {
+        withExpression(expression);
     }
 
-    public SourceType getCheckType() {
+    /**
+     * @return the check type
+     */
+    public SourceType getCheckType()
+    {
         return checkType;
     }
 
-    public String getPatternVariable() {
+    /**
+     * @return the pattern variable
+     */
+    public String getPatternVariable()
+    {
         return patternVariable;
     }
 
-    public void setPatternVariable(String patternVariable) {
+    /**
+     * @param patternVariable the pattern variable name, or null for classic instanceof
+     */
+    public void setPatternVariable(String patternVariable)
+    {
         this.patternVariable = patternVariable;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public InstanceOfExpr withExpression(Expression expression) {
-        if (this.expression != null) this.expression.setParent(null);
+    /**
+     * Replaces the tested expression, reparenting the new child and releasing the former one.
+     * @param expression the new tested expression
+     * @return this expression
+     */
+    public InstanceOfExpr withExpression(Expression expression)
+    {
+        ASTNode previous = this.expression;
         this.expression = expression;
-        if (expression != null) expression.setParent(this);
+        if (expression != null)
+        {
+            expression.setParent(this);
+        }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public InstanceOfExpr withPatternVariable(String patternVariable) {
+    /**
+     * Replaces the pattern variable name.
+     * @param patternVariable the pattern variable name, or null for classic instanceof
+     * @return this expression
+     */
+    public InstanceOfExpr withPatternVariable(String patternVariable)
+    {
         this.patternVariable = patternVariable;
         return this;
     }
 
     /**
-     * Checks if this is a pattern matching instanceof (Java 16+).
+     * @return true if this is a pattern matching instanceof (Java 16+)
      */
-    public boolean hasPatternVariable() {
+    public boolean hasPatternVariable()
+    {
         return patternVariable != null;
     }
 
     @Override
-    public SourceType getType() {
+    public SourceType getType()
+    {
         return PrimitiveSourceType.BOOLEAN;
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         return expression != null ? java.util.List.of(expression) : java.util.List.of();
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitInstanceOf(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(expression).append(" instanceof ").append(checkType.toJavaSource());
-        if (patternVariable != null) {
+        if (patternVariable != null)
+        {
             sb.append(" ").append(patternVariable);
         }
         return sb.toString();

@@ -18,10 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Pre-fix, {@code SwingUtilities.invokeLater} resolved to Object, emitting {@code invokeLater(Runnable)Object} which
  * fails with {@code NoSuchMethodError} at run time. An empty pool forces the JDK fallback path deterministically.
  */
-public class TypeResolverJdkReturnTest {
+public class TypeResolverJdkReturnTest
+{
 
     @Test
-    void voidJdkMethodNotInPoolResolvesToVoid() throws Exception {
+    void voidJdkMethodNotInPoolResolvesToVoid() throws Exception
+    {
         TypeResolver resolver = new TypeResolver(new ClassPool(), "test/Owner");
         SourceType ret = resolver.resolveMethodReturnType(
             "javax/swing/SwingUtilities", "invokeLater",
@@ -30,11 +32,11 @@ public class TypeResolverJdkReturnTest {
     }
 
     @Test
-    void valueReturningJdkMethodNotInPoolResolvesByReflection() throws Exception {
+    void valueReturningJdkMethodNotInPoolResolvesByReflection() throws Exception
+    {
         TypeResolver resolver = new TypeResolver(new ClassPool(), "test/Owner");
         SourceType ret = resolver.resolveMethodReturnType(
             "javax/swing/SwingUtilities", "isEventDispatchThread", List.of());
-        assertEquals(PrimitiveSourceType.BOOLEAN, ret,
-            "isEventDispatchThread must resolve to boolean, was " + ret);
+        assertEquals(PrimitiveSourceType.BOOLEAN, ret, "isEventDispatchThread must resolve to boolean, was " + ret);
     }
 }

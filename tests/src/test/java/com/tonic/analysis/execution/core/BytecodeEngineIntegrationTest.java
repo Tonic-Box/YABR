@@ -15,12 +15,14 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BytecodeEngineIntegrationTest {
+class BytecodeEngineIntegrationTest
+{
 
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool()))
@@ -29,7 +31,8 @@ class BytecodeEngineIntegrationTest {
             .build();
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
@@ -37,10 +40,12 @@ class BytecodeEngineIntegrationTest {
     }
 
     @Nested
-    class ReturnTests {
+    class ReturnTests
+    {
 
         @Test
-        void testReturnInt() throws IOException {
+        void testReturnInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getInt", "()I")
                     .iconst(5)
@@ -59,7 +64,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testReturnLong() throws IOException {
+        void testReturnLong() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getLong", "()J")
                     .lconst(1L)
@@ -78,7 +84,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testReturnFloat() throws IOException {
+        void testReturnFloat() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getFloat", "()F")
                     .fconst(2.0f)
@@ -97,7 +104,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testReturnDouble() throws IOException {
+        void testReturnDouble() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getDouble", "()D")
                     .dconst(1.0)
@@ -116,7 +124,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testReturnVoid() throws IOException {
+        void testReturnVoid() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("doNothing", "()V")
                     .vreturn()
@@ -132,7 +141,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testReturnNull() throws IOException {
+        void testReturnNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getNull", "()Ljava/lang/Object;")
                     .aconst_null()
@@ -152,10 +162,12 @@ class BytecodeEngineIntegrationTest {
     }
 
     @Nested
-    class IntArithmeticTests {
+    class IntArithmeticTests
+    {
 
         @Test
-        void testIAdd() throws IOException {
+        void testIAdd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -168,16 +180,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"add");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(3),
-                ConcreteValue.intValue(5));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(3), ConcreteValue.intValue(5));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(8, result.getReturnValue().asInt());
         }
 
         @Test
-        void testISub() throws IOException {
+        void testISub() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("subtract", "(II)I")
                     .iload(0)
@@ -190,16 +201,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"subtract");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(3));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(3));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(7, result.getReturnValue().asInt());
         }
 
         @Test
-        void testIMul() throws IOException {
+        void testIMul() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("multiply", "(II)I")
                     .iload(0)
@@ -212,16 +222,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"multiply");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(4),
-                ConcreteValue.intValue(6));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(4), ConcreteValue.intValue(6));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(24, result.getReturnValue().asInt());
         }
 
         @Test
-        void testIDiv() throws IOException {
+        void testIDiv() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("divide", "(II)I")
                     .iload(0)
@@ -234,16 +243,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"divide");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(15),
-                ConcreteValue.intValue(3));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(15), ConcreteValue.intValue(3));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(5, result.getReturnValue().asInt());
         }
 
         @Test
-        void testIRem() throws IOException {
+        void testIRem() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("remainder", "(II)I")
                     .iload(0)
@@ -256,16 +264,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"remainder");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(17),
-                ConcreteValue.intValue(5));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(17), ConcreteValue.intValue(5));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(2, result.getReturnValue().asInt());
         }
 
         @Test
-        void testINeg() throws IOException {
+        void testINeg() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("negate", "(I)I")
                     .iload(0)
@@ -277,15 +284,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"negate");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(42));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(-42, result.getReturnValue().asInt());
         }
 
         @Test
-        void testIDivByZero() throws IOException {
+        void testIDivByZero() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("divideByZero", "(II)I")
                     .iload(0)
@@ -298,19 +305,19 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"divideByZero");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(0));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(0));
 
             assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
         }
     }
 
     @Nested
-    class LongArithmeticTests {
+    class LongArithmeticTests
+    {
 
         @Test
-        void testLAdd() throws IOException {
+        void testLAdd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("addLongs", "(JJ)J")
                     .lload(0)
@@ -332,7 +339,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testLSub() throws IOException {
+        void testLSub() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("subtractLongs", "(JJ)J")
                     .lload(0)
@@ -354,7 +362,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testLMul() throws IOException {
+        void testLMul() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("multiplyLongs", "(JJ)J")
                     .lload(0)
@@ -367,16 +376,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"multiplyLongs");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.longValue(10L),
-                ConcreteValue.longValue(20L));
+            BytecodeResult result = engine.execute(method, ConcreteValue.longValue(10L), ConcreteValue.longValue(20L));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(200L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testLDiv() throws IOException {
+        void testLDiv() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("divideLongs", "(JJ)J")
                     .lload(0)
@@ -389,9 +397,7 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"divideLongs");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.longValue(100L),
-                ConcreteValue.longValue(5L));
+            BytecodeResult result = engine.execute(method, ConcreteValue.longValue(100L), ConcreteValue.longValue(5L));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(20L, result.getReturnValue().asLong());
@@ -399,10 +405,12 @@ class BytecodeEngineIntegrationTest {
     }
 
     @Nested
-    class TypeConversionTests {
+    class TypeConversionTests
+    {
 
         @Test
-        void testI2L() throws IOException {
+        void testI2L() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("intToLong", "(I)J")
                     .iload(0)
@@ -414,15 +422,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"intToLong");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(42));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(42));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(42L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testI2F() throws IOException {
+        void testI2F() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("intToFloat", "(I)F")
                     .iload(0)
@@ -434,15 +442,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"intToFloat");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(10.0f, result.getReturnValue().asFloat(), 0.001f);
         }
 
         @Test
-        void testI2D() throws IOException {
+        void testI2D() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("intToDouble", "(I)D")
                     .iload(0)
@@ -454,15 +462,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"intToDouble");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(25));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(25));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(25.0, result.getReturnValue().asDouble(), 0.001);
         }
 
         @Test
-        void testL2I() throws IOException {
+        void testL2I() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("longToInt", "(J)I")
                     .lload(0)
@@ -474,8 +482,7 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"longToInt");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.longValue(100L));
+            BytecodeResult result = engine.execute(method, ConcreteValue.longValue(100L));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(100, result.getReturnValue().asInt());
@@ -483,10 +490,12 @@ class BytecodeEngineIntegrationTest {
     }
 
     @Nested
-    class ComparisonTests {
+    class ComparisonTests
+    {
 
         @Test
-        void testLCmp_Equal() throws IOException {
+        void testLCmp_Equal() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareLongs", "(JJ)I")
                     .lload(0)
@@ -508,7 +517,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testLCmp_LessThan() throws IOException {
+        void testLCmp_LessThan() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareLongs", "(JJ)I")
                     .lload(0)
@@ -521,16 +531,15 @@ class BytecodeEngineIntegrationTest {
             MethodEntry method = findMethod(cf,"compareLongs");
             BytecodeEngine engine = new BytecodeEngine(context);
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.longValue(50L),
-                ConcreteValue.longValue(100L));
+            BytecodeResult result = engine.execute(method, ConcreteValue.longValue(50L), ConcreteValue.longValue(100L));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(-1, result.getReturnValue().asInt());
         }
 
         @Test
-        void testLCmp_GreaterThan() throws IOException {
+        void testLCmp_GreaterThan() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareLongs", "(JJ)I")
                     .lload(0)
@@ -552,7 +561,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testFCmpl() throws IOException {
+        void testFCmpl() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareFloatsL", "(FF)I")
                     .fload(0)
@@ -574,7 +584,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testFCmpg() throws IOException {
+        void testFCmpg() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareFloatsG", "(FF)I")
                     .fload(0)
@@ -596,7 +607,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testDCmpl() throws IOException {
+        void testDCmpl() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareDoublesL", "(DD)I")
                     .dload(0)
@@ -618,7 +630,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testDCmpg() throws IOException {
+        void testDCmpg() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("compareDoublesG", "(DD)I")
                     .dload(0)
@@ -641,10 +654,12 @@ class BytecodeEngineIntegrationTest {
     }
 
     @Nested
-    class EngineFeatureTests {
+    class EngineFeatureTests
+    {
 
         @Test
-        void testInstructionLimitReached() throws IOException {
+        void testInstructionLimitReached() throws IOException
+        {
             BytecodeContext limitedContext = new BytecodeContext.Builder()
                 .heapManager(new SimpleHeapManager())
                 .classResolver(new ClassResolver(new ClassPool()))
@@ -674,7 +689,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testInstructionCountTracking() throws IOException {
+        void testInstructionCountTracking() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("simpleAdd", "()I")
                     .iconst(10)
@@ -694,7 +710,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testExecutionTimeTracking() throws IOException {
+        void testExecutionTimeTracking() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("doWork", "()I")
                     .iconst(1)
@@ -713,7 +730,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testMultipleExecutionsOnSameEngine() throws IOException {
+        void testMultipleExecutionsOnSameEngine() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getValue", "()I")
                     .iconst(42)
@@ -737,7 +755,8 @@ class BytecodeEngineIntegrationTest {
         }
 
         @Test
-        void testComplexExpression() throws IOException {
+        void testComplexExpression() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("calculate", "(III)I")
                     .iload(0)

@@ -11,28 +11,33 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Stress tests for dominator tree to find edge cases and bugs.
+ * * Stress tests for dominator tree to find edge cases and bugs.
  */
-class DominatorTreeStressTest {
+class DominatorTreeStressTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
     }
 
     @Test
-    void deepChainDominators() {
+    void deepChainDominators()
+    {
         IRMethod method = new IRMethod("test", "deepChain", "()V", true);
         int chainLength = 50;
 
         IRBlock[] blocks = new IRBlock[chainLength];
-        for (int i = 0; i < chainLength; i++) {
+        for (int i = 0; i < chainLength; i++)
+        {
             blocks[i] = new IRBlock("B" + i);
             method.addBlock(blocks[i]);
         }
         method.setEntryBlock(blocks[0]);
 
-        for (int i = 0; i < chainLength - 1; i++) {
+        for (int i = 0; i < chainLength - 1; i++)
+        {
             blocks[i].addSuccessor(blocks[i + 1]);
         }
         blocks[chainLength - 1].addInstruction(new ReturnInstruction());
@@ -40,8 +45,8 @@ class DominatorTreeStressTest {
         DominatorTree tree = new DominatorTree(method);
         tree.compute();
 
-        // Verify dominator chain
-        for (int i = 1; i < chainLength; i++) {
+        for (int i = 1; i < chainLength; i++)
+        {
             IRBlock idom = tree.getImmediateDominator(blocks[i]);
             assertEquals(blocks[i - 1], idom, "Block " + i + " should have " + (i - 1) + " as idom");
 
@@ -54,7 +59,8 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void wideTreeDominators() {
+    void wideTreeDominators()
+    {
         IRMethod method = new IRMethod("test", "wideTree", "()V", true);
         int fanOut = 20;
 
@@ -63,7 +69,8 @@ class DominatorTreeStressTest {
         method.setEntryBlock(entry);
 
         IRBlock[] children = new IRBlock[fanOut];
-        for (int i = 0; i < fanOut; i++) {
+        for (int i = 0; i < fanOut; i++)
+        {
             children[i] = new IRBlock("child" + i);
             method.addBlock(children[i]);
             entry.addSuccessor(children[i]);
@@ -74,13 +81,16 @@ class DominatorTreeStressTest {
         tree.compute();
 
         // All children should have entry as idom
-        for (int i = 0; i < fanOut; i++) {
+        for (int i = 0; i < fanOut; i++)
+        {
             assertEquals(entry, tree.getImmediateDominator(children[i]));
             assertTrue(tree.dominates(entry, children[i]));
 
             // Children don't dominate each other
-            for (int j = 0; j < fanOut; j++) {
-                if (i != j) {
+            for (int j = 0; j < fanOut; j++)
+            {
+                if (i != j)
+                {
                     assertFalse(tree.strictlyDominates(children[i], children[j]));
                 }
             }
@@ -88,7 +98,8 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void manyMergePointsDominators() {
+    void manyMergePointsDominators()
+    {
         // Create a CFG with many merge points
         IRMethod method = new IRMethod("test", "manyMerges", "()V", true);
 
@@ -100,11 +111,12 @@ class DominatorTreeStressTest {
         List<IRBlock> currentLevel = new ArrayList<>();
         currentLevel.add(entry);
 
-        for (int level = 0; level < levels; level++) {
+        for (int level = 0; level < levels; level++)
+        {
             List<IRBlock> nextLevel = new ArrayList<>();
 
-            // Create branching
-            for (IRBlock block : currentLevel) {
+            for (IRBlock block : currentLevel)
+            {
                 IRBlock left = new IRBlock("L" + level + "_" + nextLevel.size());
                 IRBlock right = new IRBlock("R" + level + "_" + nextLevel.size());
                 method.addBlock(left);
@@ -115,19 +127,23 @@ class DominatorTreeStressTest {
                 nextLevel.add(right);
             }
 
-            // Create merge
-            if (level < levels - 1) {
+            if (level < levels - 1)
+            {
                 IRBlock merge = new IRBlock("merge" + level);
                 method.addBlock(merge);
-                for (IRBlock block : nextLevel) {
+                for (IRBlock block : nextLevel)
+                {
                     block.addSuccessor(merge);
                 }
                 currentLevel = new ArrayList<>();
                 currentLevel.add(merge);
-            } else {
+            }
+            else
+            {
                 IRBlock exit = new IRBlock("exit");
                 method.addBlock(exit);
-                for (IRBlock block : nextLevel) {
+                for (IRBlock block : nextLevel)
+                {
                     block.addSuccessor(exit);
                 }
                 exit.addInstruction(new ReturnInstruction());
@@ -138,16 +154,17 @@ class DominatorTreeStressTest {
         tree.compute();
 
         // Entry should dominate all blocks
-        for (IRBlock block : method.getBlocks()) {
-            assertTrue(tree.dominates(entry, block),
-                "Entry should dominate " + block.getName());
+        for (IRBlock block : method.getBlocks())
+        {
+            assertTrue(tree.dominates(entry, block), "Entry should dominate " + block.getName());
         }
 
-        // Check for self-domination bugs
         int selfDomCount = 0;
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = tree.getImmediateDominator(block);
-            if (idom == block && block != entry) {
+            if (idom == block && block != entry)
+            {
                 System.out.println("BUG: " + block.getName() + " is its own idom but not entry");
                 selfDomCount++;
             }
@@ -156,7 +173,8 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void nestedLoopsDominators() {
+    void nestedLoopsDominators()
+    {
         IRMethod method = new IRMethod("test", "nestedLoops", "()V", true);
 
         IRBlock entry = new IRBlock("entry");
@@ -182,7 +200,6 @@ class DominatorTreeStressTest {
         method.addBlock(exit);
         method.setEntryBlock(entry);
 
-        // Build nested loop structure
         entry.addSuccessor(outerHeader);
         outerHeader.addSuccessor(outerCond);
         outerCond.addSuccessor(innerHeader);  // continue outer
@@ -202,14 +219,13 @@ class DominatorTreeStressTest {
         DominatorTree tree = new DominatorTree(method);
         tree.compute();
 
-        // Verify dominator relationships
         assertEquals(entry, tree.getImmediateDominator(outerHeader));
         assertEquals(outerHeader, tree.getImmediateDominator(outerCond));
         assertEquals(outerCond, tree.getImmediateDominator(innerHeader));
 
-        // Print structure for debugging
         System.out.println("=== Nested Loops Dominator Structure ===");
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = tree.getImmediateDominator(block);
             System.out.println(block.getName() + " -> idom: " +
                 (idom != null ? idom.getName() : "null") +
@@ -218,7 +234,8 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void irreducibleLoopDominators() {
+    void irreducibleLoopDominators()
+    {
         // Create irreducible control flow (two entry points to loop)
         IRMethod method = new IRMethod("test", "irreducible", "()V", true);
 
@@ -235,7 +252,6 @@ class DominatorTreeStressTest {
         method.addBlock(exit);
         method.setEntryBlock(entry);
 
-        // Create irreducible CFG
         entry.addSuccessor(cond);
         cond.addSuccessor(loopA);
         cond.addSuccessor(loopB);
@@ -249,7 +265,8 @@ class DominatorTreeStressTest {
         tree.compute();
 
         System.out.println("=== Irreducible Loop Dominator Structure ===");
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = tree.getImmediateDominator(block);
             System.out.println(block.getName() + " -> idom: " +
                 (idom != null ? idom.getName() : "null") +
@@ -266,7 +283,8 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void disconnectedSubgraph() {
+    void disconnectedSubgraph()
+    {
         // Create a graph with a disconnected component
         IRMethod method = new IRMethod("test", "disconnected", "()V", true);
 
@@ -292,10 +310,10 @@ class DominatorTreeStressTest {
         tree.compute();
 
         System.out.println("=== Disconnected Subgraph ===");
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = tree.getImmediateDominator(block);
-            System.out.println(block.getName() + " -> idom: " +
-                (idom != null ? idom.getName() : "null"));
+            System.out.println(block.getName() + " -> idom: " + (idom != null ? idom.getName() : "null"));
         }
 
         // Reachable blocks should have proper idoms
@@ -308,30 +326,33 @@ class DominatorTreeStressTest {
     }
 
     @Test
-    void postorderConsistencyStress() {
+    void postorderConsistencyStress()
+    {
         // Create complex CFG and verify postorder maps are consistent
         IRMethod method = new IRMethod("test", "postorderStress", "()V", true);
 
-        // Create random-ish but deterministic CFG
         Random rand = new Random(42);
         int numBlocks = 30;
 
         IRBlock[] blocks = new IRBlock[numBlocks];
-        for (int i = 0; i < numBlocks; i++) {
+        for (int i = 0; i < numBlocks; i++)
+        {
             blocks[i] = new IRBlock("B" + i);
             method.addBlock(blocks[i]);
         }
         method.setEntryBlock(blocks[0]);
 
-        // Create edges ensuring connectivity from entry
-        for (int i = 0; i < numBlocks - 1; i++) {
+        for (int i = 0; i < numBlocks - 1; i++)
+        {
             // Primary path ensuring connectivity
             blocks[i].addSuccessor(blocks[i + 1]);
 
             // Some random extra edges
-            if (rand.nextDouble() < 0.3) {
+            if (rand.nextDouble() < 0.3)
+            {
                 int target = rand.nextInt(numBlocks);
-                if (target != i) {
+                if (target != i)
+                {
                     blocks[i].addSuccessor(blocks[target]);
                 }
             }
@@ -344,23 +365,27 @@ class DominatorTreeStressTest {
         // Verify all reachable blocks have postorder entries
         Map<IRBlock, Integer> postorder = tree.getPostorder();
         int missingPostorder = 0;
-        for (IRBlock block : method.getBlocks()) {
-            if (!postorder.containsKey(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (!postorder.containsKey(block))
+            {
                 System.out.println("Missing postorder: " + block.getName());
                 missingPostorder++;
             }
         }
 
-        // Verify dominator chain integrity
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRBlock idom = tree.getImmediateDominator(block);
             if (idom == null) continue;
 
             // Walk chain - should eventually reach entry without cycle
             Set<IRBlock> visited = new HashSet<>();
             IRBlock runner = block;
-            while (runner != null) {
-                if (visited.contains(runner)) {
+            while (runner != null)
+            {
+                if (visited.contains(runner))
+                {
                     fail("Cycle detected in dominator chain for " + block.getName());
                 }
                 visited.add(runner);

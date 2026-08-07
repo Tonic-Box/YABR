@@ -14,14 +14,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for CommonSubexpressionElimination transform.
  * Verifies elimination of repeated binary operations with same operands.
  */
-class CommonSubexpressionEliminationTest {
+class CommonSubexpressionEliminationTest
+{
 
     private IRMethod method;
     private IRBlock block;
     private CommonSubexpressionElimination transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -34,12 +36,14 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void getNameReturnsCorrectName() {
+    void getNameReturnsCorrectName()
+    {
         assertEquals("CommonSubexpressionElimination", transform.getName());
     }
 
     @Test
-    void eliminatesRepeatedBinaryOperation() {
+    void eliminatesRepeatedBinaryOperation()
+    {
         // Create:
         // result1 = x + y
         // result2 = x + y  (duplicate)
@@ -57,7 +61,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void eliminatesMultiplicationWithSameOperands() {
+    void eliminatesMultiplicationWithSameOperands()
+    {
         // Create:
         // result1 = a * b
         // result2 = a * b  (duplicate)
@@ -75,7 +80,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void doesNotEliminateOperationsWithDifferentLeftOperand() {
+    void doesNotEliminateOperationsWithDifferentLeftOperand()
+    {
         // Create:
         // result1 = x + y
         // result2 = z + y  (different left operand)
@@ -94,7 +100,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void doesNotEliminateOperationsWithDifferentRightOperand() {
+    void doesNotEliminateOperationsWithDifferentRightOperand()
+    {
         // Create:
         // result1 = x + y
         // result2 = x + z  (different right operand)
@@ -113,7 +120,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void doesNotEliminateOperationsWithDifferentOperator() {
+    void doesNotEliminateOperationsWithDifferentOperator()
+    {
         // Create:
         // result1 = x + y
         // result2 = x - y  (different operator)
@@ -131,8 +139,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void returnsFalseWhenNoCommonSubexpressions() {
-        // Create unique operations
+    void returnsFalseWhenNoCommonSubexpressions()
+    {
         SSAValue x = new SSAValue(PrimitiveType.INT);
         SSAValue y = new SSAValue(PrimitiveType.INT);
         SSAValue z = new SSAValue(PrimitiveType.INT);
@@ -148,14 +156,16 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void returnsFalseOnEmptyMethod() {
+    void returnsFalseOnEmptyMethod()
+    {
         boolean changed = transform.run(method);
 
         assertFalse(changed, "Transform should return false on empty method");
     }
 
     @Test
-    void eliminatesWithConstantOperands() {
+    void eliminatesWithConstantOperands()
+    {
         // Create:
         // result1 = x + 5
         // result2 = x + 5  (duplicate with constant)
@@ -172,7 +182,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void eliminatesMultipleCommonSubexpressions() {
+    void eliminatesMultipleCommonSubexpressions()
+    {
         // Create:
         // result1 = x + y
         // result2 = x + y  (duplicate)
@@ -198,7 +209,8 @@ class CommonSubexpressionEliminationTest {
     }
 
     @Test
-    void returnsFalseWithOnlyNonBinaryInstructions() {
+    void returnsFalseWithOnlyNonBinaryInstructions()
+    {
         // Add a constant instruction (not a binary operation)
         SSAValue result = new SSAValue(PrimitiveType.INT);
         block.addInstruction(new ConstantInstruction(result, IntConstant.of(42)));

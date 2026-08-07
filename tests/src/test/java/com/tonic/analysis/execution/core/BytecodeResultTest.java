@@ -9,10 +9,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BytecodeResultTest {
+class BytecodeResultTest
+{
 
     @Test
-    void testCompletedWithValue() {
+    void testCompletedWithValue()
+    {
         ConcreteValue value = ConcreteValue.intValue(42);
         BytecodeResult result = BytecodeResult.completed(value);
 
@@ -27,7 +29,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testCompletedWithNull() {
+    void testCompletedWithNull()
+    {
         BytecodeResult result = BytecodeResult.completed(null);
 
         assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
@@ -36,7 +39,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testException() {
+    void testException()
+    {
         ObjectInstance ex = new ObjectInstance(1, "java/lang/Exception");
         List<String> trace = Arrays.asList("line1", "line2", "line3");
 
@@ -52,14 +56,14 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testExceptionRequiresNonNull() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            BytecodeResult.exception(null, null);
-        });
+    void testExceptionRequiresNonNull()
+    {
+        assertThrows(IllegalArgumentException.class, () -> BytecodeResult.exception(null, null));
     }
 
     @Test
-    void testExceptionWithNullTrace() {
+    void testExceptionWithNullTrace()
+    {
         ObjectInstance ex = new ObjectInstance(1, "java/lang/Exception");
         BytecodeResult result = BytecodeResult.exception(ex, null);
 
@@ -67,7 +71,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testInterrupted() {
+    void testInterrupted()
+    {
         BytecodeResult result = BytecodeResult.interrupted();
 
         assertEquals(BytecodeResult.Status.INTERRUPTED, result.getStatus());
@@ -78,7 +83,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testInstructionLimit() {
+    void testInstructionLimit()
+    {
         BytecodeResult result = BytecodeResult.instructionLimit(1000000);
 
         assertEquals(BytecodeResult.Status.INSTRUCTION_LIMIT, result.getStatus());
@@ -87,7 +93,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testDepthLimit() {
+    void testDepthLimit()
+    {
         BytecodeResult result = BytecodeResult.depthLimit(500);
 
         assertEquals(BytecodeResult.Status.DEPTH_LIMIT, result.getStatus());
@@ -97,7 +104,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testWithStatistics() {
+    void testWithStatistics()
+    {
         ConcreteValue value = ConcreteValue.intValue(10);
         BytecodeResult original = BytecodeResult.completed(value);
 
@@ -110,7 +118,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testWithStatisticsPreservesStatus() {
+    void testWithStatisticsPreservesStatus()
+    {
         BytecodeResult interrupted = BytecodeResult.interrupted();
         BytecodeResult withStats = interrupted.withStatistics(100, 200);
 
@@ -120,19 +129,19 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testStackTraceIsImmutable() {
+    void testStackTraceIsImmutable()
+    {
         List<String> trace = Arrays.asList("line1", "line2");
         ObjectInstance ex = new ObjectInstance(1, "java/lang/Exception");
         BytecodeResult result = BytecodeResult.exception(ex, trace);
 
         List<String> retrievedTrace = result.getStackTrace();
-        assertThrows(UnsupportedOperationException.class, () -> {
-            retrievedTrace.add("line3");
-        });
+        assertThrows(UnsupportedOperationException.class, () -> retrievedTrace.add("line3"));
     }
 
     @Test
-    void testStackTraceModificationDoesNotAffectResult() {
+    void testStackTraceModificationDoesNotAffectResult()
+    {
         List<String> trace = new java.util.ArrayList<>(Arrays.asList("line1", "line2"));
         ObjectInstance ex = new ObjectInstance(1, "java/lang/Exception");
         BytecodeResult result = BytecodeResult.exception(ex, trace);
@@ -143,7 +152,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testToStringForCompleted() {
+    void testToStringForCompleted()
+    {
         ConcreteValue value = ConcreteValue.intValue(42);
         BytecodeResult result = BytecodeResult.completed(value);
 
@@ -153,7 +163,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testToStringForException() {
+    void testToStringForException()
+    {
         ObjectInstance ex = new ObjectInstance(1, "java/lang/Exception");
         BytecodeResult result = BytecodeResult.exception(ex, null);
 
@@ -163,7 +174,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testToStringWithStatistics() {
+    void testToStringWithStatistics()
+    {
         BytecodeResult result = BytecodeResult.completed(null)
             .withStatistics(1000, 5000000);
 
@@ -173,7 +185,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testIsSuccessForAllStatuses() {
+    void testIsSuccessForAllStatuses()
+    {
         assertTrue(BytecodeResult.completed(null).isSuccess());
         assertFalse(BytecodeResult.exception(new ObjectInstance(1, "E"), null).isSuccess());
         assertFalse(BytecodeResult.interrupted().isSuccess());
@@ -182,7 +195,8 @@ class BytecodeResultTest {
     }
 
     @Test
-    void testHasExceptionForAllStatuses() {
+    void testHasExceptionForAllStatuses()
+    {
         assertFalse(BytecodeResult.completed(null).hasException());
         assertTrue(BytecodeResult.exception(new ObjectInstance(1, "E"), null).hasException());
         assertFalse(BytecodeResult.interrupted().hasException());

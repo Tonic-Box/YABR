@@ -9,7 +9,8 @@ import java.util.Objects;
 /**
  * Represents an array type in the source AST.
  */
-public final class ArraySourceType implements SourceType {
+public final class ArraySourceType implements SourceType
+{
 
     /**
      * The component type of this array.
@@ -21,32 +22,60 @@ public final class ArraySourceType implements SourceType {
      */
     private final int dimensions;
 
-    public ArraySourceType(SourceType componentType) {
+    /**
+     * Creates a one-dimensional array type.
+     *
+     * @param componentType the component type
+     * @throws NullPointerException if the component type is null
+     */
+    public ArraySourceType(SourceType componentType)
+    {
         this(componentType, 1);
     }
 
-    public ArraySourceType(SourceType componentType, int dimensions) {
+    /**
+     * Creates an array type with an explicit dimension count.
+     *
+     * @param componentType the component type
+     * @param dimensions the number of dimensions, at least 1
+     * @throws NullPointerException if the component type is null
+     * @throws IllegalArgumentException if the dimension count is below 1
+     */
+    public ArraySourceType(SourceType componentType, int dimensions)
+    {
         this.componentType = Objects.requireNonNull(componentType);
-        if (dimensions < 1) {
+        if (dimensions < 1)
+        {
             throw new IllegalArgumentException("Array dimensions must be at least 1");
         }
         this.dimensions = dimensions;
     }
 
-    public SourceType getComponentType() {
+    /**
+     * @return the component type
+     */
+    public SourceType getComponentType()
+    {
         return componentType;
     }
 
-    public int getDimensions() {
+    /**
+     * @return the dimensions
+     */
+    public int getDimensions()
+    {
         return dimensions;
     }
 
     /**
-     * Gets the element type (base type for multi-dimensional arrays).
-     * For int[][], this returns int.
+     * Descends through nested array component types to the non-array base.
+     *
+     * @return the element type, so int for int[][]
      */
-    public SourceType getElementType() {
-        if (componentType instanceof ArraySourceType) {
+    public SourceType getElementType()
+    {
+        if (componentType instanceof ArraySourceType)
+        {
             ArraySourceType arr = (ArraySourceType) componentType;
             return arr.getElementType();
         }
@@ -54,23 +83,31 @@ public final class ArraySourceType implements SourceType {
     }
 
     /**
-     * Creates an array type with one additional dimension.
+     * Creates an array type over the same component with one additional dimension.
+     *
+     * @return the widened array type
      */
-    public ArraySourceType addDimension() {
+    public ArraySourceType addDimension()
+    {
         return new ArraySourceType(componentType, dimensions + 1);
     }
 
     @Override
-    public String toJavaSource() {
+    public String toJavaSource()
+    {
         return getElementType().toJavaSource() +
                 "[]".repeat(Math.max(0, getTotalDimensions()));
     }
 
     /**
-     * Gets the total number of dimensions for multi-dimensional arrays.
+     * Sums this type's dimension count with those of any nested array component types.
+     *
+     * @return the total dimension count
      */
-    public int getTotalDimensions() {
-        if (componentType instanceof ArraySourceType) {
+    public int getTotalDimensions()
+    {
+        if (componentType instanceof ArraySourceType)
+        {
             ArraySourceType arr = (ArraySourceType) componentType;
             return dimensions + arr.getTotalDimensions();
         }
@@ -78,22 +115,26 @@ public final class ArraySourceType implements SourceType {
     }
 
     @Override
-    public IRType toIRType() {
+    public IRType toIRType()
+    {
         return new ArrayType(componentType.toIRType(), dimensions);
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitArrayType(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return toJavaSource();
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(Object obj)
+    {
         if (this == obj) return true;
         if (!(obj instanceof ArraySourceType)) return false;
         ArraySourceType other = (ArraySourceType) obj;
@@ -102,7 +143,8 @@ public final class ArraySourceType implements SourceType {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(componentType, dimensions);
     }
 }

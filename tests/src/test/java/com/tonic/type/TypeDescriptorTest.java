@@ -5,13 +5,16 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TypeDescriptorTest {
+class TypeDescriptorTest
+{
 
     @Nested
-    class ParsePrimitiveTypes {
+    class ParsePrimitiveTypes
+    {
 
         @Test
-        void parseIntDescriptor() {
+        void parseIntDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("I");
             assertEquals(TypeDescriptor.INT, td.getSort());
             assertTrue(td.isPrimitive());
@@ -21,7 +24,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseLongDescriptor() {
+        void parseLongDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("J");
             assertEquals(TypeDescriptor.LONG, td.getSort());
             assertTrue(td.isPrimitive());
@@ -29,59 +33,68 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseDoubleDescriptor() {
+        void parseDoubleDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("D");
             assertEquals(TypeDescriptor.DOUBLE, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseFloatDescriptor() {
+        void parseFloatDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("F");
             assertEquals(TypeDescriptor.FLOAT, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseBooleanDescriptor() {
+        void parseBooleanDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("Z");
             assertEquals(TypeDescriptor.BOOLEAN, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseByteDescriptor() {
+        void parseByteDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("B");
             assertEquals(TypeDescriptor.BYTE, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseCharDescriptor() {
+        void parseCharDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("C");
             assertEquals(TypeDescriptor.CHAR, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseShortDescriptor() {
+        void parseShortDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("S");
             assertEquals(TypeDescriptor.SHORT, td.getSort());
             assertTrue(td.isPrimitive());
         }
 
         @Test
-        void parseVoidDescriptor() {
+        void parseVoidDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("V");
             assertEquals(TypeDescriptor.VOID, td.getSort());
         }
     }
 
     @Nested
-    class ParseObjectType {
+    class ParseObjectType
+    {
 
         @Test
-        void parseStringDescriptor() {
+        void parseStringDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("Ljava/lang/String;");
             assertEquals(TypeDescriptor.OBJECT, td.getSort());
             assertTrue(td.isObject());
@@ -91,7 +104,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseObjectDescriptor() {
+        void parseObjectDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("Ljava/lang/Object;");
             assertEquals(TypeDescriptor.OBJECT, td.getSort());
             assertEquals("java/lang/Object", td.getInternalName());
@@ -99,10 +113,12 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ParseArrayType {
+    class ParseArrayType
+    {
 
         @Test
-        void parseIntArrayDescriptor() {
+        void parseIntArrayDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[I");
             assertEquals(TypeDescriptor.ARRAY, td.getSort());
             assertTrue(td.isArray());
@@ -111,7 +127,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseObjectArrayDescriptor() {
+        void parseObjectArrayDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[Ljava/lang/Object;");
             assertEquals(TypeDescriptor.ARRAY, td.getSort());
             assertEquals(1, td.getDimensions());
@@ -119,7 +136,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseMultiDimensionalArray() {
+        void parseMultiDimensionalArray()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[[Ljava/lang/Object;");
             assertEquals(TypeDescriptor.ARRAY, td.getSort());
             assertEquals(2, td.getDimensions());
@@ -127,10 +145,12 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ParseMethodDescriptor {
+    class ParseMethodDescriptor
+    {
 
         @Test
-        void parseSimpleMethodDescriptor() {
+        void parseSimpleMethodDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("(ILjava/lang/String;)V");
             assertEquals(TypeDescriptor.METHOD, td.getSort());
             assertTrue(td.isMethod());
@@ -145,7 +165,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void parseNoArgMethodDescriptor() {
+        void parseNoArgMethodDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()I");
             assertEquals(TypeDescriptor.METHOD, td.getSort());
             assertEquals(TypeDescriptor.INT, td.getReturnType().getSort());
@@ -154,10 +175,12 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ForClassMethod {
+    class ForClassMethod
+    {
 
         @Test
-        void forClassCreatesObjectDescriptor() {
+        void forClassCreatesObjectDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.forClass("java/lang/String");
             assertEquals(TypeDescriptor.OBJECT, td.getSort());
             assertEquals("java/lang/String", td.getInternalName());
@@ -166,17 +189,20 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ForArrayMethod {
+    class ForArrayMethod
+    {
 
         @Test
-        void forArrayCreatesArrayDescriptor() {
+        void forArrayCreatesArrayDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.forArray(TypeDescriptor.INT_TYPE, 1);
             assertEquals(TypeDescriptor.ARRAY, td.getSort());
             assertEquals("[I", td.getDescriptor());
         }
 
         @Test
-        void forArrayCreatesMultiDimensionalDescriptor() {
+        void forArrayCreatesMultiDimensionalDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.forArray(TypeDescriptor.DOUBLE_TYPE, 3);
             assertEquals(TypeDescriptor.ARRAY, td.getSort());
             assertEquals("[[[D", td.getDescriptor());
@@ -184,10 +210,12 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ForMethodMethod {
+    class ForMethodMethod
+    {
 
         @Test
-        void forMethodCreatesMethodDescriptor() {
+        void forMethodCreatesMethodDescriptor()
+        {
             TypeDescriptor td = TypeDescriptor.forMethod(
                 TypeDescriptor.VOID_TYPE,
                 TypeDescriptor.INT_TYPE,
@@ -199,32 +227,38 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class GetSize {
+    class GetSize
+    {
 
         @Test
-        void wideTypesReturnTwo() {
+        void wideTypesReturnTwo()
+        {
             assertEquals(2, TypeDescriptor.LONG_TYPE.getSize());
             assertEquals(2, TypeDescriptor.DOUBLE_TYPE.getSize());
         }
 
         @Test
-        void narrowTypesReturnOne() {
+        void narrowTypesReturnOne()
+        {
             assertEquals(1, TypeDescriptor.INT_TYPE.getSize());
             assertEquals(1, TypeDescriptor.FLOAT_TYPE.getSize());
             assertEquals(1, TypeDescriptor.forClass("java/lang/Object").getSize());
         }
 
         @Test
-        void voidReturnsZero() {
+        void voidReturnsZero()
+        {
             assertEquals(0, TypeDescriptor.VOID_TYPE.getSize());
         }
     }
 
     @Nested
-    class GetOpcodes {
+    class GetOpcodes
+    {
 
         @Test
-        void getLoadOpcode() {
+        void getLoadOpcode()
+        {
             assertEquals(AccessFlags.ILOAD, TypeDescriptor.INT_TYPE.getLoadOpcode());
             assertEquals(AccessFlags.LLOAD, TypeDescriptor.LONG_TYPE.getLoadOpcode());
             assertEquals(AccessFlags.FLOAD, TypeDescriptor.FLOAT_TYPE.getLoadOpcode());
@@ -233,7 +267,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getStoreOpcode() {
+        void getStoreOpcode()
+        {
             assertEquals(AccessFlags.ISTORE, TypeDescriptor.INT_TYPE.getStoreOpcode());
             assertEquals(AccessFlags.LSTORE, TypeDescriptor.LONG_TYPE.getStoreOpcode());
             assertEquals(AccessFlags.FSTORE, TypeDescriptor.FLOAT_TYPE.getStoreOpcode());
@@ -242,7 +277,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getReturnOpcode() {
+        void getReturnOpcode()
+        {
             assertEquals(AccessFlags.IRETURN, TypeDescriptor.INT_TYPE.getReturnOpcode());
             assertEquals(AccessFlags.LRETURN, TypeDescriptor.LONG_TYPE.getReturnOpcode());
             assertEquals(AccessFlags.FRETURN, TypeDescriptor.FLOAT_TYPE.getReturnOpcode());
@@ -253,26 +289,31 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class GetArgumentsSize {
+    class GetArgumentsSize
+    {
 
         @Test
-        void argumentsSizeCountsSlots() {
+        void argumentsSizeCountsSlots()
+        {
             TypeDescriptor td = TypeDescriptor.parse("(IJD)V");
             assertEquals(5, td.getArgumentsSize());
         }
 
         @Test
-        void noArgsReturnsZero() {
+        void noArgsReturnsZero()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()V");
             assertEquals(0, td.getArgumentsSize());
         }
     }
 
     @Nested
-    class PrimitiveTypeInstances {
+    class PrimitiveTypeInstances
+    {
 
         @Test
-        void primitiveTypesAreCached() {
+        void primitiveTypesAreCached()
+        {
             assertSame(TypeDescriptor.INT_TYPE, TypeDescriptor.parse("I"));
             assertSame(TypeDescriptor.LONG_TYPE, TypeDescriptor.parse("J"));
             assertSame(TypeDescriptor.DOUBLE_TYPE, TypeDescriptor.parse("D"));
@@ -286,105 +327,104 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class ParseErrorCases {
+    class ParseErrorCases
+    {
 
         @Test
-        void parseNullThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse(null);
-            });
+        void parseNullThrowsException()
+        {
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse(null));
         }
 
         @Test
-        void parseEmptyStringThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("");
-            });
+        void parseEmptyStringThrowsException()
+        {
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse(""));
         }
 
         @Test
-        void parseInvalidDescriptorThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("X");
-            });
+        void parseInvalidDescriptorThrowsException()
+        {
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse("X"));
         }
 
         @Test
-        void parseInvalidCharacterThrowsException() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("@");
-            });
+        void parseInvalidCharacterThrowsException()
+        {
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse("@"));
         }
     }
 
     @Nested
-    class GetOpcodeErrorCases {
+    class GetOpcodeErrorCases
+    {
 
         @Test
-        void getLoadOpcodeForMethodThrowsException() {
+        void getLoadOpcodeForMethodThrowsException()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getLoadOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getLoadOpcode);
         }
 
         @Test
-        void getLoadOpcodeForVoidThrowsException() {
-            assertThrows(IllegalStateException.class, () -> {
-                TypeDescriptor.VOID_TYPE.getLoadOpcode();
-            });
+        void getLoadOpcodeForVoidThrowsException()
+        {
+            assertThrows(IllegalStateException.class, TypeDescriptor.VOID_TYPE::getLoadOpcode);
         }
 
         @Test
-        void getStoreOpcodeForMethodThrowsException() {
+        void getStoreOpcodeForMethodThrowsException()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getStoreOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getStoreOpcode);
         }
 
         @Test
-        void getStoreOpcodeForVoidThrowsException() {
-            assertThrows(IllegalStateException.class, () -> {
-                TypeDescriptor.VOID_TYPE.getStoreOpcode();
-            });
+        void getStoreOpcodeForVoidThrowsException()
+        {
+            assertThrows(IllegalStateException.class, TypeDescriptor.VOID_TYPE::getStoreOpcode);
         }
 
         @Test
-        void getReturnOpcodeForMethodThrowsException() {
+        void getReturnOpcodeForMethodThrowsException()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getReturnOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getReturnOpcode);
         }
     }
 
     @Nested
-    class GetInternalNameTests {
+    class GetInternalNameTests
+    {
 
         @Test
-        void getInternalNameForArrayOfPrimitives() {
+        void getInternalNameForArrayOfPrimitives()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[I");
             assertNull(td.getInternalName());
         }
 
         @Test
-        void getInternalNameForArrayOfObjects() {
+        void getInternalNameForArrayOfObjects()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[Ljava/lang/String;");
             assertEquals("java/lang/String", td.getInternalName());
         }
 
         @Test
-        void getInternalNameForPrimitiveReturnsNull() {
+        void getInternalNameForPrimitiveReturnsNull()
+        {
             assertNull(TypeDescriptor.INT_TYPE.getInternalName());
         }
     }
 
     @Nested
-    class GetElementTypeTests {
+    class GetElementTypeTests
+    {
 
         @Test
-        void getElementTypeForMultiDimensionalArray() {
+        void getElementTypeForMultiDimensionalArray()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[[[I");
             TypeDescriptor elem = td.getElementType();
             assertNotNull(elem);
@@ -393,16 +433,19 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getElementTypeForNonArrayReturnsNull() {
+        void getElementTypeForNonArrayReturnsNull()
+        {
             assertNull(TypeDescriptor.INT_TYPE.getElementType());
         }
     }
 
     @Nested
-    class GetSizeTests {
+    class GetSizeTests
+    {
 
         @Test
-        void getSizeForAllPrimitiveTypes() {
+        void getSizeForAllPrimitiveTypes()
+        {
             assertEquals(1, TypeDescriptor.INT_TYPE.getSize());
             assertEquals(1, TypeDescriptor.FLOAT_TYPE.getSize());
             assertEquals(1, TypeDescriptor.BYTE_TYPE.getSize());
@@ -415,29 +458,34 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getSizeForArrayIsOne() {
+        void getSizeForArrayIsOne()
+        {
             TypeDescriptor td = TypeDescriptor.parse("[I");
             assertEquals(1, td.getSize());
         }
 
         @Test
-        void getSizeForObjectIsOne() {
+        void getSizeForObjectIsOne()
+        {
             TypeDescriptor td = TypeDescriptor.forClass("java/lang/Object");
             assertEquals(1, td.getSize());
         }
 
         @Test
-        void getSizeForMethodIsOne() {
+        void getSizeForMethodIsOne()
+        {
             TypeDescriptor td = TypeDescriptor.parse("()V");
             assertEquals(1, td.getSize());
         }
     }
 
     @Nested
-    class AdditionalOpcodeTests {
+    class AdditionalOpcodeTests
+    {
 
         @Test
-        void getAllLoadOpcodes() {
+        void getAllLoadOpcodes()
+        {
             assertEquals(AccessFlags.ILOAD, TypeDescriptor.BOOLEAN_TYPE.getLoadOpcode());
             assertEquals(AccessFlags.ILOAD, TypeDescriptor.BYTE_TYPE.getLoadOpcode());
             assertEquals(AccessFlags.ILOAD, TypeDescriptor.CHAR_TYPE.getLoadOpcode());
@@ -446,7 +494,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getAllStoreOpcodes() {
+        void getAllStoreOpcodes()
+        {
             assertEquals(AccessFlags.ISTORE, TypeDescriptor.BOOLEAN_TYPE.getStoreOpcode());
             assertEquals(AccessFlags.ISTORE, TypeDescriptor.BYTE_TYPE.getStoreOpcode());
             assertEquals(AccessFlags.ISTORE, TypeDescriptor.CHAR_TYPE.getStoreOpcode());
@@ -455,7 +504,8 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void getAllReturnOpcodes() {
+        void getAllReturnOpcodes()
+        {
             assertEquals(AccessFlags.IRETURN, TypeDescriptor.BOOLEAN_TYPE.getReturnOpcode());
             assertEquals(AccessFlags.IRETURN, TypeDescriptor.BYTE_TYPE.getReturnOpcode());
             assertEquals(AccessFlags.IRETURN, TypeDescriptor.CHAR_TYPE.getReturnOpcode());
@@ -465,10 +515,12 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class EqualsAndHashCodeTests {
+    class EqualsAndHashCodeTests
+    {
 
         @Test
-        void equalDescriptorsAreEqual() {
+        void equalDescriptorsAreEqual()
+        {
             TypeDescriptor td1 = TypeDescriptor.parse("Ljava/lang/String;");
             TypeDescriptor td2 = TypeDescriptor.parse("Ljava/lang/String;");
             assertEquals(td1, td2);
@@ -476,24 +528,28 @@ class TypeDescriptorTest {
         }
 
         @Test
-        void differentDescriptorsAreNotEqual() {
+        void differentDescriptorsAreNotEqual()
+        {
             TypeDescriptor td1 = TypeDescriptor.parse("I");
             TypeDescriptor td2 = TypeDescriptor.parse("J");
             assertNotEquals(td1, td2);
         }
 
         @Test
-        void sameInstanceIsEqual() {
+        void sameInstanceIsEqual()
+        {
             TypeDescriptor td = TypeDescriptor.INT_TYPE;
             assertEquals(td, td);
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringReturnsDescriptor() {
+        void toStringReturnsDescriptor()
+        {
             assertEquals("I", TypeDescriptor.INT_TYPE.toString());
             assertEquals("Ljava/lang/String;", TypeDescriptor.forClass("java/lang/String").toString());
             assertEquals("[I", TypeDescriptor.parse("[I").toString());
@@ -502,16 +558,19 @@ class TypeDescriptorTest {
     }
 
     @Nested
-    class GetClassNameTests {
+    class GetClassNameTests
+    {
 
         @Test
-        void getClassNameConvertsSlashesToDots() {
+        void getClassNameConvertsSlashesToDots()
+        {
             TypeDescriptor td = TypeDescriptor.forClass("java/lang/String");
             assertEquals("java.lang.String", td.getClassName());
         }
 
         @Test
-        void getClassNameForPrimitiveReturnsNull() {
+        void getClassNameForPrimitiveReturnsNull()
+        {
             assertNull(TypeDescriptor.INT_TYPE.getClassName());
         }
     }

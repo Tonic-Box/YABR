@@ -7,18 +7,27 @@ import java.util.*;
 
 import static com.tonic.util.Opcode.*;
 
-public class Level2Features implements FeatureVector {
+/**
+ * Detailed fingerprint features: opcode-category bigrams, CFG edge and terminator histograms, and dominance depth.
+ */
+public class Level2Features implements FeatureVector
+{
     private final Map<String, Integer> opcodeNgramHistogram;
     private final Map<String, Integer> cfgEdgeTypeDistribution;
     private final int dominanceTreeDepth;
     private final Map<String, Integer> terminatorTypeHistogram;
     private final Map<String, Integer> instructionTypeHistogram;
 
-    public Level2Features(Map<String, Integer> opcodeNgrams,
-                          Map<String, Integer> cfgEdgeTypes,
-                          int dominanceDepth,
-                          Map<String, Integer> terminatorTypes,
-                          Map<String, Integer> instructionTypes) {
+    /**
+     * Creates a level-2 feature set, normalizing every histogram to per-mille proportions.
+     * @param opcodeNgrams counts per opcode-category bigram
+     * @param cfgEdgeTypes counts per CFG edge type
+     * @param dominanceDepth the dominance tree depth
+     * @param terminatorTypes counts per block-terminator type
+     * @param instructionTypes counts per instruction category
+     */
+    public Level2Features(Map<String, Integer> opcodeNgrams, Map<String, Integer> cfgEdgeTypes, int dominanceDepth, Map<String, Integer> terminatorTypes, Map<String, Integer> instructionTypes)
+    {
         this.opcodeNgramHistogram = normalize(opcodeNgrams);
         this.cfgEdgeTypeDistribution = normalize(cfgEdgeTypes);
         this.dominanceTreeDepth = dominanceDepth;
@@ -26,22 +35,32 @@ public class Level2Features implements FeatureVector {
         this.instructionTypeHistogram = normalize(instructionTypes);
     }
 
-    private static Map<String, Integer> normalize(Map<String, Integer> histogram) {
-        if (histogram == null || histogram.isEmpty()) {
+    private static Map<String, Integer> normalize(Map<String, Integer> histogram)
+    {
+        if (histogram == null || histogram.isEmpty())
+        {
             return new TreeMap<>();
         }
         int total = histogram.values().stream().mapToInt(Integer::intValue).sum();
-        if (total == 0) {
+        if (total == 0)
+        {
             return new TreeMap<>(histogram);
         }
         Map<String, Integer> normalized = new TreeMap<>();
-        for (Map.Entry<String, Integer> e : histogram.entrySet()) {
+        for (Map.Entry<String, Integer> e : histogram.entrySet())
+        {
             normalized.put(e.getKey(), (e.getValue() * 1000) / total);
         }
         return normalized;
     }
 
-    public static String getOpcodeCategory(int opcode) {
+    /**
+     * Maps an opcode onto a coarse category name such as const, load, math, or invoke.
+     * @param opcode the opcode to classify
+     * @return the category name, "other" if unrecognized
+     */
+    public static String getOpcodeCategory(int opcode)
+    {
         if (opcode >= NOP.getCode() && opcode <= LDC2_W.getCode()) return "const";
         if (opcode >= ILOAD.getCode() && opcode <= SALOAD.getCode()) return "load";
         if (opcode >= ISTORE.getCode() && opcode <= SASTORE.getCode()) return "store";
@@ -57,43 +76,59 @@ public class Level2Features implements FeatureVector {
     }
 
     @Override
-    public byte[] computeHash() {
-        try {
+    public byte[] computeHash()
+    {
+        try
+        {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            for (Map.Entry<String, Integer> e : opcodeNgramHistogram.entrySet()) {
+            for (Map.Entry<String, Integer> e : opcodeNgramHistogram.entrySet())
+            {
                 md.update(e.getKey().getBytes(StandardCharsets.UTF_8));
                 md.update((byte) (e.getValue() >> 8));
                 md.update(e.getValue().byteValue());
             }
-            for (Map.Entry<String, Integer> e : cfgEdgeTypeDistribution.entrySet()) {
+            for (Map.Entry<String, Integer> e : cfgEdgeTypeDistribution.entrySet())
+            {
                 md.update(e.getKey().getBytes(StandardCharsets.UTF_8));
                 md.update((byte) (e.getValue() >> 8));
                 md.update(e.getValue().byteValue());
             }
             md.update((byte) dominanceTreeDepth);
-            for (Map.Entry<String, Integer> e : terminatorTypeHistogram.entrySet()) {
+            for (Map.Entry<String, Integer> e : terminatorTypeHistogram.entrySet())
+            {
                 md.update(e.getKey().getBytes(StandardCharsets.UTF_8));
                 md.update((byte) (e.getValue() >> 8));
                 md.update(e.getValue().byteValue());
             }
-            for (Map.Entry<String, Integer> e : instructionTypeHistogram.entrySet()) {
+            for (Map.Entry<String, Integer> e : instructionTypeHistogram.entrySet())
+            {
                 md.update(e.getKey().getBytes(StandardCharsets.UTF_8));
                 md.update((byte) (e.getValue() >> 8));
                 md.update(e.getValue().byteValue());
             }
             return md.digest();
-        } catch (NoSuchAlgorithmException e) {
+        }
+        catch (NoSuchAlgorithmException e)
+        {
             return new byte[32];
         }
     }
 
     @Override
-    public boolean isValid() {
+    public boolean isValid()
+    {
         return !opcodeNgramHistogram.isEmpty() || !instructionTypeHistogram.isEmpty();
     }
 
-    public double similarity(Level2Features other) {
-        if (other == null) {
+    /**
+     * Scores similarity to another level-2 feature set from histogram overlaps and dominance-depth closeness.
+     * @param other the feature set to compare against
+     * @return a score in [0, 1], 0 if other is null
+     */
+    public double similarity(Level2Features other)
+    {
+        if (other == null)
+        {
             return 0.0;
         }
 
@@ -106,9 +141,12 @@ public class Level2Features implements FeatureVector {
         score += Level1Features.histogramSimilarity(cfgEdgeTypeDistribution, other.cfgEdgeTypeDistribution) * 1.5;
         weight += 1.5;
 
-        if (dominanceTreeDepth == other.dominanceTreeDepth) {
+        if (dominanceTreeDepth == other.dominanceTreeDepth)
+        {
             score += 1.0;
-        } else if (Math.abs(dominanceTreeDepth - other.dominanceTreeDepth) <= 2) {
+        }
+        else if (Math.abs(dominanceTreeDepth - other.dominanceTreeDepth) <= 2)
+        {
             score += 0.5;
         }
         weight += 1.0;
@@ -122,23 +160,43 @@ public class Level2Features implements FeatureVector {
         return score / weight;
     }
 
-    public Map<String, Integer> getOpcodeNgramHistogram() {
+    /**
+     * @return an unmodifiable view of the normalized opcode-category bigram histogram
+     */
+    public Map<String, Integer> getOpcodeNgramHistogram()
+    {
         return Collections.unmodifiableMap(opcodeNgramHistogram);
     }
 
-    public Map<String, Integer> getCfgEdgeTypeDistribution() {
+    /**
+     * @return an unmodifiable view of the normalized CFG edge-type distribution
+     */
+    public Map<String, Integer> getCfgEdgeTypeDistribution()
+    {
         return Collections.unmodifiableMap(cfgEdgeTypeDistribution);
     }
 
-    public int getDominanceTreeDepth() {
+    /**
+     * @return the dominance tree depth
+     */
+    public int getDominanceTreeDepth()
+    {
         return dominanceTreeDepth;
     }
 
-    public Map<String, Integer> getTerminatorTypeHistogram() {
+    /**
+     * @return an unmodifiable view of the normalized terminator-type histogram
+     */
+    public Map<String, Integer> getTerminatorTypeHistogram()
+    {
         return Collections.unmodifiableMap(terminatorTypeHistogram);
     }
 
-    public Map<String, Integer> getInstructionTypeHistogram() {
+    /**
+     * @return an unmodifiable view of the normalized instruction-category histogram
+     */
+    public Map<String, Integer> getInstructionTypeHistogram()
+    {
         return Collections.unmodifiableMap(instructionTypeHistogram);
     }
 }

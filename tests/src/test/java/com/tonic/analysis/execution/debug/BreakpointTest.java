@@ -1,19 +1,17 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class BreakpointTest {
+class BreakpointTest
+{
 
     @Test
-    void testConstructorWithAllParams() {
+    void testConstructorWithAllParams()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
 
         assertEquals("com/test/Foo", bp.getClassName());
@@ -27,7 +25,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testConstructorWithoutLineNumber() {
+    void testConstructorWithoutLineNumber()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
         assertEquals("com/test/Foo", bp.getClassName());
@@ -39,43 +38,44 @@ class BreakpointTest {
     }
 
     @Test
-    void testConstructorNullClassName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint(null, "method", "(II)V", 10));
+    void testConstructorNullClassName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint(null, "method", "(II)V", 10));
     }
 
     @Test
-    void testConstructorEmptyClassName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint("", "method", "(II)V", 10));
+    void testConstructorEmptyClassName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint("", "method", "(II)V", 10));
     }
 
     @Test
-    void testConstructorNullMethodName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint("com/test/Foo", null, "(II)V", 10));
+    void testConstructorNullMethodName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint("com/test/Foo", null, "(II)V", 10));
     }
 
     @Test
-    void testConstructorEmptyMethodName() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint("com/test/Foo", "", "(II)V", 10));
+    void testConstructorEmptyMethodName()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint("com/test/Foo", "", "(II)V", 10));
     }
 
     @Test
-    void testConstructorNullMethodDesc() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint("com/test/Foo", "method", null, 10));
+    void testConstructorNullMethodDesc()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint("com/test/Foo", "method", null, 10));
     }
 
     @Test
-    void testConstructorEmptyMethodDesc() {
-        assertThrows(IllegalArgumentException.class, () ->
-            new Breakpoint("com/test/Foo", "method", "", 10));
+    void testConstructorEmptyMethodDesc()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new Breakpoint("com/test/Foo", "method", "", 10));
     }
 
     @Test
-    void testMethodEntryFactory() {
+    void testMethodEntryFactory()
+    {
         Breakpoint bp = Breakpoint.methodEntry("com/test/Foo", "method", "(II)V");
 
         assertEquals("com/test/Foo", bp.getClassName());
@@ -86,7 +86,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testAtLineFactory() {
+    void testAtLineFactory()
+    {
         Breakpoint bp = Breakpoint.atLine("com/test/Foo", "method", "(II)V", 42);
 
         assertEquals("com/test/Foo", bp.getClassName());
@@ -97,13 +98,14 @@ class BreakpointTest {
     }
 
     @Test
-    void testAtLineFactoryNegativeLine() {
-        assertThrows(IllegalArgumentException.class, () ->
-            Breakpoint.atLine("com/test/Foo", "method", "(II)V", -1));
+    void testAtLineFactoryNegativeLine()
+    {
+        assertThrows(IllegalArgumentException.class, () -> Breakpoint.atLine("com/test/Foo", "method", "(II)V", -1));
     }
 
     @Test
-    void testAtPCFactory() {
+    void testAtPCFactory()
+    {
         Breakpoint bp = Breakpoint.atPC("com/test/Foo", "method", "(II)V", 25);
 
         assertEquals("com/test/Foo", bp.getClassName());
@@ -114,19 +116,21 @@ class BreakpointTest {
     }
 
     @Test
-    void testAtPCFactoryNegativePC() {
-        assertThrows(IllegalArgumentException.class, () ->
-            Breakpoint.atPC("com/test/Foo", "method", "(II)V", -2));
+    void testAtPCFactoryNegativePC()
+    {
+        assertThrows(IllegalArgumentException.class, () -> Breakpoint.atPC("com/test/Foo", "method", "(II)V", -2));
     }
 
     @Test
-    void testAtPCFactoryMethodEntry() {
+    void testAtPCFactoryMethodEntry()
+    {
         Breakpoint bp = Breakpoint.atPC("com/test/Foo", "method", "(II)V", -1);
         assertEquals(-1, bp.getPC());
     }
 
     @Test
-    void testEnableDisable() {
+    void testEnableDisable()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
         assertTrue(bp.isEnabled());
@@ -139,7 +143,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testCondition() {
+    void testCondition()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
         assertNull(bp.getCondition());
@@ -152,7 +157,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testHitCount() {
+    void testHitCount()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
         assertEquals(0, bp.getHitCount());
@@ -168,7 +174,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesStackFrame() {
+    void testMatchesStackFrame()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -184,13 +191,15 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesStackFrameNullFrame() {
+    void testMatchesStackFrameNullFrame()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
-        assertFalse(bp.matches((StackFrame) null));
+        assertFalse(bp.matches(null));
     }
 
     @Test
-    void testMatchesStackFrameDifferentClass() {
+    void testMatchesStackFrameDifferentClass()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Bar");
         when(method.getName()).thenReturn("method");
@@ -206,7 +215,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesStackFrameDifferentMethod() {
+    void testMatchesStackFrameDifferentMethod()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("other");
@@ -222,7 +232,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesStackFrameDifferentDescriptor() {
+    void testMatchesStackFrameDifferentDescriptor()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -238,7 +249,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesStackFrameDifferentPC() {
+    void testMatchesStackFrameDifferentPC()
+    {
         MethodEntry method = mock(MethodEntry.class);
         when(method.getOwnerName()).thenReturn("com/test/Foo");
         when(method.getName()).thenReturn("method");
@@ -254,7 +266,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesRawParams() {
+    void testMatchesRawParams()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
 
         assertTrue(bp.matches("com/test/Foo", "method", "(II)V", 10));
@@ -265,7 +278,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testMatchesMethodEntry() {
+    void testMatchesMethodEntry()
+    {
         Breakpoint bp = Breakpoint.methodEntry("com/test/Foo", "method", "(II)V");
 
         assertTrue(bp.matches("com/test/Foo", "method", "(II)V", 0));
@@ -273,13 +287,15 @@ class BreakpointTest {
     }
 
     @Test
-    void testKeyGeneration() {
+    void testKeyGeneration()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         assertEquals("com/test/Foo.method+(II)V@10", bp.getKey());
     }
 
     @Test
-    void testKeyGenerationUnique() {
+    void testKeyGenerationUnique()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 20);
         Breakpoint bp3 = new Breakpoint("com/test/Bar", "method", "(II)V", 10);
@@ -290,7 +306,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testEquals() {
+    void testEquals()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
 
@@ -299,7 +316,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testNotEquals() {
+    void testNotEquals()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         Breakpoint bp2 = new Breakpoint("com/test/Bar", "method", "(II)V", 10);
         Breakpoint bp3 = new Breakpoint("com/test/Foo", "other", "(II)V", 10);
@@ -315,7 +333,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testHashCode() {
+    void testHashCode()
+    {
         Breakpoint bp1 = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
         Breakpoint bp2 = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
 
@@ -323,7 +342,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10, 5);
         String str = bp.toString();
 
@@ -337,7 +357,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testToStringWithCondition() {
+    void testToStringWithCondition()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         bp.setCondition("x > 5");
         bp.incrementHitCount();
@@ -349,7 +370,8 @@ class BreakpointTest {
     }
 
     @Test
-    void testToStringNoLineNumber() {
+    void testToStringNoLineNumber()
+    {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
         String str = bp.toString();
 

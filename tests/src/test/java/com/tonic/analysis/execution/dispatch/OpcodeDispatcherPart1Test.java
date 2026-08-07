@@ -1,92 +1,108 @@
 package com.tonic.analysis.execution.dispatch;
 
+import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteLocals;
 import com.tonic.analysis.execution.state.ConcreteStack;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.*;
+import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.testutil.StubDispatchContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherPart1Test {
+class OpcodeDispatcherPart1Test
+{
 
     private OpcodeDispatcher dispatcher;
     private ConcreteStack stack;
     private ConcreteLocals locals;
     private StubDispatchContext context;
 
-    private static class SimpleInstruction extends Instruction {
-        public SimpleInstruction(int opcode, int offset, int length) {
+    private static class SimpleInstruction extends Instruction
+    {
+        public SimpleInstruction(int opcode, int offset, int length)
+        {
             super(opcode, offset, length);
         }
 
         @Override
-        public void accept(com.tonic.analysis.visitor.AbstractBytecodeVisitor visitor) {}
+        public void accept(AbstractBytecodeVisitor visitor) {}
 
         @Override
         public void write(java.io.DataOutputStream dos) {}
 
         @Override
-        public int getStackChange() {
+        public int getStackChange()
+        {
             return 0;
         }
 
         @Override
-        public int getLocalChange() {
+        public int getLocalChange()
+        {
             return 0;
         }
     }
 
-    private static class SimpleStackFrame {
+    private static class SimpleStackFrame
+    {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
-        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals) {
+        public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals)
+        {
             this.stack = stack;
             this.locals = locals;
             this.pc = 0;
         }
 
-        public void setCurrentInstruction(Instruction instr) {
+        public void setCurrentInstruction(Instruction instr)
+        {
             this.currentInstruction = instr;
         }
 
-        public Instruction getCurrentInstruction() {
+        public Instruction getCurrentInstruction()
+        {
             return currentInstruction;
         }
 
-        public ConcreteStack getStack() {
+        public ConcreteStack getStack()
+        {
             return stack;
         }
 
-        public ConcreteLocals getLocals() {
+        public ConcreteLocals getLocals()
+        {
             return locals;
         }
 
-        public int getPC() {
+        public int getPC()
+        {
             return pc;
         }
 
-        public void advancePC(int delta) {
+        public void advancePC(int delta)
+        {
             pc += delta;
         }
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         dispatcher = new OpcodeDispatcher();
         stack = new ConcreteStack(100);
         locals = new ConcreteLocals(10);
         context = new StubDispatchContext();
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr) {
+    private OpcodeDispatcher.DispatchResult dispatchSimple(Instruction instr)
+    {
         SimpleStackFrame frame = new SimpleStackFrame(stack, locals);
         frame.setCurrentInstruction(instr);
 
@@ -96,14 +112,17 @@ class OpcodeDispatcherPart1Test {
         int pcBefore = frame.getPC();
         OpcodeDispatcher.DispatchResult result = null;
 
-        try {
+        try
+        {
             java.lang.reflect.Method method = OpcodeDispatcher.class.getDeclaredMethod(
                 "dispatch",
-                com.tonic.analysis.execution.frame.StackFrame.class,
+                StackFrame.class,
                 DispatchContext.class
             );
             throw new UnsupportedOperationException("Cannot test without proper frame");
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             int opcode = instr.getOpcode();
             result = dispatchByOpcode(opcode, instr, frame);
         }
@@ -111,8 +130,10 @@ class OpcodeDispatcherPart1Test {
         return result;
     }
 
-    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame) {
-        switch (opcode) {
+    private OpcodeDispatcher.DispatchResult dispatchByOpcode(int opcode, Instruction instr, SimpleStackFrame frame)
+    {
+        switch (opcode)
+        {
             case 0x00:
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
@@ -185,7 +206,8 @@ class OpcodeDispatcherPart1Test {
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
-            case 0x2E: {
+            case 0x2E:
+            {
                 int index = stack.popInt();
                 ArrayInstance array = (ArrayInstance) stack.popReference();
                 context.checkNullReference(array, "iaload");
@@ -195,7 +217,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x32: {
+            case 0x32:
+            {
                 int index = stack.popInt();
                 ArrayInstance array = (ArrayInstance) stack.popReference();
                 context.checkNullReference(array, "aaload");
@@ -239,7 +262,8 @@ class OpcodeDispatcherPart1Test {
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
-            case 0x4F: {
+            case 0x4F:
+            {
                 int value = stack.popInt();
                 int index = stack.popInt();
                 ArrayInstance array = (ArrayInstance) stack.popReference();
@@ -250,7 +274,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x53: {
+            case 0x53:
+            {
                 ObjectInstance value = stack.popReference();
                 int index = stack.popInt();
                 ArrayInstance array = (ArrayInstance) stack.popReference();
@@ -282,7 +307,8 @@ class OpcodeDispatcherPart1Test {
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
-            case 0x60: {
+            case 0x60:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 + v2);
@@ -290,7 +316,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x61: {
+            case 0x61:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 + v2);
@@ -298,7 +325,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x64: {
+            case 0x64:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 - v2);
@@ -306,7 +334,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x68: {
+            case 0x68:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 * v2);
@@ -314,7 +343,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x6C: {
+            case 0x6C:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 / v2);
@@ -322,7 +352,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x70: {
+            case 0x70:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 % v2);
@@ -350,7 +381,8 @@ class OpcodeDispatcherPart1Test {
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
-            case 0x78: {
+            case 0x78:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value << shiftAmount);
@@ -358,7 +390,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x79: {
+            case 0x79:
+            {
                 int shiftAmount = stack.popInt();
                 long value = stack.popLong();
                 stack.pushLong(value << shiftAmount);
@@ -366,7 +399,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x7A: {
+            case 0x7A:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value >> shiftAmount);
@@ -374,7 +408,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x7C: {
+            case 0x7C:
+            {
                 int shiftAmount = stack.popInt();
                 int value = stack.popInt();
                 stack.pushInt(value >>> shiftAmount);
@@ -382,7 +417,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x7E: {
+            case 0x7E:
+            {
                 int v2 = stack.popInt();
                 int v1 = stack.popInt();
                 stack.pushInt(v1 & v2);
@@ -390,7 +426,8 @@ class OpcodeDispatcherPart1Test {
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
             }
 
-            case 0x7F: {
+            case 0x7F:
+            {
                 long v2 = stack.popLong();
                 long v1 = stack.popLong();
                 stack.pushLong(v1 & v2);
@@ -404,14 +441,16 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testNop() {
+    void testNop()
+    {
         NopInstruction instr = new NopInstruction(0x00, 0);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.CONTINUE, result);
     }
 
     @Test
-    void testAConstNull() {
+    void testAConstNull()
+    {
         AConstNullInstruction instr = new AConstNullInstruction(0x01, 0);
         OpcodeDispatcher.DispatchResult result = dispatchSimple(instr);
         assertEquals(OpcodeDispatcher.DispatchResult.CONTINUE, result);
@@ -419,63 +458,72 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIConstM1() {
+    void testIConstM1()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x02, 0, 1);
         dispatchSimple(instr);
         assertEquals(-1, stack.popInt());
     }
 
     @Test
-    void testIConst0() {
+    void testIConst0()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x03, 0, 1);
         dispatchSimple(instr);
         assertEquals(0, stack.popInt());
     }
 
     @Test
-    void testIConst5() {
+    void testIConst5()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x08, 0, 1);
         dispatchSimple(instr);
         assertEquals(5, stack.popInt());
     }
 
     @Test
-    void testLConst0() {
+    void testLConst0()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x09, 0, 1);
         dispatchSimple(instr);
         assertEquals(0L, stack.popLong());
     }
 
     @Test
-    void testFConst0() {
+    void testFConst0()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x0B, 0, 1);
         dispatchSimple(instr);
         assertEquals(0.0f, stack.popFloat());
     }
 
     @Test
-    void testDConst1() {
+    void testDConst1()
+    {
         SimpleInstruction instr = new SimpleInstruction(0x0F, 0, 1);
         dispatchSimple(instr);
         assertEquals(1.0, stack.popDouble());
     }
 
     @Test
-    void testBipush() {
+    void testBipush()
+    {
         BipushInstruction instr = new BipushInstruction(0x10, 0, 42);
         dispatchSimple(instr);
         assertEquals(42, stack.popInt());
     }
 
     @Test
-    void testSipush() {
+    void testSipush()
+    {
         SipushInstruction instr = new SipushInstruction(0x11, 0, 1000);
         dispatchSimple(instr);
         assertEquals(1000, stack.popInt());
     }
 
     @Test
-    void testILoadAndIStore() {
+    void testILoadAndIStore()
+    {
         locals.setInt(5, 123);
         ILoadInstruction loadInstr = new ILoadInstruction(0x15, 0, 5);
         dispatchSimple(loadInstr);
@@ -488,8 +536,10 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testILoad0Through3() {
-        for (int i = 0; i < 4; i++) {
+    void testILoad0Through3()
+    {
+        for (int i = 0; i < 4; i++)
+        {
             locals.setInt(i, 100 + i);
             SimpleInstruction instr = new SimpleInstruction(0x1A + i, 0, 1);
             dispatchSimple(instr);
@@ -498,7 +548,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testPop() {
+    void testPop()
+    {
         stack.pushInt(100);
         stack.pushInt(200);
         SimpleInstruction instr = new SimpleInstruction(0x57, 0, 1);
@@ -507,7 +558,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testDup() {
+    void testDup()
+    {
         stack.pushInt(42);
         SimpleInstruction instr = new SimpleInstruction(0x59, 0, 1);
         dispatchSimple(instr);
@@ -517,7 +569,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testSwap() {
+    void testSwap()
+    {
         stack.pushInt(10);
         stack.pushInt(20);
         SimpleInstruction instr = new SimpleInstruction(0x5F, 0, 1);
@@ -527,7 +580,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIAdd() {
+    void testIAdd()
+    {
         stack.pushInt(10);
         stack.pushInt(20);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x60, 0);
@@ -536,7 +590,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testLAdd() {
+    void testLAdd()
+    {
         stack.pushLong(100L);
         stack.pushLong(200L);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x61, 0);
@@ -545,7 +600,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testISub() {
+    void testISub()
+    {
         stack.pushInt(50);
         stack.pushInt(20);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x64, 0);
@@ -554,7 +610,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIMul() {
+    void testIMul()
+    {
         stack.pushInt(7);
         stack.pushInt(6);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x68, 0);
@@ -563,7 +620,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIDiv() {
+    void testIDiv()
+    {
         stack.pushInt(100);
         stack.pushInt(4);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x6C, 0);
@@ -572,7 +630,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIRem() {
+    void testIRem()
+    {
         stack.pushInt(17);
         stack.pushInt(5);
         ArithmeticInstruction instr = new ArithmeticInstruction(0x70, 0);
@@ -581,7 +640,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testINeg() {
+    void testINeg()
+    {
         stack.pushInt(42);
         SimpleInstruction instr = new SimpleInstruction(0x74, 0, 1);
         dispatchSimple(instr);
@@ -589,7 +649,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testLNeg() {
+    void testLNeg()
+    {
         stack.pushLong(1000L);
         SimpleInstruction instr = new SimpleInstruction(0x75, 0, 1);
         dispatchSimple(instr);
@@ -597,7 +658,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIShl() {
+    void testIShl()
+    {
         stack.pushInt(5);
         stack.pushInt(2);
         ArithmeticShiftInstruction instr = new ArithmeticShiftInstruction(0x78, 0);
@@ -606,7 +668,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIShr() {
+    void testIShr()
+    {
         stack.pushInt(-16);
         stack.pushInt(2);
         ArithmeticShiftInstruction instr = new ArithmeticShiftInstruction(0x7A, 0);
@@ -615,7 +678,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIUshr() {
+    void testIUshr()
+    {
         stack.pushInt(-16);
         stack.pushInt(2);
         ArithmeticShiftInstruction instr = new ArithmeticShiftInstruction(0x7C, 0);
@@ -624,7 +688,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIAnd() {
+    void testIAnd()
+    {
         stack.pushInt(0b1111);
         stack.pushInt(0b1010);
         SimpleInstruction instr = new SimpleInstruction(0x7E, 0, 1);
@@ -633,7 +698,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testLAnd() {
+    void testLAnd()
+    {
         stack.pushLong(0b11111111L);
         stack.pushLong(0b10101010L);
         SimpleInstruction instr = new SimpleInstruction(0x7F, 0, 1);
@@ -642,7 +708,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIALoad() {
+    void testIALoad()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
         array.setInt(2, 999);
         stack.pushReference(array);
@@ -653,7 +720,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testIAStore() {
+    void testIAStore()
+    {
         ArrayInstance array = new ArrayInstance(1, "I", 5);
         stack.pushReference(array);
         stack.pushInt(3);
@@ -664,7 +732,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testAALoad() {
+    void testAALoad()
+    {
         ObjectInstance element = new ObjectInstance(5, "java/lang/String");
         ArrayInstance array = new ArrayInstance(1, "Ljava/lang/String;", 3);
         array.set(1, element);
@@ -676,7 +745,8 @@ class OpcodeDispatcherPart1Test {
     }
 
     @Test
-    void testAAStore() {
+    void testAAStore()
+    {
         ObjectInstance element = new ObjectInstance(10, "java/lang/String");
         ArrayInstance array = new ArrayInstance(1, "Ljava/lang/String;", 2);
         stack.pushReference(array);

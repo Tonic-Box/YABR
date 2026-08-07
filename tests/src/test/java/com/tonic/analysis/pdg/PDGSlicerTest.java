@@ -17,17 +17,20 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PDGSlicerTest {
+class PDGSlicerTest
+{
 
     private PDGSlicer slicer;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void backwardSliceFromExitIncludesAllRelevant() {
+    void backwardSliceFromExitIncludesAllRelevant()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -40,7 +43,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void backwardSliceFromEntryIsMinimal() {
+    void backwardSliceFromEntryIsMinimal()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -53,7 +57,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void forwardSliceFromEntryIncludesAll() {
+    void forwardSliceFromEntryIncludesAll()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -66,7 +71,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void forwardSliceFromExitIsMinimal() {
+    void forwardSliceFromExitIsMinimal()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -79,7 +85,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void chopBetweenEntryAndExitIncludesPath() {
+    void chopBetweenEntryAndExitIncludesPath()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -92,7 +99,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void sliceResultContainsRelevantInstructions() {
+    void sliceResultContainsRelevantInstructions()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -100,14 +108,16 @@ class PDGSlicerTest {
         IRInstruction ret = method.getEntryBlock().getTerminator();
         PDGNode retNode = pdg.getInstructionNode(ret);
 
-        if (retNode != null) {
+        if (retNode != null)
+        {
             SliceResult slice = slicer.backwardSlice(retNode);
             assertFalse(slice.getInstructions().isEmpty());
         }
     }
 
     @Test
-    void sliceResultGetSizeMatchesNodes() {
+    void sliceResultGetSizeMatchesNodes()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -119,7 +129,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void sliceResultContainsNode() {
+    void sliceResultContainsNode()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -131,7 +142,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void multiCriterionSliceUnionOfSingleSlices() {
+    void multiCriterionSliceUnionOfSingleSlices()
+    {
         IRMethod method = createSimpleDataFlowMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -147,7 +159,8 @@ class PDGSlicerTest {
     }
 
     @Test
-    void sliceWithNullCriterionReturnsEmpty() {
+    void sliceWithNullCriterionReturnsEmpty()
+    {
         IRMethod method = TestUtils.createSimpleIRMethod();
         PDG pdg = PDGBuilder.build(method);
         slicer = new PDGSlicer(pdg);
@@ -158,7 +171,8 @@ class PDGSlicerTest {
         assertTrue(slice.isEmpty());
     }
 
-    private IRMethod createSimpleDataFlowMethod() {
+    private IRMethod createSimpleDataFlowMethod()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 

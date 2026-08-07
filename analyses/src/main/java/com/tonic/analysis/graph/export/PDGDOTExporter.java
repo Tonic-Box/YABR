@@ -9,44 +9,66 @@ import com.tonic.analysis.pdg.node.PDGRegionNode;
 import java.io.IOException;
 import java.io.Writer;
 
-public class PDGDOTExporter extends DOTExporter<PDG> {
+/**
+ * DOT exporter for a program dependence graph, colouring nodes by kind and
+ * taint state and edges by dependence type.
+ */
+public class PDGDOTExporter extends DOTExporter<PDG>
+{
 
-    public PDGDOTExporter() {
+    /**
+     * Creates an exporter with the default rendering options.
+     */
+    public PDGDOTExporter()
+    {
         this(DOTExporterConfig.defaults());
     }
 
-    public PDGDOTExporter(DOTExporterConfig config) {
+    /**
+     * Creates an exporter using the supplied rendering options.
+     * @param config controls node ids, legend and other DOT output details
+     */
+    public PDGDOTExporter(DOTExporterConfig config)
+    {
         super(config);
     }
 
     @Override
-    public void export(PDG pdg, Writer output) {
-        try {
+    public void export(PDG pdg, Writer output)
+    {
+        try
+        {
             writeHeader(output);
 
-            for (PDGNode node : pdg.getNodes()) {
+            for (PDGNode node : pdg.getNodes())
+            {
                 writeNodeDOT(output, node);
             }
 
             output.write("\n");
 
-            for (PDGEdge edge : pdg.getEdges()) {
+            for (PDGEdge edge : pdg.getEdges())
+            {
                 writeEdgeDOT(output, edge);
             }
 
-            if (config.isIncludeLegend()) {
+            if (config.isIncludeLegend())
+            {
                 output.write("\n");
                 writePDGLegend(output);
             }
 
             writeFooter(output);
             output.flush();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException("Failed to export PDG to DOT", e);
         }
     }
 
-    private void writeNodeDOT(Writer w, PDGNode node) throws IOException {
+    private void writeNodeDOT(Writer w, PDGNode node) throws IOException
+    {
         String id = "n" + node.getId();
         String label = getNodeLabel(node);
         String shape = getNodeShape(node);
@@ -56,38 +78,48 @@ public class PDGDOTExporter extends DOTExporter<PDG> {
         writeNode(w, id, label, shape, fillColor, borderColor);
     }
 
-    private String getNodeLabel(PDGNode node) {
+    private String getNodeLabel(PDGNode node)
+    {
         StringBuilder sb = new StringBuilder();
 
-        if (config.isShowNodeIds()) {
+        if (config.isShowNodeIds())
+        {
             sb.append(node.getId()).append(": ");
         }
 
-        if (node instanceof PDGRegionNode) {
+        if (node instanceof PDGRegionNode)
+        {
             sb.append(node.getType().name());
-        } else if (node instanceof PDGInstructionNode) {
+        }
+        else if (node instanceof PDGInstructionNode)
+        {
             PDGInstructionNode instrNode = (PDGInstructionNode) node;
-            if (instrNode.getInstruction() != null) {
+            if (instrNode.getInstruction() != null)
+            {
                 sb.append(instrNode.getInstruction());
-            } else {
+            }
+            else
+            {
                 sb.append("instruction");
             }
-        } else {
+        }
+        else
+        {
             sb.append(node.getType().name());
         }
 
         return sb.toString();
     }
 
-    private String getNodeShape(PDGNode node) {
-        switch (node.getType()) {
+    private String getNodeShape(PDGNode node)
+    {
+        switch (node.getType())
+        {
             case ENTRY:
             case EXIT:
                 return "ellipse";
             case PHI:
                 return "octagon";
-            case CALL_SITE:
-                return "box";
             case BRANCH:
                 return "diamond";
             default:
@@ -95,12 +127,15 @@ public class PDGDOTExporter extends DOTExporter<PDG> {
         }
     }
 
-    private String getNodeFillColor(PDGNode node) {
-        if (node.isTainted()) {
+    private String getNodeFillColor(PDGNode node)
+    {
+        if (node.isTainted())
+        {
             return "#ffcccc";
         }
 
-        switch (node.getType()) {
+        switch (node.getType())
+        {
             case ENTRY:
                 return "#90EE90";
             case EXIT:
@@ -116,14 +151,17 @@ public class PDGDOTExporter extends DOTExporter<PDG> {
         }
     }
 
-    private String getNodeBorderColor(PDGNode node) {
-        if (node.isTainted()) {
+    private String getNodeBorderColor(PDGNode node)
+    {
+        if (node.isTainted())
+        {
             return "#cc0000";
         }
         return "black";
     }
 
-    private void writeEdgeDOT(Writer w, PDGEdge edge) throws IOException {
+    private void writeEdgeDOT(Writer w, PDGEdge edge) throws IOException
+    {
         String source = "n" + edge.getSource().getId();
         String target = "n" + edge.getTarget().getId();
         String label = getEdgeLabel(edge);
@@ -133,44 +171,56 @@ public class PDGDOTExporter extends DOTExporter<PDG> {
         writeEdge(w, source, target, label, color, style);
     }
 
-    private String getEdgeLabel(PDGEdge edge) {
-        if (edge.getVariable() != null) {
+    private String getEdgeLabel(PDGEdge edge)
+    {
+        if (edge.getVariable() != null)
+        {
             return edge.getVariable();
         }
         return "";
     }
 
-    private String getEdgeColor(PDGEdge edge) {
+    private String getEdgeColor(PDGEdge edge)
+    {
         PDGDependenceType type = edge.getType();
 
-        if (type.isControlDependency()) {
-            if (type == PDGDependenceType.CONTROL_TRUE) {
+        if (type.isControlDependency())
+        {
+            if (type == PDGDependenceType.CONTROL_TRUE)
+            {
                 return "#00aa00";
-            } else if (type == PDGDependenceType.CONTROL_FALSE) {
+            }
+            else if (type == PDGDependenceType.CONTROL_FALSE)
+            {
                 return "#cc0000";
             }
             return "#006600";
         }
 
-        if (type.isDataDependency()) {
+        if (type.isDataDependency())
+        {
             return "#0000cc";
         }
 
-        if (type.isInterproceduralEdge()) {
+        if (type.isInterproceduralEdge())
+        {
             return "#9932CC";
         }
 
         return "black";
     }
 
-    private String getEdgeStyle(PDGEdge edge) {
-        if (edge.getType().isControlDependency()) {
+    private String getEdgeStyle(PDGEdge edge)
+    {
+        if (edge.getType().isControlDependency())
+        {
             return "dashed";
         }
         return "solid";
     }
 
-    private void writePDGLegend(Writer w) throws IOException {
+    private void writePDGLegend(Writer w) throws IOException
+    {
         w.write("  subgraph cluster_legend {\n");
         w.write("    label=\"Legend\";\n");
         w.write("    style=rounded;\n");

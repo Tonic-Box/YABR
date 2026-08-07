@@ -15,9 +15,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugForLoop {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing the IR and loop analysis details relevant to for-loop recovery in one method.
+ */
+public class DebugForLoop
+{
+    /**
+     * Lifts the named method to IR and prints its loop analysis.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugForLoop <classfile> <methodName>");
             return;
         }
@@ -26,8 +37,10 @@ public class DebugForLoop {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -39,27 +52,32 @@ public class DebugForLoop {
                 LoopAnalysis loopAnalysis = new LoopAnalysis(irMethod, domTree);
                 loopAnalysis.compute();
 
-                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+                {
                     IRBlock header = loop.getHeader();
                     System.out.println("\nLoop header: " + header.getName());
                     
-                    // Check isForLoopPattern
-                    for (IRBlock block : loop.getBlocks()) {
+                    for (IRBlock block : loop.getBlocks())
+                    {
                         if (block == header) continue;
                         System.out.println("  Checking block " + block.getName());
                         System.out.println("    Successors: " + block.getSuccessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                         
-                        for (IRBlock succ : block.getSuccessors()) {
-                            if (succ == header) {
+                        for (IRBlock succ : block.getSuccessors())
+                        {
+                            if (succ == header)
+                            {
                                 System.out.println("    Has back-edge to header");
-                                // Check for increment
                                 boolean hasIncrement = false;
-                                for (IRInstruction instr : block.getInstructions()) {
-                                    if (instr instanceof BinaryOpInstruction) {
+                                for (IRInstruction instr : block.getInstructions())
+                                {
+                                    if (instr instanceof BinaryOpInstruction)
+                                    {
                                         BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                                         BinaryOp op = binOp.getOp();
                                         System.out.println("      Found BinaryOp: " + op);
-                                        if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                                        if (op == BinaryOp.ADD || op == BinaryOp.SUB)
+                                        {
                                             hasIncrement = true;
                                         }
                                     }

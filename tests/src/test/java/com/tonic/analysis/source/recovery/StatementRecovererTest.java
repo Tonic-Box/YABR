@@ -11,13 +11,13 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
 import com.tonic.testutil.TestUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.util.AccessBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,21 +25,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for StatementRecoverer - recovering statement AST from IR blocks.
  * Coverage: variable declarations, assignments, control flow (if/else, loops), try-catch, returns.
  */
-class StatementRecovererTest {
+class StatementRecovererTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Statement Recovery Tests ==========
+    // Basic Statement Recovery Tests
 
     @Nested
-    class BasicStatementTests {
+    class BasicStatementTests
+    {
 
         @Test
-        void recoverEmptyMethod() throws IOException {
+        void recoverEmptyMethod() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("empty", "()V")
                     .vreturn()
@@ -56,7 +60,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverSimpleReturn() throws IOException {
+        void recoverSimpleReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("returnInt", "()I")
                     .iconst(42)
@@ -72,14 +77,14 @@ class StatementRecovererTest {
             assertNotNull(body);
             assertFalse(body.getStatements().isEmpty());
 
-            // Should contain a return statement
             boolean hasReturn = body.getStatements().stream()
                 .anyMatch(s -> s instanceof ReturnStmt);
             assertTrue(hasReturn, "Expected return statement");
         }
 
         @Test
-        void recoverVoidReturn() throws IOException {
+        void recoverVoidReturn() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("voidMethod", "()V")
                     .vreturn()
@@ -95,13 +100,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Variable Declaration and Assignment Tests ==========
+    // Variable Declaration and Assignment Tests
 
     @Nested
-    class VariableTests {
+    class VariableTests
+    {
 
         @Test
-        void recoverLocalVariableDeclaration() throws IOException {
+        void recoverLocalVariableDeclaration() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("useLocal", "()I")
                     .iconst(10)
@@ -121,7 +128,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverAssignmentToLocal() throws IOException {
+        void recoverAssignmentToLocal() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("assign", "(I)I")
                     .iconst(5)
@@ -141,7 +149,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverMultipleLocalVariables() throws IOException {
+        void recoverMultipleLocalVariables() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("multiLocal", "()I")
                     .iconst(10)
@@ -161,11 +170,12 @@ class StatementRecovererTest {
             BlockStmt body = recoverer.recoverMethod();
 
             assertNotNull(body);
-            assertTrue(body.getStatements().size() >= 1);
+            assertFalse(body.getStatements().isEmpty());
         }
 
         @Test
-        void recoverParameterUsage() throws IOException {
+        void recoverParameterUsage() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("useParam", "(I)I")
                     .iload(0)
@@ -184,13 +194,15 @@ class StatementRecovererTest {
 
     }
 
-    // ========== Arithmetic and Expression Tests ==========
+    // Arithmetic and Expression Tests
 
     @Nested
-    class ArithmeticTests {
+    class ArithmeticTests
+    {
 
         @Test
-        void recoverAddition() throws IOException {
+        void recoverAddition() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -210,7 +222,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverSubtraction() throws IOException {
+        void recoverSubtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("sub", "(II)I")
                     .iload(0)
@@ -230,7 +243,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverMultiplication() throws IOException {
+        void recoverMultiplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -250,7 +264,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverDivision() throws IOException {
+        void recoverDivision() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("div", "(II)I")
                     .iload(0)
@@ -270,7 +285,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverRemainder() throws IOException {
+        void recoverRemainder() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("rem", "(II)I")
                     .iload(0)
@@ -290,7 +306,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverNegation() throws IOException {
+        void recoverNegation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("neg", "(I)I")
                     .iload(0)
@@ -309,7 +326,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverComplexExpression() throws IOException {
+        void recoverComplexExpression() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("complex", "(III)I")
                     .iload(0)
@@ -331,13 +349,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Array Operations Tests ==========
+    // Array Operations Tests
 
     @Nested
-    class ArrayTests {
+    class ArrayTests
+    {
 
         @Test
-        void recoverArrayLoad() throws IOException {
+        void recoverArrayLoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("arrayGet", "([II)I")
                     .aload(0)
@@ -357,7 +377,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverArrayStore() throws IOException {
+        void recoverArrayStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("arraySet", "([III)V")
                     .aload(0)
@@ -378,7 +399,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverArrayLength() throws IOException {
+        void recoverArrayLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("arrayLen", "([I)I")
                     .aload(0)
@@ -397,7 +419,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverNewArray() throws IOException {
+        void recoverNewArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("createArray", "(I)[I")
                     .iload(0)
@@ -416,14 +439,16 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Field Access Tests ==========
+    // Field Access Tests
 
     @Nested
-    class FieldAccessTests {
+    class FieldAccessTests
+    {
 
         @Test
-        void recoverGetField() throws IOException {
-            int publicAccess = new com.tonic.util.AccessBuilder().setPublic().build();
+        void recoverGetField() throws IOException
+        {
+            int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
                 .publicMethod("getValue", "()I")
@@ -443,8 +468,9 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverPutField() throws IOException {
-            int publicAccess = new com.tonic.util.AccessBuilder().setPublic().build();
+        void recoverPutField() throws IOException
+        {
+            int publicAccess = new AccessBuilder().setPublic().build();
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .field(publicAccess, "value", "I")
                 .publicMethod("setValue", "(I)V")
@@ -465,7 +491,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverGetStaticField() throws IOException {
+        void recoverGetStaticField() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("getOut", "()Ljava/io/PrintStream;")
                     .getstatic("java/lang/System", "out", "Ljava/io/PrintStream;")
@@ -483,13 +510,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Type Conversion Tests ==========
+    // Type Conversion Tests
 
     @Nested
-    class TypeConversionTests {
+    class TypeConversionTests
+    {
 
         @Test
-        void recoverIntToLongConversion() throws IOException {
+        void recoverIntToLongConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toLong", "(I)J")
                     .iload(0)
@@ -508,7 +537,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverLongToIntConversion() throws IOException {
+        void recoverLongToIntConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toInt", "(J)I")
                     .lload(0)
@@ -527,7 +557,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverIntToByteConversion() throws IOException {
+        void recoverIntToByteConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toByte", "(I)B")
                     .iload(0)
@@ -546,7 +577,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverIntToCharConversion() throws IOException {
+        void recoverIntToCharConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toChar", "(I)C")
                     .iload(0)
@@ -565,7 +597,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverIntToShortConversion() throws IOException {
+        void recoverIntToShortConversion() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("toShort", "(I)S")
                     .iload(0)
@@ -584,13 +617,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Cast and Type Checking Tests ==========
+    // Cast and Type Checking Tests
 
     @Nested
-    class CastTests {
+    class CastTests
+    {
 
         @Test
-        void recoverCheckCast() throws IOException {
+        void recoverCheckCast() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("cast", "(Ljava/lang/Object;)Ljava/lang/String;")
                     .aload(0)
@@ -609,7 +644,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverInstanceOf() throws IOException {
+        void recoverInstanceOf() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("check", "(Ljava/lang/Object;)Z")
                     .aload(0)
@@ -628,13 +664,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Method Invocation Tests ==========
+    // Method Invocation Tests
 
     @Nested
-    class MethodInvocationTests {
+    class MethodInvocationTests
+    {
 
         @Test
-        void recoverStaticMethodCall() throws IOException {
+        void recoverStaticMethodCall() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("callAbs", "(I)I")
                     .iload(0)
@@ -653,7 +691,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverVirtualMethodCall() throws IOException {
+        void recoverVirtualMethodCall() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("callToString", "(Ljava/lang/Object;)Ljava/lang/String;")
                     .aload(0)
@@ -672,13 +711,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Throw Statement Tests ==========
+    // Throw Statement Tests
 
     @Nested
-    class ThrowTests {
+    class ThrowTests
+    {
 
         @Test
-        void recoverThrowStatement() throws IOException {
+        void recoverThrowStatement() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("throwEx", "(Ljava/lang/Exception;)V")
                     .aload(0)
@@ -696,13 +737,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Boolean Operations Tests ==========
+    // Boolean Operations Tests
 
     @Nested
-    class BooleanOperationTests {
+    class BooleanOperationTests
+    {
 
         @Test
-        void recoverBooleanAnd() throws IOException {
+        void recoverBooleanAnd() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("and", "(ZZ)Z")
                     .iload(0)
@@ -722,7 +765,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverBooleanOr() throws IOException {
+        void recoverBooleanOr() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("or", "(ZZ)Z")
                     .iload(0)
@@ -742,7 +786,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverBooleanXor() throws IOException {
+        void recoverBooleanXor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("xor", "(ZZ)Z")
                     .iload(0)
@@ -762,13 +807,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Bitwise Operations Tests ==========
+    // Bitwise Operations Tests
 
     @Nested
-    class BitwiseOperationTests {
+    class BitwiseOperationTests
+    {
 
         @Test
-        void recoverLeftShift() throws IOException {
+        void recoverLeftShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("shl", "(II)I")
                     .iload(0)
@@ -788,7 +835,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverRightShift() throws IOException {
+        void recoverRightShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("shr", "(II)I")
                     .iload(0)
@@ -808,7 +856,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverUnsignedRightShift() throws IOException {
+        void recoverUnsignedRightShift() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("ushr", "(II)I")
                     .iload(0)
@@ -828,13 +877,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Stack Manipulation Tests ==========
+    // Stack Manipulation Tests
 
     @Nested
-    class StackOperationTests {
+    class StackOperationTests
+    {
 
         @Test
-        void recoverWithDup() throws IOException {
+        void recoverWithDup() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("dupValue", "(I)I")
                     .iload(0)
@@ -854,7 +905,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverWithSwap() throws IOException {
+        void recoverWithSwap() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("swapValues", "(II)I")
                     .iload(0)
@@ -875,13 +927,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Long Operations Tests ==========
+    // Long Operations Tests
 
     @Nested
-    class LongOperationTests {
+    class LongOperationTests
+    {
 
         @Test
-        void recoverLongAddition() throws IOException {
+        void recoverLongAddition() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("addLong", "(JJ)J")
                     .lload(0)
@@ -901,7 +955,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverLongSubtraction() throws IOException {
+        void recoverLongSubtraction() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("subLong", "(JJ)J")
                     .lload(0)
@@ -921,7 +976,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverLongMultiplication() throws IOException {
+        void recoverLongMultiplication() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("mulLong", "(JJ)J")
                     .lload(0)
@@ -941,7 +997,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void recoverLongDivision() throws IOException {
+        void recoverLongDivision() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("divLong", "(JJ)J")
                     .lload(0)
@@ -961,13 +1018,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== If/Else and Conditional Tests ==========
+    // If/Else and Conditional Tests
 
     @Nested
-    class IfElseTests {
+    class IfElseTests
+    {
 
         @Test
-        void testSimpleIfThen() throws IOException {
+        void testSimpleIfThen() throws IOException
+        {
             // if (x > 0) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -993,7 +1052,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testSimpleIfThenElse() throws IOException {
+        void testSimpleIfThenElse() throws IOException
+        {
             // if (x > 0) { return 1; } else { return -1; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1023,7 +1083,8 @@ class StatementRecovererTest {
         // comprehensive coverage of if/else patterns without hitting bytecode lifter edge cases.
 
         @Test
-        void testIfThenElseChain() throws IOException {
+        void testIfThenElseChain() throws IOException
+        {
             // if (x > 0) return 1; else if (x < 0) return -1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1055,7 +1116,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithIntComparison() throws IOException {
+        void testIfWithIntComparison() throws IOException
+        {
             // if (a > b) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(II)I");
@@ -1082,7 +1144,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithNullCheck() throws IOException {
+        void testIfWithNullCheck() throws IOException
+        {
             // if (obj != null) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(Ljava/lang/Object;)I");
@@ -1108,7 +1171,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithNegativeCondition() throws IOException {
+        void testIfWithNegativeCondition() throws IOException
+        {
             // if (x < 0) { return -1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1134,7 +1198,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithEqualsZero() throws IOException {
+        void testIfWithEqualsZero() throws IOException
+        {
             // if (x == 0) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1160,7 +1225,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithNotEqualsZero() throws IOException {
+        void testIfWithNotEqualsZero() throws IOException
+        {
             // if (x != 0) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1186,7 +1252,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfReturningInBothBranches() throws IOException {
+        void testIfReturningInBothBranches() throws IOException
+        {
             // if (x > 0) { return 100; } else { return -100; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1212,7 +1279,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithAssignmentInBranches() throws IOException {
+        void testIfWithAssignmentInBranches() throws IOException
+        {
             // int result; if (x > 0) { result = 1; } else { result = -1; } return result;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1243,7 +1311,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testMultipleSequentialIfs() throws IOException {
+        void testMultipleSequentialIfs() throws IOException
+        {
             // if (x > 0) { return 100; } if (x < 0) { return -100; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1275,7 +1344,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testIfWithMethodCallInCondition() throws IOException {
+        void testIfWithMethodCallInCondition() throws IOException
+        {
             // if (Math.abs(x) > 10) { return 1; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1303,7 +1373,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testDeeplyNestedIf() throws IOException {
+        void testDeeplyNestedIf() throws IOException
+        {
             // if (x > 0) { if (x > 5) { if (x > 10) { return 1; } } } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/IfTest")
                 .publicStaticMethod("test", "(I)I");
@@ -1338,7 +1409,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -1346,13 +1418,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Complex Boolean Pattern Tests ==========
+    // Complex Boolean Pattern Tests
 
     @Nested
-    class ComplexBooleanTests {
+    class ComplexBooleanTests
+    {
 
         @Test
-        void testShortCircuitAnd() throws IOException {
+        void testShortCircuitAnd() throws IOException
+        {
             // if (a > 0 && b > 0) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(II)I");
@@ -1381,7 +1455,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testShortCircuitOr() throws IOException {
+        void testShortCircuitOr() throws IOException
+        {
             // if (a > 0 || b > 0) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(II)I");
@@ -1411,7 +1486,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testTripleAnd() throws IOException {
+        void testTripleAnd() throws IOException
+        {
             // if (a > 0 && b > 0 && c > 0) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(III)I");
@@ -1441,7 +1517,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testTripleOr() throws IOException {
+        void testTripleOr() throws IOException
+        {
             // if (a > 0 || b > 0 || c > 0) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(III)I");
@@ -1473,7 +1550,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testMixedAndOr() throws IOException {
+        void testMixedAndOr() throws IOException
+        {
             // if ((a > 0 && b > 0) || c > 0) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(III)I");
@@ -1507,7 +1585,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testComplexNesting() throws IOException {
+        void testComplexNesting() throws IOException
+        {
             // if (a > 0 || (b > 0 && c > 0)) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(III)I");
@@ -1540,7 +1619,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testNegatedCondition() throws IOException {
+        void testNegatedCondition() throws IOException
+        {
             // if (!(a > 0)) return 0; else return 1;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1566,7 +1646,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testReferenceEquality() throws IOException {
+        void testReferenceEquality() throws IOException
+        {
             // if (obj1 == obj2) return 1; else return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(Ljava/lang/Object;Ljava/lang/Object;)I");
@@ -1592,7 +1673,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -1600,13 +1682,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Ternary Expression Tests ==========
+    // Ternary Expression Tests
 
     @Nested
-    class TernaryExpressionTests {
+    class TernaryExpressionTests
+    {
 
         @Test
-        void testTernaryAssignment() throws IOException {
+        void testTernaryAssignment() throws IOException
+        {
             // int result = (x > 0) ? 1 : -1; return result;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1636,7 +1720,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testTernaryReturn() throws IOException {
+        void testTernaryReturn() throws IOException
+        {
             // return (x > 0) ? 1 : -1;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1664,7 +1749,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testNestedTernary() throws IOException {
+        void testNestedTernary() throws IOException
+        {
             // return (x > 0) ? ((x > 10) ? 10 : x) : 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1701,7 +1787,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testTernaryWithMethodCall() throws IOException {
+        void testTernaryWithMethodCall() throws IOException
+        {
             // return (x > 0) ? Math.abs(x) : 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1729,7 +1816,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -1737,13 +1825,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Multiple Return Path Tests ==========
+    // Multiple Return Path Tests
 
     @Nested
-    class MultipleReturnPathTests {
+    class MultipleReturnPathTests
+    {
 
         @Test
-        void testEarlyReturnInIf() throws IOException {
+        void testEarlyReturnInIf() throws IOException
+        {
             // if (x < 0) return -1; if (x == 0) return 0; return 1;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1775,7 +1865,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testGuardClauses() throws IOException {
+        void testGuardClauses() throws IOException
+        {
             // if (x < 0) return 0; if (x > 100) return 100; return x;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1808,7 +1899,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testReturnInNestedIf() throws IOException {
+        void testReturnInNestedIf() throws IOException
+        {
             // if (a > 0) { if (b > 0) return 1; return 2; } return 3;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(II)I");
@@ -1840,7 +1932,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testMultipleReturnValues() throws IOException {
+        void testMultipleReturnValues() throws IOException
+        {
             // if (x == 1) return 10; if (x == 2) return 20; if (x == 3) return 30; return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -1880,7 +1973,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -1888,13 +1982,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Loop Tests ==========
+    // Loop Tests
 
     @Nested
-    class LoopTests {
+    class LoopTests
+    {
 
         @Test
-        void testSimpleWhileLoop() throws IOException {
+        void testSimpleWhileLoop() throws IOException
+        {
             // while (i > 0) { i--; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("simpleWhile", "(I)V");
@@ -1921,7 +2017,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testWhileLoopWithAccumulator() throws IOException {
+        void testWhileLoopWithAccumulator() throws IOException
+        {
             // int sum = 0; while (i > 0) { sum += i; i--; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("whileSum", "(I)I");
@@ -1949,7 +2046,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testWhileLoopCountingDown() throws IOException {
+        void testWhileLoopCountingDown() throws IOException
+        {
             // int count = 0; while (n > 0) { count++; n--; } return count;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("countDown", "(I)I");
@@ -1977,7 +2075,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testWhileLoopCountingUp() throws IOException {
+        void testWhileLoopCountingUp() throws IOException
+        {
             // int i = 0; while (i < n) { i++; } return i;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("countUp", "(I)I");
@@ -2004,7 +2103,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testDoWhileLoop() throws IOException {
+        void testDoWhileLoop() throws IOException
+        {
             // do { i--; } while (i > 0);
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("doWhile", "(I)V");
@@ -2027,7 +2127,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testDoWhileWithBody() throws IOException {
+        void testDoWhileWithBody() throws IOException
+        {
             // int sum = 0; do { sum += i; i--; } while (i > 0); return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("doWhileSum", "(I)I");
@@ -2052,7 +2153,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testForLoopPattern() throws IOException {
+        void testForLoopPattern() throws IOException
+        {
             // for (int i = 0; i < n; i++) { count++; } return count;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("forLoop", "(I)I");
@@ -2081,7 +2183,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testForLoopWithArrayAccess() throws IOException {
+        void testForLoopWithArrayAccess() throws IOException
+        {
             // int sum = 0; for (int i = 0; i < arr.length; i++) { sum += arr[i]; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("sumArray", "([I)I");
@@ -2110,7 +2213,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testNestedWhileLoops() throws IOException {
+        void testNestedWhileLoops() throws IOException
+        {
             // int sum = 0; while (i > 0) { int j = i; while (j > 0) { sum++; j--; } i--; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("nestedWhile", "(I)I");
@@ -2146,7 +2250,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithIfInside() throws IOException {
+        void testLoopWithIfInside() throws IOException
+        {
             // int sum = 0; while (i > 0) { if (i % 2 == 0) { sum += i; } i--; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("loopWithIf", "(I)I");
@@ -2177,7 +2282,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithEarlyReturn() throws IOException {
+        void testLoopWithEarlyReturn() throws IOException
+        {
             // while (i > 0) { if (i == 5) return i; i--; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("earlyReturn", "(I)I");
@@ -2207,7 +2313,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithMultipleExits() throws IOException {
+        void testLoopWithMultipleExits() throws IOException
+        {
             // while (i > 0 && i != 10) { i--; } return i;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("multipleExits", "(I)I");
@@ -2234,7 +2341,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testCounterLoop() throws IOException {
+        void testCounterLoop() throws IOException
+        {
             // Classic for-loop: for (int i = 0; i < 10; i++) { sum += i; }
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("counterLoop", "()I");
@@ -2263,7 +2371,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithLongComparison() throws IOException {
+        void testLoopWithLongComparison() throws IOException
+        {
             // long count = 0; while (count < n) { count++; } return count;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("longLoop", "(J)J");
@@ -2290,7 +2399,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testEmptyLoopBody() throws IOException {
+        void testEmptyLoopBody() throws IOException
+        {
             // while (--i > 0) {}
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("emptyLoop", "(I)V");
@@ -2315,7 +2425,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithComplexCondition() throws IOException {
+        void testLoopWithComplexCondition() throws IOException
+        {
             // while (i > 0 && i < 100) { i += 5; } return i;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("complexCondition", "(I)I");
@@ -2342,7 +2453,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testLoopWithMultipleReturns() throws IOException {
+        void testLoopWithMultipleReturns() throws IOException
+        {
             // while (i > 0) { if (i > 10) return 1; if (i < 5) return -1; i--; } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("multiReturns", "(I)I");
@@ -2375,7 +2487,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -2383,13 +2496,15 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Deeply Nested Control Flow Tests ==========
+    // Deeply Nested Control Flow Tests
 
     @Nested
-    class DeeplyNestedTests {
+    class DeeplyNestedTests
+    {
 
         @Test
-        void testFourLevelNesting() throws IOException {
+        void testFourLevelNesting() throws IOException
+        {
             // if (a > 0) { if (b > 0) { if (c > 0) { if (d > 0) return 1; } } } return 0;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(IIII)I");
@@ -2421,7 +2536,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testNestedLoopInIf() throws IOException {
+        void testNestedLoopInIf() throws IOException
+        {
             // if (n > 0) { while (n > 0) { n--; } } return n;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -2450,7 +2566,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testNestedIfInLoop() throws IOException {
+        void testNestedIfInLoop() throws IOException
+        {
             // int sum = 0; while (i > 0) { if (i > 10) { if (i % 2 == 0) sum++; } i--; } return sum;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(I)I");
@@ -2483,7 +2600,8 @@ class StatementRecovererTest {
         }
 
         @Test
-        void testTripleNestedLoops() throws IOException {
+        void testTripleNestedLoops() throws IOException
+        {
             // for (i = 0; i < a; i++) for (j = 0; j < b; j++) for (k = 0; k < c; k++) sum++;
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Test")
                 .publicStaticMethod("test", "(III)I");
@@ -2527,7 +2645,8 @@ class StatementRecovererTest {
             assertFalse(body.getStatements().isEmpty());
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -2535,10 +2654,10 @@ class StatementRecovererTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method) {
-        // Create analysis components
+    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method)
+    {
         DominatorTree domTree = new DominatorTree(ir);
         domTree.compute();
 
@@ -2551,45 +2670,54 @@ class StatementRecovererTest {
         StructuralAnalyzer analyzer = new StructuralAnalyzer(ir, domTree, loopAnalysis);
         analyzer.analyze();
 
-        // Create recovery components
         RecoveryContext recoveryContext = new RecoveryContext(ir, method, defUse);
 
         ExpressionRecoverer exprRecoverer = new ExpressionRecoverer(recoveryContext);
 
-        ControlFlowContext cfContext = new ControlFlowContext(
-            ir, domTree, loopAnalysis, recoveryContext
-        );
+        ControlFlowContext cfContext = new ControlFlowContext(ir, domTree, loopAnalysis, recoveryContext);
 
         return new StatementRecoverer(cfContext, analyzer, exprRecoverer);
     }
 
-    private List<String> parseParameterTypes(String descriptor) {
+    private List<String> parseParameterTypes(String descriptor)
+    {
         List<String> types = new ArrayList<>();
-        if (descriptor == null || !descriptor.startsWith("(")) {
+        if (descriptor == null || !descriptor.startsWith("("))
+        {
             return types;
         }
 
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 int end = descriptor.indexOf(';', i);
                 types.add(descriptor.substring(i, end + 1));
                 i = end + 1;
-            } else if (c == '[') {
+            }
+            else if (c == '[')
+            {
                 int start = i;
-                while (descriptor.charAt(i) == '[') {
+                while (descriptor.charAt(i) == '[')
+                {
                     i++;
                 }
-                if (descriptor.charAt(i) == 'L') {
+                if (descriptor.charAt(i) == 'L')
+                {
                     int end = descriptor.indexOf(';', i);
                     types.add(descriptor.substring(start, end + 1));
                     i = end + 1;
-                } else {
+                }
+                else
+                {
                     types.add(descriptor.substring(start, i + 1));
                     i++;
                 }
-            } else {
+            }
+            else
+            {
                 types.add(String.valueOf(c));
                 i++;
             }

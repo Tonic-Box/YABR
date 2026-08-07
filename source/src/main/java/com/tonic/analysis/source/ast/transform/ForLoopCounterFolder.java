@@ -3,101 +3,354 @@ package com.tonic.analysis.source.ast.transform;
 import com.tonic.analysis.source.ast.expr.BinaryExpr;
 import com.tonic.analysis.source.ast.expr.BinaryOperator;
 import com.tonic.analysis.source.ast.expr.Expression;
+import com.tonic.analysis.source.ast.expr.LiteralExpr;
+import com.tonic.analysis.source.ast.expr.UnaryExpr;
+import com.tonic.analysis.source.ast.expr.UnaryOperator;
 import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.*;
+import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
-
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Folds a loop counter's hoisted declaration back into the {@code for}-init:
- * <pre>
- *   int j = 0; for (j = 1; j &lt;= N; j++) { ... }   ==&gt;   for (int j = 1; j &lt;= N; j++) { ... }
- * </pre>
- * javac scopes such a counter to the loop; the recovery instead lifts it to method scope with a synthetic
- * {@code = 0} default init javac never wrote - which both diverges from javac and drifts on round trip (the
- * method-scope declaration's slot-based ordering relative to other hoisted locals is unstable).
- *
- * <p>Only folded when the counter is used <em>exclusively</em> within that one {@code for} (its init, condition,
- * update, and body), so scoping it to the loop and dropping the (now dead) outer declaration changes nothing.
  */
-public class ForLoopCounterFolder implements ASTTransform {
+public class ForLoopCounterFolder implements ASTTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "ForLoopCounterFolder";
     }
 
     @Override
-    public boolean transform(BlockStmt root) {
+    public boolean transform(BlockStmt root)
+    {
         List<ForStmt> fors = new ArrayList<>();
         collectFors(root, fors);
         boolean changed = false;
-        for (ForStmt f : fors) {
-            if (f.getInit().size() != 1 || !(f.getInit().get(0) instanceof ExprStmt)) {
+        for (ForStmt f : fors)
+        {
+            if (f.getInit().size() != 1 || !(f.getInit().get(0) instanceof ExprStmt))
+            {
                 continue;
             }
             Expression e = ((ExprStmt) f.getInit().get(0)).getExpression();
-            if (!(e instanceof BinaryExpr)) {
+            if (!(e instanceof BinaryExpr))
+            {
                 continue;
             }
             BinaryExpr assign = (BinaryExpr) e;
-            if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof VarRefExpr)) {
+            if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof VarRefExpr))
+            {
                 continue;
             }
             String var = ((VarRefExpr) assign.getLeft()).getName();
             Expression initValue = assign.getRight();
-            if (countUses(initValue, var) > 0) {
+            if (countUses(initValue, var) > 0)
+            {
                 continue; // the init value references the counter (would read it before declaration)
             }
             // The counter must be used ONLY within this for loop - then its outer declaration is dead and it can
             // be scoped to the loop. (`countUses(root)` counts every reference in the method, including this for.)
-            if (countUses(root, var) != countUses(f, var)) {
+            if (countUses(root, var) != countUses(f, var))
+            {
                 continue;
             }
             VarDeclStmt decl = findDeclaration(root, var);
-            if (decl == null) {
+            if (decl == null)
+            {
                 continue;
             }
             f.getInit().set(0, new VarDeclStmt(decl.getType(), var, initValue));
             removeStatement(root, decl);
             changed = true;
         }
+        changed |= foldHoistedInitCounters(root);
         return changed;
     }
 
-    /** The child statement lists directly nested in {@code s} (block/loop/if/switch/try bodies). */
-    private List<List<Statement>> childLists(Statement s) {
+    /**
+     * Folds a counter whose init sits <em>before</em> an empty-init {@code for} into a loop-scoped declaration:
+     */
+    private boolean foldHoistedInitCounters(BlockStmt root)
+    {
+        Map<String, List<Segment>> byVar = new LinkedHashMap<>();
+        collectHoistedCounters(root, byVar);
+        boolean changed = false;
+        for (Map.Entry<String, List<Segment>> e : byVar.entrySet())
+        {
+            String var = e.getKey();
+            List<Segment> segs = e.getValue();
+            int accounted = 0;
+            for (Segment s : segs)
+            {
+                accounted += countUses(s.forStmt, var) + countUses(s.initStmt, var);
+            }
+            if (countUses(root, var) != accounted)
+            {
+                // Used outside these loop segments - scoping to the loops would change meaning. But a
+                // counter with NO declaration anywhere must still be declared somewhere or the emitted
+                // source does not compile (the recovery leaves an induction counter's declaration to this
+                // fold); hoist a default-initialized declaration at the method top as the safety net.
+                if (findDeclaration(root, var) == null && !segs.isEmpty())
+                {
+                    root.getStatements().add(0, new VarDeclStmt(segs.get(0).type, var,
+                            defaultInitFor(segs.get(0).type)));
+                    changed = true;
+                }
+                continue;
+            }
+            for (Segment s : segs)
+            {
+                s.forStmt.getInit().add(new VarDeclStmt(s.type, var, s.initValue));
+                s.list.remove(s.initStmt);
+            }
+            VarDeclStmt outer = findDeclaration(root, var);
+            if (outer != null)
+            {
+                removeStatement(root, outer);
+            }
+            changed = true;
+        }
+        return changed;
+    }
+
+    private Expression defaultInitFor(SourceType type)
+    {
+        if (type == PrimitiveSourceType.LONG)
+        {
+            return LiteralExpr.ofLong(0L);
+        }
+        if (type == PrimitiveSourceType.FLOAT)
+        {
+            return LiteralExpr.ofFloat(0f);
+        }
+        if (type == PrimitiveSourceType.DOUBLE)
+        {
+            return LiteralExpr.ofDouble(0d);
+        }
+        if (type instanceof PrimitiveSourceType)
+        {
+            return LiteralExpr.ofInt(0);
+        }
+        return LiteralExpr.ofNull();
+    }
+
+    private void collectHoistedCounters(Statement s, Map<String, List<Segment>> byVar)
+    {
+        for (List<Statement> lst : childLists(s))
+        {
+            for (int k = 0; k < lst.size(); k++)
+            {
+                Statement st = lst.get(k);
+                if (st instanceof ForStmt)
+                {
+                    Segment seg = asHoistedCounter((ForStmt) st, k, lst);
+                    if (seg != null)
+                    {
+                        byVar.computeIfAbsent(seg.var, x -> new ArrayList<>()).add(seg);
+                    }
+                }
+                collectHoistedCounters(st, byVar);
+            }
+        }
+    }
+
+    /**
+     * A {@code for} with an empty init slot and a single induction update, preceded by an assignment or
+     * declaration of the counter; else null.
+     */
+    private Segment asHoistedCounter(ForStmt f, int forIndex, List<Statement> list)
+    {
+        if (!f.getInit().isEmpty() || f.getUpdate().size() != 1)
+        {
+            return null;
+        }
+        String var = updateVar(f.getUpdate().get(0));
+        if (var == null)
+        {
+            return null;
+        }
+        int initIdx = -1;
+        for (int k = forIndex - 1; k >= 0; k--)
+        {
+            Statement prev = list.get(k);
+            boolean declaresVar = prev instanceof VarDeclStmt && var.equals(((VarDeclStmt) prev).getName());
+            if (declaresVar || countUses(prev, var) > 0)
+            {
+                initIdx = k; // nearest preceding statement that touches the counter
+                break;
+            }
+        }
+        if (initIdx < 0)
+        {
+            return null;
+        }
+        if (list.get(initIdx) instanceof VarDeclStmt)
+        {
+            VarDeclStmt decl = (VarDeclStmt) list.get(initIdx);
+            if (!decl.getName().equals(var) || decl.getInitializer() == null
+                    || countUses(decl.getInitializer(), var) > 0)
+            {
+                return null;
+            }
+            // Folding moves the initializer's evaluation past any statements between the declaration
+            // and the loop; only a constant is insensitive to that reordering, so a computed
+            // initializer folds only when the declaration directly precedes the loop.
+            if (initIdx != forIndex - 1 && !(decl.getInitializer() instanceof LiteralExpr))
+            {
+                return null;
+            }
+            return new Segment(var, decl.getType(), f, decl, decl.getInitializer(), list);
+        }
+        if (!(list.get(initIdx) instanceof ExprStmt))
+        {
+            return null;
+        }
+        Expression e = ((ExprStmt) list.get(initIdx)).getExpression();
+        if (!(e instanceof BinaryExpr))
+        {
+            return null;
+        }
+        BinaryExpr assign = (BinaryExpr) e;
+        if (assign.getOperator() != BinaryOperator.ASSIGN || !(assign.getLeft() instanceof VarRefExpr)
+                || !((VarRefExpr) assign.getLeft()).getName().equals(var))
+        {
+            return null;
+        }
+        if (countUses(assign.getRight(), var) > 0)
+        {
+            return null; // the init reads the counter (would reference it before declaration)
+        }
+        SourceType type = updateVarType(f.getUpdate().get(0));
+        if (type == null)
+        {
+            type = assign.getLeft().getType();
+        }
+        if (type == null)
+        {
+            return null;
+        }
+        return new Segment(var, type, f, list.get(initIdx), assign.getRight(), list);
+    }
+
+    /**
+     * The counter name written by a {@code v++}/{@code v--} or {@code v = ...} for-update, else null.
+     */
+    private String updateVar(Expression update)
+    {
+        if (update instanceof UnaryExpr && ((UnaryExpr) update).getOperand() instanceof VarRefExpr)
+        {
+            UnaryOperator op = ((UnaryExpr) update).getOperator();
+            if (op == UnaryOperator.PRE_INC || op == UnaryOperator.POST_INC
+                    || op == UnaryOperator.PRE_DEC || op == UnaryOperator.POST_DEC)
+            {
+                return ((VarRefExpr) ((UnaryExpr) update).getOperand()).getName();
+            }
+        }
+        if (update instanceof BinaryExpr && ((BinaryExpr) update).getOperator() == BinaryOperator.ASSIGN
+                && ((BinaryExpr) update).getLeft() instanceof VarRefExpr)
+        {
+            return ((VarRefExpr) ((BinaryExpr) update).getLeft()).getName();
+        }
+        return null;
+    }
+
+    private SourceType updateVarType(Expression update)
+    {
+        if (update instanceof UnaryExpr && ((UnaryExpr) update).getOperand() instanceof VarRefExpr)
+        {
+            return ((UnaryExpr) update).getOperand().getType();
+        }
+        if (update instanceof BinaryExpr && ((BinaryExpr) update).getLeft() instanceof VarRefExpr)
+        {
+            return ((BinaryExpr) update).getLeft().getType();
+        }
+        return null;
+    }
+
+    private static final class Segment
+    {
+        final String var;
+        final SourceType type;
+        final ForStmt forStmt;
+        final Statement initStmt;
+        final Expression initValue;
+        final List<Statement> list;
+
+        Segment(String var, SourceType type, ForStmt forStmt, Statement initStmt, Expression initValue,
+                List<Statement> list)
+                {
+            this.var = var;
+            this.type = type;
+            this.forStmt = forStmt;
+            this.initStmt = initStmt;
+            this.initValue = initValue;
+            this.list = list;
+        }
+    }
+
+    /**
+     * The child statement lists directly nested in {@code s} (block/loop/if/switch/try bodies).
+     */
+    private List<List<Statement>> childLists(Statement s)
+    {
         List<List<Statement>> lists = new ArrayList<>();
-        if (s instanceof BlockStmt) {
+        if (s instanceof BlockStmt)
+        {
             lists.add(((BlockStmt) s).getStatements());
-        } else if (s instanceof IfStmt) {
+        }
+        else if (s instanceof IfStmt)
+        {
             IfStmt i = (IfStmt) s;
             addBody(lists, i.getThenBranch());
-            if (i.hasElse()) {
+            if (i.hasElse())
+            {
                 addBody(lists, i.getElseBranch());
             }
-        } else if (s instanceof ForStmt) {
+        }
+        else if (s instanceof ForStmt)
+        {
             addBody(lists, ((ForStmt) s).getBody());
-        } else if (s instanceof WhileStmt) {
+        }
+        else if (s instanceof WhileStmt)
+        {
             addBody(lists, ((WhileStmt) s).getBody());
-        } else if (s instanceof DoWhileStmt) {
+        }
+        else if (s instanceof DoWhileStmt)
+        {
             addBody(lists, ((DoWhileStmt) s).getBody());
-        } else if (s instanceof ForEachStmt) {
+        }
+        else if (s instanceof ForEachStmt)
+        {
             addBody(lists, ((ForEachStmt) s).getBody());
-        } else if (s instanceof SynchronizedStmt) {
+        }
+        else if (s instanceof SynchronizedStmt)
+        {
             addBody(lists, ((SynchronizedStmt) s).getBody());
-        } else if (s instanceof TryCatchStmt) {
+        }
+        else if (s instanceof TryCatchStmt)
+        {
             TryCatchStmt t = (TryCatchStmt) s;
             addBody(lists, t.getTryBlock());
-            for (CatchClause c : t.getCatches()) {
+            for (CatchClause c : t.getCatches())
+            {
                 addBody(lists, c.body());
             }
             addBody(lists, t.getFinallyBlock());
-        } else if (s instanceof SwitchStmt) {
-            for (SwitchCase c : ((SwitchStmt) s).getCases()) {
-                if (c.statements() != null) {
+        }
+        else if (s instanceof SwitchStmt)
+        {
+            for (SwitchCase c : ((SwitchStmt) s).getCases())
+            {
+                if (c.statements() != null)
+                {
                     lists.add(c.statements());
                 }
             }
@@ -105,31 +358,42 @@ public class ForLoopCounterFolder implements ASTTransform {
         return lists;
     }
 
-    private void addBody(List<List<Statement>> lists, Statement body) {
-        if (body instanceof BlockStmt) {
+    private void addBody(List<List<Statement>> lists, Statement body)
+    {
+        if (body instanceof BlockStmt)
+        {
             lists.add(((BlockStmt) body).getStatements());
         }
     }
 
-    private void collectFors(Statement s, List<ForStmt> out) {
-        if (s instanceof ForStmt) {
+    private void collectFors(Statement s, List<ForStmt> out)
+    {
+        if (s instanceof ForStmt)
+        {
             out.add((ForStmt) s);
         }
-        for (List<Statement> lst : childLists(s)) {
-            for (Statement st : lst) {
+        for (List<Statement> lst : childLists(s))
+        {
+            for (Statement st : lst)
+            {
                 collectFors(st, out);
             }
         }
     }
 
-    private VarDeclStmt findDeclaration(Statement s, String var) {
-        for (List<Statement> lst : childLists(s)) {
-            for (Statement st : lst) {
-                if (st instanceof VarDeclStmt && var.equals(((VarDeclStmt) st).getName())) {
+    private VarDeclStmt findDeclaration(Statement s, String var)
+    {
+        for (List<Statement> lst : childLists(s))
+        {
+            for (Statement st : lst)
+            {
+                if (st instanceof VarDeclStmt && var.equals(((VarDeclStmt) st).getName()))
+                {
                     return (VarDeclStmt) st;
                 }
                 VarDeclStmt inner = findDeclaration(st, var);
-                if (inner != null) {
+                if (inner != null)
+                {
                     return inner;
                 }
             }
@@ -137,13 +401,18 @@ public class ForLoopCounterFolder implements ASTTransform {
         return null;
     }
 
-    private boolean removeStatement(Statement s, Statement target) {
-        for (List<Statement> lst : childLists(s)) {
-            if (lst.remove(target)) {
+    private boolean removeStatement(Statement s, Statement target)
+    {
+        for (List<Statement> lst : childLists(s))
+        {
+            if (lst.remove(target))
+            {
                 return true;
             }
-            for (Statement st : lst) {
-                if (removeStatement(st, target)) {
+            for (Statement st : lst)
+            {
+                if (removeStatement(st, target))
+                {
                     return true;
                 }
             }
@@ -151,29 +420,35 @@ public class ForLoopCounterFolder implements ASTTransform {
         return false;
     }
 
-    private int countUses(Statement s, String var) {
+    private int countUses(Statement s, String var)
+    {
         UsageCounter counter = new UsageCounter(var);
         s.accept(counter);
         return counter.count;
     }
 
-    private int countUses(Expression e, String var) {
+    private int countUses(Expression e, String var)
+    {
         UsageCounter counter = new UsageCounter(var);
         e.accept(counter);
         return counter.count;
     }
 
-    private static final class UsageCounter extends AbstractSourceVisitor<Void> {
+    private static final class UsageCounter extends AbstractSourceVisitor<Void>
+    {
         private final String varName;
         int count = 0;
 
-        UsageCounter(String varName) {
+        UsageCounter(String varName)
+        {
             this.varName = varName;
         }
 
         @Override
-        public Void visitVarRef(VarRefExpr expr) {
-            if (expr.getName().equals(varName)) {
+        public Void visitVarRef(VarRefExpr expr)
+        {
+            if (expr.getName().equals(varName))
+            {
                 count++;
             }
             return super.visitVarRef(expr);

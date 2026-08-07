@@ -14,24 +14,27 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassResolverTest {
+class ClassResolverTest
+{
 
     private ClassPool pool;
     private ClassResolver resolver;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
         resolver = new ClassResolver(pool);
     }
 
     @Nested
-    class ResolveClassTests {
+    class ResolveClassTests
+    {
 
         @Test
-        void resolveClassFound() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void resolveClassFound() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             ClassFile result = resolver.resolveClass("com/test/TestClass");
 
@@ -39,15 +42,15 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveClassNotFound() {
-            assertThrows(ResolutionException.class, () ->
-                    resolver.resolveClass("com/test/NonExistent"));
+        void resolveClassNotFound()
+        {
+            assertThrows(ResolutionException.class, () -> resolver.resolveClass("com/test/NonExistent"));
         }
 
         @Test
-        void resolveClassCached() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void resolveClassCached() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             ClassFile result1 = resolver.resolveClass("com/test/TestClass");
             ClassFile result2 = resolver.resolveClass("com/test/TestClass");
@@ -56,11 +59,10 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveMultipleClasses() throws IOException {
-            ClassFile cf1 = pool.createNewClass("com/test/Class1",
-                    new AccessBuilder().setPublic().build());
-            ClassFile cf2 = pool.createNewClass("com/test/Class2",
-                    new AccessBuilder().setPublic().build());
+        void resolveMultipleClasses() throws IOException
+        {
+            ClassFile cf1 = pool.createNewClass("com/test/Class1", new AccessBuilder().setPublic().build());
+            ClassFile cf2 = pool.createNewClass("com/test/Class2", new AccessBuilder().setPublic().build());
 
             ClassFile result1 = resolver.resolveClass("com/test/Class1");
             ClassFile result2 = resolver.resolveClass("com/test/Class2");
@@ -71,10 +73,12 @@ class ClassResolverTest {
     }
 
     @Nested
-    class RegisterClassTests {
+    class RegisterClassTests
+    {
 
         @Test
-        void registerClassAddsToPool() throws IOException {
+        void registerClassAddsToPool() throws IOException
+        {
             ClassFile cf = TestUtils.createMinimalClass("com/test/NewClass");
 
             resolver.registerClass(cf);
@@ -84,7 +88,8 @@ class ClassResolverTest {
         }
 
         @Test
-        void registerClassCanBeResolved() throws IOException {
+        void registerClassCanBeResolved() throws IOException
+        {
             ClassFile cf = TestUtils.createMinimalClass("com/test/NewClass");
 
             resolver.registerClass(cf);
@@ -95,18 +100,16 @@ class ClassResolverTest {
     }
 
     @Nested
-    class ResolveMethodTests {
+    class ResolveMethodTests
+    {
 
         @Test
-        void resolveMethodInClass() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            MethodEntry method = cf.createNewMethod(
-                    new AccessBuilder().setPublic().build(),
-                    "testMethod", "V");
+        void resolveMethodInClass() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            MethodEntry method = cf.createNewMethod(new AccessBuilder().setPublic().build(), "testMethod", "V");
 
-            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass",
-                    "testMethod", "()V");
+            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass", "testMethod", "()V");
 
             assertNotNull(result);
             assertEquals("testMethod", result.getMethod().getName());
@@ -114,20 +117,17 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveMethodInSuperclass() throws IOException {
-            ClassFile parent = pool.createNewClass("com/test/Parent",
-                    new AccessBuilder().setPublic().build());
-            parent.createNewMethod(new AccessBuilder().setPublic().build(),
-                    "parentMethod", "V");
+        void resolveMethodInSuperclass() throws IOException
+        {
+            ClassFile parent = pool.createNewClass("com/test/Parent", new AccessBuilder().setPublic().build());
+            parent.createNewMethod(new AccessBuilder().setPublic().build(), "parentMethod", "V");
 
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             resolver = new ClassResolver(pool);
 
-            ResolvedMethod result = resolver.resolveMethod("com/test/Child",
-                    "parentMethod", "()V");
+            ResolvedMethod result = resolver.resolveMethod("com/test/Child", "parentMethod", "()V");
 
             assertNotNull(result);
             assertEquals("parentMethod", result.getMethod().getName());
@@ -135,58 +135,52 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveMethodNotFound() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void resolveMethodNotFound() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveMethod("com/test/TestClass", "nonExistent", "()V"));
         }
 
         @Test
-        void resolveMethodOwnerNotFound() {
+        void resolveMethodOwnerNotFound()
+        {
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveMethod("com/test/NonExistent", "method", "()V"));
         }
 
         @Test
-        void resolveMethodCached() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPublic().build(),
-                    "testMethod", "V");
+        void resolveMethodCached() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPublic().build(), "testMethod", "V");
 
-            ResolvedMethod result1 = resolver.resolveMethod("com/test/TestClass",
-                    "testMethod", "()V");
-            ResolvedMethod result2 = resolver.resolveMethod("com/test/TestClass",
-                    "testMethod", "()V");
+            ResolvedMethod result1 = resolver.resolveMethod("com/test/TestClass", "testMethod", "()V");
+            ResolvedMethod result2 = resolver.resolveMethod("com/test/TestClass", "testMethod", "()V");
 
             assertSame(result1, result2);
         }
 
         @Test
-        void resolveStaticMethod() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPublic().setStatic().build(),
-                    "staticMethod", "V");
+        void resolveStaticMethod() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPublic().setStatic().build(), "staticMethod", "V");
 
-            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass",
-                    "staticMethod", "()V");
+            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass", "staticMethod", "()V");
 
             assertTrue(result.isStatic());
             assertEquals(ResolvedMethod.InvokeKind.STATIC, result.getKind());
         }
 
         @Test
-        void resolveVirtualMethod() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPublic().build(),
-                    "virtualMethod", "V");
+        void resolveVirtualMethod() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPublic().build(), "virtualMethod", "V");
 
-            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass",
-                    "virtualMethod", "()V");
+            ResolvedMethod result = resolver.resolveMethod("com/test/TestClass", "virtualMethod", "()V");
 
             assertFalse(result.isStatic());
             assertEquals(ResolvedMethod.InvokeKind.VIRTUAL, result.getKind());
@@ -194,52 +188,48 @@ class ClassResolverTest {
     }
 
     @Nested
-    class ResolveVirtualMethodTests {
+    class ResolveVirtualMethodTests
+    {
 
         @Test
-        void resolveVirtualMethodBasic() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPublic().build(),
-                    "method", "V");
+        void resolveVirtualMethodBasic() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPublic().build(), "method", "V");
 
-            ResolvedMethod result = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V");
+            ResolvedMethod result = resolver.resolveVirtualMethod("com/test/TestClass", "method", "()V");
 
             assertNotNull(result);
             assertEquals("method", result.getMethod().getName());
         }
 
         @Test
-        void resolveVirtualMethodCached() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPublic().build(),
-                    "method", "V");
+        void resolveVirtualMethodCached() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPublic().build(), "method", "V");
 
-            ResolvedMethod result1 = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V");
-            ResolvedMethod result2 = resolver.resolveVirtualMethod("com/test/TestClass",
-                    "method", "()V");
+            ResolvedMethod result1 = resolver.resolveVirtualMethod("com/test/TestClass", "method", "()V");
+            ResolvedMethod result2 = resolver.resolveVirtualMethod("com/test/TestClass", "method", "()V");
 
             assertSame(result1, result2);
         }
     }
 
     @Nested
-    class ResolveInterfaceMethodTests {
+    class ResolveInterfaceMethodTests
+    {
 
         @Test
-        void resolveInterfaceMethodInInterface() throws IOException {
+        void resolveInterfaceMethodInInterface() throws IOException
+        {
             ClassFile iface = pool.createNewClass("com/test/ITest",
                     new AccessBuilder().setPublic().setInterface().build());
-            iface.createNewMethod(new AccessBuilder().setPublic().setAbstract().build(),
-                    "interfaceMethod", "V");
+            iface.createNewMethod(new AccessBuilder().setPublic().setAbstract().build(), "interfaceMethod", "V");
 
             resolver = new ClassResolver(pool);
 
-            ResolvedMethod result = resolver.resolveInterfaceMethod("com/test/ITest",
-                    "interfaceMethod", "()V");
+            ResolvedMethod result = resolver.resolveInterfaceMethod("com/test/ITest", "interfaceMethod", "()V");
 
             assertNotNull(result);
             assertEquals("interfaceMethod", result.getMethod().getName());
@@ -247,33 +237,33 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveInterfaceMethodNotFound() throws IOException {
-            pool.createNewClass("com/test/ITest",
-                    new AccessBuilder().setPublic().setInterface().build());
+        void resolveInterfaceMethodNotFound() throws IOException
+        {
+            pool.createNewClass("com/test/ITest", new AccessBuilder().setPublic().setInterface().build());
 
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveInterfaceMethod("com/test/ITest", "nonExistent", "()V"));
         }
 
         @Test
-        void resolveInterfaceNotFound() {
+        void resolveInterfaceNotFound()
+        {
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveInterfaceMethod("com/test/NonExistent", "method", "()V"));
         }
     }
 
     @Nested
-    class ResolveSpecialMethodTests {
+    class ResolveSpecialMethodTests
+    {
 
         @Test
-        void resolveSpecialMethod() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPrivate().build(),
-                    "privateMethod", "V");
+        void resolveSpecialMethod() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPrivate().build(), "privateMethod", "V");
 
-            ResolvedMethod result = resolver.resolveSpecialMethod("com/test/TestClass",
-                    "privateMethod", "()V");
+            ResolvedMethod result = resolver.resolveSpecialMethod("com/test/TestClass", "privateMethod", "()V");
 
             assertNotNull(result);
             assertEquals("privateMethod", result.getMethod().getName());
@@ -281,42 +271,38 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveSpecialMethodNotFound() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void resolveSpecialMethodNotFound() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveSpecialMethod("com/test/TestClass", "nonExistent", "()V"));
         }
 
         @Test
-        void resolveSpecialMethodCached() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewMethod(new AccessBuilder().setPrivate().build(),
-                    "privateMethod", "V");
+        void resolveSpecialMethodCached() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewMethod(new AccessBuilder().setPrivate().build(), "privateMethod", "V");
 
-            ResolvedMethod result1 = resolver.resolveSpecialMethod("com/test/TestClass",
-                    "privateMethod", "()V");
-            ResolvedMethod result2 = resolver.resolveSpecialMethod("com/test/TestClass",
-                    "privateMethod", "()V");
+            ResolvedMethod result1 = resolver.resolveSpecialMethod("com/test/TestClass", "privateMethod", "()V");
+            ResolvedMethod result2 = resolver.resolveSpecialMethod("com/test/TestClass", "privateMethod", "()V");
 
             assertSame(result1, result2);
         }
     }
 
     @Nested
-    class ResolveFieldTests {
+    class ResolveFieldTests
+    {
 
         @Test
-        void resolveFieldInClass() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewField(new AccessBuilder().setPublic().build(),
-                    "testField", "I", null);
+        void resolveFieldInClass() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewField(new AccessBuilder().setPublic().build(), "testField", "I", null);
 
-            ResolvedField result = resolver.resolveField("com/test/TestClass",
-                    "testField", "I");
+            ResolvedField result = resolver.resolveField("com/test/TestClass", "testField", "I");
 
             assertNotNull(result);
             assertEquals("testField", result.getField().getName());
@@ -324,20 +310,17 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveFieldInSuperclass() throws IOException {
-            ClassFile parent = pool.createNewClass("com/test/Parent",
-                    new AccessBuilder().setPublic().build());
-            parent.createNewField(new AccessBuilder().setPublic().build(),
-                    "parentField", "I", null);
+        void resolveFieldInSuperclass() throws IOException
+        {
+            ClassFile parent = pool.createNewClass("com/test/Parent", new AccessBuilder().setPublic().build());
+            parent.createNewField(new AccessBuilder().setPublic().build(), "parentField", "I", null);
 
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             resolver = new ClassResolver(pool);
 
-            ResolvedField result = resolver.resolveField("com/test/Child",
-                    "parentField", "I");
+            ResolvedField result = resolver.resolveField("com/test/Child", "parentField", "I");
 
             assertNotNull(result);
             assertEquals("parentField", result.getField().getName());
@@ -345,76 +328,71 @@ class ClassResolverTest {
         }
 
         @Test
-        void resolveFieldNotFound() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void resolveFieldNotFound() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             assertThrows(ResolutionException.class, () ->
                     resolver.resolveField("com/test/TestClass", "nonExistent", "I"));
         }
 
         @Test
-        void resolveFieldCached() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewField(new AccessBuilder().setPublic().build(),
-                    "testField", "I", null);
+        void resolveFieldCached() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewField(new AccessBuilder().setPublic().build(), "testField", "I", null);
 
-            ResolvedField result1 = resolver.resolveField("com/test/TestClass",
-                    "testField", "I");
-            ResolvedField result2 = resolver.resolveField("com/test/TestClass",
-                    "testField", "I");
+            ResolvedField result1 = resolver.resolveField("com/test/TestClass", "testField", "I");
+            ResolvedField result2 = resolver.resolveField("com/test/TestClass", "testField", "I");
 
             assertSame(result1, result2);
         }
 
         @Test
-        void resolveStaticField() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewField(new AccessBuilder().setPublic().setStatic().build(),
-                    "staticField", "I", null);
+        void resolveStaticField() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewField(new AccessBuilder().setPublic().setStatic().build(), "staticField", "I", null);
 
-            ResolvedField result = resolver.resolveField("com/test/TestClass",
-                    "staticField", "I");
+            ResolvedField result = resolver.resolveField("com/test/TestClass", "staticField", "I");
 
             assertTrue(result.isStatic());
         }
 
         @Test
-        void resolveInstanceField() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
-            cf.createNewField(new AccessBuilder().setPublic().build(),
-                    "instanceField", "I", null);
+        void resolveInstanceField() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
+            cf.createNewField(new AccessBuilder().setPublic().build(), "instanceField", "I", null);
 
-            ResolvedField result = resolver.resolveField("com/test/TestClass",
-                    "instanceField", "I");
+            ResolvedField result = resolver.resolveField("com/test/TestClass", "instanceField", "I");
 
             assertFalse(result.isStatic());
         }
     }
 
     @Nested
-    class IsAssignableFromTests {
+    class IsAssignableFromTests
+    {
 
         @Test
-        void isAssignableFromSameType() {
+        void isAssignableFromSameType()
+        {
             assertTrue(resolver.isAssignableFrom("java/lang/String", "java/lang/String"));
         }
 
         @Test
-        void isAssignableFromObjectToAnyReference() {
+        void isAssignableFromObjectToAnyReference()
+        {
             assertTrue(resolver.isAssignableFrom("java/lang/Object", "java/lang/String"));
             assertTrue(resolver.isAssignableFrom("java/lang/Object", "com/test/TestClass"));
         }
 
         @Test
-        void isAssignableFromSuperclass() throws IOException {
-            pool.createNewClass("com/test/Parent",
-                    new AccessBuilder().setPublic().build());
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+        void isAssignableFromSuperclass() throws IOException
+        {
+            pool.createNewClass("com/test/Parent", new AccessBuilder().setPublic().build());
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             resolver = new ClassResolver(pool);
@@ -423,27 +401,26 @@ class ClassResolverTest {
         }
 
         @Test
-        void isAssignableFromNotRelated() throws IOException {
-            pool.createNewClass("com/test/Class1",
-                    new AccessBuilder().setPublic().build());
-            pool.createNewClass("com/test/Class2",
-                    new AccessBuilder().setPublic().build());
+        void isAssignableFromNotRelated() throws IOException
+        {
+            pool.createNewClass("com/test/Class1", new AccessBuilder().setPublic().build());
+            pool.createNewClass("com/test/Class2", new AccessBuilder().setPublic().build());
 
             assertFalse(resolver.isAssignableFrom("com/test/Class1", "com/test/Class2"));
         }
 
         @Test
-        void isAssignableFromPrimitiveArrays() {
+        void isAssignableFromPrimitiveArrays()
+        {
             assertTrue(resolver.isAssignableFrom("[I", "[I"));
             assertFalse(resolver.isAssignableFrom("[I", "[J"));
         }
 
         @Test
-        void isAssignableFromObjectArrays() throws IOException {
-            pool.createNewClass("com/test/Parent",
-                    new AccessBuilder().setPublic().build());
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+        void isAssignableFromObjectArrays() throws IOException
+        {
+            pool.createNewClass("com/test/Parent", new AccessBuilder().setPublic().build());
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             resolver = new ClassResolver(pool);
@@ -452,11 +429,10 @@ class ClassResolverTest {
         }
 
         @Test
-        void isAssignableFromCached() throws IOException {
-            pool.createNewClass("com/test/Parent",
-                    new AccessBuilder().setPublic().build());
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+        void isAssignableFromCached() throws IOException
+        {
+            pool.createNewClass("com/test/Parent", new AccessBuilder().setPublic().build());
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             resolver = new ClassResolver(pool);
@@ -470,12 +446,13 @@ class ClassResolverTest {
     }
 
     @Nested
-    class GetSuperclassTests {
+    class GetSuperclassTests
+    {
 
         @Test
-        void getSuperclassReturnsParent() throws IOException {
-            ClassFile child = pool.createNewClass("com/test/Child",
-                    new AccessBuilder().setPublic().build());
+        void getSuperclassReturnsParent() throws IOException
+        {
+            ClassFile child = pool.createNewClass("com/test/Child", new AccessBuilder().setPublic().build());
             child.setSuperClassName("com/test/Parent");
 
             String result = resolver.getSuperclass("com/test/Child");
@@ -484,16 +461,17 @@ class ClassResolverTest {
         }
 
         @Test
-        void getSuperclassNotFound() {
+        void getSuperclassNotFound()
+        {
             String result = resolver.getSuperclass("com/test/NonExistent");
 
             assertNull(result);
         }
 
         @Test
-        void getSuperclassObject() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void getSuperclassObject() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             String result = resolver.getSuperclass("com/test/TestClass");
 
@@ -502,12 +480,13 @@ class ClassResolverTest {
     }
 
     @Nested
-    class GetInterfacesTests {
+    class GetInterfacesTests
+    {
 
         @Test
-        void getInterfacesReturnsEmpty() throws IOException {
-            pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void getInterfacesReturnsEmpty() throws IOException
+        {
+            pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             resolver = new ClassResolver(pool);
 
@@ -518,7 +497,8 @@ class ClassResolverTest {
         }
 
         @Test
-        void getInterfacesNotFound() {
+        void getInterfacesNotFound()
+        {
             List<String> result = resolver.getInterfaces("com/test/NonExistent");
 
             assertNotNull(result);
@@ -527,12 +507,13 @@ class ClassResolverTest {
     }
 
     @Nested
-    class CacheManagementTests {
+    class CacheManagementTests
+    {
 
         @Test
-        void invalidateCacheClearsCache() throws IOException {
-            ClassFile cf = pool.createNewClass("com/test/TestClass",
-                    new AccessBuilder().setPublic().build());
+        void invalidateCacheClearsCache() throws IOException
+        {
+            ClassFile cf = pool.createNewClass("com/test/TestClass", new AccessBuilder().setPublic().build());
 
             resolver.resolveClass("com/test/TestClass");
 
@@ -544,15 +525,18 @@ class ClassResolverTest {
     }
 
     @Nested
-    class AccessorTests {
+    class AccessorTests
+    {
 
         @Test
-        void getClassPoolReturnsPool() {
+        void getClassPoolReturnsPool()
+        {
             assertSame(pool, resolver.getClassPool());
         }
 
         @Test
-        void getHierarchyReturnsHierarchy() {
+        void getHierarchyReturnsHierarchy()
+        {
             assertNotNull(resolver.getHierarchy());
         }
     }

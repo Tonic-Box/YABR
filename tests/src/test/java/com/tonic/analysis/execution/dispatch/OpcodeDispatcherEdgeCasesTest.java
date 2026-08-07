@@ -15,11 +15,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherEdgeCasesTest {
+class OpcodeDispatcherEdgeCasesTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -27,13 +29,17 @@ class OpcodeDispatcherEdgeCasesTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -41,7 +47,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2B_OverflowPositive() throws IOException {
+    void testI2B_OverflowPositive() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(300)
@@ -56,7 +63,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2B_OverflowNegative() throws IOException {
+    void testI2B_OverflowNegative() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(-200)
@@ -71,7 +79,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2C_NegativeToUnsigned() throws IOException {
+    void testI2C_NegativeToUnsigned() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(-1)
@@ -87,7 +96,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2C_Overflow() throws IOException {
+    void testI2C_Overflow() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(70000)
@@ -102,7 +112,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2S_OverflowPositive() throws IOException {
+    void testI2S_OverflowPositive() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(40000)
@@ -117,7 +128,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testI2S_OverflowNegative() throws IOException {
+    void testI2S_OverflowNegative() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .iconst(-40000)
@@ -132,7 +144,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testLRem_Basic() throws IOException {
+    void testLRem_Basic() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .lconst(17L)
@@ -148,7 +161,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testLRem_Negative() throws IOException {
+    void testLRem_Negative() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .lconst(-17L)
@@ -164,7 +178,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testFRem_Basic() throws IOException {
+    void testFRem_Basic() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()F")
                 .fconst(7.5f)
@@ -180,7 +195,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testFRem_NonExact() throws IOException {
+    void testFRem_NonExact() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()F")
                 .fconst(7.0f)
@@ -196,7 +212,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testDRem_Basic() throws IOException {
+    void testDRem_Basic() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()D")
                 .dconst(10.0)
@@ -212,7 +229,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testDRem_Negative() throws IOException {
+    void testDRem_Negative() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()D")
                 .dconst(-10.0)
@@ -228,7 +246,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testL2F_LargeLong() throws IOException {
+    void testL2F_LargeLong() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()F")
                 .lconst(123456789L)
@@ -243,7 +262,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testL2D_LargeLong() throws IOException {
+    void testL2D_LargeLong() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()D")
                 .lconst(123456789012345L)
@@ -258,7 +278,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testF2L_WithRounding() throws IOException {
+    void testF2L_WithRounding() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .fconst(42.9f)
@@ -273,7 +294,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testF2L_NaN() throws IOException {
+    void testF2L_NaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .fconst(Float.NaN)
@@ -288,7 +310,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testF2D_PrecisionPreserved() throws IOException {
+    void testF2D_PrecisionPreserved() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()D")
                 .fconst(3.14159f)
@@ -303,7 +326,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testD2L_WithRounding() throws IOException {
+    void testD2L_WithRounding() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .dconst(999.99)
@@ -318,7 +342,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testD2L_NaN() throws IOException {
+    void testD2L_NaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()J")
                 .dconst(Double.NaN)
@@ -333,7 +358,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testD2F_PrecisionLoss() throws IOException {
+    void testD2F_PrecisionLoss() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()F")
                 .dconst(1.23456789123456789)
@@ -348,7 +374,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testFCmpL_WithNaN() throws IOException {
+    void testFCmpL_WithNaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .fconst(Float.NaN)
@@ -364,7 +391,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testFCmpG_WithNaN() throws IOException {
+    void testFCmpG_WithNaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .fconst(Float.NaN)
@@ -380,7 +408,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testDCmpL_WithNaN() throws IOException {
+    void testDCmpL_WithNaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .dconst(Double.NaN)
@@ -396,7 +425,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testDCmpG_WithNaN() throws IOException {
+    void testDCmpG_WithNaN() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("TestClass")
             .publicStaticMethod("test", "()I")
                 .dconst(Double.NaN)
@@ -412,7 +442,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testIfAcmpeq_SameReference() throws IOException {
+    void testIfAcmpeq_SameReference() throws IOException
+    {
         BytecodeBuilder.Label trueLabel = new BytecodeBuilder.Label();
         BytecodeBuilder.Label endLabel = new BytecodeBuilder.Label();
 
@@ -436,7 +467,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testIfAcmpeq_DifferentReferences() throws IOException {
+    void testIfAcmpeq_DifferentReferences() throws IOException
+    {
         BytecodeBuilder.Label trueLabel = new BytecodeBuilder.Label();
         BytecodeBuilder.Label endLabel = new BytecodeBuilder.Label();
 
@@ -460,7 +492,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testIfAcmpne_SameReference() throws IOException {
+    void testIfAcmpne_SameReference() throws IOException
+    {
         BytecodeBuilder.Label trueLabel = new BytecodeBuilder.Label();
         BytecodeBuilder.Label endLabel = new BytecodeBuilder.Label();
 
@@ -484,7 +517,8 @@ class OpcodeDispatcherEdgeCasesTest {
     }
 
     @Test
-    void testIfAcmpne_DifferentReferences() throws IOException {
+    void testIfAcmpne_DifferentReferences() throws IOException
+    {
         BytecodeBuilder.Label trueLabel = new BytecodeBuilder.Label();
         BytecodeBuilder.Label endLabel = new BytecodeBuilder.Label();
 

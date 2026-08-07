@@ -17,78 +17,105 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Interprets a {@link Condition} against a {@link Subject}. The single evaluation engine: walks
- * accessor paths through the {@link AttributeRegistry}, applies operators over {@link Value}s, and
- * folds quantifier/count streams — no per-keyword dispatch. Matches record navigation evidence into
- * the subject's {@link EvalContext}.
+ * Interprets a {@link Condition} against a {@link Subject}.
  */
-public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
+public final class ConditionEvaluator implements Condition.Visitor<Boolean>
+{
 
     private final AttributeRegistry registry;
     private Subject subject;
 
-    public ConditionEvaluator(AttributeRegistry registry) {
+    /**
+     * Creates an evaluator that resolves accessor paths through a registry.
+     * @param registry the attribute resolvers to navigate with
+     */
+    public ConditionEvaluator(AttributeRegistry registry)
+    {
         this.registry = registry;
     }
 
-    public boolean eval(Condition condition, Subject against) {
+    /**
+     * Evaluates a condition against a subject, restoring the previously bound
+     * subject afterwards so nested evaluations can reenter.
+     * @param condition the condition to interpret
+     * @param against the subject to bind while interpreting
+     * @return true if the condition holds
+     */
+    public boolean eval(Condition condition, Subject against)
+    {
         Subject previous = this.subject;
         this.subject = against;
-        try {
+        try
+        {
             return condition.accept(this);
-        } finally {
+        }
+        finally
+        {
             this.subject = previous;
         }
     }
 
     @Override
-    public Boolean visitAnd(Condition.And c) {
-        for (Condition t : c.terms()) {
+    public Boolean visitAnd(Condition.And c)
+    {
+        for (Condition t : c.terms())
+        {
             if (!c0(t)) return false;
         }
         return true;
     }
 
     @Override
-    public Boolean visitOr(Condition.Or c) {
-        for (Condition t : c.terms()) {
+    public Boolean visitOr(Condition.Or c)
+    {
+        for (Condition t : c.terms())
+        {
             if (c0(t)) return true;
         }
         return false;
     }
 
     @Override
-    public Boolean visitNot(Condition.Not c) {
+    public Boolean visitNot(Condition.Not c)
+    {
         return !c0(c.inner());
     }
 
     @Override
-    public Boolean visitGroup(Condition.Group c) {
+    public Boolean visitGroup(Condition.Group c)
+    {
         return c0(c.inner());
     }
 
     @Override
-    public Boolean visitTrue(Condition.True c) {
+    public Boolean visitTrue(Condition.True c)
+    {
         return true;
     }
 
     @Override
-    public Boolean visitComparison(Condition.Comparison c) {
-        if (c.op() == Operator.SUBTYPE_OF) {
+    public Boolean visitComparison(Condition.Comparison c)
+    {
+        if (c.op() == Operator.SUBTYPE_OF)
+        {
             return evaluateSubtype(c.accessor(), c.operand());
         }
-        if (c.op() != null && c.op().isRelational()) {
+        if (c.op() != null && c.op().isRelational())
+        {
             Accessor rhs = ((Operand.Ref) c.operand()).accessor();
             return DataFlowAnalysis.evaluate(subject, c.accessor(), c.op(), rhs);
         }
         Value lhs = resolveScalar(c.accessor(), subject);
-        if (c.isBoolean()) {
-            if (lhs.kind() == ValueKind.BOOL) {
+        if (c.isBoolean())
+        {
+            if (lhs.kind() == ValueKind.BOOL)
+            {
                 return ((Value.BoolValue) lhs).get();
             }
             return lhs.kind() != ValueKind.ABSENT;
         }
-        if (lhs.kind() == ValueKind.ABSENT) {
+        if (lhs.kind() == ValueKind.ABSENT)
+        {
             return false;
         }
         Value rhs = resolveOperand(c.operand(), subject);
@@ -96,25 +123,31 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
     }
 
     @Override
-    public Boolean visitQuantifier(Condition.Quantifier c) {
+    public Boolean visitQuantifier(Condition.Quantifier c)
+    {
         List<Subject> elements = resolveStream(c.stream(), subject).collect(java.util.stream.Collectors.toList());
-        switch (c.quant()) {
+        switch (c.quant())
+        {
             case ANY:
-                for (Subject e : elements) {
-                    if (bodyMatches(c.body(), e)) {
+                for (Subject e : elements)
+                {
+                    if (bodyMatches(c.body(), e))
+                    {
                         recordEvidence(e);
                         return true;
                     }
                 }
                 return false;
             case NONE:
-                for (Subject e : elements) {
+                for (Subject e : elements)
+                {
                     if (bodyMatches(c.body(), e)) return false;
                 }
                 return true;
             case ALL:
             default:
-                for (Subject e : elements) {
+                for (Subject e : elements)
+                {
                     if (!bodyMatches(c.body(), e)) return false;
                 }
                 return !elements.isEmpty();
@@ -122,7 +155,8 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
     }
 
     @Override
-    public Boolean visitCount(Condition.Count c) {
+    public Boolean visitCount(Condition.Count c)
+    {
         long count = resolveStream(c.stream(), subject)
                 .filter(e -> bodyMatches(c.body(), e))
                 .count();
@@ -131,19 +165,24 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
     }
 
     @Override
-    public Boolean visitSequence(Condition.Sequence c) {
+    public Boolean visitSequence(Condition.Sequence c)
+    {
         EvalContext ctx = subject.context();
         List<Instruction> insns = ctx.instructions();
-        if (insns.isEmpty()) {
+        if (insns.isEmpty())
+        {
             return false;
         }
         List<Subject> elementSubjects = new ArrayList<>(insns.size());
-        for (int i = 0; i < insns.size(); i++) {
+        for (int i = 0; i < insns.size(); i++)
+        {
             elementSubjects.add(new Subject.InstructionSubject(insns.get(i), i, ctx));
         }
         int[] budget = {200_000};
-        for (int start = 0; start < insns.size(); start++) {
-            if (matchSequence(c.elements(), 0, elementSubjects, start, budget)) {
+        for (int start = 0; start < insns.size(); start++)
+        {
+            if (matchSequence(c.elements(), 0, elementSubjects, start, budget))
+            {
                 recordSequenceEvidence(ctx, insns.get(start));
                 return true;
             }
@@ -151,143 +190,181 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
         return false;
     }
 
-    /** Greedy + backtracking match of the element list against instructions starting at {@code ii}. */
-    private boolean matchSequence(List<Condition.Sequence.Element> elements, int ei,
-                                  List<Subject> subjects, int ii, int[] budget) {
-        if (ei == elements.size()) {
+    /**
+     * Greedy + backtracking match of the element list against instructions starting at {@code ii}.
+     */
+    private boolean matchSequence(List<Condition.Sequence.Element> elements, int ei, List<Subject> subjects, int ii, int[] budget)
+    {
+        if (ei == elements.size())
+        {
             return true;
         }
-        if (--budget[0] < 0) {
+        if (--budget[0] < 0)
+        {
             return false;
         }
         Condition.Sequence.Element e = elements.get(ei);
         int limit = Math.min(e.max(), subjects.size() - ii);
         int run = 0;
-        while (run < limit && eval(e.matcher(), subjects.get(ii + run))) {
+        while (run < limit && eval(e.matcher(), subjects.get(ii + run)))
+        {
             run++;
         }
-        for (int k = run; k >= e.min(); k--) {
-            if (matchSequence(elements, ei + 1, subjects, ii + k, budget)) {
+        for (int k = run; k >= e.min(); k--)
+        {
+            if (matchSequence(elements, ei + 1, subjects, ii + k, budget))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private void recordSequenceEvidence(EvalContext ctx, Instruction at) {
-        if (ctx.method() == null) {
+    private void recordSequenceEvidence(EvalContext ctx, Instruction at)
+    {
+        if (ctx.method() == null)
+        {
             return;
         }
         ctx.evidence().record(ctx.method().getOwnerName(), ctx.method().getName(),
                 ctx.method().getDesc(), at.getOffset(), "sequence @ pc " + at.getOffset());
     }
 
-    private boolean bodyMatches(Condition body, Subject element) {
+    private boolean bodyMatches(Condition body, Subject element)
+    {
         return body == null || eval(body, element);
     }
 
-    private boolean c0(Condition condition) {
+    private boolean c0(Condition condition)
+    {
         return condition.accept(this);
     }
 
-    // ---- accessor resolution ---------------------------------------------
+    // accessor resolution
 
-    private Value resolveScalar(Accessor accessor, Subject from) {
+    private Value resolveScalar(Accessor accessor, Subject from)
+    {
         List<Step> steps = accessor.steps();
         Subject cur = from;
-        for (int i = 0; i < steps.size() - 1; i++) {
+        for (int i = 0; i < steps.size() - 1; i++)
+        {
             cur = single(expand(steps.get(i), cur));
-            if (cur == null) {
+            if (cur == null)
+            {
                 return Value.ABSENT;
             }
         }
         Step terminal = steps.get(steps.size() - 1);
         AttributeRegistry.Entry entry = registry.lookup(cur.kind(), terminal.keyword());
-        if (entry == null || entry.isStream()) {
+        if (entry == null || entry.isStream())
+        {
             return Value.ABSENT;
         }
         return entry.scalar().get(cur);
     }
 
-    private Stream<Subject> resolveStream(Accessor accessor, Subject from) {
+    private Stream<Subject> resolveStream(Accessor accessor, Subject from)
+    {
         List<Step> steps = accessor.steps();
         Subject cur = from;
-        for (int i = 0; i < steps.size() - 1; i++) {
+        for (int i = 0; i < steps.size() - 1; i++)
+        {
             cur = single(expand(steps.get(i), cur));
-            if (cur == null) {
+            if (cur == null)
+            {
                 return Stream.empty();
             }
         }
         return expand(steps.get(steps.size() - 1), cur);
     }
 
-    private Stream<Subject> expand(Step step, Subject on) {
+    private Stream<Subject> expand(Step step, Subject on)
+    {
         AttributeRegistry.Entry entry = registry.lookup(on.kind(), step.keyword());
-        if (entry == null || !entry.isStream()) {
+        if (entry == null || !entry.isStream())
+        {
             return Stream.empty();
         }
         return entry.stream().expand(on, step);
     }
 
-    private Value resolveOperand(Operand operand, Subject from) {
-        if (operand instanceof Operand.Literal) {
+    private Value resolveOperand(Operand operand, Subject from)
+    {
+        if (operand instanceof Operand.Literal)
+        {
             return ((Operand.Literal) operand).value();
         }
         return resolveScalar(((Operand.Ref) operand).accessor(), from);
     }
 
     /**
-     * Transitive subtype test ({@code class isSubtypeOf java.lang.Applet}). The left accessor resolves to a class
-     * subject (a {@code FIND classes} subject directly, or a {@code FIND methods} subject's owner via the
-     * {@code class} stream); the right operand is a type literal. Walks the shared class hierarchy
-     * (superclass chain + interfaces); best-effort - unresolved ancestors stop the walk.
+     * Transitive subtype test ({@code class isSubtypeOf java.lang.Applet}).
      */
-    private Boolean evaluateSubtype(Accessor lhs, Operand operand) {
+    private Boolean evaluateSubtype(Accessor lhs, Operand operand)
+    {
         Subject resolved = single(resolveStream(lhs, subject));
         ClassFile cf;
-        if (resolved instanceof Subject.ClassSubject) {
+        if (resolved instanceof Subject.ClassSubject)
+        {
             cf = ((Subject.ClassSubject) resolved).classFile();
-        } else {
+        }
+        else
+        {
             cf = (resolved != null ? resolved : subject).context().classFile();
         }
-        if (cf == null) {
+        if (cf == null)
+        {
             return false;
         }
         ClassHierarchy hierarchy = subject.context().hierarchy();
-        if (hierarchy == null) {
+        if (hierarchy == null)
+        {
             return false;
         }
         String target = internalName(resolveOperand(operand, subject));
         return target != null && hierarchy.isAncestorOf(target, cf.getClassName());
     }
 
-    /** A type/string Value as an internal class name ({@code java/lang/Applet}), or {@code null} if not a class type. */
-    private static String internalName(Value v) {
+    /**
+     * A type/string Value as an internal class name ({@code java/lang/Applet}), or {@code null} if not a class type.
+     */
+    private static String internalName(Value v)
+    {
         String text;
-        if (v.kind() == ValueKind.TYPE) {
+        if (v.kind() == ValueKind.TYPE)
+        {
             text = ((Value.TypeValue) v).get();
-        } else if (v.kind() == ValueKind.STRING) {
+        }
+        else if (v.kind() == ValueKind.STRING)
+        {
             text = ((Value.StrValue) v).get();
-        } else {
+        }
+        else
+        {
             return null;
         }
         String canonical = TypeNames.canonical(text);
-        if (canonical == null) {
+        if (canonical == null)
+        {
             return null;
         }
-        if (canonical.startsWith("L") && canonical.endsWith(";")) {
+        if (canonical.startsWith("L") && canonical.endsWith(";"))
+        {
             return canonical.substring(1, canonical.length() - 1);
         }
         return canonical.indexOf('/') >= 0 || canonical.indexOf('.') >= 0 ? canonical.replace('.', '/') : null;
     }
 
-    private static Subject single(Stream<Subject> stream) {
+    private static Subject single(Stream<Subject> stream)
+    {
         return stream.findFirst().orElse(null);
     }
 
-    private void recordEvidence(Subject element) {
+    private void recordEvidence(Subject element)
+    {
         EvalContext ctx = element.context();
-        if (ctx.method() == null) {
+        if (ctx.method() == null)
+        {
             return;
         }
         Instruction at = locate(element);
@@ -296,7 +373,8 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
                 ctx.method().getDesc(), pc, describe(element, pc));
     }
 
-    private static Instruction locate(Subject s) {
+    private static Instruction locate(Subject s)
+    {
         if (s instanceof Subject.CallSubject) return ((Subject.CallSubject) s).invoke();
         if (s instanceof Subject.InstructionSubject) return ((Subject.InstructionSubject) s).instruction();
         if (s instanceof Subject.FieldAccessSubject) return ((Subject.FieldAccessSubject) s).instruction();
@@ -305,7 +383,8 @@ public final class ConditionEvaluator implements Condition.Visitor<Boolean> {
         return null;
     }
 
-    private static String describe(Subject s, int pc) {
+    private static String describe(Subject s, int pc)
+    {
         return s.kind().name().toLowerCase() + " @ pc " + pc;
     }
 }

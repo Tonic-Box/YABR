@@ -8,10 +8,12 @@ import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TraceEventTest {
+class TraceEventTest
+{
 
     @Test
-    void executionStartEvent() {
+    void executionStartEvent()
+    {
         TraceEvent event = TraceEvent.executionStart("com.example.Main.main()V");
 
         assertEquals(TraceEvent.Type.EXECUTION_START, event.getType());
@@ -21,7 +23,8 @@ class TraceEventTest {
     }
 
     @Test
-    void executionEndEvent() {
+    void executionEndEvent()
+    {
         TraceEvent event = TraceEvent.executionEnd("Success");
 
         assertEquals(TraceEvent.Type.EXECUTION_END, event.getType());
@@ -29,7 +32,8 @@ class TraceEventTest {
     }
 
     @Test
-    void framePushEvent() {
+    void framePushEvent()
+    {
         TraceEvent event = TraceEvent.framePush("Test.method()V");
 
         assertEquals(TraceEvent.Type.FRAME_PUSH, event.getType());
@@ -37,7 +41,8 @@ class TraceEventTest {
     }
 
     @Test
-    void framePopEvent() {
+    void framePopEvent()
+    {
         TraceEvent event = TraceEvent.framePop("Test.method()V", "int(42)");
 
         assertEquals(TraceEvent.Type.FRAME_POP, event.getType());
@@ -46,7 +51,8 @@ class TraceEventTest {
     }
 
     @Test
-    void frameExceptionEvent() {
+    void frameExceptionEvent()
+    {
         TraceEvent event = TraceEvent.frameException("Test.method()V", "NPE");
 
         assertEquals(TraceEvent.Type.FRAME_EXCEPTION, event.getType());
@@ -54,7 +60,8 @@ class TraceEventTest {
     }
 
     @Test
-    void instructionEvent() {
+    void instructionEvent()
+    {
         TraceEvent event = TraceEvent.instruction(10, 0x60, null);
 
         assertEquals(TraceEvent.Type.INSTRUCTION, event.getType());
@@ -63,7 +70,8 @@ class TraceEventTest {
     }
 
     @Test
-    void instructionEventWithStack() {
+    void instructionEventWithStack()
+    {
         ConcreteValue v1 = ConcreteValue.intValue(1);
         ConcreteValue v2 = ConcreteValue.intValue(2);
 
@@ -74,7 +82,8 @@ class TraceEventTest {
     }
 
     @Test
-    void stackPushEvent() {
+    void stackPushEvent()
+    {
         TraceEvent event = TraceEvent.stackPush(5, "int(42)");
 
         assertEquals(TraceEvent.Type.STACK_PUSH, event.getType());
@@ -83,7 +92,8 @@ class TraceEventTest {
     }
 
     @Test
-    void stackPopEvent() {
+    void stackPopEvent()
+    {
         TraceEvent event = TraceEvent.stackPop(5, "int(42)");
 
         assertEquals(TraceEvent.Type.STACK_POP, event.getType());
@@ -91,7 +101,8 @@ class TraceEventTest {
     }
 
     @Test
-    void localLoadEvent() {
+    void localLoadEvent()
+    {
         TraceEvent event = TraceEvent.localLoad(10, 3, "int(99)");
 
         assertEquals(TraceEvent.Type.LOCAL_LOAD, event.getType());
@@ -100,7 +111,8 @@ class TraceEventTest {
     }
 
     @Test
-    void localStoreEvent() {
+    void localStoreEvent()
+    {
         TraceEvent event = TraceEvent.localStore(10, 3, "int(99)");
 
         assertEquals(TraceEvent.Type.LOCAL_STORE, event.getType());
@@ -108,7 +120,8 @@ class TraceEventTest {
     }
 
     @Test
-    void objectAllocationEvent() {
+    void objectAllocationEvent()
+    {
         TraceEvent event = TraceEvent.objectAllocation("java/lang/String", 123);
 
         assertEquals(TraceEvent.Type.OBJECT_ALLOC, event.getType());
@@ -117,7 +130,8 @@ class TraceEventTest {
     }
 
     @Test
-    void arrayAllocationEvent() {
+    void arrayAllocationEvent()
+    {
         TraceEvent event = TraceEvent.arrayAllocation("I", 10, 456);
 
         assertEquals(TraceEvent.Type.ARRAY_ALLOC, event.getType());
@@ -126,7 +140,8 @@ class TraceEventTest {
     }
 
     @Test
-    void fieldReadEvent() {
+    void fieldReadEvent()
+    {
         TraceEvent event = TraceEvent.fieldRead("Object@1", "field", "int(5)");
 
         assertEquals(TraceEvent.Type.FIELD_READ, event.getType());
@@ -135,7 +150,8 @@ class TraceEventTest {
     }
 
     @Test
-    void fieldWriteEvent() {
+    void fieldWriteEvent()
+    {
         TraceEvent event = TraceEvent.fieldWrite("Object@1", "field", "int(5)", "int(10)");
 
         assertEquals(TraceEvent.Type.FIELD_WRITE, event.getType());
@@ -145,7 +161,8 @@ class TraceEventTest {
     }
 
     @Test
-    void arrayReadEvent() {
+    void arrayReadEvent()
+    {
         TraceEvent event = TraceEvent.arrayRead("Array@1", 5, "int(42)");
 
         assertEquals(TraceEvent.Type.ARRAY_READ, event.getType());
@@ -154,7 +171,8 @@ class TraceEventTest {
     }
 
     @Test
-    void arrayWriteEvent() {
+    void arrayWriteEvent()
+    {
         TraceEvent event = TraceEvent.arrayWrite("Array@1", 5, "int(1)", "int(2)");
 
         assertEquals(TraceEvent.Type.ARRAY_WRITE, event.getType());
@@ -162,7 +180,8 @@ class TraceEventTest {
     }
 
     @Test
-    void branchEvent() {
+    void branchEvent()
+    {
         TraceEvent taken = TraceEvent.branch(10, 20, true);
         TraceEvent notTaken = TraceEvent.branch(10, 20, false);
 
@@ -172,7 +191,8 @@ class TraceEventTest {
     }
 
     @Test
-    void methodCallEvent() {
+    void methodCallEvent()
+    {
         TraceEvent event = TraceEvent.methodCall("Caller.method()V", "Target.method()V");
 
         assertEquals(TraceEvent.Type.METHOD_CALL, event.getType());
@@ -180,7 +200,8 @@ class TraceEventTest {
     }
 
     @Test
-    void methodReturnEvent() {
+    void methodReturnEvent()
+    {
         TraceEvent event = TraceEvent.methodReturn("Test.method()I", "int(42)");
 
         assertEquals(TraceEvent.Type.METHOD_RETURN, event.getType());
@@ -188,7 +209,8 @@ class TraceEventTest {
     }
 
     @Test
-    void exceptionThrowEvent() {
+    void exceptionThrowEvent()
+    {
         TraceEvent event = TraceEvent.exceptionThrow("Test.method()V", "NPE");
 
         assertEquals(TraceEvent.Type.EXCEPTION_THROW, event.getType());
@@ -196,7 +218,8 @@ class TraceEventTest {
     }
 
     @Test
-    void exceptionCatchEvent() {
+    void exceptionCatchEvent()
+    {
         TraceEvent event = TraceEvent.exceptionCatch("Test.method()V", "NPE", 100);
 
         assertEquals(TraceEvent.Type.EXCEPTION_CATCH, event.getType());
@@ -205,7 +228,8 @@ class TraceEventTest {
     }
 
     @Test
-    void nativeCallEvent() {
+    void nativeCallEvent()
+    {
         TraceEvent event = TraceEvent.nativeCall("System.currentTimeMillis()J");
 
         assertEquals(TraceEvent.Type.NATIVE_CALL, event.getType());
@@ -213,7 +237,8 @@ class TraceEventTest {
     }
 
     @Test
-    void nativeReturnEvent() {
+    void nativeReturnEvent()
+    {
         TraceEvent event = TraceEvent.nativeReturn("System.currentTimeMillis()J", "long(12345)");
 
         assertEquals(TraceEvent.Type.NATIVE_RETURN, event.getType());
@@ -221,7 +246,8 @@ class TraceEventTest {
     }
 
     @Test
-    void formatProducesReadableString() {
+    void formatProducesReadableString()
+    {
         TraceEvent event = TraceEvent.instruction(10, 0x60, null);
         String formatted = event.format();
 
@@ -231,7 +257,8 @@ class TraceEventTest {
     }
 
     @Test
-    void formatIncludesStackState() {
+    void formatIncludesStackState()
+    {
         ConcreteValue v = ConcreteValue.intValue(42);
         TraceEvent event = TraceEvent.instruction(10, 0x60, Collections.singletonList(v));
         String formatted = event.format();
@@ -240,26 +267,27 @@ class TraceEventTest {
     }
 
     @Test
-    void timestampIsRecorded() {
+    void timestampIsRecorded()
+    {
         TraceEvent event = TraceEvent.executionStart("test");
 
         assertTrue(event.getTimestamp() > 0);
     }
 
     @Test
-    void toStringCallsFormat() {
+    void toStringCallsFormat()
+    {
         TraceEvent event = TraceEvent.stackPush(5, "test");
 
         assertEquals(event.format(), event.toString());
     }
 
     @Test
-    void stackStateIsUnmodifiable() {
+    void stackStateIsUnmodifiable()
+    {
         ConcreteValue v = ConcreteValue.intValue(42);
         TraceEvent event = TraceEvent.instruction(10, 0x60, Collections.singletonList(v));
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            event.getStackState().add(ConcreteValue.intValue(1));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> event.getStackState().add(ConcreteValue.intValue(1)));
     }
 }

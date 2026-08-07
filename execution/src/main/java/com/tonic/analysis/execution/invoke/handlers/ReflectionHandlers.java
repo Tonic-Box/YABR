@@ -6,10 +6,15 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class ReflectionHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the reflection surface.
+ */
+public final class ReflectionHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerClassLoaderHandlers(registry);
         registerExecutableHandlers(registry);
         registerFieldHandlers(registry);
@@ -17,14 +22,15 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
         registerReferenceHandlers(registry);
     }
 
-    private void registerClassLoaderHandlers(NativeRegistry registry) {
-        registry.register("java/lang/ClassLoader", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerClassLoaderHandlers(NativeRegistry registry)
+    {
+        registry.register("java/lang/ClassLoader", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/ClassLoader", "defineClass1", "(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (args != null && args.length > 1 && !args[1].isNull()) {
+                if (args != null && args.length > 1 && !args[1].isNull())
+                {
                     classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[1].asReference());
                 }
                 return ConcreteValue.reference(classObj);
@@ -33,7 +39,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
         registry.register("java/lang/ClassLoader", "defineClass2", "(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (args != null && args.length > 1 && !args[1].isNull()) {
+                if (args != null && args.length > 1 && !args[1].isNull())
+                {
                     classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[1].asReference());
                 }
                 return ConcreteValue.reference(classObj);
@@ -42,7 +49,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
         registry.register("java/lang/ClassLoader", "findBootstrapClass", "(Ljava/lang/String;)Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[0].asReference());
                 }
                 return ConcreteValue.reference(classObj);
@@ -67,7 +75,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
     }
 
-    private void registerExecutableHandlers(NativeRegistry registry) {
+    private void registerExecutableHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/reflect/Executable", "getParameters0", "()[Ljava/lang/reflect/Parameter;",
             (receiver, args, ctx) -> {
                 ArrayInstance empty = ctx.getHeapManager().newArray("[Ljava/lang/reflect/Parameter;", 0);
@@ -81,7 +90,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerFieldHandlers(NativeRegistry registry) {
+    private void registerFieldHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/reflect/Field", "getTypeAnnotationBytes0", "()[B",
             (receiver, args, ctx) -> {
                 ArrayInstance empty = ctx.getHeapManager().newArray("[B", 0);
@@ -89,7 +99,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
             });
     }
 
-    private void registerModuleHandlers(NativeRegistry registry) {
+    private void registerModuleHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/Module", "defineModule0", "(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V",
             (receiver, args, ctx) -> null);
 
@@ -106,7 +117,8 @@ public final class ReflectionHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> null);
     }
 
-    private void registerReferenceHandlers(NativeRegistry registry) {
+    private void registerReferenceHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/ref/Reference", "getAndClearReferencePendingList", "()Ljava/lang/ref/Reference;",
             (receiver, args, ctx) -> ConcreteValue.nullRef());
 

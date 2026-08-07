@@ -24,15 +24,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * stack (a frame-generation "Stack underflow") and the elements are dropped. Regression for the cemented
  * "// Failed to decompile static initializer" on classes with array-valued static fields.
  */
-class ArrayInitLoweringTest {
+class ArrayInitLoweringTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void newArrayWithInlineInitializerLowersAndVerifies() throws Exception {
+    void newArrayWithInlineInitializerLowersAndVerifies() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         int pub = new AccessBuilder().setPublic().setStatic().build();
         ClassFile cf = pool.createNewClass("test/ArrInit", new AccessBuilder().setPublic().build());

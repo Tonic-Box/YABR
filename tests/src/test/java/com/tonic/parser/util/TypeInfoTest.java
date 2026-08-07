@@ -5,13 +5,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TypeInfoTest {
+class TypeInfoTest
+{
 
     @Nested
-    class PrimitiveTypeConstants {
+    class PrimitiveTypeConstants
+    {
 
         @Test
-        void voidType() {
+        void voidType()
+        {
             assertEquals("V", TypeInfo.VOID.getDescriptor());
             assertEquals(0, TypeInfo.VOID.getSize());
             assertTrue(TypeInfo.VOID.isPrimitive());
@@ -20,7 +23,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void booleanType() {
+        void booleanType()
+        {
             assertEquals("Z", TypeInfo.BOOLEAN.getDescriptor());
             assertEquals(1, TypeInfo.BOOLEAN.getSize());
             assertTrue(TypeInfo.BOOLEAN.isPrimitive());
@@ -28,42 +32,48 @@ class TypeInfoTest {
         }
 
         @Test
-        void byteType() {
+        void byteType()
+        {
             assertEquals("B", TypeInfo.BYTE.getDescriptor());
             assertEquals(1, TypeInfo.BYTE.getSize());
             assertTrue(TypeInfo.BYTE.isPrimitive());
         }
 
         @Test
-        void charType() {
+        void charType()
+        {
             assertEquals("C", TypeInfo.CHAR.getDescriptor());
             assertEquals(1, TypeInfo.CHAR.getSize());
             assertTrue(TypeInfo.CHAR.isPrimitive());
         }
 
         @Test
-        void shortType() {
+        void shortType()
+        {
             assertEquals("S", TypeInfo.SHORT.getDescriptor());
             assertEquals(1, TypeInfo.SHORT.getSize());
             assertTrue(TypeInfo.SHORT.isPrimitive());
         }
 
         @Test
-        void intType() {
+        void intType()
+        {
             assertEquals("I", TypeInfo.INT.getDescriptor());
             assertEquals(1, TypeInfo.INT.getSize());
             assertTrue(TypeInfo.INT.isPrimitive());
         }
 
         @Test
-        void floatType() {
+        void floatType()
+        {
             assertEquals("F", TypeInfo.FLOAT.getDescriptor());
             assertEquals(1, TypeInfo.FLOAT.getSize());
             assertTrue(TypeInfo.FLOAT.isPrimitive());
         }
 
         @Test
-        void longType() {
+        void longType()
+        {
             assertEquals("J", TypeInfo.LONG.getDescriptor());
             assertEquals(2, TypeInfo.LONG.getSize());
             assertTrue(TypeInfo.LONG.isPrimitive());
@@ -71,7 +81,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void doubleType() {
+        void doubleType()
+        {
             assertEquals("D", TypeInfo.DOUBLE.getDescriptor());
             assertEquals(2, TypeInfo.DOUBLE.getSize());
             assertTrue(TypeInfo.DOUBLE.isPrimitive());
@@ -80,64 +91,75 @@ class TypeInfoTest {
     }
 
     @Nested
-    class OfMethodTests {
+    class OfMethodTests
+    {
 
         @Test
-        void ofPrimitiveV() {
+        void ofPrimitiveV()
+        {
             TypeInfo type = TypeInfo.of("V");
             assertSame(TypeInfo.VOID, type);
         }
 
         @Test
-        void ofPrimitiveZ() {
+        void ofPrimitiveZ()
+        {
             TypeInfo type = TypeInfo.of("Z");
             assertSame(TypeInfo.BOOLEAN, type);
         }
 
         @Test
-        void ofPrimitiveB() {
+        void ofPrimitiveB()
+        {
             TypeInfo type = TypeInfo.of("B");
             assertSame(TypeInfo.BYTE, type);
         }
 
         @Test
-        void ofPrimitiveC() {
+        void ofPrimitiveC()
+        {
             TypeInfo type = TypeInfo.of("C");
             assertSame(TypeInfo.CHAR, type);
         }
 
         @Test
-        void ofPrimitiveS() {
+        void ofPrimitiveS()
+        {
             TypeInfo type = TypeInfo.of("S");
             assertSame(TypeInfo.SHORT, type);
         }
 
         @Test
-        void ofPrimitiveI() {
+        void ofPrimitiveI()
+        {
             TypeInfo type = TypeInfo.of("I");
             assertSame(TypeInfo.INT, type);
         }
 
         @Test
-        void ofPrimitiveF() {
+        void ofPrimitiveF()
+        {
             TypeInfo type = TypeInfo.of("F");
             assertSame(TypeInfo.FLOAT, type);
         }
 
         @Test
-        void ofPrimitiveJ() {
+        void ofPrimitiveJ()
+        {
             TypeInfo type = TypeInfo.of("J");
             assertSame(TypeInfo.LONG, type);
         }
 
         @Test
-        void ofPrimitiveD() {
+        void ofPrimitiveD()
+        {
             TypeInfo type = TypeInfo.of("D");
             assertSame(TypeInfo.DOUBLE, type);
         }
 
         @Test
-        void ofObjectType() {
+        void ofObjectType()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertEquals("Ljava/lang/String;", type.getDescriptor());
             assertEquals(1, type.getSize());
@@ -147,7 +169,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void ofSingleDimensionArray() {
+        void ofSingleDimensionArray()
+        {
             TypeInfo type = TypeInfo.of("[I");
             assertEquals("[I", type.getDescriptor());
             assertEquals(1, type.getSize());
@@ -157,7 +180,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void ofMultiDimensionArray() {
+        void ofMultiDimensionArray()
+        {
             TypeInfo type = TypeInfo.of("[[Ljava/lang/Object;");
             assertEquals("[[Ljava/lang/Object;", type.getDescriptor());
             assertTrue(type.isArray());
@@ -165,27 +189,32 @@ class TypeInfoTest {
         }
 
         @Test
-        void ofNullThrows() {
+        void ofNullThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.of(null));
         }
 
         @Test
-        void ofEmptyThrows() {
+        void ofEmptyThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.of(""));
         }
 
         @Test
-        void ofInvalidDescriptorThrows() {
+        void ofInvalidDescriptorThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.of("X"));
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.of("invalid"));
         }
     }
 
     @Nested
-    class ForClassNameTests {
+    class ForClassNameTests
+    {
 
         @Test
-        void forClassName() {
+        void forClassName()
+        {
             TypeInfo type = TypeInfo.forClassName("java/lang/String");
             assertEquals("Ljava/lang/String;", type.getDescriptor());
             assertEquals(1, type.getSize());
@@ -194,27 +223,32 @@ class TypeInfoTest {
         }
 
         @Test
-        void forClassNameNested() {
+        void forClassNameNested()
+        {
             TypeInfo type = TypeInfo.forClassName("com/example/Outer$Inner");
             assertEquals("Lcom/example/Outer$Inner;", type.getDescriptor());
         }
 
         @Test
-        void forClassNameNullThrows() {
+        void forClassNameNullThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.forClassName(null));
         }
 
         @Test
-        void forClassNameEmptyThrows() {
+        void forClassNameEmptyThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> TypeInfo.forClassName(""));
         }
     }
 
     @Nested
-    class ForArrayTypeTests {
+    class ForArrayTypeTests
+    {
 
         @Test
-        void forArrayTypeSingleDimension() {
+        void forArrayTypeSingleDimension()
+        {
             TypeInfo type = TypeInfo.forArrayType(TypeInfo.INT, 1);
             assertEquals("[I", type.getDescriptor());
             assertTrue(type.isArray());
@@ -222,14 +256,16 @@ class TypeInfoTest {
         }
 
         @Test
-        void forArrayTypeMultiDimension() {
+        void forArrayTypeMultiDimension()
+        {
             TypeInfo type = TypeInfo.forArrayType(TypeInfo.INT, 3);
             assertEquals("[[[I", type.getDescriptor());
             assertTrue(type.isArray());
         }
 
         @Test
-        void forArrayTypeObject() {
+        void forArrayTypeObject()
+        {
             TypeInfo elementType = TypeInfo.forClassName("java/lang/String");
             TypeInfo arrayType = TypeInfo.forArrayType(elementType, 1);
             assertEquals("[Ljava/lang/String;", arrayType.getDescriptor());
@@ -237,7 +273,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void forArrayTypeMultiDimensionObject() {
+        void forArrayTypeMultiDimensionObject()
+        {
             TypeInfo elementType = TypeInfo.forClassName("java/lang/Object");
             TypeInfo arrayType = TypeInfo.forArrayType(elementType, 2);
             assertEquals("[[Ljava/lang/Object;", arrayType.getDescriptor());
@@ -246,17 +283,20 @@ class TypeInfoTest {
     }
 
     @Nested
-    class PropertyTests {
+    class PropertyTests
+    {
 
         @Test
-        void isVoidOnlyForVoid() {
+        void isVoidOnlyForVoid()
+        {
             assertTrue(TypeInfo.VOID.isVoid());
             assertFalse(TypeInfo.INT.isVoid());
             assertFalse(TypeInfo.of("Ljava/lang/String;").isVoid());
         }
 
         @Test
-        void isWideForLongAndDouble() {
+        void isWideForLongAndDouble()
+        {
             assertTrue(TypeInfo.LONG.isWide());
             assertTrue(TypeInfo.DOUBLE.isWide());
             assertFalse(TypeInfo.INT.isWide());
@@ -265,7 +305,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void isReferenceForObjectsAndArrays() {
+        void isReferenceForObjectsAndArrays()
+        {
             assertFalse(TypeInfo.INT.isReference());
             assertFalse(TypeInfo.VOID.isReference());
             assertTrue(TypeInfo.of("Ljava/lang/String;").isReference());
@@ -274,7 +315,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void isPrimitiveForPrimitives() {
+        void isPrimitiveForPrimitives()
+        {
             assertTrue(TypeInfo.INT.isPrimitive());
             assertTrue(TypeInfo.VOID.isPrimitive());
             assertTrue(TypeInfo.BOOLEAN.isPrimitive());
@@ -283,7 +325,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void isArrayForArrayTypes() {
+        void isArrayForArrayTypes()
+        {
             assertFalse(TypeInfo.INT.isArray());
             assertFalse(TypeInfo.of("Ljava/lang/String;").isArray());
             assertTrue(TypeInfo.of("[I").isArray());
@@ -292,67 +335,79 @@ class TypeInfoTest {
     }
 
     @Nested
-    class ClassNameTests {
+    class ClassNameTests
+    {
 
         @Test
-        void getClassNameForPrimitive() {
+        void getClassNameForPrimitive()
+        {
             assertNull(TypeInfo.INT.getClassName());
             assertNull(TypeInfo.VOID.getClassName());
         }
 
         @Test
-        void getClassNameForObject() {
+        void getClassNameForObject()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertEquals("java/lang/String", type.getClassName());
         }
 
         @Test
-        void getClassNameForArray() {
+        void getClassNameForArray()
+        {
             TypeInfo type = TypeInfo.of("[I");
             assertEquals("[I", type.getClassName());
         }
 
         @Test
-        void getClassNameForObjectArray() {
+        void getClassNameForObjectArray()
+        {
             TypeInfo type = TypeInfo.of("[Ljava/lang/Object;");
             assertEquals("[Ljava/lang/Object;", type.getClassName());
         }
     }
 
     @Nested
-    class InternalNameTests {
+    class InternalNameTests
+    {
 
         @Test
-        void getInternalNameForPrimitive() {
+        void getInternalNameForPrimitive()
+        {
             assertEquals("I", TypeInfo.INT.getInternalName());
             assertEquals("V", TypeInfo.VOID.getInternalName());
         }
 
         @Test
-        void getInternalNameForObject() {
+        void getInternalNameForObject()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertEquals("java/lang/String", type.getInternalName());
         }
 
         @Test
-        void getInternalNameForArray() {
+        void getInternalNameForArray()
+        {
             TypeInfo type = TypeInfo.of("[I");
             assertEquals("[I", type.getInternalName());
         }
     }
 
     @Nested
-    class ArrayOperations {
+    class ArrayOperations
+    {
 
         @Test
-        void getElementTypeForSingleDimensionArray() {
+        void getElementTypeForSingleDimensionArray()
+        {
             TypeInfo arrayType = TypeInfo.of("[I");
             TypeInfo elementType = arrayType.getElementType();
             assertSame(TypeInfo.INT, elementType);
         }
 
         @Test
-        void getElementTypeForMultiDimensionArray() {
+        void getElementTypeForMultiDimensionArray()
+        {
             TypeInfo arrayType = TypeInfo.of("[[I");
             TypeInfo elementType = arrayType.getElementType();
             assertEquals("[I", elementType.getDescriptor());
@@ -360,7 +415,8 @@ class TypeInfoTest {
         }
 
         @Test
-        void getElementTypeForObjectArray() {
+        void getElementTypeForObjectArray()
+        {
             TypeInfo arrayType = TypeInfo.of("[Ljava/lang/String;");
             TypeInfo elementType = arrayType.getElementType();
             assertEquals("Ljava/lang/String;", elementType.getDescriptor());
@@ -368,96 +424,112 @@ class TypeInfoTest {
         }
 
         @Test
-        void getElementTypeForNonArray() {
+        void getElementTypeForNonArray()
+        {
             assertNull(TypeInfo.INT.getElementType());
             assertNull(TypeInfo.of("Ljava/lang/String;").getElementType());
         }
 
         @Test
-        void getArrayDimensionsForNonArray() {
+        void getArrayDimensionsForNonArray()
+        {
             assertEquals(0, TypeInfo.INT.getArrayDimensions());
             assertEquals(0, TypeInfo.of("Ljava/lang/String;").getArrayDimensions());
         }
 
         @Test
-        void getArrayDimensionsForSingleDimension() {
+        void getArrayDimensionsForSingleDimension()
+        {
             TypeInfo type = TypeInfo.of("[I");
             assertEquals(1, type.getArrayDimensions());
         }
 
         @Test
-        void getArrayDimensionsForMultiDimension() {
+        void getArrayDimensionsForMultiDimension()
+        {
             TypeInfo type = TypeInfo.of("[[I");
             assertEquals(2, type.getArrayDimensions());
         }
 
         @Test
-        void getArrayDimensionsForFiveDimensions() {
+        void getArrayDimensionsForFiveDimensions()
+        {
             TypeInfo type = TypeInfo.of("[[[[[Ljava/lang/Object;");
             assertEquals(5, type.getArrayDimensions());
         }
     }
 
     @Nested
-    class EqualsAndHashCodeTests {
+    class EqualsAndHashCodeTests
+    {
 
         @Test
-        void equalsSameInstance() {
+        void equalsSameInstance()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertEquals(type, type);
         }
 
         @Test
-        void equalsSameDescriptor() {
+        void equalsSameDescriptor()
+        {
             TypeInfo type1 = TypeInfo.of("Ljava/lang/String;");
             TypeInfo type2 = TypeInfo.of("Ljava/lang/String;");
             assertEquals(type1, type2);
         }
 
         @Test
-        void equalsPrimitiveConstants() {
+        void equalsPrimitiveConstants()
+        {
             assertEquals(TypeInfo.INT, TypeInfo.of("I"));
             assertEquals(TypeInfo.VOID, TypeInfo.of("V"));
         }
 
         @Test
-        void notEqualsDifferentDescriptor() {
+        void notEqualsDifferentDescriptor()
+        {
             TypeInfo type1 = TypeInfo.of("Ljava/lang/String;");
             TypeInfo type2 = TypeInfo.of("Ljava/lang/Object;");
             assertNotEquals(type1, type2);
         }
 
         @Test
-        void notEqualsNull() {
+        void notEqualsNull()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertNotEquals(type, null);
         }
 
         @Test
-        void notEqualsDifferentType() {
+        void notEqualsDifferentType()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertNotEquals(type, "Ljava/lang/String;");
         }
 
         @Test
-        void hashCodeConsistent() {
+        void hashCodeConsistent()
+        {
             TypeInfo type1 = TypeInfo.of("Ljava/lang/String;");
             TypeInfo type2 = TypeInfo.of("Ljava/lang/String;");
             assertEquals(type1.hashCode(), type2.hashCode());
         }
 
         @Test
-        void hashCodeMatchesDescriptor() {
+        void hashCodeMatchesDescriptor()
+        {
             TypeInfo type = TypeInfo.of("Ljava/lang/String;");
             assertEquals("Ljava/lang/String;".hashCode(), type.hashCode());
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringReturnsDescript() {
+        void toStringReturnsDescript()
+        {
             assertEquals("I", TypeInfo.INT.toString());
             assertEquals("V", TypeInfo.VOID.toString());
             assertEquals("Ljava/lang/String;", TypeInfo.of("Ljava/lang/String;").toString());

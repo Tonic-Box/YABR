@@ -17,82 +17,90 @@ import java.util.*;
 
 /**
  * Main simulation engine for executing abstract interpretation.
- *
- * <p>The SimulationEngine executes a method's IR instructions while tracking
- * execution state and notifying registered listeners of events.
- *
- * <p>Example usage:
- * <pre>
- * SimulationContext ctx = SimulationContext.forMethod(method);
- * SimulationEngine engine = new SimulationEngine(ctx);
- *
- * StackOperationListener stackListener = new StackOperationListener();
- * engine.addListener(stackListener);
- *
- * SimulationResult result = engine.simulate(irMethod);
- * System.out.println("Max stack depth: " + result.getMaxStackDepth());
- * </pre>
  */
-public class SimulationEngine {
+public class SimulationEngine
+{
 
     private final SimulationContext context;
     private final CompositeListener listeners;
 
     /**
      * Creates a new simulation engine with the given context.
+     *
+     * @param context the configuration and state the simulation runs under
      */
-    public SimulationEngine(SimulationContext context) {
+    public SimulationEngine(SimulationContext context)
+    {
         this.context = context;
         this.listeners = new CompositeListener();
     }
 
     /**
-     * Adds a listener to receive simulation events.
+     * Registers a listener to receive simulation events.
+     *
+     * @param listener the listener to register
+     * @return this engine
      */
-    public SimulationEngine addListener(SimulationListener listener) {
+    public SimulationEngine addListener(SimulationListener listener)
+    {
         listeners.add(listener);
         return this;
     }
 
     /**
-     * Adds multiple listeners.
+     * Registers several listeners in one call.
+     *
+     * @param listenerArray the listeners to register
+     * @return this engine
      */
-    public SimulationEngine addListeners(SimulationListener... listenerArray) {
-        for (SimulationListener listener : listenerArray) {
+    public SimulationEngine addListeners(SimulationListener... listenerArray)
+    {
+        for (SimulationListener listener : listenerArray)
+        {
             listeners.add(listener);
         }
         return this;
     }
 
     /**
-     * Removes a listener.
+     * Unregisters a listener.
+     *
+     * @param listener the listener to drop
+     * @return this engine
      */
-    public SimulationEngine removeListener(SimulationListener listener) {
+    public SimulationEngine removeListener(SimulationListener listener)
+    {
         listeners.remove(listener);
         return this;
     }
 
     /**
-     * Gets a listener of a specific type.
+     * Looks up a registered listener by its class.
+     *
+     * @param <T>  the listener type
+     * @param type the listener class to match
+     * @return the first registered listener of that type, or null if none is registered
      */
-    public <T extends SimulationListener> T getListener(Class<T> type) {
+    public <T extends SimulationListener> T getListener(Class<T> type)
+    {
         return listeners.getListener(type);
     }
 
     /**
-     * Gets the simulation context.
+     * @return the context this engine simulates under
      */
-    public SimulationContext getContext() {
+    public SimulationContext getContext()
+    {
         return context;
     }
 
     /**
      * Simulates execution of a method.
-     *
      * @param method the IR method to simulate
      * @return the simulation result
      */
-    public SimulationResult simulate(IRMethod method) {
+    public SimulationResult simulate(IRMethod method)
+    {
         long startTime = System.nanoTime();
         SimulationResult.Builder resultBuilder = SimulationResult.builder().method(method);
 
@@ -106,7 +114,8 @@ public class SimulationEngine {
 
         // Worklist algorithm for simulation
         Queue<IRBlock> worklist = new LinkedList<>();
-        if (method.getEntryBlock() != null) {
+        if (method.getEntryBlock() != null)
+        {
             worklist.add(method.getEntryBlock());
             blockEntryStates.put(method.getEntryBlock(), state);
         }
@@ -115,39 +124,47 @@ public class SimulationEngine {
         int maxIterations = method.getBlockCount() * 10; // Prevent infinite loops
         int iterations = 0;
 
-        while (!worklist.isEmpty() && iterations < maxIterations) {
+        while (!worklist.isEmpty() && iterations < maxIterations)
+        {
             iterations++;
             IRBlock block = worklist.poll();
 
             // Skip if already completed with same state
             SimulationState entryState = blockEntryStates.get(block);
-            if (entryState == null) {
+            if (entryState == null)
+            {
                 continue;
             }
 
             state = entryState.atBlock(block);
             listeners.onBlockEntry(block, state);
 
-            if (context.isInstructionLevel()) {
+            if (context.isInstructionLevel())
+            {
                 resultBuilder.addState(state.snapshot());
             }
 
-            // Execute phi instructions first
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 state = executeInstruction(phi, state, resultBuilder);
                 instructionCount++;
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 state = executeInstruction(instr, state, resultBuilder);
                 instructionCount++;
 
                 // Handle terminating instructions
-                if (instr instanceof ReturnInstruction) {
+                if (instr instanceof ReturnInstruction)
+                {
                     listeners.onMethodReturn((ReturnInstruction) instr, state);
-                } else if (instr instanceof SimpleInstruction) {
+                }
+                else if (instr instanceof SimpleInstruction)
+                {
                     SimpleInstruction simple = (SimpleInstruction) instr;
-                    if (simple.getOp() == SimpleOp.ATHROW) {
+                    if (simple.getOp() == SimpleOp.ATHROW)
+                    {
                         listeners.onException(simple, state);
                     }
                 }
@@ -156,16 +173,21 @@ public class SimulationEngine {
             listeners.onBlockExit(block, state);
             completed.add(block);
 
-            for (IRBlock successor : block.getSuccessors()) {
+            for (IRBlock successor : block.getSuccessors())
+            {
                 SimulationState existingState = blockEntryStates.get(successor);
-                if (existingState == null) {
+                if (existingState == null)
+                {
                     blockEntryStates.put(successor, state);
                     worklist.add(successor);
-                } else if (!completed.contains(successor)) {
+                }
+                else if (!completed.contains(successor))
+                {
                     // Merge states for loops
                     SimulationState merged = existingState.merge(state);
                     blockEntryStates.put(successor, merged);
-                    if (!worklist.contains(successor)) {
+                    if (!worklist.contains(successor))
+                    {
                         worklist.add(successor);
                     }
                 }
@@ -183,10 +205,16 @@ public class SimulationEngine {
     }
 
     /**
-     * Simulates a single method entry (creates IR method on the fly).
+     * Lifts a class file method to IR and simulates it.
+     *
+     * @param method the method to lift and simulate
+     * @return the simulation result
+     * @throws IllegalArgumentException if the method has no code attribute
      */
-    public SimulationResult simulate(MethodEntry method) {
-        if (method.getCodeAttribute() == null) {
+    public SimulationResult simulate(MethodEntry method)
+    {
+        if (method.getCodeAttribute() == null)
+        {
             throw new IllegalArgumentException("Cannot simulate a method with no body: " + method.getName());
         }
         IRMethod irMethod = new SSA(method.getClassFile().getConstPool()).lift(method);
@@ -194,24 +222,36 @@ public class SimulationEngine {
     }
 
     /**
-     * Executes a single instruction and updates state.
+     * Executes one instruction without recording it in a result.
+     *
+     * @param state the state to execute against
+     * @param instr the instruction to execute
+     * @return the state after the instruction
      */
-    public SimulationState step(SimulationState state, IRInstruction instr) {
+    public SimulationState step(SimulationState state, IRInstruction instr)
+    {
         return executeInstruction(instr, state, null);
     }
 
     /**
-     * Executes all instructions in a block.
+     * Executes a block's phis and instructions, firing the block entry and exit events.
+     *
+     * @param state the state to enter the block with
+     * @param block the block to execute
+     * @return the state after the last instruction
      */
-    public SimulationState stepBlock(SimulationState state, IRBlock block) {
+    public SimulationState stepBlock(SimulationState state, IRBlock block)
+    {
         state = state.atBlock(block);
         listeners.onBlockEntry(block, state);
 
-        for (PhiInstruction phi : block.getPhiInstructions()) {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
             state = executeInstruction(phi, state, null);
         }
 
-        for (IRInstruction instr : block.getInstructions()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
             state = executeInstruction(instr, state, null);
         }
 
@@ -220,9 +260,14 @@ public class SimulationEngine {
     }
 
     /**
-     * Simulates a specific path through the method.
+     * Simulates one fixed block sequence instead of the whole method.
+     *
+     * @param method the method the path belongs to
+     * @param path the blocks to execute in order
+     * @return the simulation result for that path
      */
-    public SimulationResult simulatePath(IRMethod method, List<IRBlock> path) {
+    public SimulationResult simulatePath(IRMethod method, List<IRBlock> path)
+    {
         long startTime = System.nanoTime();
         SimulationResult.Builder resultBuilder = SimulationResult.builder().method(method);
 
@@ -231,20 +276,24 @@ public class SimulationEngine {
         SimulationState state = createInitialState(method);
         int instructionCount = 0;
 
-        for (IRBlock block : path) {
+        for (IRBlock block : path)
+        {
             state = state.atBlock(block);
             listeners.onBlockEntry(block, state);
 
-            if (context.isInstructionLevel()) {
+            if (context.isInstructionLevel())
+            {
                 resultBuilder.addState(state.snapshot());
             }
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 state = executeInstruction(phi, state, resultBuilder);
                 instructionCount++;
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
+            for (IRInstruction instr : block.getInstructions())
+            {
                 state = executeInstruction(instr, state, resultBuilder);
                 instructionCount++;
             }
@@ -262,44 +311,48 @@ public class SimulationEngine {
         return result;
     }
 
-    // ========== Private Helpers ==========
+    // Private Helpers
 
-    private SimulationState createInitialState(IRMethod method) {
+    private SimulationState createInitialState(IRMethod method)
+    {
         LocalState locals = LocalState.empty();
 
         int localIndex = 0;
 
         // For instance methods, slot 0 is 'this'
-        if (!method.isStatic()) {
+        if (!method.isStatic())
+        {
             SimValue thisValue = SimValue.ofType(null, null); // Unknown ref type
             locals = locals.set(localIndex++, thisValue);
         }
 
-        for (SSAValue param : method.getParameters()) {
+        for (SSAValue param : method.getParameters())
+        {
             SimValue paramValue = SimValue.fromSSA(param, null);
-            if (param.getType() != null && param.getType().isTwoSlot()) {
+            if (param.getType() != null && param.getType().isTwoSlot())
+            {
                 locals = locals.setWide(localIndex, paramValue);
                 localIndex += 2;
-            } else {
+            }
+            else
+            {
                 locals = locals.set(localIndex++, paramValue);
             }
         }
 
-        return SimulationState.of(
-            StackState.empty(),
-            locals
-        ).atBlock(method.getEntryBlock());
+        return SimulationState.of(StackState.empty(), locals).atBlock(method.getEntryBlock());
     }
 
-    private SimulationState executeInstruction(IRInstruction instr, SimulationState state,
-                                                SimulationResult.Builder resultBuilder) {
+    private SimulationState executeInstruction(IRInstruction instr, SimulationState state, SimulationResult.Builder resultBuilder)
+    {
         listeners.onBeforeInstruction(instr, state);
 
         SimulationState newState = StateTransitions.apply(state, instr);
 
         notifyInstructionEvents(instr, state, newState);
 
-        if (context.isInstructionLevel() && resultBuilder != null) {
+        if (context.isInstructionLevel() && resultBuilder != null)
+        {
             resultBuilder.addState(newState.snapshot());
         }
 
@@ -308,55 +361,82 @@ public class SimulationEngine {
         return newState.nextInstruction();
     }
 
-    private void notifyInstructionEvents(IRInstruction instr, SimulationState before, SimulationState after) {
+    private void notifyInstructionEvents(IRInstruction instr, SimulationState before, SimulationState after)
+    {
         // Stack push/pop events
         int pushCount = StateTransitions.getPushCount(instr);
         int popCount = StateTransitions.getPopCount(instr);
 
         // Notify pops (before the operation logically happens)
-        for (int i = 0; i < popCount && i < before.stackDepth(); i++) {
+        for (int i = 0; i < popCount && i < before.stackDepth(); i++)
+        {
             SimValue value = before.peek(i);
-            if (value != null && !value.isWideSecondSlot()) {
+            if (value != null && !value.isWideSecondSlot())
+            {
                 listeners.onStackPop(value, instr);
             }
         }
 
         // Notify pushes (after the operation)
-        for (int i = 0; i < pushCount && i < after.stackDepth(); i++) {
+        for (int i = 0; i < pushCount && i < after.stackDepth(); i++)
+        {
             SimValue value = after.peek(pushCount - 1 - i);
-            if (value != null && !value.isWideSecondSlot()) {
+            if (value != null && !value.isWideSecondSlot())
+            {
                 listeners.onStackPush(value, instr);
             }
         }
 
         // Type-specific events
-        if (instr instanceof NewInstruction) {
+        if (instr instanceof NewInstruction)
+        {
             listeners.onAllocation((NewInstruction) instr, before);
-        } else if (instr instanceof NewArrayInstruction) {
+        }
+        else if (instr instanceof NewArrayInstruction)
+        {
             listeners.onArrayAllocation((NewArrayInstruction) instr, before);
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isLoad()) {
+            if (fieldAccess.isLoad())
+            {
                 listeners.onFieldRead(fieldAccess, before);
-            } else {
+            }
+            else
+            {
                 listeners.onFieldWrite(fieldAccess, before);
             }
-        } else if (instr instanceof ArrayAccessInstruction) {
+        }
+        else if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isLoad()) {
+            if (arrayAccess.isLoad())
+            {
                 listeners.onArrayRead(arrayAccess, before);
-            } else {
+            }
+            else
+            {
                 listeners.onArrayWrite(arrayAccess, before);
             }
-        } else if (instr instanceof InvokeInstruction) {
+        }
+        else if (instr instanceof InvokeInstruction)
+        {
             listeners.onMethodCall((InvokeInstruction) instr, before);
-        } else if (instr instanceof BranchInstruction) {
+        }
+        else if (instr instanceof BranchInstruction)
+        {
             listeners.onBranch((BranchInstruction) instr, true, before);
-        } else if (instr instanceof SwitchInstruction) {
+        }
+        else if (instr instanceof SwitchInstruction)
+        {
             listeners.onSwitch((SwitchInstruction) instr, -1, before);
-        } else if (instr instanceof SimpleInstruction) {
+        }
+        else if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            switch (simple.getOp()) {
+            switch (simple.getOp())
+            {
                 case MONITORENTER:
                     listeners.onMonitorEnter(simple, before);
                     break;

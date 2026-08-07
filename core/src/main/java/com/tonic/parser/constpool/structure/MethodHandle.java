@@ -1,27 +1,43 @@
 package com.tonic.parser.constpool.structure;
 
 /**
- * Represents a Method Handle in the constant pool.
+ * The reference kind and pool index pair that makes up a CONSTANT_MethodHandle entry.
  */
-public class MethodHandle {
+public class MethodHandle
+{
     private final int referenceKind;
     private final int referenceIndex;
 
-    public MethodHandle(int referenceKind, int referenceIndex) {
+    /**
+     * Creates a method handle descriptor.
+     * @param referenceKind the JVMS reference kind, 1 through 9
+     * @param referenceIndex pool index of the field, method or interface method referred to
+     */
+    public MethodHandle(int referenceKind, int referenceIndex)
+    {
         this.referenceKind = referenceKind;
         this.referenceIndex = referenceIndex;
     }
 
-    public int getReferenceKind() {
+    /**
+     * @return the reference kind
+     */
+    public int getReferenceKind()
+    {
         return referenceKind;
     }
 
-    public int getReferenceIndex() {
+    /**
+     * @return the reference index
+     */
+    public int getReferenceIndex()
+    {
         return referenceIndex;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodHandle{" +
                 "referenceKind=" + referenceKind +
                 ", referenceIndex=" + referenceIndex +

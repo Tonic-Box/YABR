@@ -15,23 +15,27 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodSignatureTest {
+class MethodSignatureTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/SignatureTest", access);
     }
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorSetsBasicProperties() {
+        void constructorSetsBasicProperties()
+        {
             MethodSignature sig = new MethodSignature("com/test/Class", "methodName", "()V");
 
             assertEquals("com/test/Class", sig.getClassName());
@@ -40,7 +44,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void fromMethodCreatesSignature() throws IOException {
+        void fromMethodCreatesSignature() throws IOException
+        {
             MethodEntry method = createSimpleMethod("testMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -50,7 +55,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void fromMethodWithNullCodeAttribute() throws IOException {
+        void fromMethodWithNullCodeAttribute() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             MethodEntry method = classFile.createNewMethod(access, "abstractMethod", "V");
 
@@ -63,7 +69,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void fromMethodWithEmptyBytecode() throws IOException {
+        void fromMethodWithEmptyBytecode() throws IOException
+        {
             MethodEntry method = createMethodWithEmptyCode("emptyMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -73,10 +80,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class BytecodeHashTests {
+    class BytecodeHashTests
+    {
 
         @Test
-        void identicalBytecodeHashesMatch() throws IOException {
+        void identicalBytecodeHashesMatch() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("method1");
             MethodEntry method2 = createSimpleMethod("method2");
 
@@ -89,7 +98,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void differentBytecodeHashesDiffer() throws IOException {
+        void differentBytecodeHashesDiffer() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("method1");
             MethodEntry method2 = createMethodReturningInt("method2");
 
@@ -100,7 +110,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void bytecodeHashIsNonNull() throws IOException {
+        void bytecodeHashIsNonNull() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -110,10 +121,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class OpcodeExtractionTests {
+    class OpcodeExtractionTests
+    {
 
         @Test
-        void opcodeSequenceExtractedFromSimpleMethod() throws IOException {
+        void opcodeSequenceExtractedFromSimpleMethod() throws IOException
+        {
             MethodEntry method = createSimpleMethod("simple");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -123,7 +136,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void opcodeSequenceExtractedFromComplexMethod() throws IOException {
+        void opcodeSequenceExtractedFromComplexMethod() throws IOException
+        {
             MethodEntry method = createMethodWithMethodCall("complex");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -132,7 +146,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void instructionCountMatchesOpcodeLength() throws IOException {
+        void instructionCountMatchesOpcodeLength() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -141,10 +156,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class MetricAnalysisTests {
+    class MetricAnalysisTests
+    {
 
         @Test
-        void callCountDetectsCalls() throws IOException {
+        void callCountDetectsCalls() throws IOException
+        {
             MethodEntry method = createMethodWithMethodCall("withCall");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -152,7 +169,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void fieldAccessCountDetectsFieldAccess() throws IOException {
+        void fieldAccessCountDetectsFieldAccess() throws IOException
+        {
             MethodEntry method = createMethodWithFieldAccess("withField");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -160,7 +178,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void maxStackIsSet() throws IOException {
+        void maxStackIsSet() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -168,7 +187,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void maxLocalsIsSet() throws IOException {
+        void maxLocalsIsSet() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -176,7 +196,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void branchCountIsSetForSimpleMethod() throws IOException {
+        void branchCountIsSetForSimpleMethod() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -184,7 +205,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void loopCountIsSetForSimpleMethod() throws IOException {
+        void loopCountIsSetForSimpleMethod() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -193,10 +215,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class ComparisonTests {
+    class ComparisonTests
+    {
 
         @Test
-        void compareExactBytecodeReturnsOneForIdentical() throws IOException {
+        void compareExactBytecodeReturnsOneForIdentical() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createSimpleMethod("m2");
 
@@ -207,7 +231,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareExactBytecodeReturnsZeroForDifferent() throws IOException {
+        void compareExactBytecodeReturnsZeroForDifferent() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createMethodReturningInt("m2");
 
@@ -218,7 +243,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareExactBytecodeWithNullHash() {
+        void compareExactBytecodeWithNullHash()
+        {
             MethodSignature sig1 = new MethodSignature("class1", "m1", "()V");
             MethodSignature sig2 = new MethodSignature("class2", "m2", "()V");
 
@@ -226,7 +252,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareOpcodeSequenceReturnsSimilarity() throws IOException {
+        void compareOpcodeSequenceReturnsSimilarity() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createSimpleMethod("m2");
 
@@ -238,7 +265,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareOpcodeSequenceWithNullSequences() {
+        void compareOpcodeSequenceWithNullSequences()
+        {
             MethodSignature sig1 = new MethodSignature("class1", "m1", "()V");
             MethodSignature sig2 = new MethodSignature("class2", "m2", "()V");
 
@@ -246,7 +274,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareOpcodeSequenceWithEmptySequences() throws IOException {
+        void compareOpcodeSequenceWithEmptySequences() throws IOException
+        {
             MethodEntry method = createMethodWithEmptyCode("empty");
             MethodSignature sig1 = MethodSignature.fromMethod(method, classFile.getClassName());
             MethodSignature sig2 = MethodSignature.fromMethod(method, classFile.getClassName());
@@ -255,7 +284,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareStructuralReturnsSimilarity() throws IOException {
+        void compareStructuralReturnsSimilarity() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createSimpleMethod("m2");
 
@@ -267,7 +297,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareStructuralWithZeroInstructions() {
+        void compareStructuralWithZeroInstructions()
+        {
             MethodSignature sig1 = new MethodSignature("class1", "m1", "()V");
             MethodSignature sig2 = new MethodSignature("class2", "m2", "()V");
 
@@ -276,7 +307,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareStructuralWithDifferentSizes() throws IOException {
+        void compareStructuralWithDifferentSizes() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createMethodWithMethodCall("m2");
 
@@ -288,7 +320,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareStructuralWithZeroBranches() throws IOException {
+        void compareStructuralWithZeroBranches() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createSimpleMethod("m2");
 
@@ -300,22 +333,24 @@ class MethodSignatureTest {
         }
 
         @Test
-        void compareStructuralWithZeroCalls() throws IOException {
+        void compareStructuralWithZeroCalls() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createSimpleMethod("m2");
 
             MethodSignature sig1 = MethodSignature.fromMethod(method1, classFile.getClassName());
             MethodSignature sig2 = MethodSignature.fromMethod(method2, classFile.getClassName());
 
-            assertTrue(sig1.getCallCount() == 0);
-            assertTrue(sig2.getCallCount() == 0);
+            assertEquals(0, sig1.getCallCount());
+            assertEquals(0, sig2.getCallCount());
 
             double similarity = sig1.compareStructural(sig2);
             assertTrue(similarity >= 0.0);
         }
 
         @Test
-        void compareStructuralWithDifferentCallCounts() throws IOException {
+        void compareStructuralWithDifferentCallCounts() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createMethodWithMethodCall("m2");
 
@@ -328,10 +363,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class DisplayMethodsTests {
+    class DisplayMethodsTests
+    {
 
         @Test
-        void getDisplayNameReturnsSimpleName() throws IOException {
+        void getDisplayNameReturnsSimpleName() throws IOException
+        {
             MethodEntry method = createSimpleMethod("testMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, "com/test/MyClass");
 
@@ -341,7 +378,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void getFullReferenceReturnsCompleteReference() throws IOException {
+        void getFullReferenceReturnsCompleteReference() throws IOException
+        {
             MethodEntry method = createSimpleMethod("testMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, "com/test/MyClass");
 
@@ -350,7 +388,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void toStringContainsDisplayNameAndInstructionCount() throws IOException {
+        void toStringContainsDisplayNameAndInstructionCount() throws IOException
+        {
             MethodEntry method = createSimpleMethod("testMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, "com/test/MyClass");
 
@@ -362,10 +401,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void largeOpcodeSequenceUsesApproximation() throws IOException {
+        void largeOpcodeSequenceUsesApproximation() throws IOException
+        {
             MethodEntry largeMethod = createLargeMethod("largeMethod");
             MethodSignature sig1 = MethodSignature.fromMethod(largeMethod, classFile.getClassName());
             MethodSignature sig2 = MethodSignature.fromMethod(largeMethod, classFile.getClassName());
@@ -375,7 +416,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void differentLengthOpcodeSequences() throws IOException {
+        void differentLengthOpcodeSequences() throws IOException
+        {
             MethodEntry short1 = createSimpleMethod("short1");
             MethodEntry long1 = createLargeMethod("long1");
 
@@ -387,7 +429,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void methodWithComplexInstructions() throws IOException {
+        void methodWithComplexInstructions() throws IOException
+        {
             MethodEntry method = createMethodWithComplexInstructions("complexMethod");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -397,10 +440,12 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class BranchCoverageTests {
+    class BranchCoverageTests
+    {
 
         @Test
-        void instructionLengthForRegularOpcodes() throws IOException {
+        void instructionLengthForRegularOpcodes() throws IOException
+        {
             MethodEntry method = createSimpleMethod("regular");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -408,7 +453,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void allInvokeOpcodesDetected() throws IOException {
+        void allInvokeOpcodesDetected() throws IOException
+        {
             MethodEntry method = createMethodWithAllInvokeTypes("invokes");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -416,7 +462,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void allFieldOpcodesDetected() throws IOException {
+        void allFieldOpcodesDetected() throws IOException
+        {
             MethodEntry method = createMethodWithFieldAccess("fields");
             MethodSignature sig = MethodSignature.fromMethod(method, classFile.getClassName());
 
@@ -424,7 +471,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void longestCommonSubsequenceWithIdenticalSequences() throws IOException {
+        void longestCommonSubsequenceWithIdenticalSequences() throws IOException
+        {
             MethodEntry method = createSimpleMethod("method");
             MethodSignature sig1 = MethodSignature.fromMethod(method, classFile.getClassName());
             MethodSignature sig2 = MethodSignature.fromMethod(method, classFile.getClassName());
@@ -434,7 +482,8 @@ class MethodSignatureTest {
         }
 
         @Test
-        void longestCommonSubsequenceWithPartialMatch() throws IOException {
+        void longestCommonSubsequenceWithPartialMatch() throws IOException
+        {
             MethodEntry method1 = createSimpleMethod("m1");
             MethodEntry method2 = createMethodReturningInt("m2");
 
@@ -447,46 +496,54 @@ class MethodSignatureTest {
     }
 
     @Nested
-    class GetterTests {
+    class GetterTests
+    {
 
         @Test
-        void getClassNameReturnsCorrectValue() {
+        void getClassNameReturnsCorrectValue()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "()V");
             assertEquals("com/test/TestClass", sig.getClassName());
         }
 
         @Test
-        void getMethodNameReturnsCorrectValue() {
+        void getMethodNameReturnsCorrectValue()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "()V");
             assertEquals("method", sig.getMethodName());
         }
 
         @Test
-        void getDescriptorReturnsCorrectValue() {
+        void getDescriptorReturnsCorrectValue()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "(I)V");
             assertEquals("(I)V", sig.getDescriptor());
         }
 
         @Test
-        void getBytecodeHashReturnsNullForUnanalyzed() {
+        void getBytecodeHashReturnsNullForUnanalyzed()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "()V");
             assertNull(sig.getBytecodeHash());
         }
 
         @Test
-        void getOpcodeSequenceReturnsNullForUnanalyzed() {
+        void getOpcodeSequenceReturnsNullForUnanalyzed()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "()V");
             assertNull(sig.getOpcodeSequence());
         }
 
         @Test
-        void getInstructionCountReturnsZeroForUnanalyzed() {
+        void getInstructionCountReturnsZeroForUnanalyzed()
+        {
             MethodSignature sig = new MethodSignature("com/test/TestClass", "method", "()V");
             assertEquals(0, sig.getInstructionCount());
         }
     }
 
-    private MethodEntry createSimpleMethod(String name) throws IOException {
+    private MethodEntry createSimpleMethod(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
         Bytecode bc = new Bytecode(method);
@@ -495,7 +552,8 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodReturningInt(String name) throws IOException {
+    private MethodEntry createMethodReturningInt(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "I");
         Bytecode bc = new Bytecode(method);
@@ -505,7 +563,8 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodWithMethodCall(String name) throws IOException {
+    private MethodEntry createMethodWithMethodCall(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "J");
         Bytecode bc = new Bytecode(method);
@@ -515,7 +574,8 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodWithFieldAccess(String name) throws IOException {
+    private MethodEntry createMethodWithFieldAccess(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "Ljava/io/PrintStream;");
         Bytecode bc = new Bytecode(method);
@@ -525,17 +585,19 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodWithEmptyCode(String name) throws IOException {
+    private MethodEntry createMethodWithEmptyCode(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
-        MethodEntry method = classFile.createNewMethod(access, name, "V");
-        return method;
+        return classFile.createNewMethod(access, name, "V");
     }
 
-    private MethodEntry createLargeMethod(String name) throws IOException {
+    private MethodEntry createLargeMethod(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
         Bytecode bc = new Bytecode(method);
-        for (int i = 0; i < 2000; i++) {
+        for (int i = 0; i < 2000; i++)
+        {
             bc.addIConst(i % 6);
             bc.addIStore(1);
         }
@@ -544,7 +606,8 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodWithComplexInstructions(String name) throws IOException {
+    private MethodEntry createMethodWithComplexInstructions(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
         Bytecode bc = new Bytecode(method);
@@ -563,7 +626,8 @@ class MethodSignatureTest {
         return method;
     }
 
-    private MethodEntry createMethodWithAllInvokeTypes(String name) throws IOException {
+    private MethodEntry createMethodWithAllInvokeTypes(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
         Bytecode bc = new Bytecode(method);

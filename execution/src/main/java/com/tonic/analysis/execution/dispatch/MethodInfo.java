@@ -1,6 +1,10 @@
 package com.tonic.analysis.execution.dispatch;
 
-public class MethodInfo {
+/**
+ * A resolved method reference: owner class, name, descriptor, and invocation kind flags.
+ */
+public class MethodInfo
+{
     private final String ownerClass;
     private final String methodName;
     private final String descriptor;
@@ -8,11 +12,30 @@ public class MethodInfo {
     private final boolean isInterface;
     private final boolean isSpecial;
 
-    public MethodInfo(String ownerClass, String methodName, String descriptor, boolean isStatic, boolean isInterface) {
+    /**
+     * Creates a non-special method reference.
+     * @param ownerClass internal name of the declaring class
+     * @param methodName the method's name
+     * @param descriptor the method's descriptor
+     * @param isStatic whether the method is invoked statically
+     * @param isInterface whether the method is invoked via invokeinterface
+     */
+    public MethodInfo(String ownerClass, String methodName, String descriptor, boolean isStatic, boolean isInterface)
+    {
         this(ownerClass, methodName, descriptor, isStatic, isInterface, false);
     }
 
-    public MethodInfo(String ownerClass, String methodName, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial) {
+    /**
+     * Creates a method reference.
+     * @param ownerClass internal name of the declaring class
+     * @param methodName the method's name
+     * @param descriptor the method's descriptor
+     * @param isStatic whether the method is invoked statically
+     * @param isInterface whether the method is invoked via invokeinterface
+     * @param isSpecial whether the method is invoked via invokespecial
+     */
+    public MethodInfo(String ownerClass, String methodName, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial)
+    {
         this.ownerClass = ownerClass;
         this.methodName = methodName;
         this.descriptor = descriptor;
@@ -21,32 +44,57 @@ public class MethodInfo {
         this.isSpecial = isSpecial;
     }
 
-    public String getOwnerClass() {
+    /**
+     * @return the owner class
+     */
+    public String getOwnerClass()
+    {
         return ownerClass;
     }
 
-    public String getMethodName() {
+    /**
+     * @return the method name
+     */
+    public String getMethodName()
+    {
         return methodName;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public boolean isStatic() {
+    /**
+     * @return whether static
+     */
+    public boolean isStatic()
+    {
         return isStatic;
     }
 
-    public boolean isInterface() {
+    /**
+     * @return whether interface
+     */
+    public boolean isInterface()
+    {
         return isInterface;
     }
 
-    public boolean isSpecial() {
+    /**
+     * @return whether special
+     */
+    public boolean isSpecial()
+    {
         return isSpecial;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return ownerClass + "." + methodName + descriptor +
                (isStatic ? " (static)" : "") + (isInterface ? " (interface)" : "") + (isSpecial ? " (special)" : "");
     }

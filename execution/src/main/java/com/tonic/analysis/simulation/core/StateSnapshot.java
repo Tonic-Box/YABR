@@ -10,12 +10,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A lightweight, immutable snapshot of simulation state at a specific point.
- *
- * <p>StateSnapshots are designed for efficient storage in collections
- * and comparison across different simulation runs.
+ * An immutable snapshot of simulation state at one instruction.
  */
-public final class StateSnapshot {
+public final class StateSnapshot
+{
 
     private final IRBlock block;
     private final int instructionIndex;
@@ -28,7 +26,8 @@ public final class StateSnapshot {
 
     private static long nextTimestamp = 0;
 
-    StateSnapshot(SimulationState state) {
+    StateSnapshot(SimulationState state)
+    {
         this.block = state.getCurrentBlock();
         this.instructionIndex = state.getInstructionIndex();
         this.stackDepth = state.stackDepth();
@@ -40,96 +39,117 @@ public final class StateSnapshot {
     }
 
     /**
-     * Get the block this snapshot was taken in.
+     * @return the block the snapshot was taken in
      */
-    public IRBlock getBlock() {
+    public IRBlock getBlock()
+    {
         return block;
     }
 
     /**
-     * Get the instruction index within the block.
+     * @return the instruction index within the block
      */
-    public int getInstructionIndex() {
+    public int getInstructionIndex()
+    {
         return instructionIndex;
     }
 
     /**
-     * Get the stack depth at this point.
+     * @return the stack depth
      */
-    public int getStackDepth() {
+    public int getStackDepth()
+    {
         return stackDepth;
     }
 
     /**
-     * Get the maximum stack depth seen up to this point.
+     * @return the high-water stack depth reached before the snapshot
      */
-    public int getMaxStackDepth() {
+    public int getMaxStackDepth()
+    {
         return maxStackDepth;
     }
 
     /**
-     * Get the stack values (bottom to top).
+     * @return the captured stack values, bottom to top
      */
-    public List<SimValue> getStackValues() {
+    public List<SimValue> getStackValues()
+    {
         return stackValues;
     }
 
     /**
-     * Get the local variable values.
+     * @return the captured locals, keyed by slot
      */
-    public Map<Integer, SimValue> getLocalValues() {
+    public Map<Integer, SimValue> getLocalValues()
+    {
         return localValues;
     }
 
     /**
-     * Get the call depth at this point.
+     * @return the call depth
      */
-    public int getCallDepth() {
+    public int getCallDepth()
+    {
         return callDepth;
     }
 
     /**
-     * Get the logical timestamp of this snapshot.
+     * @return the logical timestamp, unique per snapshot
      */
-    public long getTimestamp() {
+    public long getTimestamp()
+    {
         return timestamp;
     }
 
     /**
-     * Get the top stack value, or null if stack is empty.
+     * @return the topmost captured stack value, or null if the stack was empty
      */
-    public SimValue getTopOfStack() {
+    public SimValue getTopOfStack()
+    {
         if (stackValues.isEmpty()) return null;
         return stackValues.get(stackValues.size() - 1);
     }
 
     /**
-     * Get a stack value by depth (0 = top).
+     * Looks up a captured stack value counting down from the top.
+     *
+     * @param depth the distance below the top, where 0 is the top
+     * @return the value at that depth, or null if it is out of range
      */
-    public SimValue getStackValue(int depth) {
+    public SimValue getStackValue(int depth)
+    {
         int index = stackValues.size() - 1 - depth;
         if (index < 0 || index >= stackValues.size()) return null;
         return stackValues.get(index);
     }
 
     /**
-     * Get a local variable value.
+     * Looks up a captured local variable.
+     *
+     * @param index the local slot
+     * @return the value in that slot, or null if the slot was unoccupied
      */
-    public SimValue getLocalValue(int index) {
+    public SimValue getLocalValue(int index)
+    {
         return localValues.get(index);
     }
 
     /**
-     * Reconstruct the full SimulationState from this snapshot.
+     * Rebuilds a simulation state from the captured stack, locals and position.
+     *
+     * @return the reconstructed state
      */
-    public SimulationState toState() {
+    public SimulationState toState()
+    {
         StackState stack = StackState.of(stackValues);
         LocalState locals = LocalState.of(localValues);
         return SimulationState.of(stack, locals).atBlock(block).atInstruction(instructionIndex);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof StateSnapshot)) return false;
         StateSnapshot that = (StateSnapshot) o;
@@ -137,12 +157,14 @@ public final class StateSnapshot {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(timestamp);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "StateSnapshot[" +
             "t=" + timestamp +
             ", block=" + (block != null ? block.getId() : "null") +

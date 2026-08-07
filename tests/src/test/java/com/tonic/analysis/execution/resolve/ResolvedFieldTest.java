@@ -11,10 +11,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ResolvedFieldTest {
+class ResolvedFieldTest
+{
 
     @Test
-    void constructor_shouldInitializeAllFields() throws IOException {
+    void constructor_shouldInitializeAllFields() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Test")
             .field(fieldAccess, "counter", "I")
@@ -29,7 +31,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void getField_shouldReturnCorrectFieldEntry() throws IOException {
+    void getField_shouldReturnCorrectFieldEntry() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPrivate().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Bean")
             .field(fieldAccess, "value", "Ljava/lang/String;")
@@ -43,7 +46,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void getDeclaringClass_shouldReturnCorrectClassFile() throws IOException {
+    void getDeclaringClass_shouldReturnCorrectClassFile() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Data")
             .field(fieldAccess, "items", "[I")
@@ -57,7 +61,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void isStatic_shouldReturnTrueForStaticField() throws IOException {
+    void isStatic_shouldReturnTrueForStaticField() throws IOException
+    {
         int staticAccess = new AccessBuilder().setPublic().setStatic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Config")
             .field(staticAccess, "DEFAULT_SIZE", "I")
@@ -70,7 +75,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void isStatic_shouldReturnFalseForInstanceField() throws IOException {
+    void isStatic_shouldReturnFalseForInstanceField() throws IOException
+    {
         int instanceAccess = new AccessBuilder().setPrivate().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Point")
             .field(instanceAccess, "x", "D")
@@ -83,7 +89,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void isStatic_shouldCheckCorrectAccessFlagBit() throws IOException {
+    void isStatic_shouldCheckCorrectAccessFlagBit() throws IOException
+    {
         int access = 0x0008;
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Test")
             .field(access, "staticField", "J")
@@ -97,7 +104,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void toString_shouldIncludeFieldInfo() throws IOException {
+    void toString_shouldIncludeFieldInfo() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Container")
             .field(fieldAccess, "data", "Ljava/util/List;")
@@ -115,7 +123,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void shouldHandleMultipleFieldsInClass() throws IOException {
+    void shouldHandleMultipleFieldsInClass() throws IOException
+    {
         int publicAccess = new AccessBuilder().setPublic().build();
         int privateAccess = new AccessBuilder().setPrivate().build();
         int staticAccess = new AccessBuilder().setPublic().setStatic().build();
@@ -139,7 +148,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void shouldHandlePrimitiveFieldDescriptors() throws IOException {
+    void shouldHandlePrimitiveFieldDescriptors() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Primitives")
             .field(access, "boolField", "Z")
@@ -161,7 +171,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void shouldHandleArrayFieldDescriptors() throws IOException {
+    void shouldHandleArrayFieldDescriptors() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Arrays")
             .field(access, "intArray", "[I")
@@ -181,7 +192,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void shouldHandleComplexObjectFieldDescriptors() throws IOException {
+    void shouldHandleComplexObjectFieldDescriptors() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().setStatic().build();
         ClassFile classFile = BytecodeBuilder.forClass("com/example/Complex")
             .field(access, "map", "Ljava/util/Map;")
@@ -195,7 +207,8 @@ class ResolvedFieldTest {
     }
 
     @Test
-    void accessFlagCombinations_shouldWorkCorrectly() throws IOException {
+    void accessFlagCombinations_shouldWorkCorrectly() throws IOException
+    {
         int combinedAccess = new AccessBuilder()
             .setPublic()
             .setStatic()

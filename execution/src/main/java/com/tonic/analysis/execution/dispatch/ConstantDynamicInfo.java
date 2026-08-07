@@ -1,45 +1,88 @@
 package com.tonic.analysis.execution.dispatch;
 
-public final class ConstantDynamicInfo {
+/**
+ * A CONSTANT_Dynamic constant pool entry awaiting bootstrap-method resolution.
+ */
+public final class ConstantDynamicInfo
+{
 
     private final int bootstrapMethodIndex;
     private final String name;
     private final String descriptor;
     private final int constantPoolIndex;
 
-    public ConstantDynamicInfo(int bootstrapMethodIndex, String name, String descriptor, int constantPoolIndex) {
+    /**
+     * Creates a constant-dynamic descriptor.
+     * @param bootstrapMethodIndex index into the BootstrapMethods attribute
+     * @param name the constant's name
+     * @param descriptor the constant's field descriptor
+     * @param constantPoolIndex index of the entry in the constant pool
+     */
+    public ConstantDynamicInfo(int bootstrapMethodIndex, String name, String descriptor, int constantPoolIndex)
+    {
         this.bootstrapMethodIndex = bootstrapMethodIndex;
         this.name = name;
         this.descriptor = descriptor;
         this.constantPoolIndex = constantPoolIndex;
     }
 
-    public int getBootstrapMethodIndex() {
+    /**
+     * @return the bootstrap method index
+     */
+    public int getBootstrapMethodIndex()
+    {
         return bootstrapMethodIndex;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public int getConstantPoolIndex() {
+    /**
+     * @return the constant pool index
+     */
+    public int getConstantPoolIndex()
+    {
         return constantPoolIndex;
     }
 
-    public String getReturnType() {
+    /**
+     * @return the return type
+     */
+    public String getReturnType()
+    {
         return descriptor;
     }
 
-    public boolean isWideType() {
+    /**
+     * Checks whether the constant occupies two stack slots.
+     * @return true if the descriptor is long or double
+     */
+    public boolean isWideType()
+    {
         return "J".equals(descriptor) || "D".equals(descriptor);
     }
 
-    public boolean isPrimitive() {
-        if (descriptor == null || descriptor.isEmpty()) {
+    /**
+     * Checks whether the constant is of primitive type.
+     * @return true if the descriptor denotes a primitive
+     */
+    public boolean isPrimitive()
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return false;
         }
         char c = descriptor.charAt(0);
@@ -47,8 +90,14 @@ public final class ConstantDynamicInfo {
                c == 'I' || c == 'J' || c == 'F' || c == 'D';
     }
 
-    public boolean isReference() {
-        if (descriptor == null || descriptor.isEmpty()) {
+    /**
+     * Checks whether the constant is of reference type.
+     * @return true if the descriptor denotes an object or array
+     */
+    public boolean isReference()
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return false;
         }
         char c = descriptor.charAt(0);
@@ -56,7 +105,8 @@ public final class ConstantDynamicInfo {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ConstantDynamicInfo{" +
             "bsm=" + bootstrapMethodIndex +
             ", name='" + name + '\'' +

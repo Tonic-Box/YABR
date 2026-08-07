@@ -27,19 +27,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * loop-invariant call there recomputes it every iteration and breaks decompile/recompile round-trip
  * stability. It should still inline into ordinary (non-loop) uses.
  */
-class SingleUseInlinerTest {
+class SingleUseInlinerTest
+{
 
-    private static VarRefExpr ref(String name) {
+    private static VarRefExpr ref(String name)
+    {
         return new VarRefExpr(name, PrimitiveSourceType.INT);
     }
 
-    private static boolean declares(BlockStmt block, String name) {
+    private static boolean declares(BlockStmt block, String name)
+    {
         return block.getStatements().stream()
             .anyMatch(s -> s instanceof VarDeclStmt && ((VarDeclStmt) s).getName().equals(name));
     }
 
     @Test
-    void doesNotInlineLoopInvariantCallIntoForCondition() {
+    void doesNotInlineLoopInvariantCallIntoForCondition()
+    {
         // int x = Foo.bound();
         // for (int i = 0; i < x; i++) { }
         MethodCallExpr call = new MethodCallExpr(null, "bound", "Foo", new ArrayList<>(), true, PrimitiveSourceType.INT);
@@ -64,7 +68,8 @@ class SingleUseInlinerTest {
     }
 
     @Test
-    void stillInlinesIntoNonLoopUse() {
+    void stillInlinesIntoNonLoopUse()
+    {
         // int x = Foo.val();
         // if (x > 0) { }
         MethodCallExpr call = new MethodCallExpr(null, "val", "Foo", new ArrayList<>(), true, PrimitiveSourceType.INT);

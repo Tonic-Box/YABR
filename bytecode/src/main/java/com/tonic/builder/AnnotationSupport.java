@@ -15,37 +15,37 @@ import java.util.Map;
 import java.util.function.IntFunction;
 
 /**
- * Shared materialization/attachment helpers for {@link AnnotationBuilder}. Centralizes the
- * "append to the existing annotations attribute of matching visibility, or create one" logic so the
- * fluent builders and standalone attach share a single implementation and never emit a duplicate
- * attribute.
+ * Shared materialization/attachment helpers for {@link AnnotationBuilder}.
  */
-final class AnnotationSupport {
+final class AnnotationSupport
+{
 
-    private AnnotationSupport() {
+    private AnnotationSupport()
+    {
     }
 
-    static void appendAnnotation(MemberEntry member, ConstPool pool, Annotation annotation, boolean visible) {
+    static void appendAnnotation(MemberEntry member, ConstPool pool, Annotation annotation, boolean visible)
+    {
         String name = attributeName(visible);
         append(member.getAttributes(), pool, annotation, visible,
                 nameIndex -> new RuntimeVisibleAnnotationsAttribute(name, member, visible, nameIndex, 0));
     }
 
-    static void appendAnnotation(ClassFile classFile, ConstPool pool, Annotation annotation, boolean visible) {
+    static void appendAnnotation(ClassFile classFile, ConstPool pool, Annotation annotation, boolean visible)
+    {
         String name = attributeName(visible);
         append(classFile.getClassAttributes(), pool, annotation, visible,
                 nameIndex -> new RuntimeVisibleAnnotationsAttribute(name, classFile, visible, nameIndex, 0));
     }
 
     /**
-     * Emits a parameter-annotations attribute on a freshly-built method. {@code byIndex} maps a
-     * parameter position to its annotations; positions with no entry get an empty list, and the
-     * table is sized to the method's parameter count.
+     * Emits a parameter-annotations attribute on a freshly-built method.
      */
-    static void setParameterAnnotations(MethodEntry method, ConstPool pool,
-                                        Map<Integer, List<Annotation>> byIndex, int paramCount, boolean visible) {
+    static void setParameterAnnotations(MethodEntry method, ConstPool pool, Map<Integer, List<Annotation>> byIndex, int paramCount, boolean visible)
+    {
         List<List<Annotation>> parameters = new ArrayList<>(paramCount);
-        for (int i = 0; i < paramCount; i++) {
+        for (int i = 0; i < paramCount; i++)
+        {
             List<Annotation> annotations = byIndex.get(i);
             parameters.add(annotations != null ? annotations : new ArrayList<>());
         }
@@ -59,13 +59,17 @@ final class AnnotationSupport {
         method.getAttributes().add(attribute);
     }
 
-    private static void append(List<Attribute> attributes, ConstPool pool, Annotation annotation, boolean visible,
-                               IntFunction<RuntimeVisibleAnnotationsAttribute> create) {
-        for (Attribute attribute : attributes) {
-            if (attribute instanceof RuntimeVisibleAnnotationsAttribute) {
+    private static void append(List<Attribute> attributes, ConstPool pool, Annotation annotation, boolean visible, IntFunction<RuntimeVisibleAnnotationsAttribute> create)
+    {
+        for (Attribute attribute : attributes)
+        {
+            if (attribute instanceof RuntimeVisibleAnnotationsAttribute)
+            {
                 RuntimeVisibleAnnotationsAttribute existing = (RuntimeVisibleAnnotationsAttribute) attribute;
-                if (existing.isVisible() == visible) {
-                    if (existing.getAnnotations() == null) {
+                if (existing.isVisible() == visible)
+                {
+                    if (existing.getAnnotations() == null)
+                    {
                         existing.setAnnotations(new ArrayList<>());
                     }
                     existing.getAnnotations().add(annotation);
@@ -83,7 +87,8 @@ final class AnnotationSupport {
         attributes.add(created);
     }
 
-    private static String attributeName(boolean visible) {
+    private static String attributeName(boolean visible)
+    {
         return visible ? "RuntimeVisibleAnnotations" : "RuntimeInvisibleAnnotations";
     }
 }

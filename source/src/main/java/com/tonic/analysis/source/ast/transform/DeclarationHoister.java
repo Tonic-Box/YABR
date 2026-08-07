@@ -9,37 +9,26 @@ import java.util.*;
 
 /**
  * Moves variable declarations closer to their first use.
- *
- * This transform identifies variable declarations at the start of a method
- * that are initialized with default values (0, null, etc.) and moves them
- * to just before their first use. This produces more natural-looking code.
- *
- * Example before:
- *   long local3 = 0L;
- *   long local5 = 0L;
- *   int local7 = 0;
- *   while (local3 < arg0) { ... }
- *   local5 = System.nanoTime();
- *
- * Example after:
- *   long local3 = 0L;
- *   while (local3 < arg0) { ... }
- *   long local5 = System.nanoTime();
  */
-public class DeclarationHoister implements ASTTransform {
+public class DeclarationHoister implements ASTTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "DeclarationHoister";
     }
 
     @Override
-    public boolean transform(BlockStmt block) {
+    public boolean transform(BlockStmt block)
+    {
         return hoistDeclarations(block.getStatements());
     }
 
-    private boolean hoistDeclarations(List<Statement> stmts) {
-        if (stmts.isEmpty()) {
+    private boolean hoistDeclarations(List<Statement> stmts)
+    {
+        if (stmts.isEmpty())
+        {
             return false;
         }
 
@@ -48,52 +37,64 @@ public class DeclarationHoister implements ASTTransform {
         List<VarDeclStmt> frontDeclarations = new ArrayList<>();
         int firstNonDeclIndex = 0;
 
-        for (int i = 0; i < stmts.size(); i++) {
+        for (int i = 0; i < stmts.size(); i++)
+        {
             Statement stmt = stmts.get(i);
-            if (stmt instanceof VarDeclStmt) {
+            if (stmt instanceof VarDeclStmt)
+            {
                 VarDeclStmt decl = (VarDeclStmt) stmt;
-                if (isDefaultInitializer(decl.getInitializer())) {
+                if (isDefaultInitializer(decl.getInitializer()))
+                {
                     frontDeclarations.add(decl);
-                } else {
+                }
+                else
+                {
                     break;
                 }
-            } else {
+            }
+            else
+            {
                 firstNonDeclIndex = i;
                 break;
             }
             firstNonDeclIndex = i + 1;
         }
 
-        if (frontDeclarations.isEmpty() || firstNonDeclIndex >= stmts.size()) {
+        if (frontDeclarations.isEmpty() || firstNonDeclIndex >= stmts.size())
+        {
             changed |= transformNested(stmts);
             return changed;
         }
 
-        List<Statement> nonDeclStatements = new ArrayList<>(
-            stmts.subList(firstNonDeclIndex, stmts.size())
-        );
+        List<Statement> nonDeclStatements = new ArrayList<>(stmts.subList(firstNonDeclIndex, stmts.size()));
 
         Map<String, Integer> firstUseIndex = new LinkedHashMap<>();
         Map<String, Boolean> usedInNestedScope = new HashMap<>();
 
-        for (VarDeclStmt decl : frontDeclarations) {
+        for (VarDeclStmt decl : frontDeclarations)
+        {
             String varName = decl.getName();
             int firstUse = findFirstUseIndex(nonDeclStatements, varName);
             firstUseIndex.put(varName, firstUse);
-            if (firstUse >= 0 && firstUse < nonDeclStatements.size()) {
+            if (firstUse >= 0 && firstUse < nonDeclStatements.size())
+            {
                 usedInNestedScope.put(varName, isUsedInNestedScope(nonDeclStatements.get(firstUse), varName));
             }
         }
 
         Map<String, Expression> firstAssignments = new HashMap<>();
-        for (VarDeclStmt decl : frontDeclarations) {
+        for (VarDeclStmt decl : frontDeclarations)
+        {
             String varName = decl.getName();
             int useIdx = firstUseIndex.getOrDefault(varName, -1);
-            if (useIdx >= 0 && useIdx < nonDeclStatements.size()) {
+            if (useIdx >= 0 && useIdx < nonDeclStatements.size())
+            {
                 Statement firstUseStmt = nonDeclStatements.get(useIdx);
                 Expression assignedValue = getAssignmentValue(firstUseStmt, varName);
-                if (assignedValue != null && !usedInNestedScope.getOrDefault(varName, false)) {
-                    if (!referencesVar(assignedValue, varName)) {
+                if (assignedValue != null && !usedInNestedScope.getOrDefault(varName, false))
+                {
+                    if (!referencesVar(assignedValue, varName))
+                    {
                         firstAssignments.put(varName, assignedValue);
                     }
                 }
@@ -106,16 +107,23 @@ public class DeclarationHoister implements ASTTransform {
         declsToInsert.sort((a, b) -> {
             int idxA = firstUseIndex.getOrDefault(a.getName(), Integer.MAX_VALUE);
             int idxB = firstUseIndex.getOrDefault(b.getName(), Integer.MAX_VALUE);
-            return Integer.compare(idxA, idxB);
+            int cmp = Integer.compare(idxA, idxB);
+            // Break first-use ties by name so declarations that first appear at the same top-level statement
+            // (e.g. several locals first assigned inside one loop) get a stable order. Their discovery order is
+            // not preserved across a recompile, so without this tie-break the front-declaration block reshuffles
+            // on the round trip.
+            return cmp != 0 ? cmp : a.getName().compareTo(b.getName());
         });
 
         int offset = 0;
 
-        for (VarDeclStmt decl : declsToInsert) {
+        for (VarDeclStmt decl : declsToInsert)
+        {
             String varName = decl.getName();
             int useIdx = firstUseIndex.getOrDefault(varName, -1);
 
-            if (useIdx < 0) {
+            if (useIdx < 0)
+            {
                 stmts.add(offset, decl);
                 offset++;
                 changed = true;
@@ -128,10 +136,11 @@ public class DeclarationHoister implements ASTTransform {
             // first store, dropping the synthetic default init - matching javac's block scoping. Only `if`
             // arms (not loop bodies, which re-run; not switches) are targeted, so a loop-carried variable is
             // never re-initialized and pattern-switch reconstruction is untouched.
-            if (useIdx < nonDeclStatements.size()
-                    && isConfinedToSingleStatement(nonDeclStatements, varName, useIdx)) {
+            if (useIdx < nonDeclStatements.size() && isConfinedToSingleStatement(nonDeclStatements, varName, useIdx))
+            {
                 List<Statement> sinkTarget = getSinkTargetBlock(nonDeclStatements.get(useIdx), varName);
-                if (sinkTarget != null) {
+                if (sinkTarget != null)
+                {
                     sinkTarget.add(0, decl);
                     changed = true;
                     continue;
@@ -139,18 +148,20 @@ public class DeclarationHoister implements ASTTransform {
             }
 
             Expression inlineValue = firstAssignments.get(varName);
-            if (inlineValue != null) {
+            if (inlineValue != null)
+            {
                 VarDeclStmt newDecl = new VarDeclStmt(decl.getType(), varName, inlineValue);
                 int insertPos = useIdx + offset;
                 Locations.copy(stmts.get(insertPos), newDecl);
                 stmts.set(insertPos, newDecl);
-                changed = true;
-            } else {
+            }
+            else
+            {
                 int insertPos = useIdx + offset;
                 stmts.add(insertPos, decl);
                 offset++;
-                changed = true;
             }
+            changed = true;
         }
 
         changed |= transformNested(stmts);
@@ -158,92 +169,129 @@ public class DeclarationHoister implements ASTTransform {
         return changed;
     }
 
-    private boolean transformNested(List<Statement> stmts) {
+    private boolean transformNested(List<Statement> stmts)
+    {
         boolean changed = false;
-        for (Statement stmt : stmts) {
-            if (stmt instanceof WhileStmt) {
+        for (Statement stmt : stmts)
+        {
+            if (stmt instanceof WhileStmt)
+            {
                 WhileStmt whileStmt = (WhileStmt) stmt;
-                if (whileStmt.getBody() instanceof BlockStmt) {
+                if (whileStmt.getBody() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) whileStmt.getBody()).getStatements());
                 }
-            } else if (stmt instanceof DoWhileStmt) {
+            }
+            else if (stmt instanceof DoWhileStmt)
+            {
                 DoWhileStmt doWhile = (DoWhileStmt) stmt;
-                if (doWhile.getBody() instanceof BlockStmt) {
+                if (doWhile.getBody() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) doWhile.getBody()).getStatements());
                 }
-            } else if (stmt instanceof ForStmt) {
+            }
+            else if (stmt instanceof ForStmt)
+            {
                 ForStmt forStmt = (ForStmt) stmt;
-                if (forStmt.getBody() instanceof BlockStmt) {
+                if (forStmt.getBody() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) forStmt.getBody()).getStatements());
                 }
-            } else if (stmt instanceof IfStmt) {
+            }
+            else if (stmt instanceof IfStmt)
+            {
                 IfStmt ifStmt = (IfStmt) stmt;
-                if (ifStmt.getThenBranch() instanceof BlockStmt) {
+                if (ifStmt.getThenBranch() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) ifStmt.getThenBranch()).getStatements());
                 }
-                if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt) {
+                if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) ifStmt.getElseBranch()).getStatements());
                 }
-            } else if (stmt instanceof TryCatchStmt) {
+            }
+            else if (stmt instanceof TryCatchStmt)
+            {
                 TryCatchStmt tryCatch = (TryCatchStmt) stmt;
-                if (tryCatch.getTryBlock() instanceof BlockStmt) {
+                if (tryCatch.getTryBlock() instanceof BlockStmt)
+                {
                     changed |= hoistDeclarations(((BlockStmt) tryCatch.getTryBlock()).getStatements());
                 }
-                for (CatchClause clause : tryCatch.getCatches()) {
-                    if (clause.body() instanceof BlockStmt) {
+                for (CatchClause clause : tryCatch.getCatches())
+                {
+                    if (clause.body() instanceof BlockStmt)
+                    {
                         changed |= hoistDeclarations(((BlockStmt) clause.body()).getStatements());
                     }
                 }
-            } else if (stmt instanceof BlockStmt) {
+            }
+            else if (stmt instanceof BlockStmt)
+            {
                 changed |= hoistDeclarations(((BlockStmt) stmt).getStatements());
             }
         }
         return changed;
     }
 
-    private boolean isDefaultInitializer(Expression init) {
-        if (init == null) {
+    private boolean isDefaultInitializer(Expression init)
+    {
+        if (init == null)
+        {
             return true;
         }
-        if (init instanceof LiteralExpr) {
+        if (init instanceof LiteralExpr)
+        {
             LiteralExpr lit = (LiteralExpr) init;
             Object val = lit.getValue();
             if (val == null) return true;
-            if (val instanceof Number) {
+            if (val instanceof Number)
+            {
                 return ((Number) val).doubleValue() == 0.0;
             }
-            if (val instanceof Boolean) {
+            if (val instanceof Boolean)
+            {
                 return !(Boolean) val;
             }
-            if (val instanceof Character) {
+            if (val instanceof Character)
+            {
                 return (Character) val == '\0';
             }
         }
         return false;
     }
 
-    private int findFirstUseIndex(List<Statement> stmts, String varName) {
-        for (int i = 0; i < stmts.size(); i++) {
-            if (usesVariable(stmts.get(i), varName)) {
+    private int findFirstUseIndex(List<Statement> stmts, String varName)
+    {
+        for (int i = 0; i < stmts.size(); i++)
+        {
+            if (usesVariable(stmts.get(i), varName))
+            {
                 return i;
             }
         }
         return -1;
     }
 
-    private boolean usesVariable(Statement stmt, String varName) {
+    private boolean usesVariable(Statement stmt, String varName)
+    {
         VariableUsageChecker checker = new VariableUsageChecker(varName);
         stmt.accept(checker);
         return checker.found;
     }
 
-    /** Whether {@code varName} is used in no statement of {@code stmts} other than the one at {@code keepIdx}. */
-    private boolean isConfinedToSingleStatement(List<Statement> stmts, String varName, int keepIdx) {
-        for (int j = 0; j < stmts.size(); j++) {
-            if (j == keepIdx) {
+    /**
+     * Whether {@code varName} is used in no statement of {@code stmts} other than the one at {@code keepIdx}.
+     */
+    private boolean isConfinedToSingleStatement(List<Statement> stmts, String varName, int keepIdx)
+    {
+        for (int j = 0; j < stmts.size(); j++)
+        {
+            if (j == keepIdx)
+            {
                 continue;
             }
-            if (usesVariable(stmts.get(j), varName)) {
+            if (usesVariable(stmts.get(j), varName))
+            {
                 return false;
             }
         }
@@ -252,25 +300,29 @@ public class DeclarationHoister implements ASTTransform {
 
     /**
      * If {@code varName} is used inside exactly one block of an {@code if} statement (and not its controlling
-     * condition), returns that block's statement list as a sink target; otherwise null. Only {@code if} arms
-     * are eligible - loop bodies re-run (a loop-carried variable must not be re-initialized) and switches drive
-     * pattern reconstruction - so the variable's lifetime is genuinely confined to a block that executes once.
+     * condition), returns that block's statement list as a sink target.
      */
-    private List<Statement> getSinkTargetBlock(Statement stmt, String varName) {
-        if (!(stmt instanceof IfStmt)) {
+    private List<Statement> getSinkTargetBlock(Statement stmt, String varName)
+    {
+        if (!(stmt instanceof IfStmt))
+        {
             return null;
         }
         IfStmt ifStmt = (IfStmt) stmt;
-        if (usesVariableInExpr(ifStmt.getCondition(), varName)) {
+        if (usesVariableInExpr(ifStmt.getCondition(), varName))
+        {
             return null;
         }
         List<Statement> target = null;
-        if (ifStmt.getThenBranch() instanceof BlockStmt && usesVariable(ifStmt.getThenBranch(), varName)) {
+        if (ifStmt.getThenBranch() instanceof BlockStmt && usesVariable(ifStmt.getThenBranch(), varName))
+        {
             target = ((BlockStmt) ifStmt.getThenBranch()).getStatements();
         }
         if (ifStmt.hasElse() && ifStmt.getElseBranch() instanceof BlockStmt
-                && usesVariable(ifStmt.getElseBranch(), varName)) {
-            if (target != null) {
+                && usesVariable(ifStmt.getElseBranch(), varName))
+        {
+            if (target != null)
+            {
                 return null;
             }
             target = ((BlockStmt) ifStmt.getElseBranch()).getStatements();
@@ -278,18 +330,27 @@ public class DeclarationHoister implements ASTTransform {
         return target;
     }
 
-    private boolean isUsedInNestedScope(Statement stmt, String varName) {
-        if (stmt instanceof WhileStmt) {
+    private boolean isUsedInNestedScope(Statement stmt, String varName)
+    {
+        if (stmt instanceof WhileStmt)
+        {
             WhileStmt whileStmt = (WhileStmt) stmt;
-            if (usesVariable(whileStmt.getBody(), varName)) {
+            if (usesVariable(whileStmt.getBody(), varName))
+            {
                 return true;
             }
             return usesVariableInExpr(whileStmt.getCondition(), varName);
-        } else if (stmt instanceof DoWhileStmt) {
+        }
+        else if (stmt instanceof DoWhileStmt)
+        {
             return usesVariable(((DoWhileStmt) stmt).getBody(), varName);
-        } else if (stmt instanceof ForStmt) {
+        }
+        else if (stmt instanceof ForStmt)
+        {
             return usesVariable(((ForStmt) stmt).getBody(), varName);
-        } else if (stmt instanceof IfStmt) {
+        }
+        else if (stmt instanceof IfStmt)
+        {
             IfStmt ifStmt = (IfStmt) stmt;
             return usesVariable(ifStmt.getThenBranch(), varName) ||
                    (ifStmt.hasElse() && usesVariable(ifStmt.getElseBranch(), varName));
@@ -297,21 +358,28 @@ public class DeclarationHoister implements ASTTransform {
         return false;
     }
 
-    private boolean usesVariableInExpr(Expression expr, String varName) {
+    private boolean usesVariableInExpr(Expression expr, String varName)
+    {
         VariableUsageChecker checker = new VariableUsageChecker(varName);
         expr.accept(checker);
         return checker.found;
     }
 
-    private Expression getAssignmentValue(Statement stmt, String varName) {
-        if (stmt instanceof ExprStmt) {
+    private Expression getAssignmentValue(Statement stmt, String varName)
+    {
+        if (stmt instanceof ExprStmt)
+        {
             Expression expr = ((ExprStmt) stmt).getExpression();
-            if (expr instanceof BinaryExpr) {
+            if (expr instanceof BinaryExpr)
+            {
                 BinaryExpr binary = (BinaryExpr) expr;
-                if (binary.getOperator() == BinaryOperator.ASSIGN) {
-                    if (binary.getLeft() instanceof VarRefExpr) {
+                if (binary.getOperator() == BinaryOperator.ASSIGN)
+                {
+                    if (binary.getLeft() instanceof VarRefExpr)
+                    {
                         VarRefExpr varRef = (VarRefExpr) binary.getLeft();
-                        if (varRef.getName().equals(varName)) {
+                        if (varRef.getName().equals(varName))
+                        {
                             return binary.getRight();
                         }
                     }
@@ -321,23 +389,28 @@ public class DeclarationHoister implements ASTTransform {
         return null;
     }
 
-    private boolean referencesVar(Expression expr, String varName) {
+    private boolean referencesVar(Expression expr, String varName)
+    {
         VariableUsageChecker checker = new VariableUsageChecker(varName);
         expr.accept(checker);
         return checker.found;
     }
 
-    private static class VariableUsageChecker extends AbstractSourceVisitor<Void> {
+    private static class VariableUsageChecker extends AbstractSourceVisitor<Void>
+    {
         private final String varName;
         boolean found = false;
 
-        VariableUsageChecker(String varName) {
+        VariableUsageChecker(String varName)
+        {
             this.varName = varName;
         }
 
         @Override
-        public Void visitVarRef(VarRefExpr expr) {
-            if (expr.getName().equals(varName)) {
+        public Void visitVarRef(VarRefExpr expr)
+        {
+            if (expr.getName().equals(varName))
+            {
                 found = true;
             }
             return super.visitVarRef(expr);

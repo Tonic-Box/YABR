@@ -20,15 +20,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * type must widen to java/lang/Object, not stay narrowed to String. A stale String type would
  * make callers downcast the unrelated Object incoming and fail at runtime.
  */
-class MixedReferencePhiTest {
+class MixedReferencePhiTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void ternaryOfStringAndObjectWidensToObject() throws Exception {
+    void ternaryOfStringAndObjectWidensToObject() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("MixedReferencePhi");
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals("pick"))
@@ -38,22 +41,30 @@ class MixedReferencePhiTest {
         IRMethod ir = new SSA(cf.getConstPool()).lift(method);
 
         boolean sawMixedPhi = false;
-        for (IRBlock block : ir.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 boolean hasString = false;
                 boolean hasObject = false;
-                for (Value v : phi.getIncomingValues().values()) {
-                    if (v == null || v.getType() == null || !v.getType().isReference()) {
+                for (Value v : phi.getIncomingValues().values())
+                {
+                    if (v == null || v.getType() == null || !v.getType().isReference())
+                    {
                         continue;
                     }
                     String desc = v.getType().getDescriptor();
-                    if (desc.equals("Ljava/lang/String;")) {
+                    if (desc.equals("Ljava/lang/String;"))
+                    {
                         hasString = true;
-                    } else if (desc.equals("Ljava/lang/Object;")) {
+                    }
+                    else if (desc.equals("Ljava/lang/Object;"))
+                    {
                         hasObject = true;
                     }
                 }
-                if (hasString && hasObject) {
+                if (hasString && hasObject)
+                {
                     sawMixedPhi = true;
                     IRType resultType = phi.getResult().getType();
                     assertEquals("Ljava/lang/Object;", resultType.getDescriptor(),

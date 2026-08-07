@@ -23,20 +23,40 @@ import static org.junit.jupiter.api.Assertions.*;
  * StackScheduler schedules instructions for stack-based execution, inserting
  * LOAD and STORE operations as needed to manage the JVM operand stack.
  */
-class StackSchedulerTest {
+class StackSchedulerTest
+{
+
+    /**
+     * The position of the first scheduled instruction of {@code type}, or -1 when there is none.
+     */
+    private static int indexOfType(List<StackScheduler.ScheduledInstruction> schedule,
+            StackScheduler.ScheduleType type)
+    {
+        for (int i = 0; i < schedule.size(); i++)
+        {
+            if (schedule.get(i).getType() == type)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    // ========== Basic Scheduling Tests ==========
+    // Basic Scheduling Tests
 
     @Nested
-    class BasicSchedulingTests {
+    class BasicSchedulingTests
+    {
 
         @Test
-        void schedulerCreation() {
+        void schedulerCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Sched", "test", "()V")
                 .entry()
                     .vreturn()
@@ -56,7 +76,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void schedulerSchedulesSimpleInstructions() {
+        void schedulerSchedulesSimpleInstructions()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Simple", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -74,11 +95,12 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0, "Schedule should contain instructions");
+            assertFalse(schedule.isEmpty(), "Schedule should contain instructions");
         }
 
         @Test
-        void scheduleReturnsScheduledInstructions() {
+        void scheduleReturnsScheduledInstructions()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Ret", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -100,12 +122,12 @@ class StackSchedulerTest {
             assertNotNull(schedule);
 
             // Should have: EXECUTE(iconst), STORE/EXECUTE, EXECUTE(iconst), STORE/EXECUTE,
-            //              LOAD(a), LOAD(b), EXECUTE(add), STORE/EXECUTE(result), LOAD(result), EXECUTE(return)
             assertTrue(schedule.size() >= 4, "Schedule should have multiple instructions");
         }
 
         @Test
-        void emptyMethodSchedules() {
+        void emptyMethodSchedules()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Empty", "test", "()V")
                 .entry()
                     .vreturn()
@@ -123,17 +145,19 @@ class StackSchedulerTest {
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
             // Should have at least the return instruction
-            assertTrue(schedule.size() >= 1);
+            assertFalse(schedule.isEmpty());
         }
     }
 
-    // ========== Load Emission Tests ==========
+    // Load Emission Tests
 
     @Nested
-    class LoadEmissionTests {
+    class LoadEmissionTests
+    {
 
         @Test
-        void emitsLoadWhenOperandNotOnStack() {
+        void emitsLoadWhenOperandNotOnStack()
+        {
             // Create a scenario where a value needs to be loaded from local variable
             IRMethod method = IRBuilder.staticMethod("com/test/Load", "test", "()I")
                 .entry()
@@ -160,11 +184,13 @@ class StackSchedulerTest {
                 .count();
 
             // Should have LOADs for operands that were stored
-            assertTrue(loadCount >= 0, "Should emit LOAD instructions for stored values");
+            assertTrue(loadCount >= 1,
+                "an operand buried by a later definition must be reloaded, not left on the stack");
         }
 
         @Test
-        void loadInstructionHasCorrectRegister() {
+        void loadInstructionHasCorrectRegister()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/LoadReg", "test", "()I")
                 .entry()
                     .iconst(10, "x")
@@ -196,7 +222,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void multipleUsesRequireLoad() {
+        void multipleUsesRequireLoad()
+        {
             // Value used twice should be loaded each time it's needed
             IRMethod method = IRBuilder.staticMethod("com/test/MultiUse", "test", "()I")
                 .entry()
@@ -224,17 +251,20 @@ class StackSchedulerTest {
                 .filter(si -> si.getType() == StackScheduler.ScheduleType.LOAD)
                 .count();
 
-            assertTrue(loadCount >= 0, "Multiple uses should produce LOADs");
+            assertTrue(loadCount >= 2,
+                "each reuse of a value past its first consumer must reload it");
         }
     }
 
-    // ========== Store Emission Tests ==========
+    // Store Emission Tests
 
     @Nested
-    class StoreEmissionTests {
+    class StoreEmissionTests
+    {
 
         @Test
-        void emitsStoreWhenValueUsedMoreThanOnce() {
+        void emitsStoreWhenValueUsedMoreThanOnce()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Store", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -261,11 +291,13 @@ class StackSchedulerTest {
                 .count();
 
             // Values used multiple times should be stored
-            assertTrue(storeCount >= 0, "Should emit STORE for multiply-used values");
+            assertTrue(storeCount >= 1,
+                "a value read more than once must be spilled to a local");
         }
 
         @Test
-        void storeInstructionHasCorrectRegister() {
+        void storeInstructionHasCorrectRegister()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/StoreReg", "test", "()I")
                 .entry()
                     .iconst(10, "x")
@@ -297,7 +329,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void storeNotEmittedForUnusedValue() {
+        void storeNotEmittedForUnusedValue()
+        {
             // A value that's defined but never used shouldn't need a store
             // (though it might still be scheduled, just not with a store after)
             IRMethod method = IRBuilder.staticMethod("com/test/NoStore", "test", "()I")
@@ -321,13 +354,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Immediate Use Detection Tests ==========
+    // Immediate Use Detection Tests
 
     @Nested
-    class ImmediateUseTests {
+    class ImmediateUseTests
+    {
 
         @Test
-        void immediateUseDoesNotRequireStore() {
+        void immediateUseDoesNotRequireStore()
+        {
             // If value is used immediately by next instruction only, no store needed
             IRMethod method = IRBuilder.staticMethod("com/test/Immediate", "test", "()I")
                 .entry()
@@ -350,11 +385,12 @@ class StackSchedulerTest {
             assertNotNull(schedule);
 
             // The schedule should be optimized for immediate use
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
 
         @Test
-        void nonImmediateUseRequiresStore() {
+        void nonImmediateUseRequiresStore()
+        {
             // If value is not used immediately, it needs to be stored
             IRMethod method = IRBuilder.staticMethod("com/test/NotImmediate", "test", "()I")
                 .entry()
@@ -380,12 +416,18 @@ class StackSchedulerTest {
             long storeCount = schedule.stream()
                 .filter(si -> si.getType() == StackScheduler.ScheduleType.STORE)
                 .count();
+            long loadCount = schedule.stream()
+                .filter(si -> si.getType() == StackScheduler.ScheduleType.LOAD)
+                .count();
 
-            assertTrue(storeCount >= 0, "Non-immediate uses should produce STOREs");
+            assertTrue(loadCount >= 2, "both operands of the add are buried and must be reloaded");
+            assertTrue(storeCount >= loadCount,
+                "every reload needs a spill behind it; a LOAD with no STORE reads an undefined local");
         }
 
         @Test
-        void chainedImmediateUses() {
+        void chainedImmediateUses()
+        {
             // a -> b -> c, each immediately used
             IRMethod method = IRBuilder.staticMethod("com/test/Chained", "test", "()I")
                 .entry()
@@ -408,17 +450,19 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
-    // ========== Two-Slot Stack Accounting Tests ==========
+    // Two-Slot Stack Accounting Tests
 
     @Nested
-    class TwoSlotStackTests {
+    class TwoSlotStackTests
+    {
 
         @Test
-        void longValuesCountAsTwoSlots() {
+        void longValuesCountAsTwoSlots()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Long", "test", "()J")
                 .entry()
                     .lconst(100L, "a")
@@ -443,12 +487,12 @@ class StackSchedulerTest {
             // Long values should be counted as 2 stack slots
             int maxStack = scheduler.getMaxStack();
             // With two longs potentially on stack, max should account for 2-slot types
-            assertTrue(maxStack >= 0, "Max stack should account for long (2-slot) values");
+            assertTrue(maxStack >= 2, "a long occupies two stack slots");
         }
 
         @Test
-        void doubleValuesCountAsTwoSlots() {
-            // Create method with double constant manually
+        void doubleValuesCountAsTwoSlots()
+        {
             IRMethod method = new IRMethod("com/test/Double", "test", "()D", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -472,11 +516,12 @@ class StackSchedulerTest {
             scheduler.schedule();
 
             int maxStack = scheduler.getMaxStack();
-            assertTrue(maxStack >= 0, "Max stack should account for double (2-slot) values");
+            assertTrue(maxStack >= 2, "a double occupies two stack slots");
         }
 
         @Test
-        void mixedSingleAndTwoSlotValues() {
+        void mixedSingleAndTwoSlotValues()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Mixed", "test", "()I")
                 .entry()
                     .iconst(5, "a")      // 1 slot
@@ -484,7 +529,6 @@ class StackSchedulerTest {
                     .iconst(3, "c")      // 1 slot
                     .build();
 
-            // Add return
             IRBlock entry = method.getEntryBlock();
             ReturnInstruction ret = new ReturnInstruction(entry.getInstructions().get(0).getResult());
             entry.addInstruction(ret);
@@ -498,13 +542,22 @@ class StackSchedulerTest {
             StackScheduler scheduler = new StackScheduler(method, regAlloc);
             scheduler.schedule();
 
-            int maxStack = scheduler.getMaxStack();
-            // Should correctly account for mixed slot sizes
-            assertTrue(maxStack >= 0);
+            // The long is spilled, so it never shares the stack with the int being returned; what the
+            // two-slot width must change is the LOCAL numbering - the value after a long cannot sit
+            // in the next index, or the two halves of the long are overwritten.
+            List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
+            List<Integer> storeSlots = schedule.stream()
+                .filter(si -> si.getType() == StackScheduler.ScheduleType.STORE)
+                .map(si -> ((StoreLocalInstruction) si.getInstruction()).getLocalIndex())
+                .collect(java.util.stream.Collectors.toList());
+            assertEquals(3, storeSlots.size(), "each of the three constants is spilled");
+            assertTrue(storeSlots.get(2) - storeSlots.get(1) >= 2,
+                "a long reserves two local slots, so the next value skips one: " + storeSlots);
         }
 
         @Test
-        void maxStackReflectsActualSlotCount() {
+        void maxStackReflectsActualSlotCount()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/MaxSlot", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -530,13 +583,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Schedule Type Tests ==========
+    // Schedule Type Tests
 
     @Nested
-    class ScheduleTypeTests {
+    class ScheduleTypeTests
+    {
 
         @Test
-        void scheduleTypeLoad() {
+        void scheduleTypeLoad()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeLoad", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -561,11 +616,16 @@ class StackSchedulerTest {
                 .anyMatch(si -> si.getType() == StackScheduler.ScheduleType.LOAD);
 
             // May or may not have loads depending on optimization
-            assertTrue(hasLoad || !hasLoad, "Schedule should handle LOAD type correctly");
+            assertTrue(hasLoad, "the operand buried by the second constant must be reloaded");
+            int firstStore = indexOfType(schedule, StackScheduler.ScheduleType.STORE);
+            int firstLoad = indexOfType(schedule, StackScheduler.ScheduleType.LOAD);
+            assertTrue(firstStore >= 0 && firstLoad > firstStore,
+                "the reload must follow the spill it reads");
         }
 
         @Test
-        void scheduleTypeStore() {
+        void scheduleTypeStore()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeStore", "test", "()I")
                 .entry()
                     .iconst(5, "a")
@@ -590,11 +650,12 @@ class StackSchedulerTest {
                 .anyMatch(si -> si.getType() == StackScheduler.ScheduleType.STORE);
 
             // May or may not have stores depending on optimization
-            assertTrue(hasStore || !hasStore, "Schedule should handle STORE type correctly");
+            assertTrue(hasStore, "the operand buried by the second constant must be spilled");
         }
 
         @Test
-        void scheduleTypeExecute() {
+        void scheduleTypeExecute()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/TypeExec", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -620,7 +681,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void allScheduleTypesValid() {
+        void allScheduleTypesValid()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/AllTypes", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -650,14 +712,15 @@ class StackSchedulerTest {
         }
     }
 
-    // ========== Multiple Block Tests ==========
+    // Multiple Block Tests
 
     @Nested
-    class MultipleBlockTests {
+    class MultipleBlockTests
+    {
 
         @Test
-        void schedulesEachBlockIndependently() {
-            // Create method with multiple blocks manually
+        void schedulesEachBlockIndependently()
+        {
             IRMethod method = new IRMethod("com/test/MultiBlock", "test", "(I)I", true);
 
             // Entry block
@@ -700,12 +763,12 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Should schedule instructions from both blocks
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
 
         @Test
-        void stackResetBetweenBlocks() {
+        void stackResetBetweenBlocks()
+        {
             // Each block should start with empty simulated stack
             IRMethod method = new IRMethod("com/test/StackReset", "test", "(I)I", true);
 
@@ -741,14 +804,13 @@ class StackSchedulerTest {
             StackScheduler scheduler = new StackScheduler(method, regAlloc);
             scheduler.schedule();
 
-            // Should successfully schedule without stack overflow
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
         }
 
         @Test
-        void complexControlFlow() {
-            // Test with branch
+        void complexControlFlow()
+        {
             IRMethod method = new IRMethod("com/test/Branch", "test", "(I)I", true);
 
             // Entry block
@@ -777,7 +839,6 @@ class StackSchedulerTest {
             IRBlock merge = new IRBlock("merge");
             method.addBlock(merge);
 
-            // Add branch
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, param, IntConstant.of(0), trueBlock, falseBlock);
             entry.addInstruction(branch);
 
@@ -785,7 +846,6 @@ class StackSchedulerTest {
             entry.addSuccessor(trueBlock);
             entry.addSuccessor(falseBlock);
 
-            // Add gotos
             SimpleInstruction gotoFromTrue = SimpleInstruction.createGoto(merge);
             trueBlock.addInstruction(gotoFromTrue);
             trueBlock.addSuccessor(merge);
@@ -794,7 +854,6 @@ class StackSchedulerTest {
             falseBlock.addInstruction(gotoFromFalse);
             falseBlock.addSuccessor(merge);
 
-            // Return from merge
             ReturnInstruction ret = new ReturnInstruction(trueVal);
             merge.addInstruction(ret);
 
@@ -809,18 +868,19 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Should handle complex control flow
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void noInstructions() {
+        void noInstructions()
+        {
             IRMethod method = new IRMethod("com/test/NoInstr", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -837,12 +897,12 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Empty block should produce empty or minimal schedule
-            assertTrue(schedule.size() >= 0);
+            assertTrue(schedule.isEmpty(), "an empty block schedules nothing");
         }
 
         @Test
-        void singleInstruction() {
+        void singleInstruction()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Single", "test", "()V")
                 .entry()
                     .vreturn()
@@ -863,7 +923,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void deepExpressionNesting() {
+        void deepExpressionNesting()
+        {
             // ((a + b) + (c + d)) + ((e + f) + (g + h))
             IRMethod method = IRBuilder.staticMethod("com/test/Deep", "test", "()I")
                 .entry()
@@ -896,30 +957,28 @@ class StackSchedulerTest {
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
             assertTrue(scheduler.getMaxStack() > 0, "Deep nesting should increase max stack");
         }
 
         @Test
-        void parameterHandling() {
+        void parameterHandling()
+        {
             IRMethod method = new IRMethod("com/test/Params", "add", "(II)I", true);
 
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
             method.setEntryBlock(entry);
 
-            // Add parameters
             SSAValue param0 = new SSAValue(PrimitiveType.INT, "p0");
             SSAValue param1 = new SSAValue(PrimitiveType.INT, "p1");
             method.addParameter(param0);
             method.addParameter(param1);
 
-            // Create add instruction
             SSAValue sum = new SSAValue(PrimitiveType.INT, "sum");
             BinaryOpInstruction add = new BinaryOpInstruction(sum, BinaryOp.ADD, param0, param1);
             entry.addInstruction(add);
 
-            // Return
             ReturnInstruction ret = new ReturnInstruction(sum);
             entry.addInstruction(ret);
 
@@ -935,17 +994,19 @@ class StackSchedulerTest {
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
             // Parameters should be loaded from their slots
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
-    // ========== Integration Tests ==========
+    // Integration Tests
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void schedulerIntegratesWithRegisterAllocator() {
+        void schedulerIntegratesWithRegisterAllocator()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Integrate", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -979,7 +1040,8 @@ class StackSchedulerTest {
         }
 
         @Test
-        void maxStackIsConsistentWithSchedule() {
+        void maxStackIsConsistentWithSchedule()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Consistent", "test", "()I")
                 .entry()
                     .iconst(10, "a")
@@ -1002,7 +1064,7 @@ class StackSchedulerTest {
             int maxStack = scheduler.getMaxStack();
 
             // Max stack should be reasonable
-            assertTrue(maxStack >= 0, "Max stack should be non-negative");
+            assertTrue(maxStack >= 1, "a method that returns a computed value needs stack space");
             assertTrue(maxStack < 100, "Max stack should be reasonable for small method");
         }
     }

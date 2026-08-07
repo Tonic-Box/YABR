@@ -11,55 +11,86 @@ import com.tonic.util.DescriptorUtil;
 
 /**
  * Computes state transitions for IR instructions.
- *
- * <p>Each instruction type has a specific effect on the simulation state
- * (stack and locals). This class encapsulates all transition logic.
  */
-public final class StateTransitions {
+public final class StateTransitions
+{
 
     private StateTransitions() {}
 
     /**
      * Apply an instruction's effect to the simulation state.
-     *
      * @param state the current state before the instruction
      * @param instr the instruction to execute
      * @return the new state after the instruction
      */
-    public static SimulationState apply(SimulationState state, IRInstruction instr) {
-        if (instr instanceof ConstantInstruction) {
+    public static SimulationState apply(SimulationState state, IRInstruction instr)
+    {
+        if (instr instanceof ConstantInstruction)
+        {
             return applyConstant(state, (ConstantInstruction) instr);
-        } else if (instr instanceof LoadLocalInstruction) {
+        }
+        else if (instr instanceof LoadLocalInstruction)
+        {
             return applyLoadLocal(state, (LoadLocalInstruction) instr);
-        } else if (instr instanceof StoreLocalInstruction) {
+        }
+        else if (instr instanceof StoreLocalInstruction)
+        {
             return applyStoreLocal(state, (StoreLocalInstruction) instr);
-        } else if (instr instanceof BinaryOpInstruction) {
+        }
+        else if (instr instanceof BinaryOpInstruction)
+        {
             return applyBinaryOp(state, (BinaryOpInstruction) instr);
-        } else if (instr instanceof UnaryOpInstruction) {
+        }
+        else if (instr instanceof UnaryOpInstruction)
+        {
             return applyUnaryOp(state, (UnaryOpInstruction) instr);
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             return applyFieldAccess(state, (FieldAccessInstruction) instr);
-        } else if (instr instanceof ArrayAccessInstruction) {
+        }
+        else if (instr instanceof ArrayAccessInstruction)
+        {
             return applyArrayAccess(state, (ArrayAccessInstruction) instr);
-        } else if (instr instanceof NewInstruction) {
+        }
+        else if (instr instanceof NewInstruction)
+        {
             return applyNew(state, (NewInstruction) instr);
-        } else if (instr instanceof NewArrayInstruction) {
+        }
+        else if (instr instanceof NewArrayInstruction)
+        {
             return applyNewArray(state, (NewArrayInstruction) instr);
-        } else if (instr instanceof InvokeInstruction) {
+        }
+        else if (instr instanceof InvokeInstruction)
+        {
             return applyInvoke(state, (InvokeInstruction) instr);
-        } else if (instr instanceof ReturnInstruction) {
+        }
+        else if (instr instanceof ReturnInstruction)
+        {
             return applyReturn(state);
-        } else if (instr instanceof BranchInstruction) {
+        }
+        else if (instr instanceof BranchInstruction)
+        {
             return applyBranch(state, (BranchInstruction) instr);
-        } else if (instr instanceof SwitchInstruction) {
+        }
+        else if (instr instanceof SwitchInstruction)
+        {
             return applySwitch(state);
-        } else if (instr instanceof TypeCheckInstruction) {
+        }
+        else if (instr instanceof TypeCheckInstruction)
+        {
             return applyTypeCheck(state, (TypeCheckInstruction) instr);
-        } else if (instr instanceof SimpleInstruction) {
+        }
+        else if (instr instanceof SimpleInstruction)
+        {
             return applySimple(state, (SimpleInstruction) instr);
-        } else if (instr instanceof PhiInstruction) {
+        }
+        else if (instr instanceof PhiInstruction)
+        {
             return applyPhi(state, (PhiInstruction) instr);
-        } else if (instr instanceof CopyInstruction) {
+        }
+        else if (instr instanceof CopyInstruction)
+        {
             return applyCopy(state);
         }
 
@@ -67,85 +98,102 @@ public final class StateTransitions {
         return state;
     }
 
-    // ========== Instruction Handlers ==========
+    // Instruction Handlers
 
-    private static SimulationState applyConstant(SimulationState state, ConstantInstruction instr) {
+    private static SimulationState applyConstant(SimulationState state, ConstantInstruction instr)
+    {
         IRType type = instr.getResultType();
         Object value = instr.getConstant() != null ? instr.getConstant().getValue() : null;
         SimValue simValue = SimValue.constant(value, type, instr);
 
-        if (isWideType(type)) {
+        if (isWideType(type))
+        {
             return state.pushWide(simValue);
         }
         return state.push(simValue);
     }
 
-    private static SimulationState applyLoadLocal(SimulationState state, LoadLocalInstruction instr) {
+    private static SimulationState applyLoadLocal(SimulationState state, LoadLocalInstruction instr)
+    {
         int index = instr.getLocalIndex();
         SimValue value = state.getLocal(index);
 
-        if (isWideType(instr.getResultType())) {
+        if (isWideType(instr.getResultType()))
+        {
             return state.pushWide(value);
         }
         return state.push(value);
     }
 
-    private static SimulationState applyStoreLocal(SimulationState state, StoreLocalInstruction instr) {
+    private static SimulationState applyStoreLocal(SimulationState state, StoreLocalInstruction instr)
+    {
         int index = instr.getLocalIndex();
         SimValue value = state.peek();
 
         IRType type = instr.getValue() != null ? instr.getValue().getType() : null;
-        if (isWideType(type)) {
+        if (isWideType(type))
+        {
             return state.popWide().setLocalWide(index, value);
         }
         return state.pop().setLocal(index, value);
     }
 
-    private static SimulationState applyBinaryOp(SimulationState state, BinaryOpInstruction instr) {
+    private static SimulationState applyBinaryOp(SimulationState state, BinaryOpInstruction instr)
+    {
         IRType type = instr.getResultType();
         boolean wide = isWideType(type);
 
         SimulationState newState;
-        if (wide) {
+        if (wide)
+        {
             // Wide operands: pop 4 slots total (2 per operand)
             newState = state.popWide().popWide();
-        } else {
+        }
+        else
+        {
             // Regular: pop 2 slots
             newState = state.pop(2);
         }
 
         SimValue result = SimValue.ofType(type, instr);
-        if (wide) {
+        if (wide)
+        {
             return newState.pushWide(result);
         }
         return newState.push(result);
     }
 
-    private static SimulationState applyUnaryOp(SimulationState state, UnaryOpInstruction instr) {
+    private static SimulationState applyUnaryOp(SimulationState state, UnaryOpInstruction instr)
+    {
         IRType inputType = instr.getOperand() != null ? instr.getOperand().getType() : null;
         IRType resultType = instr.getResultType();
 
         SimulationState newState;
-        if (isWideType(inputType)) {
+        if (isWideType(inputType))
+        {
             newState = state.popWide();
-        } else {
+        }
+        else
+        {
             newState = state.pop();
         }
 
         SimValue result = SimValue.ofType(resultType, instr);
-        if (isWideType(resultType)) {
+        if (isWideType(resultType))
+        {
             return newState.pushWide(result);
         }
         return newState.push(result);
     }
 
-
-    private static SimulationState applyNew(SimulationState state, NewInstruction instr) {
+    private static SimulationState applyNew(SimulationState state, NewInstruction instr)
+    {
         IRType type = instr.getResultType();
         return state.push(SimValue.ofType(type, instr));
     }
 
-    private static SimulationState applyNewArray(SimulationState state, NewArrayInstruction instr) {
+    private static SimulationState applyNewArray(SimulationState state, NewArrayInstruction instr)
+    {
         int dimensions = instr.getDimensions().size();
         SimulationState newState = state.pop(dimensions);
 
@@ -153,7 +201,8 @@ public final class StateTransitions {
         return newState.push(SimValue.ofType(type, instr));
     }
 
-    private static SimulationState applyInvoke(SimulationState state, InvokeInstruction instr) {
+    private static SimulationState applyInvoke(SimulationState state, InvokeInstruction instr)
+    {
         String descriptor = instr.getDescriptor();
         int argSlots = DescriptorUtil.countParameterSlots(descriptor);
 
@@ -161,17 +210,22 @@ public final class StateTransitions {
 
         newState = popSlots(newState, argSlots);
 
-        if (instr.getInvokeType() != InvokeType.STATIC) {
+        if (instr.getInvokeType() != InvokeType.STATIC)
+        {
             newState = newState.pop();
         }
 
         String returnDesc = DescriptorUtil.parseReturnDescriptor(descriptor);
-        if (!"V".equals(returnDesc)) {
+        if (!"V".equals(returnDesc))
+        {
             IRType returnType = getTypeFromDescriptor(returnDesc);
             SimValue result = SimValue.ofType(returnType, instr);
-            if (isWideType(returnType)) {
+            if (isWideType(returnType))
+            {
                 newState = newState.pushWide(result);
-            } else {
+            }
+            else
+            {
                 newState = newState.push(result);
             }
         }
@@ -179,12 +233,14 @@ public final class StateTransitions {
         return newState;
     }
 
-    private static SimulationState applyReturn(SimulationState state) {
+    private static SimulationState applyReturn(SimulationState state)
+    {
         // The return value (if any) stays on the stack; control flow leaves the method.
         return state;
     }
 
-    private static SimulationState applyBranch(SimulationState state, BranchInstruction instr) {
+    private static SimulationState applyBranch(SimulationState state, BranchInstruction instr)
+    {
         // Pop count depends on whether it's a single-value or two-value comparison
         Value left = instr.getLeft();
         Value right = instr.getRight();
@@ -196,127 +252,158 @@ public final class StateTransitions {
         return state.pop(popCount);
     }
 
-    private static SimulationState applySwitch(SimulationState state) {
+    private static SimulationState applySwitch(SimulationState state)
+    {
         // Pop the key value.
         return state.pop();
     }
 
-    private static SimulationState applyPhi(SimulationState state, PhiInstruction instr) {
+    private static SimulationState applyPhi(SimulationState state, PhiInstruction instr)
+    {
         // Phi nodes don't directly affect the stack in simulation
         // They represent value merging at control flow join points
         // The result is conceptually "on the stack" but handled via SSA values
         IRType type = instr.getResultType();
         SimValue result = SimValue.ofType(type, instr);
-        if (isWideType(type)) {
+        if (isWideType(type))
+        {
             return state.pushWide(result);
         }
         return state.push(result);
     }
 
-    private static SimulationState applyCopy(SimulationState state) {
+    private static SimulationState applyCopy(SimulationState state)
+    {
         // Copy has no stack effect in SSA; treat as identity.
         return state;
     }
 
-    private static SimulationState applyFieldAccess(SimulationState state, FieldAccessInstruction instr) {
-        if (instr.isLoad()) {
+    private static SimulationState applyFieldAccess(SimulationState state, FieldAccessInstruction instr)
+    {
+        if (instr.isLoad())
+        {
             SimulationState newState = state;
-            if (!instr.isStatic()) {
+            if (!instr.isStatic())
+            {
                 newState = state.pop();
             }
             IRType fieldType = getTypeFromDescriptor(instr.getDescriptor());
             SimValue result = SimValue.ofType(fieldType, instr);
-            if (isWideType(fieldType)) {
+            if (isWideType(fieldType))
+            {
                 return newState.pushWide(result);
             }
             return newState.push(result);
-        } else {
+        }
+        else
+        {
             IRType fieldType = getTypeFromDescriptor(instr.getDescriptor());
             SimulationState newState;
-            if (isWideType(fieldType)) {
+            if (isWideType(fieldType))
+            {
                 newState = state.popWide();
-            } else {
+            }
+            else
+            {
                 newState = state.pop();
             }
-            if (!instr.isStatic()) {
+            if (!instr.isStatic())
+            {
                 newState = newState.pop();
             }
             return newState;
         }
     }
 
-    private static SimulationState applyArrayAccess(SimulationState state, ArrayAccessInstruction instr) {
-        if (instr.isLoad()) {
+    private static SimulationState applyArrayAccess(SimulationState state, ArrayAccessInstruction instr)
+    {
+        if (instr.isLoad())
+        {
             SimulationState newState = state.pop(2);
             IRType elementType = instr.getResult() != null ? instr.getResult().getType() : null;
             SimValue result = SimValue.ofType(elementType, instr);
-            if (isWideType(elementType)) {
+            if (isWideType(elementType))
+            {
                 return newState.pushWide(result);
             }
             return newState.push(result);
-        } else {
+        }
+        else
+        {
             Value valueOperand = instr.getValue();
             IRType valueType = valueOperand != null ? valueOperand.getType() : null;
             SimulationState newState;
-            if (isWideType(valueType)) {
+            if (isWideType(valueType))
+            {
                 newState = state.popWide();
-            } else {
+            }
+            else
+            {
                 newState = state.pop();
             }
             return newState.pop(2);
         }
     }
 
-    private static SimulationState applyTypeCheck(SimulationState state, TypeCheckInstruction instr) {
-        if (instr.isCast()) {
+    private static SimulationState applyTypeCheck(SimulationState state, TypeCheckInstruction instr)
+    {
+        if (instr.isCast())
+        {
             IRType targetType = instr.getTargetType();
             Value sourceValue = instr.getOperand();
             IRType sourceType = sourceValue != null ? sourceValue.getType() : null;
             SimulationState newState;
-            if (isWideType(sourceType)) {
+            if (isWideType(sourceType))
+            {
                 newState = state.popWide();
-            } else {
+            }
+            else
+            {
                 newState = state.pop();
             }
             SimValue result = SimValue.ofType(targetType, instr);
-            if (isWideType(targetType)) {
+            if (isWideType(targetType))
+            {
                 return newState.pushWide(result);
             }
             return newState.push(result);
-        } else {
+        }
+        else
+        {
             return state.pop().push(SimValue.ofType(PrimitiveType.INT, instr));
         }
     }
 
-    private static SimulationState applySimple(SimulationState state, SimpleInstruction instr) {
-        switch (instr.getOp()) {
+    private static SimulationState applySimple(SimulationState state, SimpleInstruction instr)
+    {
+        switch (instr.getOp())
+        {
             case ARRAYLENGTH:
                 return state.pop().push(SimValue.ofType(PrimitiveType.INT, instr));
             case MONITORENTER:
-                return state.pop();
             case MONITOREXIT:
-                return state.pop();
             case ATHROW:
                 return state.pop();
-            case GOTO:
-                return state;
             default:
                 return state;
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private static boolean isWideType(IRType type) {
+    private static boolean isWideType(IRType type)
+    {
         if (type == null) return false;
         return type.isTwoSlot();
     }
 
-    private static IRType getTypeFromDescriptor(String descriptor) {
+    private static IRType getTypeFromDescriptor(String descriptor)
+    {
         if (descriptor == null || descriptor.isEmpty()) return null;
 
         char first = descriptor.charAt(0);
-        switch (first) {
+        switch (first)
+        {
             case 'V': return VoidType.INSTANCE;
             case 'Z': return PrimitiveType.BOOLEAN;
             case 'B': return PrimitiveType.BYTE;
@@ -336,21 +423,27 @@ public final class StateTransitions {
 
     /**
      * Pop a specific number of slots from the stack.
-     * This accounts for wide values taking 2 slots.
      */
-    private static SimulationState popSlots(SimulationState state, int slots) {
+    private static SimulationState popSlots(SimulationState state, int slots)
+    {
         SimulationState newState = state;
         int popped = 0;
-        while (popped < slots && newState.stackDepth() > 0) {
+        while (popped < slots && newState.stackDepth() > 0)
+        {
             SimValue top = newState.peek();
-            if (top.isWide()) {
+            if (top.isWide())
+            {
                 newState = newState.popWide();
                 popped += 2;
-            } else if (top.isWideSecondSlot()) {
+            }
+            else if (top.isWideSecondSlot())
+            {
                 // Skip second slot (should be handled with the first)
                 newState = newState.pop();
                 popped += 1;
-            } else {
+            }
+            else
+            {
                 newState = newState.pop();
                 popped += 1;
             }
@@ -360,49 +453,65 @@ public final class StateTransitions {
 
     /**
      * Get the number of stack slots an instruction pops.
+     * @param instr the instruction to size
+     * @return the slot count, counting long and double operands as two, 0 for unrecognized forms
      */
-    public static int getPopCount(IRInstruction instr) {
+    public static int getPopCount(IRInstruction instr)
+    {
         if (instr instanceof ConstantInstruction) return 0;
         if (instr instanceof LoadLocalInstruction) return 0;
-        if (instr instanceof StoreLocalInstruction) {
+        if (instr instanceof StoreLocalInstruction)
+        {
             Value val = ((StoreLocalInstruction) instr).getValue();
             IRType type = val != null ? val.getType() : null;
             return isWideType(type) ? 2 : 1;
         }
-        if (instr instanceof BinaryOpInstruction) {
+        if (instr instanceof BinaryOpInstruction)
+        {
             IRType type = instr.getResultType();
             return isWideType(type) ? 4 : 2;
         }
-        if (instr instanceof UnaryOpInstruction) {
+        if (instr instanceof UnaryOpInstruction)
+        {
             Value op = ((UnaryOpInstruction) instr).getOperand();
             return op != null && isWideType(op.getType()) ? 2 : 1;
         }
-        if (instr instanceof FieldAccessInstruction) {
+        if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isLoad()) {
+            if (fieldAccess.isLoad())
+            {
                 return fieldAccess.isStatic() ? 0 : 1;
-            } else {
+            }
+            else
+            {
                 int slots = isWideType(getTypeFromDescriptor(fieldAccess.getDescriptor())) ? 2 : 1;
                 return fieldAccess.isStatic() ? slots : slots + 1;
             }
         }
-        if (instr instanceof ArrayAccessInstruction) {
+        if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isLoad()) {
+            if (arrayAccess.isLoad())
+            {
                 return 2;
-            } else {
+            }
+            else
+            {
                 Value val = arrayAccess.getValue();
                 return 2 + (val != null && isWideType(val.getType()) ? 2 : 1);
             }
         }
         if (instr instanceof NewInstruction) return 0;
         if (instr instanceof NewArrayInstruction) return ((NewArrayInstruction) instr).getDimensions().size();
-        if (instr instanceof InvokeInstruction) {
+        if (instr instanceof InvokeInstruction)
+        {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             int slots = DescriptorUtil.countParameterSlots(invoke.getDescriptor());
             return invoke.getInvokeType() != InvokeType.STATIC ? slots + 1 : slots;
         }
-        if (instr instanceof BranchInstruction) {
+        if (instr instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) instr;
             int count = 0;
             if (branch.getLeft() != null) count++;
@@ -410,18 +519,24 @@ public final class StateTransitions {
             return count;
         }
         if (instr instanceof SwitchInstruction) return 1;
-        if (instr instanceof TypeCheckInstruction) {
+        if (instr instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
-            if (typeCheck.isCast()) {
+            if (typeCheck.isCast())
+            {
                 Value val = typeCheck.getOperand();
                 return val != null && isWideType(val.getType()) ? 2 : 1;
-            } else {
+            }
+            else
+            {
                 return 1;
             }
         }
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            switch (simple.getOp()) {
+            switch (simple.getOp())
+            {
                 case ARRAYLENGTH:
                 case MONITORENTER:
                 case MONITOREXIT:
@@ -437,62 +552,84 @@ public final class StateTransitions {
 
     /**
      * Get the number of stack slots an instruction pushes.
+     * @param instr the instruction to size
+     * @return the slot count, counting long and double results as two, 0 for unrecognized forms
      */
-    public static int getPushCount(IRInstruction instr) {
-        if (instr instanceof ConstantInstruction) {
+    public static int getPushCount(IRInstruction instr)
+    {
+        if (instr instanceof ConstantInstruction)
+        {
             return isWideType(instr.getResultType()) ? 2 : 1;
         }
-        if (instr instanceof LoadLocalInstruction) {
+        if (instr instanceof LoadLocalInstruction)
+        {
             return isWideType(instr.getResultType()) ? 2 : 1;
         }
-        if (instr instanceof BinaryOpInstruction) {
+        if (instr instanceof BinaryOpInstruction)
+        {
             return isWideType(instr.getResultType()) ? 2 : 1;
         }
-        if (instr instanceof UnaryOpInstruction) {
+        if (instr instanceof UnaryOpInstruction)
+        {
             return isWideType(instr.getResultType()) ? 2 : 1;
         }
-        if (instr instanceof FieldAccessInstruction) {
+        if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isLoad()) {
+            if (fieldAccess.isLoad())
+            {
                 String desc = fieldAccess.getDescriptor();
                 return isWideType(getTypeFromDescriptor(desc)) ? 2 : 1;
-            } else {
+            }
+            else
+            {
                 return 0;
             }
         }
-        if (instr instanceof ArrayAccessInstruction) {
+        if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isLoad()) {
+            if (arrayAccess.isLoad())
+            {
                 Value result = arrayAccess.getResult();
                 return result != null && isWideType(result.getType()) ? 2 : 1;
-            } else {
+            }
+            else
+            {
                 return 0;
             }
         }
         if (instr instanceof NewInstruction) return 1;
         if (instr instanceof NewArrayInstruction) return 1;
-        if (instr instanceof InvokeInstruction) {
-            String returnDesc = DescriptorUtil.parseReturnDescriptor(
-                ((InvokeInstruction) instr).getDescriptor());
+        if (instr instanceof InvokeInstruction)
+        {
+            String returnDesc = DescriptorUtil.parseReturnDescriptor(((InvokeInstruction) instr).getDescriptor());
             if ("V".equals(returnDesc)) return 0;
             return isWideType(getTypeFromDescriptor(returnDesc)) ? 2 : 1;
         }
-        if (instr instanceof TypeCheckInstruction) {
+        if (instr instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
-            if (typeCheck.isCast()) {
+            if (typeCheck.isCast())
+            {
                 return isWideType(typeCheck.getTargetType()) ? 2 : 1;
-            } else {
+            }
+            else
+            {
                 return 1;
             }
         }
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.ARRAYLENGTH) {
+            if (simple.getOp() == SimpleOp.ARRAYLENGTH)
+            {
                 return 1;
             }
             return 0;
         }
-        if (instr instanceof PhiInstruction) {
+        if (instr instanceof PhiInstruction)
+        {
             return isWideType(instr.getResultType()) ? 2 : 1;
         }
         return 0;

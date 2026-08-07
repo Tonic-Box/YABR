@@ -11,52 +11,69 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Represents an unresolved invokedynamic call with bootstrap method information.
- * <p>
- * When the bootstrap method is not a recognized pattern (like LambdaMetafactory
- * or StringConcatFactory), this expression preserves the bootstrap information
- * and call arguments for display.
- * <p>
- * Output format: {@code invokedynamic("name", args) /* @bsm owner.method *\/}
+ * An invokedynamic call whose bootstrap method was not a recognized pattern, preserving the
+ * bootstrap information and call arguments for display.
  */
-public final class InvokeDynamicExpr implements Expression {
+public final class InvokeDynamicExpr implements Expression
+{
 
-    /** The name of the invoked method. */
+    /**
+     * The name of the invoked method.
+     */
     private final String name;
 
-    /** The method descriptor. */
+    /**
+     * The method descriptor.
+     */
     private final String descriptor;
 
-    /** The arguments to the invokedynamic call. */
+    /**
+     * The arguments to the invokedynamic call.
+     */
     private final List<Expression> arguments;
 
-    /** The owner class of the bootstrap method. */
+    /**
+     * The owner class of the bootstrap method.
+     */
     private final String bootstrapOwner;
 
-    /** The name of the bootstrap method. */
+    /**
+     * The name of the bootstrap method.
+     */
     private final String bootstrapName;
 
-    /** The inferred return type. */
+    /**
+     * The inferred return type.
+     */
     private SourceType type;
 
-    /** Source location. */
+    /**
+     * Source location.
+     */
     private final SourceLocation location;
 
-    /** Parent AST node. */
+    /**
+     * Parent AST node.
+     */
     private ASTNode parent;
 
     /**
-     * For a {@code SwitchBootstraps.typeSwitch} call, the internal names of the case-type class
-     * bootstrap static arguments in declaration order (e.g. {@code [java/lang/Integer, java/lang/String]}).
-     * Empty for other bootstraps. Used to reconstruct pattern-switch case types.
+     * For a {@code SwitchBootstraps.typeSwitch} call, the internal names of the case-type class bootstrap static
+     * arguments in declaration order.
      */
     private List<String> bootstrapClassArgs = Collections.emptyList();
 
     /**
-     * Creates an invokedynamic expression with full bootstrap information.
+     * Creates an invokedynamic expression with full bootstrap information; null arguments fall back to placeholders.
+     * @param name the invoked method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, or null for none
+     * @param bootstrapOwner the bootstrap method owner class
+     * @param bootstrapName the bootstrap method name
+     * @param type the inferred return type, or null for Object
      */
-    public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments,
-                              String bootstrapOwner, String bootstrapName, SourceType type) {
+    public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments, String bootstrapOwner, String bootstrapName, SourceType type)
+    {
         this.name = name != null ? name : "<unknown>";
         this.descriptor = descriptor != null ? descriptor : "()V";
         this.arguments = arguments != null ? new ArrayList<>(arguments) : Collections.emptyList();
@@ -67,79 +84,137 @@ public final class InvokeDynamicExpr implements Expression {
     }
 
     /**
-     * Creates an invokedynamic expression with minimal information.
+     * Creates an invokedynamic expression with unknown bootstrap owner and name.
+     * @param name the invoked method name
+     * @param descriptor the method descriptor
+     * @param arguments the call arguments, or null for none
+     * @param type the inferred return type, or null for Object
      */
-    public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments, SourceType type) {
+    public InvokeDynamicExpr(String name, String descriptor, List<Expression> arguments, SourceType type)
+    {
         this(name, descriptor, arguments, "unknown", "unknown", type);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public List<Expression> getArguments() {
+    /**
+     * @return the arguments
+     */
+    public List<Expression> getArguments()
+    {
         return arguments;
     }
 
-    public String getBootstrapOwner() {
+    /**
+     * @return the bootstrap owner
+     */
+    public String getBootstrapOwner()
+    {
         return bootstrapOwner;
     }
 
-    public String getBootstrapName() {
+    /**
+     * @return the bootstrap name
+     */
+    public String getBootstrapName()
+    {
         return bootstrapName;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public void setType(SourceType type) {
+    /**
+     * @param type the new inferred return type
+     */
+    public void setType(SourceType type)
+    {
         this.type = type;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public List<String> getBootstrapClassArgs() {
+    /**
+     * @return the bootstrap class args
+     */
+    public List<String> getBootstrapClassArgs()
+    {
         return bootstrapClassArgs;
     }
 
-    public void setBootstrapClassArgs(List<String> bootstrapClassArgs) {
+    /**
+     * @param bootstrapClassArgs the internal names of the typeSwitch case-type bootstrap arguments
+     */
+    public void setBootstrapClassArgs(List<String> bootstrapClassArgs)
+    {
         this.bootstrapClassArgs = bootstrapClassArgs;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitInvokeDynamic(this);
     }
 
     /**
-     * Gets a formatted string for the bootstrap method reference.
+     * @return the bootstrap method reference as owner.method with dots for slashes
      */
-    public String getFormattedBootstrapMethod() {
+    public String getFormattedBootstrapMethod()
+    {
         return bootstrapOwner.replace('/', '.') + "." + bootstrapName;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("invokedynamic(\"").append(name).append("\"");
-        if (!arguments.isEmpty()) {
+        if (!arguments.isEmpty())
+        {
             sb.append(", ");
-            for (int i = 0; i < arguments.size(); i++) {
+            for (int i = 0; i < arguments.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(arguments.get(i));
             }

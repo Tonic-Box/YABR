@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldInfoTest {
+class FieldInfoTest
+{
 
     @Test
-    void constructor_shouldInitializeAllFields() {
+    void constructor_shouldInitializeAllFields()
+    {
         FieldInfo info = new FieldInfo("java/lang/String", "value", "[C", true);
 
         assertNotNull(info);
@@ -18,42 +20,48 @@ class FieldInfoTest {
     }
 
     @Test
-    void getOwnerClass_shouldReturnCorrectValue() {
+    void getOwnerClass_shouldReturnCorrectValue()
+    {
         FieldInfo info = new FieldInfo("com/example/Test", "counter", "I", false);
 
         assertEquals("com/example/Test", info.getOwnerClass());
     }
 
     @Test
-    void getFieldName_shouldReturnCorrectValue() {
+    void getFieldName_shouldReturnCorrectValue()
+    {
         FieldInfo info = new FieldInfo("com/example/Test", "counter", "I", false);
 
         assertEquals("counter", info.getFieldName());
     }
 
     @Test
-    void getDescriptor_shouldReturnCorrectValue() {
+    void getDescriptor_shouldReturnCorrectValue()
+    {
         FieldInfo info = new FieldInfo("com/example/Test", "counter", "I", false);
 
         assertEquals("I", info.getDescriptor());
     }
 
     @Test
-    void isStatic_shouldReturnTrueForStaticField() {
+    void isStatic_shouldReturnTrueForStaticField()
+    {
         FieldInfo info = new FieldInfo("com/example/Config", "DEFAULT_SIZE", "I", true);
 
         assertTrue(info.isStatic());
     }
 
     @Test
-    void isStatic_shouldReturnFalseForInstanceField() {
+    void isStatic_shouldReturnFalseForInstanceField()
+    {
         FieldInfo info = new FieldInfo("com/example/Point", "x", "D", false);
 
         assertFalse(info.isStatic());
     }
 
     @Test
-    void toString_shouldIncludeStaticMarkerForStaticField() {
+    void toString_shouldIncludeStaticMarkerForStaticField()
+    {
         FieldInfo info = new FieldInfo("com/example/Config", "MAX_VALUE", "I", true);
 
         String result = info.toString();
@@ -63,7 +71,8 @@ class FieldInfoTest {
     }
 
     @Test
-    void toString_shouldNotIncludeStaticMarkerForInstanceField() {
+    void toString_shouldNotIncludeStaticMarkerForInstanceField()
+    {
         FieldInfo info = new FieldInfo("com/example/Point", "y", "D", false);
 
         String result = info.toString();
@@ -73,7 +82,8 @@ class FieldInfoTest {
     }
 
     @Test
-    void toString_shouldFormatWithOwnerClassAndFieldNameAndDescriptor() {
+    void toString_shouldFormatWithOwnerClassAndFieldNameAndDescriptor()
+    {
         FieldInfo info = new FieldInfo("java/lang/System", "out", "Ljava/io/PrintStream;", true);
 
         String result = info.toString();
@@ -82,7 +92,8 @@ class FieldInfoTest {
     }
 
     @Test
-    void shouldHandleComplexDescriptors() {
+    void shouldHandleComplexDescriptors()
+    {
         FieldInfo info = new FieldInfo("com/example/Data", "matrix", "[[Ljava/lang/Object;", false);
 
         assertEquals("[[Ljava/lang/Object;", info.getDescriptor());

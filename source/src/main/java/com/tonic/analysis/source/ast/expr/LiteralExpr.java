@@ -8,159 +8,275 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 
 /**
- * Represents a literal value: integers, floats, strings, booleans, chars, null.
+ * A literal value: integers, floats, strings, booleans, chars, or null.
  */
-public final class LiteralExpr implements Expression {
+public final class LiteralExpr implements Expression
+{
 
     private Object value;
     private SourceType type;
     private final SourceLocation location;
     private ASTNode parent;
 
-    public LiteralExpr(Object value, SourceType type, SourceLocation location) {
+    /**
+     * Creates a literal.
+     * @param value the literal value, or null for the null literal
+     * @param type the literal's source type
+     * @param location the source location, or null for unknown
+     */
+    public LiteralExpr(Object value, SourceType type, SourceLocation location)
+    {
         this.value = value;
         this.type = type;
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public LiteralExpr(Object value, SourceType type) {
+    /**
+     * Creates a literal with an unknown source location.
+     * @param value the literal value, or null for the null literal
+     * @param type the literal's source type
+     */
+    public LiteralExpr(Object value, SourceType type)
+    {
         this(value, type, SourceLocation.UNKNOWN);
     }
 
-    public Object getValue() {
+    /**
+     * @return the value
+     */
+    public Object getValue()
+    {
         return value;
     }
 
-    public void setValue(Object value) {
+    /**
+     * @param value the new literal value
+     */
+    public void setValue(Object value)
+    {
         this.value = value;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public void setType(SourceType type) {
-        this.type = type;
+    /**
+     * @param type the new source type
+     */
+    public void setType(SourceType type)
+    {
+        withType(type);
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * @param parent the enclosing AST node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public static LiteralExpr ofInt(int value) {
+    /**
+     * Creates an int literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofInt(int value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.INT);
     }
 
-    public static LiteralExpr ofLong(long value) {
+    /**
+     * Creates a long literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofLong(long value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.LONG);
     }
 
-    public static LiteralExpr ofFloat(float value) {
+    /**
+     * Creates a float literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofFloat(float value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.FLOAT);
     }
 
-    public static LiteralExpr ofDouble(double value) {
+    /**
+     * Creates a double literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofDouble(double value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.DOUBLE);
     }
 
-    public static LiteralExpr ofBoolean(boolean value) {
+    /**
+     * Creates a boolean literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofBoolean(boolean value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.BOOLEAN);
     }
 
-    public static LiteralExpr ofChar(char value) {
+    /**
+     * Creates a char literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofChar(char value)
+    {
         return new LiteralExpr(value, PrimitiveSourceType.CHAR);
     }
 
-    public static LiteralExpr ofString(String value) {
+    /**
+     * Creates a String literal.
+     * @param value the literal value
+     * @return the new literal
+     */
+    public static LiteralExpr ofString(String value)
+    {
         return new LiteralExpr(value, ReferenceSourceType.STRING);
     }
 
-    public static LiteralExpr ofNull() {
+    /**
+     * Creates a null literal typed as Object.
+     * @return the new literal
+     */
+    public static LiteralExpr ofNull()
+    {
         return new LiteralExpr(null, ReferenceSourceType.OBJECT);
     }
 
-    public LiteralExpr withValue(Object value) {
+    /**
+     * Replaces the literal value.
+     * @param value the new literal value
+     * @return this expression
+     */
+    public LiteralExpr withValue(Object value)
+    {
         this.value = value;
         return this;
     }
 
-    public LiteralExpr withType(SourceType type) {
+    /**
+     * Replaces the source type.
+     * @param type the new source type
+     * @return this expression
+     */
+    public LiteralExpr withType(SourceType type)
+    {
         this.type = type;
         return this;
     }
 
     /**
-     * Checks if this is a null literal.
+     * @return true if the value is null
      */
-    public boolean isNull() {
+    public boolean isNull()
+    {
         return value == null;
     }
 
     /**
-     * Checks if this is a string literal.
+     * @return true if the value is a String
      */
-    public boolean isString() {
+    public boolean isString()
+    {
         return value instanceof String;
     }
 
     /**
-     * Checks if this is a numeric literal.
+     * @return true if the value is a Number
      */
-    public boolean isNumeric() {
+    public boolean isNumeric()
+    {
         return value instanceof Number;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitLiteral(this);
     }
 
     @Override
-    public String toString() {
-        if (value == null) {
+    public String toString()
+    {
+        if (value == null)
+        {
             return "null";
         }
-        if (value instanceof String) {
+        if (value instanceof String)
+        {
             String s = (String) value;
             return "\"" + escapeString(s) + "\"";
         }
-        if (value instanceof Character) {
+        if (value instanceof Character)
+        {
             Character c = (Character) value;
             return "'" + escapeChar(c) + "'";
         }
-        if (value instanceof Long) {
+        if (value instanceof Long)
+        {
             Long l = (Long) value;
             return l + "L";
         }
-        if (value instanceof Float) {
+        if (value instanceof Float)
+        {
             Float f = (Float) value;
             return f + "f";
         }
-        if (value instanceof Double) {
+        if (value instanceof Double)
+        {
             Double d = (Double) value;
             return d + "d";
         }
         return value.toString();
     }
 
-    private static String escapeString(String s) {
+    private static String escapeString(String s)
+    {
         StringBuilder sb = new StringBuilder();
-        for (char c : s.toCharArray()) {
+        for (char c : s.toCharArray())
+        {
             sb.append(escapeChar(c));
         }
         return sb.toString();
     }
 
-    private static String escapeChar(char c) {
-        switch (c) {
+    private static String escapeChar(char c)
+    {
+        switch (c)
+        {
             case '\n':
                 return "\\n";
             case '\r':

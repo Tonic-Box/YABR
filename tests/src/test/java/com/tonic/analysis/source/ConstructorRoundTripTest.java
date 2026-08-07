@@ -15,15 +15,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * decompile -> recompile instead of spilling to {@code new; astore; aload; ...; invokespecial} - which the decompiler
  * could not re-pair, dropping the arguments ({@code new X()}).
  */
-class ConstructorRoundTripTest {
+class ConstructorRoundTripTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void constructorArgumentsSurviveRoundTrip() throws Exception {
+    void constructorArgumentsSurviveRoundTrip() throws Exception
+    {
         String src = "package test; public class CtorT {"
             + " public static String f(String s){ return new StringBuilder(s).append(\"!\").toString(); } }";
         ClassFile cf = TestUtils.compileSource(src, "test/CtorT");
@@ -34,7 +37,8 @@ class ConstructorRoundTripTest {
     }
 
     @Test
-    void constantConstructorArgSurvives() throws Exception {
+    void constantConstructorArgSurvives() throws Exception
+    {
         String src = "package test; public class CtorC {"
             + " public static String f(){ return new StringBuilder(\"hi\").append(\"!\").toString(); } }";
         ClassFile cf = TestUtils.compileSource(src, "test/CtorC");
@@ -46,7 +50,8 @@ class ConstructorRoundTripTest {
     }
 
     @Test
-    void constructionNestedInStringConcatVerifies() throws Exception {
+    void constructionNestedInStringConcatVerifies() throws Exception
+    {
         // The case that exposed the frame bug: a construction whose result feeds a string concat (branchy bytecode).
         String src = "package test; public class CtorN {"
             + " public static String f(boolean c, int n){"

@@ -7,23 +7,27 @@ public class TypeUtil
 {
     /**
      * Validates and normalizes a JVM type descriptor.
-     *
      * @param desc the JVM descriptor (e.g., "I" for int, "Ljava/lang/String;" for String)
      * @return the normalized descriptor
      */
-    public static String validateDescriptorFormat(String desc) {
-        if (desc == null || desc.isEmpty()) {
+    public static String validateDescriptorFormat(String desc)
+    {
+        if (desc == null || desc.isEmpty())
+        {
             return desc;
         }
 
         // Handle array descriptors
-        if (desc.startsWith("[")) {
+        if (desc.startsWith("["))
+        {
             // Find the element type by stripping leading '['
             int arrayDepth = 0;
-            while (arrayDepth < desc.length() && desc.charAt(arrayDepth) == '[') {
+            while (arrayDepth < desc.length() && desc.charAt(arrayDepth) == '[')
+            {
                 arrayDepth++;
             }
-            if (arrayDepth >= desc.length()) {
+            if (arrayDepth >= desc.length())
+            {
                 return desc; // Malformed, return as-is
             }
             String elementType = desc.substring(arrayDepth);
@@ -34,7 +38,8 @@ public class TypeUtil
         }
 
         // Handle primitive types
-        switch (desc) {
+        switch (desc)
+        {
             case "I":
             case "J":
             case "F":
@@ -48,13 +53,16 @@ public class TypeUtil
             default:
                 // Handle object types
                 desc = desc.replace(".", "/");
-                if (desc.startsWith("L") && desc.endsWith(";")) {
+                if (desc.startsWith("L") && desc.endsWith(";"))
+                {
                     return desc;
                 }
-                if (desc.startsWith("L")) {
+                if (desc.startsWith("L"))
+                {
                     return desc + ";";
                 }
-                if (desc.endsWith(";")) {
+                if (desc.endsWith(";"))
+                {
                     return "L" + desc;
                 }
                 return "L" + desc + ";";
@@ -63,12 +71,13 @@ public class TypeUtil
 
     /**
      * Capitalizes the first letter of a given string.
-     *
      * @param str the string to capitalize
      * @return the capitalized string, or the original if null or empty
      */
-    public static String capitalize(String str) {
-        if (str == null || str.isEmpty()) {
+    public static String capitalize(String str)
+    {
+        if (str == null || str.isEmpty())
+        {
             return str;
         }
         return str.substring(0, 1).toUpperCase() + str.substring(1);

@@ -7,18 +7,14 @@ import com.tonic.analysis.ssa.analysis.LoopAnalysis;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.source.recovery.ControlFlowContext.StructuredRegion;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
-import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.*;
 
@@ -28,21 +24,25 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for ControlFlowContext.
  * Covers state management, statement handling, stop blocks stack, and structured regions.
  */
-class ControlFlowContextTest {
+class ControlFlowContextTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    // ========== Constructor and Getters Tests ==========
+    // Constructor and Getters Tests
 
     @Nested
-    class ConstructorAndGetterTests {
+    class ConstructorAndGetterTests
+    {
 
         @Test
-        void constructorInitializesAllFields() throws IOException {
+        void constructorInitializesAllFields() throws IOException
+        {
             IRMethod method = createSimpleMethod();
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
@@ -50,9 +50,7 @@ class ControlFlowContextTest {
             loopAnalysis.compute();
             RecoveryContext recoveryContext = createRecoveryContext(method);
 
-            ControlFlowContext context = new ControlFlowContext(
-                method, domTree, loopAnalysis, recoveryContext
-            );
+            ControlFlowContext context = new ControlFlowContext(method, domTree, loopAnalysis, recoveryContext);
 
             assertEquals(method, context.getIrMethod());
             assertEquals(domTree, context.getDominatorTree());
@@ -61,7 +59,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void initialStateIsEmpty() throws IOException {
+        void initialStateIsEmpty() throws IOException
+        {
             ControlFlowContext context = createContext();
 
             assertNotNull(context.getProcessedBlocks());
@@ -79,7 +78,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void labelCounterStartsAtZero() throws IOException {
+        void labelCounterStartsAtZero() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock block = method.getEntryBlock();
@@ -89,13 +89,15 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Processed Blocks Tests ==========
+    // Processed Blocks Tests
 
     @Nested
-    class ProcessedBlocksTests {
+    class ProcessedBlocksTests
+    {
 
         @Test
-        void markProcessedAddsBlock() throws IOException {
+        void markProcessedAddsBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -107,7 +109,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void markProcessedMultipleBlocks() throws IOException {
+        void markProcessedMultipleBlocks() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock block1 = method.getEntryBlock();
@@ -123,7 +126,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void isProcessedReturnsFalseForUnmarkedBlock() throws IOException {
+        void isProcessedReturnsFalseForUnmarkedBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock unmarked = new IRBlock("unmarked");
 
@@ -131,7 +135,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void markProcessedIsIdempotent() throws IOException {
+        void markProcessedIsIdempotent() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -144,18 +149,18 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Statement Management Tests ==========
+    // Statement Management Tests
 
     @Nested
-    class StatementManagementTests {
+    class StatementManagementTests
+    {
 
         @Test
-        void setStatementsStoresStatements() throws IOException {
+        void setStatementsStoresStatements() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
-            List<Statement> statements = Arrays.asList(
-                new ReturnStmt(null)
-            );
+            List<Statement> statements = List.of(new ReturnStmt(null));
 
             context.setStatements(block, statements);
 
@@ -165,7 +170,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getStatementsReturnsEmptyListForUnsetBlock() throws IOException {
+        void getStatementsReturnsEmptyListForUnsetBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = new IRBlock("unset");
 
@@ -176,14 +182,12 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void setStatementsReplacesExisting() throws IOException {
+        void setStatementsReplacesExisting() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
-            List<Statement> first = Arrays.asList(new ReturnStmt(null));
-            List<Statement> second = Arrays.asList(
-                new ReturnStmt(null),
-                new ReturnStmt(null)
-            );
+            List<Statement> first = List.of(new ReturnStmt(null));
+            List<Statement> second = Arrays.asList(new ReturnStmt(null), new ReturnStmt(null));
 
             context.setStatements(block, first);
             context.setStatements(block, second);
@@ -194,7 +198,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void setStatementsWithEmptyList() throws IOException {
+        void setStatementsWithEmptyList() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
             List<Statement> empty = Collections.emptyList();
@@ -206,18 +211,16 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void setStatementsForMultipleBlocks() throws IOException {
+        void setStatementsForMultipleBlocks() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock block1 = method.getEntryBlock();
             IRBlock block2 = new IRBlock("second");
             method.addBlock(block2);
 
-            List<Statement> stmts1 = Arrays.asList(new ReturnStmt(null));
-            List<Statement> stmts2 = Arrays.asList(
-                new ReturnStmt(null),
-                new ReturnStmt(null)
-            );
+            List<Statement> stmts1 = List.of(new ReturnStmt(null));
+            List<Statement> stmts2 = Arrays.asList(new ReturnStmt(null), new ReturnStmt(null));
 
             context.setStatements(block1, stmts1);
             context.setStatements(block2, stmts2);
@@ -227,13 +230,15 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Structured Region Tests ==========
+    // Structured Region Tests
 
     @Nested
-    class StructuredRegionTests {
+    class StructuredRegionTests
+    {
 
         @Test
-        void setRegionStoresRegion() throws IOException {
+        void setRegionStoresRegion() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -243,7 +248,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getRegionReturnsNullForUnsetBlock() throws IOException {
+        void getRegionReturnsNullForUnsetBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = new IRBlock("unset");
 
@@ -251,7 +257,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void setRegionReplacesExisting() throws IOException {
+        void setRegionReplacesExisting() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -262,7 +269,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void setDifferentRegionsForDifferentBlocks() throws IOException {
+        void setDifferentRegionsForDifferentBlocks() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock block1 = method.getEntryBlock();
@@ -277,11 +285,13 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void allStructuredRegionTypesSupported() throws IOException {
+        void allStructuredRegionTypesSupported() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
 
-            for (StructuredRegion region : StructuredRegion.values()) {
+            for (StructuredRegion region : StructuredRegion.values())
+            {
                 IRBlock block = new IRBlock("test_" + region);
                 method.addBlock(block);
                 context.setRegion(block, region);
@@ -290,13 +300,15 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Label Management Tests ==========
+    // Label Management Tests
 
     @Nested
-    class LabelManagementTests {
+    class LabelManagementTests
+    {
 
         @Test
-        void getOrCreateLabelCreatesNewLabel() throws IOException {
+        void getOrCreateLabelCreatesNewLabel() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -307,7 +319,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getOrCreateLabelReturnsExistingLabel() throws IOException {
+        void getOrCreateLabelReturnsExistingLabel() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -318,7 +331,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void labelCounterIncrementsForEachNewBlock() throws IOException {
+        void labelCounterIncrementsForEachNewBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock block1 = method.getEntryBlock();
@@ -335,7 +349,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void hasLabelReturnsFalseForUnlabeledBlock() throws IOException {
+        void hasLabelReturnsFalseForUnlabeledBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -343,7 +358,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void hasLabelReturnsTrueAfterCreation() throws IOException {
+        void hasLabelReturnsTrueAfterCreation() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -353,7 +369,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getLabelReturnsNullForUnlabeledBlock() throws IOException {
+        void getLabelReturnsNullForUnlabeledBlock() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -361,7 +378,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getLabelReturnsLabelAfterCreation() throws IOException {
+        void getLabelReturnsLabelAfterCreation() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock block = context.getIrMethod().getEntryBlock();
 
@@ -372,15 +390,17 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Pending Statements Tests ==========
+    // Pending Statements Tests
 
     @Nested
-    class PendingStatementsTests {
+    class PendingStatementsTests
+    {
 
         @Test
-        void addPendingStatementsStoresStatements() throws IOException {
+        void addPendingStatementsStoresStatements() throws IOException
+        {
             ControlFlowContext context = createContext();
-            List<Statement> statements = Arrays.asList(new ReturnStmt(null));
+            List<Statement> statements = List.of(new ReturnStmt(null));
 
             context.addPendingStatements(statements);
 
@@ -388,10 +408,11 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void addPendingStatementsAppendsToExisting() throws IOException {
+        void addPendingStatementsAppendsToExisting() throws IOException
+        {
             ControlFlowContext context = createContext();
-            List<Statement> first = Arrays.asList(new ReturnStmt(null));
-            List<Statement> second = Arrays.asList(new ReturnStmt(null));
+            List<Statement> first = List.of(new ReturnStmt(null));
+            List<Statement> second = List.of(new ReturnStmt(null));
 
             context.addPendingStatements(first);
             context.addPendingStatements(second);
@@ -400,12 +421,10 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void collectPendingStatementsReturnsAndClears() throws IOException {
+        void collectPendingStatementsReturnsAndClears() throws IOException
+        {
             ControlFlowContext context = createContext();
-            List<Statement> statements = Arrays.asList(
-                new ReturnStmt(null),
-                new ReturnStmt(null)
-            );
+            List<Statement> statements = Arrays.asList(new ReturnStmt(null), new ReturnStmt(null));
             context.addPendingStatements(statements);
 
             List<Statement> collected = context.collectPendingStatements();
@@ -415,7 +434,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void collectPendingStatementsReturnsEmptyWhenNoPending() throws IOException {
+        void collectPendingStatementsReturnsEmptyWhenNoPending() throws IOException
+        {
             ControlFlowContext context = createContext();
 
             List<Statement> collected = context.collectPendingStatements();
@@ -425,9 +445,10 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void collectPendingStatementsCreatesNewList() throws IOException {
+        void collectPendingStatementsCreatesNewList() throws IOException
+        {
             ControlFlowContext context = createContext();
-            List<Statement> statements = Arrays.asList(new ReturnStmt(null));
+            List<Statement> statements = List.of(new ReturnStmt(null));
             context.addPendingStatements(statements);
 
             List<Statement> collected1 = context.collectPendingStatements();
@@ -440,9 +461,10 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void multipleCollectsWithoutAdding() throws IOException {
+        void multipleCollectsWithoutAdding() throws IOException
+        {
             ControlFlowContext context = createContext();
-            List<Statement> statements = Arrays.asList(new ReturnStmt(null));
+            List<Statement> statements = List.of(new ReturnStmt(null));
             context.addPendingStatements(statements);
 
             List<Statement> collected1 = context.collectPendingStatements();
@@ -453,7 +475,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void addEmptyPendingStatements() throws IOException {
+        void addEmptyPendingStatements() throws IOException
+        {
             ControlFlowContext context = createContext();
             List<Statement> empty = Collections.emptyList();
 
@@ -463,16 +486,18 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Stop Blocks Stack Tests ==========
+    // Stop Blocks Stack Tests
 
     @Nested
-    class StopBlocksStackTests {
+    class StopBlocksStackTests
+    {
 
         @Test
-        void pushStopBlocksAddsToStack() throws IOException {
+        void pushStopBlocksAddsToStack() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
-            Set<IRBlock> stopSet = new HashSet<>(Arrays.asList(stop1));
+            Set<IRBlock> stopSet = new HashSet<>(List.of(stop1));
 
             context.pushStopBlocks(stopSet);
 
@@ -480,10 +505,11 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void popStopBlocksRemovesFromStack() throws IOException {
+        void popStopBlocksRemovesFromStack() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
-            Set<IRBlock> stopSet = new HashSet<>(Arrays.asList(stop1));
+            Set<IRBlock> stopSet = new HashSet<>(List.of(stop1));
 
             context.pushStopBlocks(stopSet);
             context.popStopBlocks();
@@ -492,19 +518,21 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void popStopBlocksOnEmptyStackDoesNotThrow() throws IOException {
+        void popStopBlocksOnEmptyStackDoesNotThrow() throws IOException
+        {
             ControlFlowContext context = createContext();
 
-            assertDoesNotThrow(() -> context.popStopBlocks());
+            assertDoesNotThrow(context::popStopBlocks);
         }
 
         @Test
-        void multiplePushAndPop() throws IOException {
+        void multiplePushAndPop() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
             IRBlock stop2 = new IRBlock("stop2");
-            Set<IRBlock> set1 = new HashSet<>(Arrays.asList(stop1));
-            Set<IRBlock> set2 = new HashSet<>(Arrays.asList(stop2));
+            Set<IRBlock> set1 = new HashSet<>(List.of(stop1));
+            Set<IRBlock> set2 = new HashSet<>(List.of(stop2));
 
             context.pushStopBlocks(set1);
             context.pushStopBlocks(set2);
@@ -518,7 +546,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getAllStopBlocksReturnsEmpty() throws IOException {
+        void getAllStopBlocksReturnsEmpty() throws IOException
+        {
             ControlFlowContext context = createContext();
 
             Set<IRBlock> all = context.getAllStopBlocks();
@@ -528,7 +557,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getAllStopBlocksReturnsSingleLevel() throws IOException {
+        void getAllStopBlocksReturnsSingleLevel() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
             IRBlock stop2 = new IRBlock("stop2");
@@ -543,12 +573,13 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getAllStopBlocksCombinesMultipleLevels() throws IOException {
+        void getAllStopBlocksCombinesMultipleLevels() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
             IRBlock stop2 = new IRBlock("stop2");
             IRBlock stop3 = new IRBlock("stop3");
-            Set<IRBlock> set1 = new HashSet<>(Arrays.asList(stop1));
+            Set<IRBlock> set1 = new HashSet<>(List.of(stop1));
             Set<IRBlock> set2 = new HashSet<>(Arrays.asList(stop2, stop3));
 
             context.pushStopBlocks(set1);
@@ -562,12 +593,13 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getAllStopBlocksAfterPop() throws IOException {
+        void getAllStopBlocksAfterPop() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
             IRBlock stop2 = new IRBlock("stop2");
-            Set<IRBlock> set1 = new HashSet<>(Arrays.asList(stop1));
-            Set<IRBlock> set2 = new HashSet<>(Arrays.asList(stop2));
+            Set<IRBlock> set1 = new HashSet<>(List.of(stop1));
+            Set<IRBlock> set2 = new HashSet<>(List.of(stop2));
 
             context.pushStopBlocks(set1);
             context.pushStopBlocks(set2);
@@ -580,7 +612,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void pushEmptyStopBlocks() throws IOException {
+        void pushEmptyStopBlocks() throws IOException
+        {
             ControlFlowContext context = createContext();
             Set<IRBlock> empty = Collections.emptySet();
 
@@ -591,12 +624,13 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void getAllStopBlocksWithOverlappingSets() throws IOException {
+        void getAllStopBlocksWithOverlappingSets() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRBlock stop1 = new IRBlock("stop1");
             IRBlock stop2 = new IRBlock("stop2");
             Set<IRBlock> set1 = new HashSet<>(Arrays.asList(stop1, stop2));
-            Set<IRBlock> set2 = new HashSet<>(Arrays.asList(stop2));
+            Set<IRBlock> set2 = new HashSet<>(List.of(stop2));
 
             context.pushStopBlocks(set1);
             context.pushStopBlocks(set2);
@@ -609,13 +643,15 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Integration Tests ==========
+    // Integration Tests
 
     @Nested
-    class IntegrationTests {
+    class IntegrationTests
+    {
 
         @Test
-        void simulateLoopProcessing() throws IOException {
+        void simulateLoopProcessing() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock header = method.getEntryBlock();
@@ -624,24 +660,21 @@ class ControlFlowContextTest {
             method.addBlock(body);
             method.addBlock(exit);
 
-            // Set up loop structure
             context.setRegion(header, StructuredRegion.WHILE_LOOP);
             context.markProcessed(header);
 
             // Push stop blocks for the loop
-            Set<IRBlock> stopBlocks = new HashSet<>(Arrays.asList(exit));
+            Set<IRBlock> stopBlocks = new HashSet<>(List.of(exit));
             context.pushStopBlocks(stopBlocks);
 
-            // Process body
             context.markProcessed(body);
-            List<Statement> bodyStmts = Arrays.asList(new ReturnStmt(null));
+            List<Statement> bodyStmts = List.of(new ReturnStmt(null));
             context.setStatements(body, bodyStmts);
 
             // Exit loop
             context.popStopBlocks();
             context.markProcessed(exit);
 
-            // Verify state
             assertTrue(context.isProcessed(header));
             assertTrue(context.isProcessed(body));
             assertTrue(context.isProcessed(exit));
@@ -651,7 +684,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void simulateNestedLoops() throws IOException {
+        void simulateNestedLoops() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock outerHeader = method.getEntryBlock();
@@ -665,12 +699,12 @@ class ControlFlowContextTest {
             method.addBlock(outerExit);
 
             // Outer loop
-            Set<IRBlock> outerStops = new HashSet<>(Arrays.asList(outerExit));
+            Set<IRBlock> outerStops = new HashSet<>(List.of(outerExit));
             context.pushStopBlocks(outerStops);
             context.setRegion(outerHeader, StructuredRegion.WHILE_LOOP);
 
             // Inner loop
-            Set<IRBlock> innerStops = new HashSet<>(Arrays.asList(innerExit));
+            Set<IRBlock> innerStops = new HashSet<>(List.of(innerExit));
             context.pushStopBlocks(innerStops);
             context.setRegion(innerHeader, StructuredRegion.WHILE_LOOP);
 
@@ -692,7 +726,8 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void simulateIfStatementWithLabels() throws IOException {
+        void simulateIfStatementWithLabels() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock header = method.getEntryBlock();
@@ -707,17 +742,14 @@ class ControlFlowContextTest {
             context.setRegion(header, StructuredRegion.IF_THEN_ELSE);
             context.markProcessed(header);
 
-            // Process branches
             context.markProcessed(thenBlock);
             context.markProcessed(elseBlock);
 
             // Create label for merge (in case of break)
             String mergeLabel = context.getOrCreateLabel(merge);
 
-            // Process merge
             context.markProcessed(merge);
 
-            // Verify
             assertTrue(context.hasLabel(merge));
             assertEquals("label0", mergeLabel);
             assertTrue(context.isProcessed(header));
@@ -727,29 +759,29 @@ class ControlFlowContextTest {
         }
 
         @Test
-        void simulatePendingStatementsInControlFlow() throws IOException {
+        void simulatePendingStatementsInControlFlow() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock header = method.getEntryBlock();
 
             // Add pending statements (e.g., from header processing)
-            List<Statement> headerStmts = Arrays.asList(new ReturnStmt(null));
+            List<Statement> headerStmts = List.of(new ReturnStmt(null));
             context.addPendingStatements(headerStmts);
 
-            // Set region
             context.setRegion(header, StructuredRegion.IF_THEN);
 
             // Collect pending before creating structured statement
             List<Statement> pending = context.collectPendingStatements();
 
-            // Verify
             assertEquals(1, pending.size());
             assertTrue(context.getPendingStatements().isEmpty());
             assertEquals(StructuredRegion.IF_THEN, context.getRegion(header));
         }
 
         @Test
-        void complexStateTransitions() throws IOException {
+        void complexStateTransitions() throws IOException
+        {
             ControlFlowContext context = createContext();
             IRMethod method = context.getIrMethod();
             IRBlock b1 = method.getEntryBlock();
@@ -758,24 +790,22 @@ class ControlFlowContextTest {
             method.addBlock(b2);
             method.addBlock(b3);
 
-            // Simulate complex processing
             context.markProcessed(b1);
             context.setRegion(b1, StructuredRegion.IF_THEN);
-            context.setStatements(b1, Arrays.asList(new ReturnStmt(null)));
+            context.setStatements(b1, List.of(new ReturnStmt(null)));
             String label1 = context.getOrCreateLabel(b1);
 
-            Set<IRBlock> stops1 = new HashSet<>(Arrays.asList(b3));
+            Set<IRBlock> stops1 = new HashSet<>(List.of(b3));
             context.pushStopBlocks(stops1);
 
             context.markProcessed(b2);
             context.setRegion(b2, StructuredRegion.SEQUENCE);
             context.setStatements(b2, Arrays.asList(new ReturnStmt(null), new ReturnStmt(null)));
-            context.addPendingStatements(Arrays.asList(new ReturnStmt(null)));
+            context.addPendingStatements(List.of(new ReturnStmt(null)));
 
-            Set<IRBlock> stops2 = new HashSet<>(Arrays.asList(b2));
+            Set<IRBlock> stops2 = new HashSet<>(List.of(b2));
             context.pushStopBlocks(stops2);
 
-            // Verify complex state
             assertTrue(context.isProcessed(b1));
             assertTrue(context.isProcessed(b2));
             assertEquals(StructuredRegion.IF_THEN, context.getRegion(b1));
@@ -797,9 +827,10 @@ class ControlFlowContextTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private IRMethod createSimpleMethod() {
+    private IRMethod createSimpleMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "simple", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -808,7 +839,8 @@ class ControlFlowContextTest {
         return method;
     }
 
-    private RecoveryContext createRecoveryContext(IRMethod method) throws IOException {
+    private RecoveryContext createRecoveryContext(IRMethod method) throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("com/test/Test")
             .publicStaticMethod("test", "()V")
                 .vreturn()
@@ -819,7 +851,8 @@ class ControlFlowContextTest {
         return new RecoveryContext(method, methodEntry, defUse);
     }
 
-    private ControlFlowContext createContext() throws IOException {
+    private ControlFlowContext createContext() throws IOException
+    {
         IRMethod method = createSimpleMethod();
         DominatorTree domTree = new DominatorTree(method);
         domTree.compute();

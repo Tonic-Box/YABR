@@ -5,17 +5,20 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SimpleHeapManagerTest {
+class SimpleHeapManagerTest
+{
 
     private SimpleHeapManager heap;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heap = new SimpleHeapManager();
     }
 
     @Test
-    void testNewObjectCreatesUniqueIds() {
+    void testNewObjectCreatesUniqueIds()
+    {
         ObjectInstance obj1 = heap.newObject("java/lang/Object");
         ObjectInstance obj2 = heap.newObject("java/lang/Object");
 
@@ -23,13 +26,15 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewObjectWithClassName() {
+    void testNewObjectWithClassName()
+    {
         ObjectInstance obj = heap.newObject("com/example/Person");
         assertEquals("com/example/Person", obj.getClassName());
     }
 
     @Test
-    void testNewObjectIncrementsCount() {
+    void testNewObjectIncrementsCount()
+    {
         assertEquals(0, heap.objectCount());
 
         heap.newObject("java/lang/Object");
@@ -40,7 +45,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewIntArray() {
+    void testNewIntArray()
+    {
         ArrayInstance array = heap.newArray("I", 10);
 
         assertEquals("I", array.getComponentType());
@@ -49,7 +55,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewLongArray() {
+    void testNewLongArray()
+    {
         ArrayInstance array = heap.newArray("J", 5);
 
         assertEquals("J", array.getComponentType());
@@ -58,7 +65,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewBooleanArray() {
+    void testNewBooleanArray()
+    {
         ArrayInstance array = heap.newArray("Z", 8);
 
         assertEquals("Z", array.getComponentType());
@@ -66,7 +74,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewByteArray() {
+    void testNewByteArray()
+    {
         ArrayInstance array = heap.newArray("B", 100);
 
         assertEquals("B", array.getComponentType());
@@ -74,7 +83,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewCharArray() {
+    void testNewCharArray()
+    {
         ArrayInstance array = heap.newArray("C", 20);
 
         assertEquals("C", array.getComponentType());
@@ -82,7 +92,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewShortArray() {
+    void testNewShortArray()
+    {
         ArrayInstance array = heap.newArray("S", 15);
 
         assertEquals("S", array.getComponentType());
@@ -90,7 +101,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewFloatArray() {
+    void testNewFloatArray()
+    {
         ArrayInstance array = heap.newArray("F", 7);
 
         assertEquals("F", array.getComponentType());
@@ -98,7 +110,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewDoubleArray() {
+    void testNewDoubleArray()
+    {
         ArrayInstance array = heap.newArray("D", 12);
 
         assertEquals("D", array.getComponentType());
@@ -106,7 +119,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewObjectArray() {
+    void testNewObjectArray()
+    {
         ArrayInstance array = heap.newArray("Ljava/lang/String;", 5);
 
         assertEquals("Ljava/lang/String;", array.getComponentType());
@@ -115,25 +129,29 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewArrayNegativeLengthThrows() {
+    void testNewArrayNegativeLengthThrows()
+    {
         HeapException ex = assertThrows(HeapException.class, () -> heap.newArray("I", -1));
         assertTrue(ex.getMessage().contains("Negative array length"));
     }
 
     @Test
-    void testNewArrayZeroLength() {
+    void testNewArrayZeroLength()
+    {
         ArrayInstance array = heap.newArray("I", 0);
         assertEquals(0, array.getLength());
     }
 
     @Test
-    void testNewMultiArray2D() {
+    void testNewMultiArray2D()
+    {
         ArrayInstance array = heap.newMultiArray("I", new int[]{3, 4});
 
         assertEquals(3, array.getLength());
         assertEquals("[[I", array.getClassName());
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++)
+        {
             ArrayInstance subArray = (ArrayInstance) array.get(i);
             assertNotNull(subArray);
             assertEquals(4, subArray.getLength());
@@ -142,16 +160,19 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewMultiArray3D() {
+    void testNewMultiArray3D()
+    {
         ArrayInstance array = heap.newMultiArray("I", new int[]{2, 3, 4});
 
         assertEquals(2, array.getLength());
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++)
+        {
             ArrayInstance level2 = (ArrayInstance) array.get(i);
             assertEquals(3, level2.getLength());
 
-            for (int j = 0; j < 3; j++) {
+            for (int j = 0; j < 3; j++)
+            {
                 ArrayInstance level3 = (ArrayInstance) level2.get(j);
                 assertEquals(4, level3.getLength());
                 assertEquals("I", level3.getComponentType());
@@ -160,24 +181,27 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testNewMultiArrayNullDimensionsThrows() {
+    void testNewMultiArrayNullDimensionsThrows()
+    {
         assertThrows(HeapException.class, () -> heap.newMultiArray("I", null));
     }
 
     @Test
-    void testNewMultiArrayEmptyDimensionsThrows() {
+    void testNewMultiArrayEmptyDimensionsThrows()
+    {
         assertThrows(HeapException.class, () -> heap.newMultiArray("I", new int[]{}));
     }
 
     @Test
-    void testNewMultiArrayNegativeDimensionThrows() {
-        HeapException ex = assertThrows(HeapException.class,
-            () -> heap.newMultiArray("I", new int[]{3, -1}));
+    void testNewMultiArrayNegativeDimensionThrows()
+    {
+        HeapException ex = assertThrows(HeapException.class, () -> heap.newMultiArray("I", new int[]{3, -1}));
         assertTrue(ex.getMessage().contains("Negative dimension"));
     }
 
     @Test
-    void testInternStringReturnsSameInstance() {
+    void testInternStringReturnsSameInstance()
+    {
         ObjectInstance str1 = heap.internString("hello");
         ObjectInstance str2 = heap.internString("hello");
 
@@ -185,7 +209,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testInternStringDifferentStrings() {
+    void testInternStringDifferentStrings()
+    {
         ObjectInstance str1 = heap.internString("hello");
         ObjectInstance str2 = heap.internString("world");
 
@@ -193,7 +218,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testInternStringIncrementsObjectCount() {
+    void testInternStringIncrementsObjectCount()
+    {
         long initialCount = heap.objectCount();
 
         heap.internString("test");
@@ -203,23 +229,27 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testIsNullWithNull() {
+    void testIsNullWithNull()
+    {
         assertTrue(heap.isNull(null));
     }
 
     @Test
-    void testIsNullWithNonNull() {
+    void testIsNullWithNonNull()
+    {
         ObjectInstance obj = heap.newObject("java/lang/Object");
         assertFalse(heap.isNull(obj));
     }
 
     @Test
-    void testIdentityHashCodeWithNull() {
+    void testIdentityHashCodeWithNull()
+    {
         assertEquals(0, heap.identityHashCode(null));
     }
 
     @Test
-    void testIdentityHashCodeWithObject() {
+    void testIdentityHashCodeWithObject()
+    {
         ObjectInstance obj = heap.newObject("java/lang/Object");
         int hash = heap.identityHashCode(obj);
 
@@ -228,7 +258,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testObjectCountWithMixedObjects() {
+    void testObjectCountWithMixedObjects()
+    {
         assertEquals(0, heap.objectCount());
 
         heap.newObject("java/lang/Object");
@@ -239,13 +270,15 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testClassResolverCanBeSet() {
+    void testClassResolverCanBeSet()
+    {
         Object resolver = new Object();
         heap.setClassResolver(resolver);
     }
 
     @Test
-    void testNewObjectsHaveSequentialIds() {
+    void testNewObjectsHaveSequentialIds()
+    {
         ObjectInstance obj1 = heap.newObject("java/lang/Object");
         ObjectInstance obj2 = heap.newObject("java/lang/Object");
 
@@ -253,7 +286,8 @@ class SimpleHeapManagerTest {
     }
 
     @Test
-    void testMultipleArrayTypes() {
+    void testMultipleArrayTypes()
+    {
         heap.newArray("I", 5);
         heap.newArray("J", 3);
         heap.newArray("Ljava/lang/String;", 7);

@@ -9,20 +9,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for StackOperationListener.
+ * * Tests for StackOperationListener.
  */
-class StackOperationListenerTest {
+class StackOperationListenerTest
+{
 
     private StackOperationListener listener;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new StackOperationListener();
         listener.onSimulationStart(null);
     }
 
     @Test
-    void testInitialState() {
+    void testInitialState()
+    {
         assertEquals(0, listener.getPushCount());
         assertEquals(0, listener.getPopCount());
         assertEquals(0, listener.getMaxDepth());
@@ -30,7 +33,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testPushCounting() {
+    void testPushCounting()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         listener.onStackPush(value, null);
@@ -43,7 +47,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testPopCounting() {
+    void testPopCounting()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         listener.onStackPush(value, null);
@@ -57,7 +62,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testMaxDepthTracking() {
+    void testMaxDepthTracking()
+    {
         SimValue value = SimValue.unknown(null);
 
         listener.onStackPush(value, null);
@@ -71,7 +77,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testTotalOperations() {
+    void testTotalOperations()
+    {
         SimValue value = SimValue.unknown(null);
 
         listener.onStackPush(value, null);
@@ -82,7 +89,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testHistoryTracking() {
+    void testHistoryTracking()
+    {
         StackOperationListener historyListener = new StackOperationListener(true);
         historyListener.onSimulationStart(null);
 
@@ -97,13 +105,15 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testNoHistoryByDefault() {
+    void testNoHistoryByDefault()
+    {
         var history = listener.getDepthHistory();
         assertTrue(history.isEmpty());
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         SimValue value = SimValue.unknown(null);
         listener.onStackPush(value, null);
 
@@ -112,7 +122,8 @@ class StackOperationListenerTest {
     }
 
     @Test
-    void testResetOnNewSimulation() {
+    void testResetOnNewSimulation()
+    {
         SimValue value = SimValue.unknown(null);
         listener.onStackPush(value, null);
         listener.onStackPush(value, null);

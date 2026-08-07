@@ -10,72 +10,105 @@ import com.tonic.parser.FieldEntry;
 
 import java.util.*;
 
-public class SwitchMapAnalyzer {
+/**
+ * Recovers the enum constant behind each ordinal in a javac $SwitchMap holder class by reading its
+ * static initializer.
+ */
+public class SwitchMapAnalyzer
+{
 
-    public static void analyzeClass(String holderClass, List<FieldEntry> fields, List<IRMethod> methods) {
+    /**
+     * Finds the class's $SwitchMap fields and analyzes its static initializer to key them, doing
+     * nothing when the class declares none.
+     *
+     * @param holderClass the internal name of the class declaring the switch map fields
+     * @param fields the class's declared fields
+     * @param methods the class's methods in IR form
+     */
+    public static void analyzeClass(String holderClass, List<FieldEntry> fields, List<IRMethod> methods)
+    {
         Set<String> switchMapFieldNames = new HashSet<>();
-        for (FieldEntry field : fields) {
+        for (FieldEntry field : fields)
+        {
             String name = field.getName();
-            if (name != null && name.startsWith("$SwitchMap$")) {
+            if (name != null && name.startsWith("$SwitchMap$"))
+            {
                 switchMapFieldNames.add(name);
             }
         }
 
-        if (switchMapFieldNames.isEmpty()) {
+        if (switchMapFieldNames.isEmpty())
+        {
             return;
         }
 
-        for (IRMethod method : methods) {
-            if ("<clinit>".equals(method.getName())) {
+        for (IRMethod method : methods)
+        {
+            if ("<clinit>".equals(method.getName()))
+            {
                 analyzeStaticInit(holderClass, method, switchMapFieldNames);
                 break;
             }
         }
     }
 
-    private static void analyzeStaticInit(String holderClass, IRMethod clinit, Set<String> switchMapFieldNames) {
+    private static void analyzeStaticInit(String holderClass, IRMethod clinit, Set<String> switchMapFieldNames)
+    {
         Map<SSAValue, String> valueToEnumConstant = new HashMap<>();
         Map<SSAValue, String> valueToSwitchMapField = new HashMap<>();
 
-        for (IRBlock block : clinit.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof FieldAccessInstruction) {
+        for (IRBlock block : clinit.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof FieldAccessInstruction)
+                {
                     FieldAccessInstruction fieldInstr = (FieldAccessInstruction) instr;
-                    if (fieldInstr.isStatic() && fieldInstr.isLoad()) {
+                    if (fieldInstr.isStatic() && fieldInstr.isLoad())
+                    {
                         String fieldName = fieldInstr.getName();
                         String fieldOwner = fieldInstr.getOwner();
 
                         if (fieldName != null && switchMapFieldNames.contains(fieldName) &&
-                            fieldInstr.getResult() != null) {
+                            fieldInstr.getResult() != null)
+                            {
                             valueToSwitchMapField.put(fieldInstr.getResult(), fieldName);
                         }
-                        else if (fieldOwner != null && fieldInstr.getResult() != null) {
+                        else if (fieldOwner != null && fieldInstr.getResult() != null)
+                        {
                             String enumClassName = fieldOwner.replace('/', '.');
                             valueToEnumConstant.put(fieldInstr.getResult(), enumClassName + "." + fieldName);
                         }
                     }
                 }
-                else if (instr instanceof InvokeInstruction) {
+                else if (instr instanceof InvokeInstruction)
+                {
                     InvokeInstruction invokeInstr = (InvokeInstruction) instr;
                     if ("ordinal".equals(invokeInstr.getName()) &&
                         "()I".equals(invokeInstr.getDescriptor()) &&
-                        invokeInstr.getResult() != null) {
+                        invokeInstr.getResult() != null)
+                        {
 
                         List<Value> args = invokeInstr.getArguments();
-                        if (!args.isEmpty()) {
+                        if (!args.isEmpty())
+                        {
                             Value receiver = args.get(0);
-                            if (receiver instanceof SSAValue) {
+                            if (receiver instanceof SSAValue)
+                            {
                                 String enumConstant = valueToEnumConstant.get(receiver);
-                                if (enumConstant != null) {
+                                if (enumConstant != null)
+                                {
                                     valueToEnumConstant.put(invokeInstr.getResult(), enumConstant);
                                 }
                             }
                         }
                     }
                 }
-                else if (instr instanceof ArrayAccessInstruction) {
+                else if (instr instanceof ArrayAccessInstruction)
+                {
                     ArrayAccessInstruction arrayInstr = (ArrayAccessInstruction) instr;
-                    if (!arrayInstr.isStore()) {
+                    if (!arrayInstr.isStore())
+                    {
                         continue;
                     }
 
@@ -83,55 +116,69 @@ public class SwitchMapAnalyzer {
                     Value index = arrayInstr.getIndex();
                     Value storeValue = arrayInstr.getValue();
 
-                    if (!(array instanceof SSAValue)) {
+                    if (!(array instanceof SSAValue))
+                    {
                         continue;
                     }
 
                     Integer caseValue = null;
-                    if (storeValue instanceof IntConstant) {
+                    if (storeValue instanceof IntConstant)
+                    {
                         caseValue = ((IntConstant) storeValue).getValue();
-                    } else if (storeValue instanceof SSAValue) {
+                    }
+                    else if (storeValue instanceof SSAValue)
+                    {
                         SSAValue storeSSA = (SSAValue) storeValue;
                         IRInstruction def = storeSSA.getDefinition();
-                        if (def instanceof ConstantInstruction) {
+                        if (def instanceof ConstantInstruction)
+                        {
                             Value constValue = ((ConstantInstruction) def).getConstant();
-                            if (constValue instanceof IntConstant) {
+                            if (constValue instanceof IntConstant)
+                            {
                                 caseValue = ((IntConstant) constValue).getValue();
                             }
                         }
                     }
 
-                    if (caseValue == null) {
+                    if (caseValue == null)
+                    {
                         continue;
                     }
 
                     String switchMapField = valueToSwitchMapField.get(array);
-                    if (switchMapField == null) {
+                    if (switchMapField == null)
+                    {
                         SSAValue arraySSA = (SSAValue) array;
                         IRInstruction defInstr = arraySSA.getDefinition();
-                        if (defInstr instanceof FieldAccessInstruction) {
+                        if (defInstr instanceof FieldAccessInstruction)
+                        {
                             FieldAccessInstruction fieldDef = (FieldAccessInstruction) defInstr;
-                            if (switchMapFieldNames.contains(fieldDef.getName())) {
+                            if (switchMapFieldNames.contains(fieldDef.getName()))
+                            {
                                 switchMapField = fieldDef.getName();
                             }
                         }
                     }
 
-                    if (switchMapField == null) {
+                    if (switchMapField == null)
+                    {
                         continue;
                     }
 
                     String enumConstant = null;
-                    if (index instanceof SSAValue) {
+                    if (index instanceof SSAValue)
+                    {
                         enumConstant = valueToEnumConstant.get(index);
                     }
 
-                    if (enumConstant == null) {
+                    if (enumConstant == null)
+                    {
                         continue;
                     }
 
                     String enumClassName = EnumSwitchMapRegistry.parseEnumClassFromFieldName(switchMapField);
-                    if (enumClassName != null) {
+                    if (enumClassName != null)
+                    {
                         String constantName = extractConstantName(enumConstant);
                         EnumSwitchMapRegistry.getInstance()
                                 .registerMapping(holderClass, enumClassName, caseValue, constantName);
@@ -141,9 +188,11 @@ public class SwitchMapAnalyzer {
         }
     }
 
-    private static String extractConstantName(String fullConstant) {
+    private static String extractConstantName(String fullConstant)
+    {
         int lastDot = fullConstant.lastIndexOf('.');
-        if (lastDot >= 0 && lastDot < fullConstant.length() - 1) {
+        if (lastDot >= 0 && lastDot < fullConstant.length() - 1)
+        {
             return fullConstant.substring(lastDot + 1);
         }
         return fullConstant;

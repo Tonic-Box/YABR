@@ -9,11 +9,11 @@ import com.tonic.parser.MethodEntry;
  * Functional interface for pattern matching on IR instructions.
  */
 @FunctionalInterface
-public interface PatternMatcher {
+public interface PatternMatcher
+{
 
     /**
      * Tests if the given instruction matches this pattern.
-     *
      * @param instruction the instruction to test
      * @param method the containing IR method
      * @param sourceMethod the source method entry

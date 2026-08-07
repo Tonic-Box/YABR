@@ -12,9 +12,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugBBMethod {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
+/**
+ * Debug demo showing the lifted IR blocks of one method, optionally after optimization passes.
+ */
+public class DebugBBMethod
+{
+    /**
+     * Lifts a method to IR and prints its basic blocks.
+     * @param args class file path, optional method name (default "run"), and optional "--optimize" flag
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 1)
+        {
             System.out.println("Usage: DebugBBMethod <classfile>");
             return;
         }
@@ -23,25 +34,30 @@ public class DebugBBMethod {
         ConstPool constPool = cf.getConstPool();
 
         String targetMethod = args.length > 1 ? args[1] : "run";
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(targetMethod)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(targetMethod))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
                 // Skip descriptor
 
                 SSA ssa = new SSA(constPool);
                 boolean optimize = args.length > 2 && args[2].equals("--optimize");
-                if (optimize) {
+                if (optimize)
+                {
                     ssa.withRedundantCopyElimination()
                        .withCopyPropagation()
                        .withDeadCodeElimination();
                 }
                 IRMethod irMethod = ssa.lift(method);
-                if (optimize) {
+                if (optimize)
+                {
                     ssa.runTransforms(irMethod);
                 }
 
                 System.out.println("\n=== Exception Handlers ===");
-                for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+                for (ExceptionHandler handler : irMethod.getExceptionHandlers())
+                {
                     System.out.println("Handler: " + handler.getHandlerBlock().getName() +
                         " type=" + (handler.isCatchAll() ? "all" : handler.getCatchType()) +
                         " tryStart=" + (handler.getTryStart() != null ? handler.getTryStart().getName() : "null") +
@@ -49,24 +65,28 @@ public class DebugBBMethod {
                 }
 
                 System.out.println("\n=== All Blocks ===");
-                for (IRBlock block : irMethod.getBlocks()) {
+                for (IRBlock block : irMethod.getBlocks())
+                {
                     System.out.println("\n--- Block: " + block.getName() + " ---");
                     System.out.println("Predecessors: " + block.getPredecessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
                     System.out.println("Successors: " + block.getSuccessors().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
 
-                    // Print PHI instructions first
-                    for (PhiInstruction phi : block.getPhiInstructions()) {
+                    for (PhiInstruction phi : block.getPhiInstructions())
+                    {
                         System.out.println("  [PHI] " + phi);
                     }
 
-                    for (IRInstruction instr : block.getInstructions()) {
+                    for (IRInstruction instr : block.getInstructions())
+                    {
                         System.out.println("  " + instr);
                     }
 
                     IRInstruction term = block.getTerminator();
-                    if (term != null) {
+                    if (term != null)
+                    {
                         System.out.println("  [TERM] " + term);
-                        if (term instanceof BranchInstruction) {
+                        if (term instanceof BranchInstruction)
+                        {
                             BranchInstruction branch = (BranchInstruction) term;
                             System.out.println("    trueTarget: " + branch.getTrueTarget().getName());
                             System.out.println("    falseTarget: " + branch.getFalseTarget().getName());

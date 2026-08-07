@@ -3,55 +3,83 @@ package com.tonic.analysis.query.ast;
 import java.util.Objects;
 
 /**
- * One segment of an {@link Accessor} path: a keyword atom optionally indexed (e.g. {@code value},
- * {@code arg(0)}). Whether a step resolves to a scalar attribute or a sub-subject stream is decided
- * by the attribute registry from {@code (subjectKind, keyword)} — the step itself carries no
- * behavior, which is what keeps the vocabulary open.
+ * One segment of an {@link Accessor} path: a keyword atom optionally indexed (e.g. {@code value}, {@code
+ * arg(0)}).
  */
-public final class Step {
+public final class Step
+{
 
     private final String keyword;
     private final Integer index;   // explicit index, e.g. arg(0); null when absent
 
-    private Step(String keyword, Integer index) {
+    private Step(String keyword, Integer index)
+    {
         this.keyword = Objects.requireNonNull(keyword);
         this.index = index;
     }
 
-    public static Step of(String keyword) {
+    /**
+     * Creates an unindexed step.
+     * @param keyword the step keyword
+     * @return the step
+     */
+    public static Step of(String keyword)
+    {
         return new Step(keyword, null);
     }
 
-    public static Step indexed(String keyword, int index) {
+    /**
+     * Creates an indexed step such as arg(0).
+     * @param keyword the step keyword
+     * @param index the explicit index
+     * @return the step
+     */
+    public static Step indexed(String keyword, int index)
+    {
         return new Step(keyword, index);
     }
 
-    public String keyword() {
+    /**
+     * @return the step keyword
+     */
+    public String keyword()
+    {
         return keyword;
     }
 
-    public boolean hasIndex() {
+    /**
+     * @return whether an explicit index is present
+     */
+    public boolean hasIndex()
+    {
         return index != null;
     }
 
-    public int index() {
+    /**
+     * @return the explicit index, only valid when hasIndex() is true
+     */
+    public int index()
+    {
         return index;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return index != null ? keyword + "(" + index + ")" : keyword;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (!(o instanceof Step)) return false;
         Step s = (Step) o;
         return keyword.equals(s.keyword) && Objects.equals(index, s.index);
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(keyword, index);
     }
 }

@@ -24,10 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * not pop it again. This reproduces the double-pop that made every super-constructor call on an
  * unresolved superclass throw a reified {@code IllegalStateException} ("Stack underflow").
  */
-class UnresolvedInvokeStubTest {
+class UnresolvedInvokeStubTest
+{
 
     @Test
-    void unresolvedInstanceCallDoesNotUnderflowStack() throws Exception {
+    void unresolvedInstanceCallDoesNotUnderflowStack() throws Exception
+    {
         byte[] bytes = ClassBuilder.create("test/Sub")
                 .addMethod(AccessFlags.ACC_PUBLIC, "run", "()V")
                 .code().aload(0).invokevirtual("some/Unknown", "foo", "()V").vreturn().end()

@@ -20,14 +20,16 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FrameGeneratorEdgeCasesTest {
+class FrameGeneratorEdgeCasesTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/FrameEdgeCases", access);
@@ -35,10 +37,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class BranchTargetEdgeCases {
+    class BranchTargetEdgeCases
+    {
 
         @Test
-        void testFindFrameTargetsWithNegativeBranchOffset() throws IOException {
+        void testFindFrameTargetsWithNegativeBranchOffset() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NegativeBranch")
                     .publicStaticMethod("negativeBranch", "()V");
             BytecodeBuilder.Label backLabel = mb.newLabel();
@@ -62,7 +66,8 @@ class FrameGeneratorEdgeCasesTest {
         }
 
         @Test
-        void testTableSwitchWithNegativeDefaultOffset() throws IOException {
+        void testTableSwitchWithNegativeDefaultOffset() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/TableSwitchNeg")
                     .publicStaticMethod("tableSwitchNeg", "(I)I");
             BytecodeBuilder.Label beforeSwitch = mb.newLabel();
@@ -90,7 +95,8 @@ class FrameGeneratorEdgeCasesTest {
         }
 
         @Test
-        void testLookupSwitchWithNegativeMatchOffset() throws IOException {
+        void testLookupSwitchWithNegativeMatchOffset() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/LookupSwitchNeg")
                     .publicStaticMethod("lookupSwitchNeg", "(I)I");
             BytecodeBuilder.Label beforeSwitch = mb.newLabel();
@@ -121,10 +127,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class TypeStateComputationEdgeCases {
+    class TypeStateComputationEdgeCases
+    {
 
         @Test
-        void testComputeTypeStatesWithMergingPaths() throws IOException {
+        void testComputeTypeStatesWithMergingPaths() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/MergePaths")
                     .publicStaticMethod("mergePaths", "(I)I");
             BytecodeBuilder.Label path1 = mb.newLabel();
@@ -150,11 +158,12 @@ class FrameGeneratorEdgeCasesTest {
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0);
+            assertFalse(frames.isEmpty());
         }
 
         @Test
-        void testComputeTypeStatesWithBackwardBranch() throws IOException {
+        void testComputeTypeStatesWithBackwardBranch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/BackwardBranch")
                     .publicStaticMethod("backwardBranch", "(I)I");
             BytecodeBuilder.Label loopStart = mb.newLabel();
@@ -181,11 +190,12 @@ class FrameGeneratorEdgeCasesTest {
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0);
+            assertFalse(frames.isEmpty());
         }
 
         @Test
-        void testComputeTypeStatesWithUnreachableCode() throws IOException {
+        void testComputeTypeStatesWithUnreachableCode() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Unreachable")
                     .publicStaticMethod("unreachable", "()I");
 
@@ -206,7 +216,8 @@ class FrameGeneratorEdgeCasesTest {
         }
 
         @Test
-        void testComputeTypeStatesWithMultipleExceptionHandlers() throws IOException {
+        void testComputeTypeStatesWithMultipleExceptionHandlers() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/MultipleHandlers")
                     .publicStaticMethod("multipleHandlers", "()V");
             BytecodeBuilder.Label tryStart = mb.newLabel();
@@ -248,10 +259,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class WorklistAlgorithmEdgeCases {
+    class WorklistAlgorithmEdgeCases
+    {
 
         @Test
-        void testWorklistWithConvergingPaths() throws IOException {
+        void testWorklistWithConvergingPaths() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/Converge")
                     .publicStaticMethod("converge", "(I)I");
             BytecodeBuilder.Label path1 = mb.newLabel();
@@ -286,7 +299,8 @@ class FrameGeneratorEdgeCasesTest {
         }
 
         @Test
-        void testWorklistWithNestedLoops() throws IOException {
+        void testWorklistWithNestedLoops() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/NestedLoops")
                     .publicStaticMethod("nestedLoops", "(I)I");
             BytecodeBuilder.Label outerLoop = mb.newLabel();
@@ -328,10 +342,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class OpcodeClassificationEdgeCases {
+    class OpcodeClassificationEdgeCases
+    {
 
         @Test
-        void testIsTerminatorForAllReturnTypes() throws IOException {
+        void testIsTerminatorForAllReturnTypes() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/AllReturns")
                     .publicStaticMethod("ireturn", "()I")
                         .iconst(1)
@@ -360,8 +376,10 @@ class FrameGeneratorEdgeCasesTest {
 
             FrameGenerator generator = new FrameGenerator(cf.getConstPool());
 
-            for (MethodEntry method : cf.getMethods()) {
-                if (!method.getName().equals("<init>")) {
+            for (MethodEntry method : cf.getMethods())
+            {
+                if (!method.getName().equals("<init>"))
+                {
                     List<StackMapFrame> frames = generator.computeFrames(method);
                     assertNotNull(frames);
                 }
@@ -370,10 +388,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class OffsetDeltaCalculationEdgeCases {
+    class OffsetDeltaCalculationEdgeCases
+    {
 
         @Test
-        void testOffsetDeltaForFirstFrame() throws IOException {
+        void testOffsetDeltaForFirstFrame() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/FirstFrame")
                     .publicStaticMethod("firstFrame", "(I)I");
             BytecodeBuilder.Label target = mb.newLabel();
@@ -395,13 +415,15 @@ class FrameGeneratorEdgeCasesTest {
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            if (!frames.isEmpty()) {
+            if (!frames.isEmpty())
+            {
                 assertTrue(frames.get(0) instanceof FullFrame);
             }
         }
 
         @Test
-        void testOffsetDeltaForConsecutiveFrames() throws IOException {
+        void testOffsetDeltaForConsecutiveFrames() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/ConsecutiveFrames")
                     .publicStaticMethod("consecutiveFrames", "(I)I");
             BytecodeBuilder.Label target1 = mb.newLabel();
@@ -442,10 +464,12 @@ class FrameGeneratorEdgeCasesTest {
     }
 
     @Nested
-    class UpdateStackMapTableEdgeCases {
+    class UpdateStackMapTableEdgeCases
+    {
 
         @Test
-        void testUpdateStackMapTableWithExistingFrames() throws IOException {
+        void testUpdateStackMapTableWithExistingFrames() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("com/test/ExistingFrames")
                     .publicStaticMethod("existingFrames", "(I)I");
             BytecodeBuilder.Label target = mb.newLabel();

@@ -7,45 +7,66 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.List;
 
 /**
- * Store to local variable slot (used during lifting before SSA conversion).
+ * A store to a local variable slot, used during lifting before SSA conversion.
  */
-public class StoreLocalInstruction extends IRInstruction {
+public class StoreLocalInstruction extends IRInstruction
+{
 
     private final int localIndex;
     private Value value;
 
-    public StoreLocalInstruction(int localIndex, Value value) {
+    /**
+     * Creates a local store and registers a use of an SSA value.
+     * @param localIndex the local variable slot to write
+     * @param value the value to store
+     */
+    public StoreLocalInstruction(int localIndex, Value value)
+    {
         super();
         this.localIndex = localIndex;
         this.value = value;
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             ssa.addUse(this);
         }
     }
 
-    public int getLocalIndex() {
+    /**
+     * @return the local index
+     */
+    public int getLocalIndex()
+    {
         return localIndex;
     }
 
-    public Value getValue() {
+    /**
+     * @return the value
+     */
+    public Value getValue()
+    {
         return value;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return List.of(value);
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (value.equals(oldValue)) {
-            if (value instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (value.equals(oldValue))
+        {
+            if (value instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) value;
                 ssa.removeUse(this);
             }
             value = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) newValue;
                 ssa.addUse(this);
             }
@@ -53,18 +74,21 @@ public class StoreLocalInstruction extends IRInstruction {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitStoreLocal(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
         if (newOperands.isEmpty()) return null;
         return new StoreLocalInstruction(localIndex, newOperands.get(0));
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "store_local " + localIndex + ", " + value;
     }
 }

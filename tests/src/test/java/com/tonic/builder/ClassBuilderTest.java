@@ -9,29 +9,35 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassBuilderTest {
+class ClassBuilderTest
+{
 
     @Nested
-    class CreateTests {
+    class CreateTests
+    {
 
         @Test
-        void createSetsClassName() {
+        void createSetsClassName()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MyClass").build();
             assertEquals("com/test/MyClass", cf.getClassName());
         }
 
         @Test
-        void createWithSimpleName() {
+        void createWithSimpleName()
+        {
             ClassFile cf = ClassBuilder.create("SimpleClass").build();
             assertEquals("SimpleClass", cf.getClassName());
         }
     }
 
     @Nested
-    class VersionTests {
+    class VersionTests
+    {
 
         @Test
-        void versionSetsMajorMinor() {
+        void versionSetsMajorMinor()
+        {
             ClassFile cf = ClassBuilder.create("com/test/VersionTest")
                 .version(55, 0)
                 .build();
@@ -41,17 +47,20 @@ class ClassBuilderTest {
         }
 
         @Test
-        void defaultVersionIsJava11() {
+        void defaultVersionIsJava11()
+        {
             ClassFile cf = ClassBuilder.create("com/test/DefaultVersion").build();
             assertEquals(AccessFlags.V11, cf.getMajorVersion());
         }
     }
 
     @Nested
-    class AccessTests {
+    class AccessTests
+    {
 
         @Test
-        void accessSetsFlags() {
+        void accessSetsFlags()
+        {
             ClassFile cf = ClassBuilder.create("com/test/AccessTest")
                 .access(AccessFlags.ACC_PUBLIC, AccessFlags.ACC_FINAL)
                 .build();
@@ -63,7 +72,8 @@ class ClassBuilderTest {
         }
 
         @Test
-        void defaultAccessIsPublicSuper() {
+        void defaultAccessIsPublicSuper()
+        {
             ClassFile cf = ClassBuilder.create("com/test/DefaultAccess").build();
             int flags = cf.getAccess();
             assertTrue((flags & AccessFlags.ACC_PUBLIC) != 0);
@@ -72,10 +82,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class SuperClassTests {
+    class SuperClassTests
+    {
 
         @Test
-        void superClassSetsSuperName() {
+        void superClassSetsSuperName()
+        {
             ClassFile cf = ClassBuilder.create("com/test/SuperTest")
                 .superClass("java/util/ArrayList")
                 .build();
@@ -84,17 +96,20 @@ class ClassBuilderTest {
         }
 
         @Test
-        void defaultSuperClassIsObject() {
+        void defaultSuperClassIsObject()
+        {
             ClassFile cf = ClassBuilder.create("com/test/DefaultSuper").build();
             assertEquals("java/lang/Object", cf.getSuperClassName());
         }
     }
 
     @Nested
-    class InterfaceTests {
+    class InterfaceTests
+    {
 
         @Test
-        void interfacesAddsInterfaces() {
+        void interfacesAddsInterfaces()
+        {
             ClassFile cf = ClassBuilder.create("com/test/InterfaceTest")
                 .interfaces("java/io/Serializable", "java/lang/Cloneable")
                 .build();
@@ -103,28 +118,33 @@ class ClassBuilderTest {
         }
 
         @Test
-        void singleInterface() {
+        void singleInterface()
+        {
             ClassFile cf = ClassBuilder.create("com/test/SingleInterface")
                 .interfaces("java/lang/Runnable")
                 .build();
 
-            assertTrue(cf.getInterfaces().size() >= 1);
+            assertTrue(!cf.getInterfaces().isEmpty());
         }
     }
 
     @Nested
-    class AddFieldTests {
+    class AddFieldTests
+    {
 
         @Test
-        void addFieldCreatesField() {
+        void addFieldCreatesField()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FieldTest")
                 .addField(AccessFlags.ACC_PRIVATE, "value", "I")
                 .end()
                 .build();
 
             boolean hasField = false;
-            for (FieldEntry field : cf.getFields()) {
-                if ("value".equals(field.getName())) {
+            for (FieldEntry field : cf.getFields())
+            {
+                if ("value".equals(field.getName()))
+                {
                     hasField = true;
                     break;
                 }
@@ -134,10 +154,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class AddMethodTests {
+    class AddMethodTests
+    {
 
         @Test
-        void addMethodCreatesMethod() {
+        void addMethodCreatesMethod()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "doSomething", "()V")
                 .code()
@@ -147,8 +169,10 @@ class ClassBuilderTest {
                 .build();
 
             boolean hasMethod = false;
-            for (MethodEntry method : cf.getMethods()) {
-                if ("doSomething".equals(method.getName())) {
+            for (MethodEntry method : cf.getMethods())
+            {
+                if ("doSomething".equals(method.getName()))
+                {
                     hasMethod = true;
                     break;
                 }
@@ -158,10 +182,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class BuildTests {
+    class BuildTests
+    {
 
         @Test
-        void buildCreatesValidClassFile() {
+        void buildCreatesValidClassFile()
+        {
             ClassFile cf = ClassBuilder.create("com/test/BuildTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "<init>", "()V")
                 .code()
@@ -178,10 +204,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class ToByteArrayTests {
+    class ToByteArrayTests
+    {
 
         @Test
-        void toByteArrayProducesValidBytecode() {
+        void toByteArrayProducesValidBytecode()
+        {
             ClassBuilder builder = ClassBuilder.create("com/test/ByteArrayTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "getValue", "()I")
                 .code()
@@ -201,7 +229,8 @@ class ClassBuilderTest {
         }
 
         @Test
-        void toByteArrayCallsBuildIfNeeded() {
+        void toByteArrayCallsBuildIfNeeded()
+        {
             ClassBuilder builder = ClassBuilder.create("com/test/AutoBuildTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .code()
@@ -216,10 +245,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class BootstrapMethodTests {
+    class BootstrapMethodTests
+    {
 
         @Test
-        void addBootstrapMethodReturnsIndex() {
+        void addBootstrapMethodReturnsIndex()
+        {
             ClassBuilder builder = ClassBuilder.create("com/test/BootstrapTest");
             ClassFile cf = builder.build();
 
@@ -232,7 +263,8 @@ class ClassBuilderTest {
         }
 
         @Test
-        void multipleBootstrapMethodsIncreaseIndex() {
+        void multipleBootstrapMethodsIncreaseIndex()
+        {
             ClassBuilder builder = ClassBuilder.create("com/test/BootstrapTest");
             ClassFile cf = builder.build();
 
@@ -247,10 +279,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class AccessFlagsEdgeCases {
+    class AccessFlagsEdgeCases
+    {
 
         @Test
-        void accessWithEmptyFlagsArrayRetainsSuper() {
+        void accessWithEmptyFlagsArrayRetainsSuper()
+        {
             ClassFile cf = ClassBuilder.create("com/test/EmptyFlagsTest")
                 .access()
                 .build();
@@ -260,7 +294,8 @@ class ClassBuilderTest {
         }
 
         @Test
-        void accessCombinesMultipleFlags() {
+        void accessCombinesMultipleFlags()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MultiFlagsTest")
                 .access(AccessFlags.ACC_PUBLIC, AccessFlags.ACC_FINAL, AccessFlags.ACC_ABSTRACT)
                 .build();
@@ -274,10 +309,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class SuperClassEdgeCases {
+    class SuperClassEdgeCases
+    {
 
         @Test
-        void customSuperClassIsNotObject() {
+        void customSuperClassIsNotObject()
+        {
             ClassFile cf = ClassBuilder.create("com/test/CustomSuperTest")
                 .superClass("java/util/HashMap")
                 .build();
@@ -287,18 +324,21 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class InterfacesEdgeCases {
+    class InterfacesEdgeCases
+    {
 
         @Test
-        void noInterfacesHasEmptyList() {
+        void noInterfacesHasEmptyList()
+        {
             ClassFile cf = ClassBuilder.create("com/test/NoInterfacesTest")
                 .build();
 
-            assertTrue(cf.getInterfaces().isEmpty() || cf.getInterfaces().size() == 0);
+            assertTrue(cf.getInterfaces().isEmpty());
         }
 
         @Test
-        void multipleInterfaceCallsAccumulate() {
+        void multipleInterfaceCallsAccumulate()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MultiInterfaceTest")
                 .interfaces("java/io/Serializable")
                 .interfaces("java/lang/Cloneable", "java/lang/Runnable")
@@ -309,10 +349,12 @@ class ClassBuilderTest {
     }
 
     @Nested
-    class FluentApiTests {
+    class FluentApiTests
+    {
 
         @Test
-        void fluentApiAllowsChaining() {
+        void fluentApiAllowsChaining()
+        {
             ClassFile cf = ClassBuilder.create("com/test/FluentTest")
                 .version(52, 0)
                 .access(AccessFlags.ACC_PUBLIC)

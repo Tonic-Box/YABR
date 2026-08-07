@@ -18,12 +18,12 @@ public abstract class AbstractClassVisitor implements Visitor<ClassFile>
 
     /**
      * Processes the given class file by visiting its elements and rebuilding.
-     *
      * @param classFile the class file to process
      * @throws IOException if an I/O error occurs during processing
      */
     @Override
-    public void process(ClassFile classFile) throws IOException {
+    public void process(ClassFile classFile) throws IOException
+    {
         this.classFile = classFile;
         classFile.accept(this);
         classFile.rebuild();
@@ -31,62 +31,63 @@ public abstract class AbstractClassVisitor implements Visitor<ClassFile>
 
     /**
      * Visits a method entry and its attributes.
-     *
      * @param methodEntry the method entry to visit
      */
-    public void visitMethod(MethodEntry methodEntry) {
-        for (Attribute attribute : methodEntry.getAttributes()) {
+    public void visitMethod(MethodEntry methodEntry)
+    {
+        for (Attribute attribute : methodEntry.getAttributes())
+        {
             visitMethodAttributes(methodEntry, attribute);
         }
     }
 
     /**
      * Visits a field entry and its attributes.
-     *
      * @param fieldEntry the field entry to visit
      */
     public void visitField(FieldEntry fieldEntry)
     {
-        for (Attribute attribute : fieldEntry.getAttributes()) {
+        for (Attribute attribute : fieldEntry.getAttributes())
+        {
             visitFieldAttributes(fieldEntry, attribute);
         }
     }
 
     /**
      * Visits a constant pool item.
-     *
      * @param constPoolItem the constant pool item to visit
      */
-    public void visitConstPoolItem(Item<?> constPoolItem) {
+    public void visitConstPoolItem(Item<?> constPoolItem)
+    {
 
     }
 
     /**
      * Visits a class-level attribute.
-     *
      * @param attribute the attribute to visit
      */
-    public void visitClassAttribute(Attribute attribute) {
+    public void visitClassAttribute(Attribute attribute)
+    {
 
     }
 
     /**
      * Visits a method-level attribute.
-     *
      * @param methodEntry the method entry containing the attribute
      * @param attribute the attribute to visit
      */
-    public void visitMethodAttributes(MethodEntry methodEntry, Attribute attribute) {
+    public void visitMethodAttributes(MethodEntry methodEntry, Attribute attribute)
+    {
 
     }
 
     /**
      * Visits a field-level attribute.
-     *
      * @param fieldEntry the field entry containing the attribute
      * @param attribute the attribute to visit
      */
-    public void visitFieldAttributes(FieldEntry fieldEntry, Attribute attribute) {
+    public void visitFieldAttributes(FieldEntry fieldEntry, Attribute attribute)
+    {
 
     }
 }

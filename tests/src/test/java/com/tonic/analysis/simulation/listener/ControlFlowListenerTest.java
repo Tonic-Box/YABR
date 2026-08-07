@@ -3,8 +3,6 @@ package com.tonic.analysis.simulation.listener;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.value.SSAValue;
-import com.tonic.analysis.ssa.value.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,19 +10,22 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ControlFlowListenerTest {
+class ControlFlowListenerTest
+{
 
     private ControlFlowListener listener;
     private SimulationState mockState;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         listener = new ControlFlowListener();
         mockState = SimulationState.empty();
     }
 
     @Test
-    void trackBlockTransitions() {
+    void trackBlockTransitions()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
         IRBlock blockC = new IRBlock("C");
@@ -49,7 +50,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void detectBlockRevisits() {
+    void detectBlockRevisits()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
 
@@ -71,7 +73,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void countBranchInstructions() {
+    void countBranchInstructions()
+    {
         BranchInstruction branch = createBranch();
 
         listener.onBranch(branch, true, mockState);
@@ -83,7 +86,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void countSwitchInstructions() {
+    void countSwitchInstructions()
+    {
         SwitchInstruction switchInstr = createSwitch();
 
         listener.onSwitch(switchInstr, 0, mockState);
@@ -96,7 +100,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void countThrowInstructions() {
+    void countThrowInstructions()
+    {
         SimpleInstruction throwInstr = createThrow();
 
         listener.onException(throwInstr, mockState);
@@ -107,7 +112,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void getRevisitedBlocks() {
+    void getRevisitedBlocks()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
         IRBlock blockC = new IRBlock("C");
@@ -128,7 +134,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void trackGotoInstructions() {
+    void trackGotoInstructions()
+    {
         SimpleInstruction gotoInstr = createGoto();
 
         listener.onBeforeInstruction(gotoInstr, mockState);
@@ -140,7 +147,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void trackReturnInstructions() {
+    void trackReturnInstructions()
+    {
         ReturnInstruction returnInstr = createReturn();
 
         listener.onMethodReturn(returnInstr, mockState);
@@ -151,7 +159,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void trackMixedControlFlowInstructions() {
+    void trackMixedControlFlowInstructions()
+    {
         BranchInstruction branch = createBranch();
         SwitchInstruction switchInstr = createSwitch();
         SimpleInstruction gotoInstr = createGoto();
@@ -174,7 +183,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void wasVisitedCheck() {
+    void wasVisitedCheck()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
 
@@ -185,13 +195,15 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void getVisitCountForUnvisitedBlock() {
+    void getVisitCountForUnvisitedBlock()
+    {
         IRBlock block = new IRBlock("A");
         assertEquals(0, listener.getVisitCount(block));
     }
 
     @Test
-    void firstBlockEntryHasNoTransition() {
+    void firstBlockEntryHasNoTransition()
+    {
         IRBlock blockA = new IRBlock("A");
 
         listener.onBlockEntry(blockA, mockState);
@@ -201,7 +213,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void loopCreatesMultipleTransitions() {
+    void loopCreatesMultipleTransitions()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
         IRBlock blockC = new IRBlock("C");
@@ -224,7 +237,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void repeatedTransitionsIncreaseCount() {
+    void repeatedTransitionsIncreaseCount()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
 
@@ -245,7 +259,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void onSimulationStartResetsCounts() {
+    void onSimulationStartResetsCounts()
+    {
         IRBlock blockA = new IRBlock("A");
         BranchInstruction branch = createBranch();
         ReturnInstruction returnInstr = createReturn();
@@ -267,7 +282,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void blockSequenceTrackingDisabledByDefault() {
+    void blockSequenceTrackingDisabledByDefault()
+    {
         ControlFlowListener defaultListener = new ControlFlowListener();
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -280,7 +296,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void blockSequenceTrackingWhenEnabled() {
+    void blockSequenceTrackingWhenEnabled()
+    {
         ControlFlowListener trackingListener = new ControlFlowListener(true);
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
@@ -300,7 +317,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void getBlockVisitCountsReturnsUnmodifiableMap() {
+    void getBlockVisitCountsReturnsUnmodifiableMap()
+    {
         IRBlock blockA = new IRBlock("A");
         listener.onBlockEntry(blockA, mockState);
 
@@ -313,7 +331,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void getTransitionCountsReturnsUnmodifiableMap() {
+    void getTransitionCountsReturnsUnmodifiableMap()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
         listener.onBlockEntry(blockA, mockState);
@@ -328,20 +347,20 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void getBlockSequenceReturnsUnmodifiableList() {
+    void getBlockSequenceReturnsUnmodifiableList()
+    {
         ControlFlowListener trackingListener = new ControlFlowListener(true);
         IRBlock blockA = new IRBlock("A");
         trackingListener.onBlockEntry(blockA, mockState);
 
         List<IRBlock> sequence = trackingListener.getBlockSequence();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            sequence.clear();
-        });
+        assertThrows(UnsupportedOperationException.class, sequence::clear);
     }
 
     @Test
-    void blockTransitionEquality() {
+    void blockTransitionEquality()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
         IRBlock blockC = new IRBlock("C");
@@ -356,7 +375,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void blockTransitionToString() {
+    void blockTransitionToString()
+    {
         IRBlock blockA = new IRBlock("A");
         IRBlock blockB = new IRBlock("B");
 
@@ -367,7 +387,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void listenerToString() {
+    void listenerToString()
+    {
         BranchInstruction branch = createBranch();
         SwitchInstruction switchInstr = createSwitch();
         SimpleInstruction gotoInstr = createGoto();
@@ -394,7 +415,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void onBeforeInstructionOnlyCountsGoto() {
+    void onBeforeInstructionOnlyCountsGoto()
+    {
         BranchInstruction branch = createBranch();
         ReturnInstruction returnInstr = createReturn();
         SimpleInstruction gotoInstr = createGoto();
@@ -410,7 +432,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void emptyListenerHasZeroCounts() {
+    void emptyListenerHasZeroCounts()
+    {
         assertEquals(0, listener.getBranchCount());
         assertEquals(0, listener.getSwitchCount());
         assertEquals(0, listener.getGotoCount());
@@ -423,7 +446,8 @@ class ControlFlowListenerTest {
     }
 
     @Test
-    void complexControlFlowScenario() {
+    void complexControlFlowScenario()
+    {
         IRBlock entry = new IRBlock("entry");
         IRBlock loopHeader = new IRBlock("loop_header");
         IRBlock loopBody = new IRBlock("loop_body");
@@ -465,13 +489,15 @@ class ControlFlowListenerTest {
         assertEquals(4, listener.getDistinctTransitions());
     }
 
-    private BranchInstruction createBranch() {
+    private BranchInstruction createBranch()
+    {
         IRBlock trueTarget = new IRBlock("true_target");
         IRBlock falseTarget = new IRBlock("false_target");
         return new BranchInstruction(CompareOp.EQ, null, trueTarget, falseTarget);
     }
 
-    private SwitchInstruction createSwitch() {
+    private SwitchInstruction createSwitch()
+    {
         IRBlock defaultTarget = new IRBlock("default");
         SwitchInstruction switchInstr = new SwitchInstruction(null, defaultTarget);
         switchInstr.addCase(1, new IRBlock("case1"));
@@ -480,16 +506,19 @@ class ControlFlowListenerTest {
         return switchInstr;
     }
 
-    private SimpleInstruction createGoto() {
+    private SimpleInstruction createGoto()
+    {
         IRBlock target = new IRBlock("target");
         return SimpleInstruction.createGoto(target);
     }
 
-    private ReturnInstruction createReturn() {
+    private ReturnInstruction createReturn()
+    {
         return new ReturnInstruction(null);
     }
 
-    private SimpleInstruction createThrow() {
+    private SimpleInstruction createThrow()
+    {
         return SimpleInstruction.createThrow(null);
     }
 }

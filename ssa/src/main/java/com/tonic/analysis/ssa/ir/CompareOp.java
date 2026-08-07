@@ -3,43 +3,82 @@ package com.tonic.analysis.ssa.ir;
 /**
  * Comparison operations for branches.
  */
-public enum CompareOp {
-    /** Equal. */
+public enum CompareOp
+{
+    /**
+     * Equal.
+     */
     EQ,
-    /** Not equal. */
+    /**
+     * Not equal.
+     */
     NE,
-    /** Less than. */
+    /**
+     * Less than.
+     */
     LT,
-    /** Greater or equal. */
+    /**
+     * Greater or equal.
+     */
     GE,
-    /** Greater than. */
+    /**
+     * Greater than.
+     */
     GT,
-    /** Less or equal. */
+    /**
+     * Less or equal.
+     */
     LE,
-    /** If equal to zero. */
+    /**
+     * If equal to zero.
+     */
     IFEQ,
-    /** If not equal to zero. */
+    /**
+     * If not equal to zero.
+     */
     IFNE,
-    /** If less than zero. */
+    /**
+     * If less than zero.
+     */
     IFLT,
-    /** If greater or equal to zero. */
+    /**
+     * If greater or equal to zero.
+     */
     IFGE,
-    /** If greater than zero. */
+    /**
+     * If greater than zero.
+     */
     IFGT,
-    /** If less or equal to zero. */
+    /**
+     * If less or equal to zero.
+     */
     IFLE,
-    /** If reference is null. */
+    /**
+     * If reference is null.
+     */
     IFNULL,
-    /** If reference is not null. */
+    /**
+     * If reference is not null.
+     */
     IFNONNULL,
-    /** If references are equal. */
+    /**
+     * If references are equal.
+     */
     ACMPEQ,
-    /** If references are not equal. */
+    /**
+     * If references are not equal.
+     */
     ACMPNE;
 
-    /** The logically-opposite comparison (the branch that fires exactly when this one would not). */
-    public CompareOp invert() {
-        switch (this) {
+    /**
+     * The logically-opposite comparison (the branch that fires exactly when this one would not).
+     *
+     * @return the inverted comparison
+     */
+    public CompareOp invert()
+    {
+        switch (this)
+        {
             case EQ: return NE;
             case NE: return EQ;
             case LT: return GE;

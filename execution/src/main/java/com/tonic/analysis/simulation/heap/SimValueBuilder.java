@@ -8,9 +8,9 @@ import java.util.*;
 
 /**
  * Builder API for constructing simulated values with field initialization.
- * Supports building complex object graphs for simulation entry points.
  */
-public final class SimValueBuilder {
+public final class SimValueBuilder
+{
 
     private final IRType type;
     private AllocationSite allocationSite;
@@ -20,176 +20,337 @@ public final class SimValueBuilder {
     private SimValue.NullState nullState;
     private Object constantValue;
 
-    private SimValueBuilder(IRType type) {
+    private SimValueBuilder(IRType type)
+    {
         this.type = type;
         this.fieldValues = new LinkedHashMap<>();
         this.arrayElements = new ArrayList<>();
         this.nullState = SimValue.NullState.MAYBE_NULL;
     }
 
-    public static SimValueBuilder forType(IRType type) {
+    /**
+     * Starts a builder for an IR type.
+     * @param type the value type
+     * @return the new builder
+     */
+    public static SimValueBuilder forType(IRType type)
+    {
         return new SimValueBuilder(type);
     }
 
-    public static SimValueBuilder forClass(String className) {
+    /**
+     * Starts a builder for an object type, accepting dotted or slashed names.
+     * @param className the class name
+     * @return the new builder
+     */
+    public static SimValueBuilder forClass(String className)
+    {
         return new SimValueBuilder(IRType.fromDescriptor("L" + className.replace('.', '/') + ";"));
     }
 
-    public static SimValueBuilder forArray(IRType elementType) {
+    /**
+     * Starts a builder for a one-dimensional array.
+     * @param elementType the element type
+     * @return the new builder
+     */
+    public static SimValueBuilder forArray(IRType elementType)
+    {
         return new SimValueBuilder(IRType.fromDescriptor("[" + elementType.getDescriptor()));
     }
 
-    public SimValueBuilder withIntValue(int value) {
+    /**
+     * Sets the constant this value carries.
+     * @param value the int constant
+     * @return this builder
+     */
+    public SimValueBuilder withIntValue(int value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    public SimValueBuilder withLongValue(long value) {
+    /**
+     * Sets the constant this value carries.
+     * @param value the long constant
+     * @return this builder
+     */
+    public SimValueBuilder withLongValue(long value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    public SimValueBuilder withFloatValue(float value) {
+    /**
+     * Sets the constant this value carries.
+     * @param value the float constant
+     * @return this builder
+     */
+    public SimValueBuilder withFloatValue(float value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    public SimValueBuilder withDoubleValue(double value) {
+    /**
+     * Sets the constant this value carries.
+     * @param value the double constant
+     * @return this builder
+     */
+    public SimValueBuilder withDoubleValue(double value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    public SimValueBuilder withBooleanValue(boolean value) {
+    /**
+     * Sets the constant this value carries, stored as the int 0 or 1.
+     * @param value the boolean constant
+     * @return this builder
+     */
+    public SimValueBuilder withBooleanValue(boolean value)
+    {
         this.constantValue = value ? 1 : 0;
         return this;
     }
 
-    public SimValueBuilder withStringValue(String value) {
+    /**
+     * Sets the constant this value carries.
+     * @param value the string constant
+     * @return this builder
+     */
+    public SimValueBuilder withStringValue(String value)
+    {
         this.constantValue = value;
         return this;
     }
 
-    public SimValueBuilder withAllocationSite(AllocationSite site) {
+    /**
+     * Pins the value to an allocation site, which also makes it non-null.
+     * @param site the allocation site
+     * @return this builder
+     */
+    public SimValueBuilder withAllocationSite(AllocationSite site)
+    {
         this.allocationSite = site;
         this.nullState = SimValue.NullState.DEFINITELY_NOT_NULL;
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, SimValue value) {
+    /**
+     * Sets a field to an already built value.
+     * @param fieldName the field name
+     * @param value the field value
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, SimValue value)
+    {
         fieldValues.put(fieldName, value);
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, SimValueBuilder nested) {
+    /**
+     * Sets a field to a nested builder, built against the same heap at build time.
+     * @param fieldName the field name
+     * @param nested the builder for the field value
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, SimValueBuilder nested)
+    {
         fieldValues.put(fieldName, nested);
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, int value) {
+    /**
+     * Sets a field to an int constant.
+     * @param fieldName the field name
+     * @param value the constant
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, int value)
+    {
         fieldValues.put(fieldName, SimValueBuilder.forType(PrimitiveType.INT).withIntValue(value));
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, long value) {
+    /**
+     * Sets a field to a long constant.
+     * @param fieldName the field name
+     * @param value the constant
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, long value)
+    {
         fieldValues.put(fieldName, SimValueBuilder.forType(PrimitiveType.LONG).withLongValue(value));
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, boolean value) {
+    /**
+     * Sets a field to a boolean constant.
+     * @param fieldName the field name
+     * @param value the constant
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, boolean value)
+    {
         fieldValues.put(fieldName, SimValueBuilder.forType(PrimitiveType.BOOLEAN).withBooleanValue(value));
         return this;
     }
 
-    public SimValueBuilder withField(String fieldName, String value) {
+    /**
+     * Sets a field to a java.lang.String constant.
+     * @param fieldName the field name
+     * @param value the constant
+     * @return this builder
+     */
+    public SimValueBuilder withField(String fieldName, String value)
+    {
         fieldValues.put(fieldName, SimValueBuilder.forClass("java/lang/String").withStringValue(value));
         return this;
     }
 
-    public SimValueBuilder asArray(SimValue... elements) {
+    /**
+     * Replaces the array contents and sets the length to match.
+     * @param elements the array elements in index order
+     * @return this builder
+     */
+    public SimValueBuilder asArray(SimValue... elements)
+    {
         this.arrayElements.clear();
         this.arrayElements.addAll(Arrays.asList(elements));
         this.arrayLength = SimValue.constant(elements.length, PrimitiveType.INT, null);
         return this;
     }
 
-    public SimValueBuilder withArrayLength(int length) {
+    /**
+     * Sets the array length independently of the elements supplied.
+     * @param length the array length
+     * @return this builder
+     */
+    public SimValueBuilder withArrayLength(int length)
+    {
         this.arrayLength = SimValue.constant(length, PrimitiveType.INT, null);
         return this;
     }
 
-    public SimValueBuilder withArrayElement(SimValue element) {
+    /**
+     * Appends one element at the next index.
+     * @param element the element value
+     * @return this builder
+     */
+    public SimValueBuilder withArrayElement(SimValue element)
+    {
         this.arrayElements.add(element);
         return this;
     }
 
-    public SimValueBuilder nullable() {
+    /**
+     * Marks the value as possibly null, the default state.
+     * @return this builder
+     */
+    public SimValueBuilder nullable()
+    {
         this.nullState = SimValue.NullState.MAYBE_NULL;
         return this;
     }
 
-    public SimValueBuilder definitelyNull() {
+    /**
+     * Marks the value as null, dropping any allocation site.
+     * @return this builder
+     */
+    public SimValueBuilder definitelyNull()
+    {
         this.nullState = SimValue.NullState.DEFINITELY_NULL;
         this.allocationSite = null;
         return this;
     }
 
-    public SimValueBuilder definitelyNotNull() {
+    /**
+     * Marks the value as non-null.
+     * @return this builder
+     */
+    public SimValueBuilder definitelyNotNull()
+    {
         this.nullState = SimValue.NullState.DEFINITELY_NOT_NULL;
         return this;
     }
 
-    public IRType getType() {
+    /**
+     * @return the type
+     */
+    public IRType getType()
+    {
         return type;
     }
 
-    public SimValue build(SimHeap heap) {
-        if (constantValue != null && type != null && type.isPrimitive()) {
+    /**
+     * Materializes the value, allocating on the heap and recursively building nested field builders.
+     * @param heap the heap that receives allocations, field stores and array stores
+     * @return the built value
+     */
+    public SimValue build(SimHeap heap)
+    {
+        if (constantValue != null && type != null && type.isPrimitive())
+        {
             return SimValue.constant(constantValue, type, null);
         }
 
-        if (nullState == SimValue.NullState.DEFINITELY_NULL) {
+        if (nullState == SimValue.NullState.DEFINITELY_NULL)
+        {
             return SimValue.ofNull(type, null);
         }
 
-        if (type != null && type.isArray()) {
+        if (type != null && type.isArray())
+        {
             return buildArray(heap);
         }
 
-        if (type != null && type.isReference()) {
+        if (type != null && type.isReference())
+        {
             return buildObject(heap);
         }
 
-        if (constantValue != null) {
+        if (constantValue != null)
+        {
             return SimValue.constant(constantValue, type, null);
         }
 
         return SimValue.ofType(type, null);
     }
 
-    private SimValue buildObject(SimHeap heap) {
+    private SimValue buildObject(SimHeap heap)
+    {
         AllocationSite site = allocationSite;
-        if (site == null) {
+        if (site == null)
+        {
             site = AllocationSite.synthetic(type.getDescriptor(), "builder");
         }
 
         heap.allocate(site);
 
-        if (!fieldValues.isEmpty()) {
+        if (!fieldValues.isEmpty())
+        {
             String ownerClass = type.getDescriptor();
-            if (ownerClass.startsWith("L") && ownerClass.endsWith(";")) {
+            if (ownerClass.startsWith("L") && ownerClass.endsWith(";"))
+            {
                 ownerClass = ownerClass.substring(1, ownerClass.length() - 1);
             }
 
-            for (Map.Entry<String, Object> entry : fieldValues.entrySet()) {
+            for (Map.Entry<String, Object> entry : fieldValues.entrySet())
+            {
                 String fieldName = entry.getKey();
                 Object value = entry.getValue();
 
                 SimValue fieldValue;
-                if (value instanceof SimValue) {
+                if (value instanceof SimValue)
+                {
                     fieldValue = (SimValue) value;
-                } else if (value instanceof SimValueBuilder) {
+                }
+                else if (value instanceof SimValueBuilder)
+                {
                     fieldValue = ((SimValueBuilder) value).build(heap);
-                } else {
+                }
+                else
+                {
                     continue;
                 }
 
@@ -202,21 +363,25 @@ public final class SimValueBuilder {
         return SimValue.ofAllocation(site, type, null);
     }
 
-    private SimValue buildArray(SimHeap heap) {
+    private SimValue buildArray(SimHeap heap)
+    {
         AllocationSite site = allocationSite;
-        if (site == null) {
+        if (site == null)
+        {
             site = AllocationSite.synthetic(type.getDescriptor(), "builder-array");
         }
 
         IRType elementType = extractArrayElementType(type);
         SimValue length = arrayLength;
-        if (length == null) {
+        if (length == null)
+        {
             length = SimValue.constant(arrayElements.size(), PrimitiveType.INT, null);
         }
 
         heap.allocateArray(site, elementType, length);
 
-        for (int i = 0; i < arrayElements.size(); i++) {
+        for (int i = 0; i < arrayElements.size(); i++)
+        {
             SimValue indexValue = SimValue.constant(i, PrimitiveType.INT, null);
             heap.arrayStore(site, indexValue, arrayElements.get(i));
         }
@@ -224,33 +389,40 @@ public final class SimValueBuilder {
         return SimValue.ofAllocation(site, type, null);
     }
 
-    private static String inferDescriptor(SimValue value) {
+    private static String inferDescriptor(SimValue value)
+    {
         if (value == null) return "Ljava/lang/Object;";
         IRType type = value.getType();
         if (type == null) return "Ljava/lang/Object;";
         return type.getDescriptor();
     }
 
-    private static IRType extractArrayElementType(IRType arrayType) {
+    private static IRType extractArrayElementType(IRType arrayType)
+    {
         if (arrayType == null) return null;
         String desc = arrayType.getDescriptor();
-        if (desc.startsWith("[")) {
+        if (desc.startsWith("["))
+        {
             return IRType.fromDescriptor(desc.substring(1));
         }
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("SimValueBuilder[");
         sb.append("type=").append(type);
-        if (constantValue != null) {
+        if (constantValue != null)
+        {
             sb.append(", const=").append(constantValue);
         }
-        if (!fieldValues.isEmpty()) {
+        if (!fieldValues.isEmpty())
+        {
             sb.append(", fields=").append(fieldValues.size());
         }
-        if (!arrayElements.isEmpty()) {
+        if (!arrayElements.isEmpty())
+        {
             sb.append(", elements=").append(arrayElements.size());
         }
         sb.append(", null=").append(nullState);

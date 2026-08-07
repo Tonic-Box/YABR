@@ -2,10 +2,6 @@ package com.tonic.analysis.ssa.transform;
 
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -23,14 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for MethodInlining transform (ClassTransform).
  * Tests inlining of small methods into their call sites.
  */
-class MethodInliningTest {
+class MethodInliningTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private SSA ssa;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -41,13 +39,15 @@ class MethodInliningTest {
     }
 
     @Test
-    void getNameReturnsMethodInlining() {
+    void getNameReturnsMethodInlining()
+    {
         MethodInlining transform = new MethodInlining();
         assertEquals("MethodInlining", transform.getName());
     }
 
     @Test
-    void returnsFalseWhenNothingToInline() throws IOException {
+    void returnsFalseWhenNothingToInline() throws IOException
+    {
         MethodInlining transform = new MethodInlining();
 
         int access = new AccessBuilder().setPublic().build();
@@ -59,7 +59,8 @@ class MethodInliningTest {
     }
 
     @Test
-    void handlesEmptyClass() {
+    void handlesEmptyClass()
+    {
         MethodInlining transform = new MethodInlining();
 
         boolean changed = transform.run(classFile, ssa);
@@ -68,7 +69,8 @@ class MethodInliningTest {
     }
 
     @Test
-    void preservesClassStructure() throws IOException {
+    void preservesClassStructure() throws IOException
+    {
         MethodInlining transform = new MethodInlining();
 
         int access = new AccessBuilder().setPublic().build();
@@ -83,7 +85,8 @@ class MethodInliningTest {
     }
 
     @Test
-    void handlesMethodWithoutCode() throws IOException {
+    void handlesMethodWithoutCode() throws IOException
+    {
         MethodInlining transform = new MethodInlining();
 
         int access = new AccessBuilder().setPublic().setAbstract().build();
@@ -95,7 +98,8 @@ class MethodInliningTest {
     }
 
     @Test
-    void ignoresConstructors() throws IOException {
+    void ignoresConstructors() throws IOException
+    {
         MethodInlining transform = new MethodInlining();
 
         int access = new AccessBuilder().setPublic().build();
@@ -104,11 +108,12 @@ class MethodInliningTest {
         transform.run(classFile, ssa);
 
         // ClassFile auto-creates default constructor + clinit, so expect at least 1 method
-        assertTrue(classFile.getMethods().size() >= 1);
+        assertFalse(classFile.getMethods().isEmpty());
     }
 
     @Test
-    void handlesMultipleMethods() throws IOException {
+    void handlesMultipleMethods() throws IOException
+    {
         MethodInlining transform = new MethodInlining();
 
         int access = new AccessBuilder().setPublic().build();

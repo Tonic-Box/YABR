@@ -7,48 +7,77 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 /**
- * Represents the ConstantValue attribute.
- * Used in fields to represent the constant value assigned to the field.
+ * The ConstantValue attribute: the constant-pool index of a field's constant initial value.
  */
-public class ConstantValueAttribute extends Attribute {
+public class ConstantValueAttribute extends Attribute
+{
     private int constantValueIndex;
 
-    public void setConstantValueIndex(int index) {
+    /**
+     * @param index constant-pool index of the constant value
+     */
+    public void setConstantValueIndex(int index)
+    {
         this.constantValueIndex = index;
     }
 
-    public ConstantValueAttribute(String name, MemberEntry parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a member.
+     * @param name the attribute name
+     * @param parent the member the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public ConstantValueAttribute(String name, MemberEntry parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public ConstantValueAttribute(String name, ClassFile parent, int nameIndex, int length) {
+    /**
+     * Creates the attribute shell for parsing, attached to a class.
+     * @param name the attribute name
+     * @param parent the class the attribute belongs to
+     * @param nameIndex constant-pool index of the name Utf8
+     * @param length the attribute length in bytes
+     */
+    public ConstantValueAttribute(String name, ClassFile parent, int nameIndex, int length)
+    {
         super(name, parent, nameIndex, length);
     }
 
-    public int getConstantValueIndex() {
+    /**
+     * @return the constant value index
+     */
+    public int getConstantValueIndex()
+    {
         return constantValueIndex;
     }
 
     @Override
-    public void read(ClassFile classFile, int length) {
-        if (length != 2) {
+    public void read(ClassFile classFile, int length)
+    {
+        if (length != 2)
+        {
             throw new IllegalArgumentException("ConstantValue attribute length must be 2, found: " + length);
         }
         this.constantValueIndex = classFile.readUnsignedShort();
     }
 
     @Override
-    protected void writeInfo(DataOutputStream dos) throws IOException {
+    protected void writeInfo(DataOutputStream dos) throws IOException
+    {
         dos.writeShort(constantValueIndex);
     }
 
     @Override
-    public void updateLength() {
+    public void updateLength()
+    {
         this.length = 2;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ConstantValueAttribute{constantValueIndex=" + constantValueIndex + "}";
     }
 }

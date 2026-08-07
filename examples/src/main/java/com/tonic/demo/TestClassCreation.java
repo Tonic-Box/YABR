@@ -1,13 +1,15 @@
 package com.tonic.demo;
 import com.tonic.analysis.ClassFactory;
-
-import com.tonic.analysis.Bytecode;
 import com.tonic.parser.*;
 import com.tonic.util.*;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TestClassCreation {
+/**
+ * Demo showing ClassFactory building a class with initialized fields and generated accessors.
+ */
+public class TestClassCreation
+{
     private static final int classAccess = new AccessBuilder()
             .setPublic()
             .build();
@@ -19,20 +21,23 @@ public class TestClassCreation {
     private static final int accessPrivate = new AccessBuilder()
             .setPrivate()
             .build();
-    public static void main(String[] args) throws IOException {
+    /**
+     * Creates a class with two fields plus accessors, rebuilds it, and prints the result.
+     * @param args unused
+     * @throws IOException if class generation fails
+     */
+    public static void main(String[] args) throws IOException
+    {
         Logger.setLog(false);
 
-        //Create a new class
         ClassPool classPool = ClassPool.getDefault();
         ClassFile classFile = ClassFactory.createClass(classPool, "com/tonic/ANewClass", classAccess);
 
-        //Create a Static field with setter/getter
         FieldEntry staticField = classFile.createNewField(staticAccessPrivate, "testStaticIntField", "I", new ArrayList<>());
         ClassFactory.setFieldInitialValue(classFile, staticField, 12);
         ClassFactory.generateGetter(classFile, staticField, true);
         ClassFactory.generateSetter(classFile, staticField, true);
 
-        //Create a field with setter/getter
         FieldEntry field = classFile.createNewField(accessPrivate, "testIntField", "I", new ArrayList<>());
         ClassFactory.setFieldInitialValue(classFile, field, 54);
         ClassFactory.generateGetter(classFile, field, false);
@@ -43,7 +48,6 @@ public class TestClassCreation {
         //compile our changes in memory
         classFile.rebuild();
 
-        //Print the class file
         System.out.println(classFile);
 
         //Save the class file to disk

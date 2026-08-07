@@ -7,6 +7,7 @@ import com.tonic.analysis.source.ast.expr.VarRefExpr;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ExprStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
+import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.VarDeclStmt;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
@@ -20,12 +21,11 @@ import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,14 +33,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ASTLowerer - lowering AST back to SSA IR.
  * Uses lenient assertions focusing on successful lowering rather than exact IR structure.
  */
-class ASTLowererTest {
+class ASTLowererTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/ASTLowererTestClass", access);
@@ -50,10 +52,11 @@ class ASTLowererTest {
         SSAValue.resetIdCounter();
     }
 
-    // ========== Basic Lowering Tests ==========
+    // Basic Lowering Tests
 
     @Test
-    void lowerEmptyMethodBody() {
+    void lowerEmptyMethodBody()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
@@ -73,20 +76,14 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodWithReturnStatement() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerMethodWithReturnStatement()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(42)));
         BlockStmt body = new BlockStmt(stmts);
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "returnInt",
-            "com/test/Test",
-            true,
-            List.of(),
-            PrimitiveSourceType.INT
-        );
+        IRMethod irMethod = lowerer.lower(body, "returnInt", "com/test/Test", true, List.of(), PrimitiveSourceType.INT);
 
         assertNotNull(irMethod);
         assertNotNull(irMethod.getEntryBlock());
@@ -94,8 +91,9 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodWithVoidReturn() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerMethodWithVoidReturn()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -114,7 +112,8 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerStaticMethodHasNoThisParameter() {
+    void lowerStaticMethodHasNoThisParameter()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
@@ -131,7 +130,8 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerInstanceMethodHasThisParameter() {
+    void lowerInstanceMethodHasThisParameter()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
@@ -148,29 +148,24 @@ class ASTLowererTest {
         assertEquals(1, irMethod.getParameters().size());
     }
 
-    // ========== Parameter Handling Tests ==========
+    // Parameter Handling Tests
 
     @Test
-    void lowerMethodWithSingleParameter() {
+    void lowerMethodWithSingleParameter()
+    {
         BlockStmt body = new BlockStmt();
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "withParam",
-            "com/test/Test",
-            true,
-            params,
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "withParam", "com/test/Test", true, params, VoidSourceType.INSTANCE);
 
         assertEquals(1, irMethod.getParameters().size());
     }
 
     @Test
-    void lowerMethodWithMultipleParameters() {
+    void lowerMethodWithMultipleParameters()
+    {
         BlockStmt body = new BlockStmt();
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
@@ -178,20 +173,14 @@ class ASTLowererTest {
         params.add(PrimitiveSourceType.FLOAT);
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "multiParam",
-            "com/test/Test",
-            true,
-            params,
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "multiParam", "com/test/Test", true, params, VoidSourceType.INSTANCE);
 
         assertEquals(3, irMethod.getParameters().size());
     }
 
     @Test
-    void lowerInstanceMethodParametersIncludeThis() {
+    void lowerInstanceMethodParametersIncludeThis()
+    {
         BlockStmt body = new BlockStmt();
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
@@ -209,11 +198,12 @@ class ASTLowererTest {
         assertEquals(2, irMethod.getParameters().size());
     }
 
-    // ========== Variable Declaration Tests ==========
+    // Variable Declaration Tests
 
     @Test
-    void lowerVariableDeclarationWithoutInitializer() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerVariableDeclarationWithoutInitializer()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x"));
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
@@ -233,8 +223,9 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerVariableDeclarationWithInitializer() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerVariableDeclarationWithInitializer()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(10)));
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
@@ -250,13 +241,14 @@ class ASTLowererTest {
         );
 
         assertNotNull(irMethod);
-        assertTrue(irMethod.getEntryBlock().getInstructions().size() > 0);
+        assertFalse(irMethod.getEntryBlock().getInstructions().isEmpty());
     }
 
-    // ========== Expression Lowering Tests ==========
+    // Expression Lowering Tests
 
     @Test
-    void lowerAssignmentExpression() {
+    void lowerAssignmentExpression()
+    {
         BinaryExpr assignment = new BinaryExpr(
             BinaryOperator.ASSIGN,
             new VarRefExpr("x", PrimitiveSourceType.INT),
@@ -264,28 +256,22 @@ class ASTLowererTest {
             PrimitiveSourceType.INT
         );
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x"));
         stmts.add(new ExprStmt(assignment));
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "assignVar",
-            "com/test/Test",
-            true,
-            List.of(),
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "assignVar", "com/test/Test", true, List.of(), VoidSourceType.INSTANCE);
 
         assertNotNull(irMethod);
         assertTrue(irMethod.getInstructionCount() > 0);
     }
 
     @Test
-    void lowerBinaryExpression() {
+    void lowerBinaryExpression()
+    {
         BinaryExpr addition = new BinaryExpr(
             BinaryOperator.ADD,
             LiteralExpr.ofInt(1),
@@ -293,7 +279,7 @@ class ASTLowererTest {
             PrimitiveSourceType.INT
         );
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(addition));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -312,8 +298,9 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerLiteralExpression() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerLiteralExpression()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt(LiteralExpr.ofInt(123)));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -331,83 +318,60 @@ class ASTLowererTest {
         assertNotNull(irMethod.getEntryBlock().getTerminator());
     }
 
-    // ========== Method Descriptor Tests ==========
+    // Method Descriptor Tests
 
     @Test
-    void lowerMethodBuildsCorrectDescriptorForNoParams() {
+    void lowerMethodBuildsCorrectDescriptorForNoParams()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "noParams",
-            "com/test/Test",
-            true,
-            List.of(),
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "noParams", "com/test/Test", true, List.of(), VoidSourceType.INSTANCE);
 
         assertEquals("()V", irMethod.getDescriptor());
     }
 
     @Test
-    void lowerMethodBuildsCorrectDescriptorWithIntReturn() {
+    void lowerMethodBuildsCorrectDescriptorWithIntReturn()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "returnInt",
-            "com/test/Test",
-            true,
-            List.of(),
-            PrimitiveSourceType.INT
-        );
+        IRMethod irMethod = lowerer.lower(body, "returnInt", "com/test/Test", true, List.of(), PrimitiveSourceType.INT);
 
         assertEquals("()I", irMethod.getDescriptor());
     }
 
     @Test
-    void lowerMethodBuildsCorrectDescriptorWithParams() {
+    void lowerMethodBuildsCorrectDescriptorWithParams()
+    {
         BlockStmt body = new BlockStmt();
         List<SourceType> params = new ArrayList<>();
         params.add(PrimitiveSourceType.INT);
         params.add(PrimitiveSourceType.LONG);
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "withParams",
-            "com/test/Test",
-            true,
-            params,
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "withParams", "com/test/Test", true, params, VoidSourceType.INSTANCE);
 
         assertEquals("(IJ)V", irMethod.getDescriptor());
     }
 
-    // ========== Block Structure Tests ==========
+    // Block Structure Tests
 
     @Test
-    void lowerMethodCreatesEntryBlock() {
+    void lowerMethodCreatesEntryBlock()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
-        IRMethod irMethod = lowerer.lower(
-            body,
-            "hasEntry",
-            "com/test/Test",
-            true,
-            List.of(),
-            VoidSourceType.INSTANCE
-        );
+        IRMethod irMethod = lowerer.lower(body, "hasEntry", "com/test/Test", true, List.of(), VoidSourceType.INSTANCE);
 
         assertNotNull(irMethod.getEntryBlock());
     }
 
     @Test
-    void lowerMethodEntryBlockIsInBlockList() {
+    void lowerMethodEntryBlockIsInBlockList()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
@@ -424,8 +388,9 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodAddsImplicitReturnIfMissing() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerMethodAddsImplicitReturnIfMissing()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(1)));
         BlockStmt body = new BlockStmt(stmts);
 
@@ -442,16 +407,17 @@ class ASTLowererTest {
         assertNotNull(irMethod.getEntryBlock().getTerminator());
     }
 
-    // ========== Existing IRMethod Lowering Tests ==========
+    // Existing IRMethod Lowering Tests
 
     @Test
-    void replaceBodyReplacesExistingBlocks() throws IOException {
+    void replaceBodyReplacesExistingBlocks()
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, "original", "V");
         IRMethod irMethod = new IRMethod("com/test/Test", "original", "()V", true);
         irMethod.addBlock(new IRBlock("oldBlock"));
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -462,10 +428,11 @@ class ASTLowererTest {
     }
 
     @Test
-    void replaceBodySetsNewEntryBlock() {
+    void replaceBodySetsNewEntryBlock()
+    {
         IRMethod irMethod = new IRMethod("com/test/Test", "test", "()V", true);
 
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new ReturnStmt());
         BlockStmt body = new BlockStmt(stmts);
 
@@ -475,10 +442,11 @@ class ASTLowererTest {
         assertNotNull(irMethod.getEntryBlock());
     }
 
-    // ========== Static Convenience Method Tests ==========
+    // Static Convenience Method Tests
 
     @Test
-    void staticLowerMethodWorks() {
+    void staticLowerMethodWorks()
+    {
         BlockStmt body = new BlockStmt();
 
         IRMethod irMethod = ASTLowerer.lowerMethod(
@@ -496,11 +464,12 @@ class ASTLowererTest {
         assertEquals("staticHelper", irMethod.getName());
     }
 
-    // ========== Complex Lowering Tests ==========
+    // Complex Lowering Tests
 
     @Test
-    void lowerMethodWithMultipleStatements() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerMethodWithMultipleStatements()
+    {
+        List<Statement> stmts = new ArrayList<>();
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "a", LiteralExpr.ofInt(1)));
         stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "b", LiteralExpr.ofInt(2)));
 
@@ -528,15 +497,13 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodDoesNotThrowOnComplexAST() {
-        List<com.tonic.analysis.source.ast.stmt.Statement> stmts = new ArrayList<>();
+    void lowerMethodDoesNotThrowOnComplexAST()
+    {
+        List<Statement> stmts = new ArrayList<>();
 
-        for (int i = 0; i < 5; i++) {
-            stmts.add(new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "var" + i,
-                LiteralExpr.ofInt(i)
-            ));
+        for (int i = 0; i < 5; i++)
+        {
+            stmts.add(new VarDeclStmt(PrimitiveSourceType.INT, "var" + i, LiteralExpr.ofInt(i)));
         }
 
         stmts.add(new ReturnStmt(new VarRefExpr("var0", PrimitiveSourceType.INT)));
@@ -555,7 +522,8 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodPreservesMethodName() {
+    void lowerMethodPreservesMethodName()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);
@@ -572,7 +540,8 @@ class ASTLowererTest {
     }
 
     @Test
-    void lowerMethodPreservesOwnerClass() {
+    void lowerMethodPreservesOwnerClass()
+    {
         BlockStmt body = new BlockStmt();
 
         ASTLowerer lowerer = new ASTLowerer(constPool, pool);

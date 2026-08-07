@@ -8,34 +8,56 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents an opens entry in the Module attribute.
+ * One opens directive of a Module attribute.
  */
-public class Opens {
+public class Opens
+{
     private final ConstPool constPool;
     private final int opensIndex, opensFlags;
     private final List<Integer> opensTo;
 
-    public Opens(ConstPool constPool, int opensIndex, int opensFlags, List<Integer> opensTo) {
+    /**
+     * Creates an opens entry from its raw constant pool indices.
+     * @param constPool the pool used to resolve the package names
+     * @param opensIndex the pool index of the opened package
+     * @param opensFlags the ACC_ flags on the directive
+     * @param opensTo pool indices of the modules the package is opened to, empty for unqualified
+     */
+    public Opens(ConstPool constPool, int opensIndex, int opensFlags, List<Integer> opensTo)
+    {
         this.constPool = constPool;
         this.opensIndex = opensIndex;
         this.opensFlags = opensFlags;
         this.opensTo = opensTo;
     }
 
-    public int getOpensIndex() {
+    /**
+     * @return the opens index
+     */
+    public int getOpensIndex()
+    {
         return opensIndex;
     }
 
-    public int getOpensFlags() {
+    /**
+     * @return the opens flags
+     */
+    public int getOpensFlags()
+    {
         return opensFlags;
     }
 
-    public List<Integer> getOpensTo() {
+    /**
+     * @return the opens to
+     */
+    public List<Integer> getOpensTo()
+    {
         return opensTo;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String opensPackage = resolveOpensPackage();
         String opensToPackages = resolveOpensToPackages();
         return "Opens{" +
@@ -45,24 +67,32 @@ public class Opens {
                 '}';
     }
 
-    private String resolveOpensPackage() {
+    private String resolveOpensPackage()
+    {
         Item<?> utf8Item = constPool.getItem(opensIndex);
-        if (utf8Item instanceof Utf8Item) {
+        if (utf8Item instanceof Utf8Item)
+        {
             return ((Utf8Item) utf8Item).getValue().replace('/', '.');
         }
         return "Unknown";
     }
 
-    private String resolveOpensToPackages() {
-        if (opensTo.isEmpty()) {
+    private String resolveOpensToPackages()
+    {
+        if (opensTo.isEmpty())
+        {
             return "None";
         }
         List<String> packages = new ArrayList<>();
-        for (int toIndex : opensTo) {
+        for (int toIndex : opensTo)
+        {
             Item<?> utf8Item = constPool.getItem(toIndex);
-            if (utf8Item instanceof Utf8Item) {
+            if (utf8Item instanceof Utf8Item)
+            {
                 packages.add(((Utf8Item) utf8Item).getValue().replace('/', '.'));
-            } else {
+            }
+            else
+            {
                 packages.add("Unknown");
             }
         }

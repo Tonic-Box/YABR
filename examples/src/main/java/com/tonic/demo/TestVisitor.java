@@ -2,7 +2,7 @@ package com.tonic.demo;
 import com.tonic.analysis.ClassFactory;
 
 import com.tonic.analysis.Bytecode;
-import com.tonic.analysis.instruction.ReturnInstruction;
+import com.tonic.analysis.instruction.MethodReturnInstruction;
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
 import com.tonic.parser.visitor.AbstractClassVisitor;
 import com.tonic.parser.*;
@@ -11,6 +11,9 @@ import com.tonic.util.Logger;
 import java.io.IOException;
 import java.util.ArrayList;
 
+/**
+ * Demo showing the class and bytecode visitor pattern over a generated class.
+ */
 public class TestVisitor
 {
     private static final int classAccess = new AccessBuilder()
@@ -25,18 +28,22 @@ public class TestVisitor
             .setPrivate()
             .build();
 
-    public static void main(String[] args) throws IOException {
+    /**
+     * Generates a class with fields and accessors, then walks it with a class visitor.
+     * @param args unused
+     * @throws IOException if class generation fails
+     */
+    public static void main(String[] args) throws IOException
+    {
         Logger.setLog(false);
         ClassPool classPool = ClassPool.getDefault();
         ClassFile classFile = ClassFactory.createClass(classPool, "com/tonic/ANewClass", classAccess);
 
-        //Create a Static field with setter/getter
         FieldEntry staticField = classFile.createNewField(staticAccessPrivate, "testStaticIntField", "I", new ArrayList<>());
         ClassFactory.setFieldInitialValue(classFile, staticField, 12);
         ClassFactory.generateGetter(classFile, staticField, true);
         ClassFactory.generateSetter(classFile, staticField, true);
 
-        //Create a field with setter/getter
         FieldEntry field = classFile.createNewField(accessPrivate, "testIntField", "I", new ArrayList<>());
         ClassFactory.setFieldInitialValue(classFile, field, 54);
         ClassFactory.generateGetter(classFile, field, false);
@@ -57,32 +64,37 @@ public class TestVisitor
     }
 
     /**
-     * This class visitor will visit each method in the class and pass it to the TestBytecodeVisitor
+     * A class visitor that passes each method in the class to the TestBytecodeVisitor.
      */
     public static final class TestClassVisitor extends AbstractClassVisitor
     {
         private final TestBytecodeVisitor bytecodeVisitor = new TestBytecodeVisitor();
         @Override
-        public void visitMethod(MethodEntry methodEntry) {
+        public void visitMethod(MethodEntry methodEntry)
+        {
             super.visitMethod(methodEntry);
             if(methodEntry.getName().contains("lambda$") || methodEntry.getName().startsWith("<"))
                 return;
 
-            try {
+            try
+            {
                 bytecodeVisitor.process(methodEntry);
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 throw new RuntimeException(e);
             }
         }
 
         @Override
-        public void visitField(FieldEntry fieldEntry) {
+        public void visitField(FieldEntry fieldEntry)
+        {
             super.visitField(fieldEntry);
         }
     }
 
     /**
-     * This visitor will add a System.out.println call to each exit point of the method
+     * A bytecode visitor that adds a System.out.println call at each method exit point.
      */
     public static final class TestBytecodeVisitor extends AbstractBytecodeVisitor
     {
@@ -91,7 +103,8 @@ public class TestVisitor
          * @param instruction the return instruction
          */
         @Override
-        public void visit(ReturnInstruction instruction) {
+        public void visit(MethodReturnInstruction instruction)
+        {
             super.visit(instruction);
             Bytecode bytecode = new Bytecode(codeWriter);
             bytecode.setInsertBefore(true);
@@ -100,9 +113,12 @@ public class TestVisitor
             bytecode.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bytecode.addLdc("Hello, World!");
             bytecode.addInvokeVirtual("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-            try {
+            try
+            {
                 bytecode.finalizeBytecode();
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 throw new RuntimeException(e);
             }
         }

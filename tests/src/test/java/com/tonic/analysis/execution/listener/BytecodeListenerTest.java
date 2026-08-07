@@ -1,20 +1,18 @@
 package com.tonic.analysis.execution.listener;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.analysis.execution.result.BytecodeResult;
 import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BytecodeListenerTest {
+class BytecodeListenerTest
+{
 
     @Test
-    void defaultMethodsAreNoOps() {
+    void defaultMethodsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onExecutionStart(null));
@@ -27,7 +25,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void stackEventDefaultsAreNoOps() {
+    void stackEventDefaultsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onStackPush(null, null));
@@ -35,7 +34,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void localVariableEventDefaultsAreNoOps() {
+    void localVariableEventDefaultsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onLocalLoad(null, 0, null));
@@ -43,7 +43,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void heapEventDefaultsAreNoOps() {
+    void heapEventDefaultsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onObjectAllocation(null));
@@ -55,7 +56,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void controlFlowEventDefaultsAreNoOps() {
+    void controlFlowEventDefaultsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onBranch(null, 0, 0, false));
@@ -66,7 +68,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void nativeMethodEventDefaultsAreNoOps() {
+    void nativeMethodEventDefaultsAreNoOps()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         assertDoesNotThrow(() -> listener.onNativeMethodCall(null, null, null));
@@ -74,12 +77,14 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void interfaceCanBeImplemented() {
+    void interfaceCanBeImplemented()
+    {
         final boolean[] called = {false};
 
         BytecodeListener listener = new BytecodeListener() {
             @Override
-            public void onExecutionStart(MethodEntry entryPoint) {
+            public void onExecutionStart(MethodEntry entryPoint)
+            {
                 called[0] = true;
             }
         };
@@ -89,7 +94,8 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void allMethodsCallable() {
+    void allMethodsCallable()
+    {
         BytecodeListener listener = new BytecodeListener() {};
 
         listener.onExecutionStart(null);
@@ -119,17 +125,20 @@ class BytecodeListenerTest {
     }
 
     @Test
-    void multipleMethodsCanBeOverridden() {
+    void multipleMethodsCanBeOverridden()
+    {
         final int[] count = {0};
 
         BytecodeListener listener = new BytecodeListener() {
             @Override
-            public void onStackPush(StackFrame frame, ConcreteValue value) {
+            public void onStackPush(StackFrame frame, ConcreteValue value)
+            {
                 count[0]++;
             }
 
             @Override
-            public void onStackPop(StackFrame frame, ConcreteValue value) {
+            public void onStackPop(StackFrame frame, ConcreteValue value)
+            {
                 count[0]++;
             }
         };

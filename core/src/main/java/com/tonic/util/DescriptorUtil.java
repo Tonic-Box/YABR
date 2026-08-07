@@ -7,40 +7,75 @@ import java.util.Set;
 
 /**
  * Utility class for JVM descriptor parsing and manipulation.
- * Provides methods for parsing method descriptors, type descriptors,
- * and extracting type information.
  */
-public final class DescriptorUtil {
+public final class DescriptorUtil
+{
 
-    private DescriptorUtil() {
+    private DescriptorUtil()
+    {
         // Utility class
     }
 
     /**
      * Descriptor categories for JVM types.
      */
-    public enum DescriptorCategory {
+    public enum DescriptorCategory
+    {
+        /**
+         * Descriptor {@code V}, a return type only, occupying no slot.
+         */
         VOID,
+        /**
+         * Descriptor {@code Z}, carried on the stack as an int.
+         */
         BOOLEAN,
+        /**
+         * Descriptor {@code B}, carried on the stack as an int.
+         */
         BYTE,
+        /**
+         * Descriptor {@code C}, carried on the stack as an unsigned int.
+         */
         CHAR,
+        /**
+         * Descriptor {@code S}, carried on the stack as an int.
+         */
         SHORT,
+        /**
+         * Descriptor {@code I}, one slot wide.
+         */
         INT,
+        /**
+         * Descriptor {@code J}, two slots wide.
+         */
         LONG,
+        /**
+         * Descriptor {@code F}, one slot wide.
+         */
         FLOAT,
+        /**
+         * Descriptor {@code D}, two slots wide.
+         */
         DOUBLE,
+        /**
+         * A class or interface reference, written {@code Lpkg/Name;}.
+         */
         OBJECT,
+        /**
+         * An array reference, written with one leading {@code [} per dimension.
+         */
         ARRAY
     }
 
     /**
      * Categorizes a type descriptor character.
-     *
      * @param c the first character of the descriptor
      * @return the category, or null if not a valid descriptor character
      */
-    public static DescriptorCategory categorize(char c) {
-        switch (c) {
+    public static DescriptorCategory categorize(char c)
+    {
+        switch (c)
+        {
             case 'V': return DescriptorCategory.VOID;
             case 'Z': return DescriptorCategory.BOOLEAN;
             case 'B': return DescriptorCategory.BYTE;
@@ -58,12 +93,13 @@ public final class DescriptorUtil {
 
     /**
      * Categorizes a type descriptor string.
-     *
      * @param descriptor the type descriptor
      * @return the category, or null if empty or invalid
      */
-    public static DescriptorCategory categorize(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    public static DescriptorCategory categorize(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return null;
         }
         return categorize(descriptor.charAt(0));
@@ -71,23 +107,24 @@ public final class DescriptorUtil {
 
     /**
      * Checks if a character represents a primitive type descriptor.
-     *
      * @param c the descriptor character
      * @return true if this is a primitive type (Z, B, C, S, I, J, F, D, V)
      */
-    public static boolean isPrimitive(char c) {
+    public static boolean isPrimitive(char c)
+    {
         return c == 'V' || c == 'Z' || c == 'B' || c == 'C' ||
                c == 'S' || c == 'I' || c == 'J' || c == 'F' || c == 'D';
     }
 
     /**
      * Checks if a type descriptor represents a wide type (takes 2 slots).
-     *
      * @param descriptor the type descriptor
      * @return true if this is a long (J) or double (D)
      */
-    public static boolean isWideType(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    public static boolean isWideType(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return false;
         }
         char c = descriptor.charAt(0);
@@ -96,19 +133,22 @@ public final class DescriptorUtil {
 
     /**
      * Gets the number of slots a type occupies on the stack/locals.
-     *
      * @param descriptor the type descriptor
      * @return 2 for long/double, 0 for void, 1 for everything else
      */
-    public static int getTypeSlots(String descriptor) {
-        if (descriptor == null || descriptor.isEmpty()) {
+    public static int getTypeSlots(String descriptor)
+    {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             return 1;
         }
         char c = descriptor.charAt(0);
-        if (c == 'J' || c == 'D') {
+        if (c == 'J' || c == 'D')
+        {
             return 2;
         }
-        if (c == 'V') {
+        if (c == 'V')
+        {
             return 0;
         }
         return 1;
@@ -116,40 +156,47 @@ public final class DescriptorUtil {
 
     /**
      * Parses the parameter descriptors from a method descriptor.
-     *
      * @param methodDescriptor the full method descriptor (e.g., "(ILjava/lang/String;)V")
      * @return list of individual parameter descriptors (e.g., ["I", "Ljava/lang/String;"])
      */
-    public static List<String> parseParameterDescriptors(String methodDescriptor) {
+    public static List<String> parseParameterDescriptors(String methodDescriptor)
+    {
         List<String> params = new ArrayList<>();
-        if (methodDescriptor == null || !methodDescriptor.startsWith("(")) {
+        if (methodDescriptor == null || !methodDescriptor.startsWith("("))
+        {
             return params;
         }
 
         int closeIndex = methodDescriptor.indexOf(')');
-        if (closeIndex < 0) {
+        if (closeIndex < 0)
+        {
             return params;
         }
 
         String paramSection = methodDescriptor.substring(1, closeIndex);
         int i = 0;
-        while (i < paramSection.length()) {
+        while (i < paramSection.length())
+        {
             int start = i;
             char c = paramSection.charAt(i);
 
             // Handle array dimensions
-            while (c == '[') {
+            while (c == '[')
+            {
                 i++;
                 if (i >= paramSection.length()) break;
                 c = paramSection.charAt(i);
             }
 
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 // Object type - find semicolon
                 int semi = paramSection.indexOf(';', i);
                 if (semi < 0) break;
                 i = semi + 1;
-            } else {
+            }
+            else
+            {
                 // Primitive type
                 i++;
             }
@@ -162,16 +209,18 @@ public final class DescriptorUtil {
 
     /**
      * Parses the return type descriptor from a method descriptor.
-     *
      * @param methodDescriptor the full method descriptor (e.g., "(I)Ljava/lang/String;")
      * @return the return type descriptor (e.g., "Ljava/lang/String;")
      */
-    public static String parseReturnDescriptor(String methodDescriptor) {
-        if (methodDescriptor == null) {
+    public static String parseReturnDescriptor(String methodDescriptor)
+    {
+        if (methodDescriptor == null)
+        {
             return null;
         }
         int closeIndex = methodDescriptor.indexOf(')');
-        if (closeIndex < 0 || closeIndex + 1 >= methodDescriptor.length()) {
+        if (closeIndex < 0 || closeIndex + 1 >= methodDescriptor.length())
+        {
             return null;
         }
         return methodDescriptor.substring(closeIndex + 1);
@@ -179,23 +228,24 @@ public final class DescriptorUtil {
 
     /**
      * Counts the number of parameters in a method descriptor.
-     *
      * @param methodDescriptor the full method descriptor
      * @return the number of parameters
      */
-    public static int countParameters(String methodDescriptor) {
+    public static int countParameters(String methodDescriptor)
+    {
         return parseParameterDescriptors(methodDescriptor).size();
     }
 
     /**
      * Counts the total number of stack/local slots needed for method parameters.
-     *
      * @param methodDescriptor the full method descriptor
      * @return the total slot count (long/double count as 2)
      */
-    public static int countParameterSlots(String methodDescriptor) {
+    public static int countParameterSlots(String methodDescriptor)
+    {
         int slots = 0;
-        for (String param : parseParameterDescriptors(methodDescriptor)) {
+        for (String param : parseParameterDescriptors(methodDescriptor))
+        {
             slots += getTypeSlots(param);
         }
         return slots;
@@ -203,29 +253,36 @@ public final class DescriptorUtil {
 
     /**
      * Extracts all class names referenced in a descriptor (internal format).
-     * This includes parameter types, return type, and array element types.
-     *
      * @param descriptor a type or method descriptor
      * @return set of internal class names (e.g., "java/lang/String")
      */
-    public static Set<String> extractClassNames(String descriptor) {
+    public static Set<String> extractClassNames(String descriptor)
+    {
         Set<String> classNames = new HashSet<>();
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
             return classNames;
         }
 
         int i = 0;
-        while (i < descriptor.length()) {
+        while (i < descriptor.length())
+        {
             char c = descriptor.charAt(i);
-            if (c == 'L') {
+            if (c == 'L')
+            {
                 int semi = descriptor.indexOf(';', i);
-                if (semi > i + 1) {
+                if (semi > i + 1)
+                {
                     classNames.add(descriptor.substring(i + 1, semi));
                     i = semi + 1;
-                } else {
+                }
+                else
+                {
                     i++;
                 }
-            } else {
+            }
+            else
+            {
                 i++;
             }
         }
@@ -235,16 +292,18 @@ public final class DescriptorUtil {
 
     /**
      * Gets the element type from an array descriptor.
-     *
      * @param arrayDescriptor the array type descriptor (e.g., "[[I" or "[Ljava/lang/String;")
      * @return the element type (e.g., "I" or "Ljava/lang/String;"), or null if not an array
      */
-    public static String getArrayElementType(String arrayDescriptor) {
-        if (arrayDescriptor == null || !arrayDescriptor.startsWith("[")) {
+    public static String getArrayElementType(String arrayDescriptor)
+    {
+        if (arrayDescriptor == null || !arrayDescriptor.startsWith("["))
+        {
             return null;
         }
         int dims = 0;
-        while (dims < arrayDescriptor.length() && arrayDescriptor.charAt(dims) == '[') {
+        while (dims < arrayDescriptor.length() && arrayDescriptor.charAt(dims) == '[')
+        {
             dims++;
         }
         return arrayDescriptor.substring(dims);
@@ -252,16 +311,18 @@ public final class DescriptorUtil {
 
     /**
      * Gets the number of array dimensions.
-     *
      * @param arrayDescriptor the array type descriptor
      * @return the number of dimensions, or 0 if not an array
      */
-    public static int getArrayDimensions(String arrayDescriptor) {
-        if (arrayDescriptor == null) {
+    public static int getArrayDimensions(String arrayDescriptor)
+    {
+        if (arrayDescriptor == null)
+        {
             return 0;
         }
         int dims = 0;
-        while (dims < arrayDescriptor.length() && arrayDescriptor.charAt(dims) == '[') {
+        while (dims < arrayDescriptor.length() && arrayDescriptor.charAt(dims) == '[')
+        {
             dims++;
         }
         return dims;
@@ -269,12 +330,13 @@ public final class DescriptorUtil {
 
     /**
      * Extracts the class name from an object type descriptor.
-     *
      * @param descriptor the object type descriptor (e.g., "Ljava/lang/String;")
      * @return the internal class name (e.g., "java/lang/String"), or null if not an object type
      */
-    public static String extractClassName(String descriptor) {
-        if (descriptor == null || !descriptor.startsWith("L") || !descriptor.endsWith(";")) {
+    public static String extractClassName(String descriptor)
+    {
+        if (descriptor == null || !descriptor.startsWith("L") || !descriptor.endsWith(";"))
+        {
             return null;
         }
         return descriptor.substring(1, descriptor.length() - 1);
@@ -282,12 +344,13 @@ public final class DescriptorUtil {
 
     /**
      * Creates an object type descriptor from an internal class name.
-     *
      * @param internalName the internal class name (e.g., "java/lang/String")
      * @return the object type descriptor (e.g., "Ljava/lang/String;")
      */
-    public static String toObjectDescriptor(String internalName) {
-        if (internalName == null) {
+    public static String toObjectDescriptor(String internalName)
+    {
+        if (internalName == null)
+        {
             return null;
         }
         return "L" + internalName + ";";

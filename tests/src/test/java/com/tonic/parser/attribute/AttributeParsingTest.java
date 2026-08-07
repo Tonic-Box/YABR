@@ -18,15 +18,18 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for attribute parsing and handling.
  * Tests CodeAttribute, LineNumberTableAttribute, ExceptionsAttribute, and other attributes.
  */
-class AttributeParsingTest {
+class AttributeParsingTest
+{
 
-    // ========== CodeAttribute Tests ==========
+    // CodeAttribute Tests
 
     @Nested
-    class CodeAttributeTests {
+    class CodeAttributeTests
+    {
 
         @Test
-        void codeAttributeBasicParsing() throws IOException {
+        void codeAttributeBasicParsing() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Code")
                 .publicStaticMethod("simple", "()V")
                     .vreturn()
@@ -41,7 +44,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeMaxStackAndLocals() throws IOException {
+        void codeAttributeMaxStackAndLocals() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Stack")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -59,7 +63,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeUpdateLength() throws IOException {
+        void codeAttributeUpdateLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Len")
                 .publicStaticMethod("method", "()I")
                     .iconst(42)
@@ -74,7 +79,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeToString() throws IOException {
+        void codeAttributeToString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ToString")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -91,7 +97,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeWithExceptionTable() throws IOException {
+        void codeAttributeWithExceptionTable() throws IOException
+        {
             // A method with try-catch will have exception table entries
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExTable")
                 .publicStaticMethod("tryCatch", "()V")
@@ -108,7 +115,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeNestedAttributes() throws IOException {
+        void codeAttributeNestedAttributes() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Nested")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -122,7 +130,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void codeAttributeRoundTrip() throws IOException {
+        void codeAttributeRoundTrip() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RoundTrip")
                 .publicStaticMethod("compute", "(II)I")
                     .iload(0)
@@ -131,12 +140,10 @@ class AttributeParsingTest {
                     .ireturn()
                 .build();
 
-            // Write to bytes
             byte[] bytes = cf.write();
             assertNotNull(bytes);
             assertTrue(bytes.length > 0);
 
-            // Parse back
             ClassFile parsed = new ClassFile(new ByteArrayInputStream(bytes));
             MethodEntry method = parsed.getMethods().get(0);
             CodeAttribute codeAttr = method.getCodeAttribute();
@@ -146,13 +153,15 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== ExceptionTableEntry Tests ==========
+    // ExceptionTableEntry Tests
 
     @Nested
-    class ExceptionTableEntryTests {
+    class ExceptionTableEntryTests
+    {
 
         @Test
-        void exceptionTableEntryConstruction() {
+        void exceptionTableEntryConstruction()
+        {
             ExceptionTableEntry entry = new ExceptionTableEntry(10, 20, 30, 5);
 
             assertEquals(10, entry.getStartPc());
@@ -162,7 +171,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void exceptionTableEntryCatchAll() {
+        void exceptionTableEntryCatchAll()
+        {
             // catchType of 0 means catch all exceptions
             ExceptionTableEntry entry = new ExceptionTableEntry(0, 10, 15, 0);
 
@@ -170,13 +180,15 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== LineNumberTableEntry Tests ==========
+    // LineNumberTableEntry Tests
 
     @Nested
-    class LineNumberTableEntryTests {
+    class LineNumberTableEntryTests
+    {
 
         @Test
-        void lineNumberTableEntryConstruction() {
+        void lineNumberTableEntryConstruction()
+        {
             LineNumberTableEntry entry = new LineNumberTableEntry(5, 42);
 
             assertEquals(5, entry.getStartPc());
@@ -184,7 +196,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void lineNumberTableEntryToString() {
+        void lineNumberTableEntryToString()
+        {
             LineNumberTableEntry entry = new LineNumberTableEntry(10, 100);
             String str = entry.toString();
 
@@ -192,13 +205,15 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== Attribute Base Class Tests ==========
+    // Attribute Base Class Tests
 
     @Nested
-    class AttributeBaseTests {
+    class AttributeBaseTests
+    {
 
         @Test
-        void attributeNameParsing() throws IOException {
+        void attributeNameParsing() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/AttrName")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -212,7 +227,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void attributeFromFactory() throws IOException {
+        void attributeFromFactory() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Factory")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -223,18 +239,19 @@ class AttributeParsingTest {
 
             assertNotNull(attrs);
             assertFalse(attrs.isEmpty());
-            // First attribute should be Code
             assertTrue(attrs.get(0) instanceof CodeAttribute);
         }
     }
 
-    // ========== Multiple Attributes Tests ==========
+    // Multiple Attributes Tests
 
     @Nested
-    class MultipleAttributesTests {
+    class MultipleAttributesTests
+    {
 
         @Test
-        void methodWithMultipleAttributes() throws IOException {
+        void methodWithMultipleAttributes() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/MultiAttr")
                 .publicStaticMethod("method", "()I")
                     .iconst(1)
@@ -248,50 +265,58 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== GenericAttribute Tests ==========
+    // GenericAttribute Tests
 
     @Nested
-    class GenericAttributeTests {
+    class GenericAttributeTests
+    {
 
         @Test
-        void genericAttributeHandlesUnknown() {
+        void genericAttributeHandlesUnknown()
+        {
             // GenericAttribute is used for unknown attribute types
             // It just stores raw bytes
             // Can't easily test this without crafting raw bytes
         }
     }
 
-    // ========== SyntheticAttribute Tests ==========
+    // SyntheticAttribute Tests
 
     @Nested
-    class SyntheticAttributeTests {
+    class SyntheticAttributeTests
+    {
 
         @Test
-        void syntheticAttributeGetType() {
+        void syntheticAttributeGetType()
+        {
             // SyntheticAttribute has no data (length 0)
             // Would need to manually create synthetic method to test
         }
     }
 
-    // ========== DeprecatedAttribute Tests ==========
+    // DeprecatedAttribute Tests
 
     @Nested
-    class DeprecatedAttributeTests {
+    class DeprecatedAttributeTests
+    {
 
         @Test
-        void deprecatedAttributeGetType() {
+        void deprecatedAttributeGetType()
+        {
             // DeprecatedAttribute has no data (length 0)
             // Would need to manually mark method deprecated to test
         }
     }
 
-    // ========== Write/Read Integration Tests ==========
+    // Write/Read Integration Tests
 
     @Nested
-    class WriteReadIntegrationTests {
+    class WriteReadIntegrationTests
+    {
 
         @Test
-        void writeAndReadPreservesCodeAttribute() throws IOException {
+        void writeAndReadPreservesCodeAttribute() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Preserve")
                 .publicStaticMethod("compute", "(I)I")
                     .iload(0)
@@ -306,7 +331,6 @@ class AttributeParsingTest {
             int originalMaxLocals = originalCode.getMaxLocals();
             int originalCodeLength = originalCode.getCode().length;
 
-            // Write and re-read
             byte[] bytes = original.write();
             ClassFile parsed = new ClassFile(new ByteArrayInputStream(bytes));
 
@@ -319,7 +343,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void writeAndReadPreservesExceptionTable() throws IOException {
+        void writeAndReadPreservesExceptionTable() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/ExPreserve")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -335,13 +360,15 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== Edge Cases Tests ==========
+    // Edge Cases Tests
 
     @Nested
-    class EdgeCasesTests {
+    class EdgeCasesTests
+    {
 
         @Test
-        void emptyMethodHasMinimalCode() throws IOException {
+        void emptyMethodHasMinimalCode() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Empty")
                 .publicStaticMethod("empty", "()V")
                     .vreturn()
@@ -355,7 +382,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void methodWithManyLocals() throws IOException {
+        void methodWithManyLocals() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ManyLocals")
                 .publicStaticMethod("many", "(IIIIII)I")
                     .iload(0)
@@ -373,7 +401,8 @@ class AttributeParsingTest {
         }
 
         @Test
-        void methodWithDeepStack() throws IOException {
+        void methodWithDeepStack() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/DeepStack")
                 .publicStaticMethod("deep", "()I")
                     .iconst(1)
@@ -393,11 +422,14 @@ class AttributeParsingTest {
         }
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }

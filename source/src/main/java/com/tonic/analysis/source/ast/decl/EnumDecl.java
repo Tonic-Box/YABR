@@ -11,7 +11,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public final class EnumDecl implements TypeDecl {
+/**
+ * A Java enum declaration: constants plus ordinary members (fields, methods, constructors, inner types).
+ */
+public final class EnumDecl implements TypeDecl
+{
 
     private String name;
     private final Set<Modifier> modifiers;
@@ -25,7 +29,13 @@ public final class EnumDecl implements TypeDecl {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public EnumDecl(String name, SourceLocation location) {
+    /**
+     * Creates an empty enum declaration.
+     * @param name the simple enum name
+     * @param location the source location, or null for unknown
+     */
+    public EnumDecl(String name, SourceLocation location)
+    {
         this.name = name;
         this.modifiers = EnumSet.noneOf(Modifier.class);
         this.annotations = new NodeList<>(this);
@@ -38,116 +48,243 @@ public final class EnumDecl implements TypeDecl {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public EnumDecl(String name) {
+    /**
+     * Creates an empty enum declaration at an unknown location.
+     * @param name the simple enum name
+     */
+    public EnumDecl(String name)
+    {
         this(name, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the enum name.
+     * @param name the simple enum name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public Set<Modifier> getModifiers() {
+    /**
+     * @return the modifiers
+     */
+    public Set<Modifier> getModifiers()
+    {
         return modifiers;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public NodeList<SourceType> getInterfaces() {
+    /**
+     * @return the interfaces
+     */
+    public NodeList<SourceType> getInterfaces()
+    {
         return interfaces;
     }
 
-    public NodeList<EnumConstantDecl> getConstants() {
+    /**
+     * @return the constants
+     */
+    public NodeList<EnumConstantDecl> getConstants()
+    {
         return constants;
     }
 
-    public NodeList<FieldDecl> getFields() {
+    /**
+     * @return the fields
+     */
+    public NodeList<FieldDecl> getFields()
+    {
         return fields;
     }
 
-    public NodeList<MethodDecl> getMethods() {
+    /**
+     * @return the methods
+     */
+    public NodeList<MethodDecl> getMethods()
+    {
         return methods;
     }
 
-    public NodeList<ConstructorDecl> getConstructors() {
+    /**
+     * @return the constructors
+     */
+    public NodeList<ConstructorDecl> getConstructors()
+    {
         return constructors;
     }
 
-    public NodeList<TypeDecl> getInnerTypes() {
+    /**
+     * @return the inner types
+     */
+    public NodeList<TypeDecl> getInnerTypes()
+    {
         return innerTypes;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public EnumDecl withName(String name) {
+    /**
+     * Sets the enum name.
+     * @param name the simple enum name
+     * @return this declaration
+     */
+    public EnumDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public EnumDecl withModifiers(Set<Modifier> modifiers) {
+    /**
+     * Replaces all modifiers with the given set.
+     * @param modifiers the modifiers to apply
+     * @return this declaration
+     */
+    public EnumDecl withModifiers(Set<Modifier> modifiers)
+    {
         this.modifiers.clear();
         this.modifiers.addAll(modifiers);
         return this;
     }
 
-    public EnumDecl addModifier(Modifier modifier) {
+    /**
+     * Adds a modifier.
+     * @param modifier the modifier to add
+     * @return this declaration
+     */
+    public EnumDecl addModifier(Modifier modifier)
+    {
         modifiers.add(modifier);
         return this;
     }
 
-    public EnumDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Adds an annotation.
+     * @param annotation the annotation to add
+     * @return this declaration
+     */
+    public EnumDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
-    public EnumDecl addInterface(SourceType iface) {
+    /**
+     * Adds an implemented interface.
+     * @param iface the interface type
+     * @return this declaration
+     */
+    public EnumDecl addInterface(SourceType iface)
+    {
         interfaces.add(iface);
         return this;
     }
 
-    public EnumDecl addConstant(EnumConstantDecl constant) {
+    /**
+     * Adds an enum constant.
+     * @param constant the constant declaration
+     * @return this declaration
+     */
+    public EnumDecl addConstant(EnumConstantDecl constant)
+    {
         constants.add(constant);
         return this;
     }
 
-    public EnumDecl addField(FieldDecl field) {
+    /**
+     * Adds a field member.
+     * @param field the field declaration
+     * @return this declaration
+     */
+    public EnumDecl addField(FieldDecl field)
+    {
         fields.add(field);
         return this;
     }
 
-    public EnumDecl addMethod(MethodDecl method) {
+    /**
+     * Adds a method member.
+     * @param method the method declaration
+     * @return this declaration
+     */
+    public EnumDecl addMethod(MethodDecl method)
+    {
         methods.add(method);
         return this;
     }
 
-    public EnumDecl addConstructor(ConstructorDecl constructor) {
+    /**
+     * Adds a constructor.
+     * @param constructor the constructor declaration
+     * @return this declaration
+     */
+    public EnumDecl addConstructor(ConstructorDecl constructor)
+    {
         constructors.add(constructor);
         return this;
     }
 
-    public EnumDecl addInnerType(TypeDecl innerType) {
+    /**
+     * Adds a nested type.
+     * @param innerType the nested type declaration
+     * @return this declaration
+     */
+    public EnumDecl addInnerType(TypeDecl innerType)
+    {
         innerTypes.add(innerType);
         return this;
     }
 
-    public EnumConstantDecl getConstant(String name) {
-        for (EnumConstantDecl c : constants) {
-            if (name.equals(c.getName())) {
+    /**
+     * Finds an enum constant by name.
+     * @param name the constant name
+     * @return the matching constant, or null if none
+     */
+    public EnumConstantDecl getConstant(String name)
+    {
+        for (EnumConstantDecl c : constants)
+        {
+            if (name.equals(c.getName()))
+            {
                 return c;
             }
         }
@@ -155,10 +292,13 @@ public final class EnumDecl implements TypeDecl {
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>(annotations);
-        for (SourceType iface : interfaces) {
-            if (iface != null) {
+        for (SourceType iface : interfaces)
+        {
+            if (iface != null)
+            {
                 children.add(iface);
             }
         }
@@ -171,24 +311,30 @@ public final class EnumDecl implements TypeDecl {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append("\n");
         }
         String mods = Modifier.toSourceString(modifiers);
-        if (!mods.isEmpty()) {
+        if (!mods.isEmpty())
+        {
             sb.append(mods).append(" ");
         }
         sb.append("enum ").append(name);
-        if (!interfaces.isEmpty()) {
+        if (!interfaces.isEmpty())
+        {
             sb.append(" implements ");
-            for (int i = 0; i < interfaces.size(); i++) {
+            for (int i = 0; i < interfaces.size(); i++)
+            {
                 if (i > 0) sb.append(", ");
                 sb.append(interfaces.get(i));
             }

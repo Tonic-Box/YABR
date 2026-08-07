@@ -16,12 +16,14 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers the array-store element-type filter and exception-handler instrumentation,
  * both wired up after they were previously placeholders.
  */
-class InstrumentationWireupTest {
+class InstrumentationWireupTest
+{
 
-    // ========== Array-store element-type filter ==========
+    // Array-store element-type filter
 
     @Test
-    void arrayStoreFilterInstrumentsMatchingElementType() throws Exception {
+    void arrayStoreFilterInstrumentsMatchingElementType() throws Exception
+    {
         int count = Instrumenter.forClass(intArrayStoreClass("com/test/ArrFilterMatch"))
                 .onArrayStore()
                     .forArrayType("[I")
@@ -33,7 +35,8 @@ class InstrumentationWireupTest {
     }
 
     @Test
-    void arrayStoreFilterSkipsNonMatchingElementType() throws Exception {
+    void arrayStoreFilterSkipsNonMatchingElementType() throws Exception
+    {
         int count = Instrumenter.forClass(intArrayStoreClass("com/test/ArrFilterSkip"))
                 .onArrayStore()
                     .forArrayType("[J")
@@ -44,7 +47,8 @@ class InstrumentationWireupTest {
         assertEquals(0, count, "an int[] store must be skipped when the filter is a different array type");
     }
 
-    private ClassFile intArrayStoreClass(String name) throws Exception {
+    private ClassFile intArrayStoreClass(String name) throws Exception
+    {
         // Stores straight into the freshly allocated int[] so the array's element type stays precise.
         return BytecodeBuilder.forClass(name)
                 .publicStaticMethod("arrayStore", "()V")
@@ -58,10 +62,11 @@ class InstrumentationWireupTest {
                 .build();
     }
 
-    // ========== Exception-handler instrumentation ==========
+    // Exception-handler instrumentation
 
     @Test
-    void lifterExposesHandlerExceptionValue() throws Exception {
+    void lifterExposesHandlerExceptionValue() throws Exception
+    {
         IRMethod ir = liftDemoMethod("osrs/dev/auth/PasswordHasher", "verifyPassword");
         assertNotNull(ir, "verifyPassword should be present in the demo jar");
         assertFalse(ir.getExceptionHandlers().isEmpty(), "verifyPassword has try-catch handlers");
@@ -72,7 +77,8 @@ class InstrumentationWireupTest {
     }
 
     @Test
-    void exceptionHookInstrumentsHandlers() throws Exception {
+    void exceptionHookInstrumentsHandlers() throws Exception
+    {
         int count = Instrumenter.forClass(loadDemoClass("osrs/dev/auth/PasswordHasher"))
                 .onException()
                     .callStatic("com/test/Hooks", "onException", "(Ljava/lang/Throwable;)V")
@@ -83,18 +89,23 @@ class InstrumentationWireupTest {
         assertTrue(count >= 1, "a method with try-catch must have at least one exception handler instrumented");
     }
 
-    private IRMethod liftDemoMethod(String className, String methodName) throws Exception {
+    private IRMethod liftDemoMethod(String className, String methodName) throws Exception
+    {
         ClassFile cf = loadDemoClass(className);
-        for (MethodEntry method : cf.getMethods()) {
-            if (methodName.equals(method.getName()) && method.getCodeAttribute() != null) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (methodName.equals(method.getName()) && method.getCodeAttribute() != null)
+            {
                 return new BytecodeLifter(cf.getConstPool()).lift(method);
             }
         }
         return null;
     }
 
-    private ClassFile loadDemoClass(String className) throws Exception {
-        try (JarFile jar = new JarFile("src/test/resources/DemoJar.jar")) {
+    private ClassFile loadDemoClass(String className) throws Exception
+    {
+        try (JarFile jar = new JarFile("src/test/resources/DemoJar.jar"))
+        {
             JarEntry entry = jar.getJarEntry(className + ".class");
             assertNotNull(entry, "DemoJar must contain " + className);
             return new ClassFile(jar.getInputStream(entry));

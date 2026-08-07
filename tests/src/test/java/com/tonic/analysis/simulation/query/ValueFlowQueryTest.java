@@ -35,7 +35,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Constant extraction
  * - Edge cases
  */
-class ValueFlowQueryTest {
+class ValueFlowQueryTest
+{
 
     private IRBlock testBlock;
     private IRInstruction instr1;
@@ -43,11 +44,10 @@ class ValueFlowQueryTest {
     private IRInstruction instr3;
 
     @BeforeEach
-    void setUp() {
-        // Create real IR elements
+    void setUp()
+    {
         testBlock = new IRBlock("test_block");
 
-        // Create simple constant instructions
         SSAValue result1 = new SSAValue(PrimitiveType.INT);
         SSAValue result2 = new SSAValue(PrimitiveType.INT);
         SSAValue result3 = new SSAValue(PrimitiveType.INT);
@@ -56,16 +56,16 @@ class ValueFlowQueryTest {
         instr2 = new ConstantInstruction(result2, new IntConstant(100));
         instr3 = new ConstantInstruction(result3, new IntConstant(200));
 
-        // Add instructions to block
         testBlock.addInstruction(instr1);
         testBlock.addInstruction(instr2);
         testBlock.addInstruction(instr3);
     }
 
-    // ========== Factory Method Tests ==========
+    // Factory Method Tests
 
     @Test
-    void testFrom_shouldCreateQueryObject() {
+    void testFrom_shouldCreateQueryObject()
+    {
         SimulationResult result = createEmptyResult();
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
@@ -75,7 +75,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testFrom_shouldBuildFlowGraph() {
+    void testFrom_shouldBuildFlowGraph()
+    {
         SimValue value1 = SimValue.constant(42, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.ofType(PrimitiveType.INT, instr2);
 
@@ -89,25 +90,24 @@ class ValueFlowQueryTest {
         assertEquals(2, query.getValueCount(), "Should track values from snapshots");
     }
 
-    // ========== Definition Tracking Tests ==========
+    // Definition Tracking Tests
 
     @Test
-    void testGetDefiningInstruction_shouldReturnInstructionThatProducedValue() {
+    void testGetDefiningInstruction_shouldReturnInstructionThatProducedValue()
+    {
         SimValue value = SimValue.constant(100, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         IRInstruction definingInstr = query.getDefiningInstruction(value);
 
-        assertEquals(instr1, definingInstr,
-            "Should return instruction that produced the value");
+        assertEquals(instr1, definingInstr, "Should return instruction that produced the value");
     }
 
     @Test
-    void testGetDefiningInstruction_shouldFallbackToValueSourceInstruction() {
+    void testGetDefiningInstruction_shouldFallbackToValueSourceInstruction()
+    {
         // Create a value that won't be in the definitions map
         SimValue orphanValue = SimValue.constant(99, PrimitiveType.INT, instr2);
 
@@ -116,12 +116,12 @@ class ValueFlowQueryTest {
 
         IRInstruction definingInstr = query.getDefiningInstruction(orphanValue);
 
-        assertEquals(instr2, definingInstr,
-            "Should fall back to value's source instruction");
+        assertEquals(instr2, definingInstr, "Should fall back to value's source instruction");
     }
 
     @Test
-    void testGetDefiningInstruction_withNullValue_shouldReturnNull() {
+    void testGetDefiningInstruction_withNullValue_shouldReturnNull()
+    {
         SimulationResult result = createEmptyResult();
         ValueFlowQuery query = ValueFlowQuery.from(result);
 
@@ -131,7 +131,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetDefiningInstruction_withValueWithoutSource_shouldReturnNull() {
+    void testGetDefiningInstruction_withValueWithoutSource_shouldReturnNull()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
 
         SimulationResult result = createEmptyResult();
@@ -142,15 +143,14 @@ class ValueFlowQueryTest {
         assertNull(definingInstr, "Should return null when value has no source");
     }
 
-    // ========== Use Tracking Tests ==========
+    // Use Tracking Tests
 
     @Test
-    void testGetUses_withNoUses_shouldReturnEmptyList() {
+    void testGetUses_withNoUses_shouldReturnEmptyList()
+    {
         SimValue value = SimValue.constant(10, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         List<IRInstruction> uses = query.getUses(value);
@@ -160,7 +160,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetUses_withUnknownValue_shouldReturnEmptyList() {
+    void testGetUses_withUnknownValue_shouldReturnEmptyList()
+    {
         SimValue value = SimValue.unknown(null);
 
         SimulationResult result = createEmptyResult();
@@ -172,15 +173,14 @@ class ValueFlowQueryTest {
         assertTrue(uses.isEmpty(), "Should return empty list for unknown value");
     }
 
-    // ========== Dependency Tracking Tests ==========
+    // Dependency Tracking Tests
 
     @Test
-    void testGetDependencies_withNoDependencies_shouldReturnEmptySet() {
+    void testGetDependencies_withNoDependencies_shouldReturnEmptySet()
+    {
         SimValue value = SimValue.constant(5, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         Set<SimValue> deps = query.getDependencies(value);
@@ -190,7 +190,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetDependencies_withUnknownValue_shouldReturnEmptySet() {
+    void testGetDependencies_withUnknownValue_shouldReturnEmptySet()
+    {
         SimValue value = SimValue.unknown(null);
 
         SimulationResult result = createEmptyResult();
@@ -203,12 +204,11 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetDependents_withNoDependents_shouldReturnEmptySet() {
+    void testGetDependents_withNoDependents_shouldReturnEmptySet()
+    {
         SimValue value = SimValue.constant(7, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         Set<SimValue> dependents = query.getDependents(value);
@@ -218,7 +218,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void tracksUsesDependenciesAndFlowAcrossAnOperation() {
+    void tracksUsesDependenciesAndFlowAcrossAnOperation()
+    {
         // sum = instr1.result + instr2.result, appended to the shared test block (index 3).
         SSAValue sumResult = new SSAValue(PrimitiveType.INT);
         BinaryOpInstruction add = new BinaryOpInstruction(
@@ -246,15 +247,14 @@ class ValueFlowQueryTest {
         assertEquals(List.of(a, sum), query.getFlowPath(a, sum), "flow path is a -> sum");
     }
 
-    // ========== Flow Analysis Tests ==========
+    // Flow Analysis Tests
 
     @Test
-    void testFlowsTo_withSameValue_shouldReturnTrue() {
+    void testFlowsTo_withSameValue_shouldReturnTrue()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         boolean flows = query.flowsTo(value, value);
@@ -263,7 +263,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testFlowsTo_withNullSource_shouldReturnFalse() {
+    void testFlowsTo_withNullSource_shouldReturnFalse()
+    {
         SimValue target = SimValue.constant(10, PrimitiveType.INT, instr1);
 
         SimulationResult result = createEmptyResult();
@@ -275,7 +276,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testFlowsTo_withNullTarget_shouldReturnFalse() {
+    void testFlowsTo_withNullTarget_shouldReturnFalse()
+    {
         SimValue source = SimValue.constant(10, PrimitiveType.INT, instr1);
 
         SimulationResult result = createEmptyResult();
@@ -287,7 +289,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testFlowsTo_withBothNull_shouldReturnFalse() {
+    void testFlowsTo_withBothNull_shouldReturnFalse()
+    {
         SimulationResult result = createEmptyResult();
         ValueFlowQuery query = ValueFlowQuery.from(result);
 
@@ -297,7 +300,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testFlowsTo_withNoConnection_shouldReturnFalse() {
+    void testFlowsTo_withNoConnection_shouldReturnFalse()
+    {
         SimValue value1 = SimValue.constant(1, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.constant(2, PrimitiveType.INT, instr2);
 
@@ -312,15 +316,14 @@ class ValueFlowQueryTest {
         assertFalse(flows, "Unconnected values should not flow to each other");
     }
 
-    // ========== Path Reconstruction Tests ==========
+    // Path Reconstruction Tests
 
     @Test
-    void testGetFlowPath_withSameValue_shouldReturnSingletonList() {
+    void testGetFlowPath_withSameValue_shouldReturnSingletonList()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         List<SimValue> path = query.getFlowPath(value, value);
@@ -330,7 +333,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetFlowPath_withNullSource_shouldReturnEmptyList() {
+    void testGetFlowPath_withNullSource_shouldReturnEmptyList()
+    {
         SimValue target = SimValue.constant(10, PrimitiveType.INT, instr1);
 
         SimulationResult result = createEmptyResult();
@@ -342,7 +346,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetFlowPath_withNullTarget_shouldReturnEmptyList() {
+    void testGetFlowPath_withNullTarget_shouldReturnEmptyList()
+    {
         SimValue source = SimValue.constant(10, PrimitiveType.INT, instr1);
 
         SimulationResult result = createEmptyResult();
@@ -354,7 +359,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetFlowPath_withNoConnection_shouldReturnEmptyList() {
+    void testGetFlowPath_withNoConnection_shouldReturnEmptyList()
+    {
         SimValue value1 = SimValue.constant(1, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.constant(2, PrimitiveType.INT, instr2);
 
@@ -369,10 +375,11 @@ class ValueFlowQueryTest {
         assertTrue(path.isEmpty(), "Path should be empty when no connection exists");
     }
 
-    // ========== Position Query Tests ==========
+    // Position Query Tests
 
     @Test
-    void testGetValuesAtStackPosition_withMultipleStates_shouldReturnUniqueValues() {
+    void testGetValuesAtStackPosition_withMultipleStates_shouldReturnUniqueValues()
+    {
         SimValue value1 = SimValue.constant(10, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.constant(20, PrimitiveType.INT, instr2);
 
@@ -391,7 +398,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesAtStackPosition_withSameValueMultipleTimes_shouldReturnOnce() {
+    void testGetValuesAtStackPosition_withSameValueMultipleTimes_shouldReturnOnce()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, instr1);
 
         // Same value appears in multiple states
@@ -409,12 +417,11 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesAtStackPosition_withInvalidPosition_shouldReturnEmptyList() {
+    void testGetValuesAtStackPosition_withInvalidPosition_shouldReturnEmptyList()
+    {
         SimValue value = SimValue.constant(5, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         List<SimValue> values = query.getValuesAtStackPosition(10); // Invalid position
@@ -423,7 +430,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesAtStackPosition_withEmptyResult_shouldReturnEmptyList() {
+    void testGetValuesAtStackPosition_withEmptyResult_shouldReturnEmptyList()
+    {
         SimulationResult result = createEmptyResult();
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
@@ -433,7 +441,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesInLocal_withMultipleStates_shouldReturnUniqueValues() {
+    void testGetValuesInLocal_withMultipleStates_shouldReturnUniqueValues()
+    {
         SimValue value1 = SimValue.constant(100, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.constant(200, PrimitiveType.INT, instr2);
 
@@ -451,7 +460,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesInLocal_withSameValueMultipleTimes_shouldReturnOnce() {
+    void testGetValuesInLocal_withSameValueMultipleTimes_shouldReturnOnce()
+    {
         SimValue value = SimValue.constant(77, PrimitiveType.INT, instr1);
 
         SimulationResult result = createResultWithValues(
@@ -467,12 +477,11 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValuesInLocal_withUndefinedLocal_shouldReturnEmptyList() {
+    void testGetValuesInLocal_withUndefinedLocal_shouldReturnEmptyList()
+    {
         SimValue value = SimValue.constant(5, PrimitiveType.INT, instr1);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithLocal(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithLocal(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         List<SimValue> values = query.getValuesInLocal(5); // Undefined local
@@ -480,10 +489,11 @@ class ValueFlowQueryTest {
         assertTrue(values.isEmpty(), "Should return empty list for undefined local");
     }
 
-    // ========== Constant Extraction Tests ==========
+    // Constant Extraction Tests
 
     @Test
-    void testGetConstants_shouldReturnAllConstantValues() {
+    void testGetConstants_shouldReturnAllConstantValues()
+    {
         SimValue const1 = SimValue.constant(10, PrimitiveType.INT, instr1);
         SimValue const2 = SimValue.constant(20, PrimitiveType.INT, instr2);
         SimValue nonConst = SimValue.ofType(PrimitiveType.INT, instr3);
@@ -504,7 +514,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetConstants_withDuplicates_shouldReturnUnique() {
+    void testGetConstants_withDuplicates_shouldReturnUnique()
+    {
         SimValue constant = SimValue.constant(42, PrimitiveType.INT, instr1);
 
         SimulationResult result = createResultWithValues(
@@ -521,7 +532,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetConstants_withNoConstants_shouldReturnEmptyList() {
+    void testGetConstants_withNoConstants_shouldReturnEmptyList()
+    {
         SimValue value1 = SimValue.ofType(PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.unknown(instr2);
 
@@ -537,7 +549,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetConstants_withEmptyResult_shouldReturnEmptyList() {
+    void testGetConstants_withEmptyResult_shouldReturnEmptyList()
+    {
         SimulationResult result = createEmptyResult();
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
@@ -547,13 +560,12 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetConstants_fromLocals_shouldIncludeLocalConstants() {
+    void testGetConstants_fromLocals_shouldIncludeLocalConstants()
+    {
         SimValue stackConst = SimValue.constant(10, PrimitiveType.INT, instr1);
         SimValue localConst = SimValue.constant(20, PrimitiveType.INT, instr2);
 
-        SimulationResult result = createResultWithValues(
-            createStateWithStackAndLocal(0, stackConst, 0, localConst)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStackAndLocal(0, stackConst, 0, localConst));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         List<SimValue> constants = query.getConstants();
@@ -563,10 +575,11 @@ class ValueFlowQueryTest {
         assertTrue(constants.contains(localConst), "Should contain local constant");
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void testEmptySimulationResult() {
+    void testEmptySimulationResult()
+    {
         SimulationResult result = createEmptyResult();
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
@@ -578,11 +591,10 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, instr1);
-        SimulationResult result = createResultWithValues(
-            createStateWithStack(0, value)
-        );
+        SimulationResult result = createResultWithValues(createStateWithStack(0, value));
 
         ValueFlowQuery query = ValueFlowQuery.from(result);
         String str = query.toString();
@@ -593,7 +605,8 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testGetValueCount() {
+    void testGetValueCount()
+    {
         SimValue value1 = SimValue.constant(1, PrimitiveType.INT, instr1);
         SimValue value2 = SimValue.constant(2, PrimitiveType.INT, instr2);
         SimValue value3 = SimValue.constant(3, PrimitiveType.INT, instr3);
@@ -610,14 +623,11 @@ class ValueFlowQueryTest {
     }
 
     @Test
-    void testSnapshotWithNullBlock_shouldNotCrash() {
+    void testSnapshotWithNullBlock_shouldNotCrash()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, instr1);
 
-        // Create state without block
-        SimulationState state = SimulationState.of(
-            StackState.empty().push(value),
-            LocalState.empty()
-        );
+        SimulationState state = SimulationState.of(StackState.empty().push(value), LocalState.empty());
 
         SimulationResult result = SimulationResult.builder()
             .addState(state.snapshot())
@@ -629,30 +639,34 @@ class ValueFlowQueryTest {
         assertNotNull(query, "Query should be created even with null blocks");
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
     /**
-     * Creates an empty SimulationResult.
+     * * Creates an empty SimulationResult.
      */
-    private SimulationResult createEmptyResult() {
+    private SimulationResult createEmptyResult()
+    {
         return SimulationResult.builder().build();
     }
 
     /**
-     * Creates a SimulationResult with the given state snapshots.
+     * * Creates a SimulationResult with the given state snapshots.
      */
-    private SimulationResult createResultWithValues(StateSnapshot... snapshots) {
+    private SimulationResult createResultWithValues(StateSnapshot... snapshots)
+    {
         SimulationResult.Builder builder = SimulationResult.builder();
-        for (StateSnapshot snapshot : snapshots) {
+        for (StateSnapshot snapshot : snapshots)
+        {
             builder.addState(snapshot);
         }
         return builder.build();
     }
 
     /**
-     * Creates a StateSnapshot with a value at the given stack position.
+     * * Creates a StateSnapshot with a value at the given stack position.
      */
-    private StateSnapshot createStateWithStack(int instrIndex, SimValue value) {
+    private StateSnapshot createStateWithStack(int instrIndex, SimValue value)
+    {
         SimulationState state = SimulationState.of(
             StackState.empty().push(value),
             LocalState.empty()
@@ -662,9 +676,10 @@ class ValueFlowQueryTest {
     }
 
     /**
-     * Creates a StateSnapshot with a value in a local variable.
+     * * Creates a StateSnapshot with a value in a local variable.
      */
-    private StateSnapshot createStateWithLocal(int localIndex, SimValue value) {
+    private StateSnapshot createStateWithLocal(int localIndex, SimValue value)
+    {
         SimulationState state = SimulationState.of(
             StackState.empty(),
             LocalState.empty().set(localIndex, value)
@@ -674,10 +689,10 @@ class ValueFlowQueryTest {
     }
 
     /**
-     * Creates a StateSnapshot with values in both stack and local.
+     * * Creates a StateSnapshot with values in both stack and local.
      */
-    private StateSnapshot createStateWithStackAndLocal(int instrIndex, SimValue stackValue,
-                                                       int localIndex, SimValue localValue) {
+    private StateSnapshot createStateWithStackAndLocal(int instrIndex, SimValue stackValue, int localIndex, SimValue localValue)
+    {
         SimulationState state = SimulationState.of(
             StackState.empty().push(stackValue),
             LocalState.empty().set(localIndex, localValue)

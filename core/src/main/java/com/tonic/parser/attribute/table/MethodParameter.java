@@ -6,51 +6,62 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Represents a method parameter in the MethodParameters attribute.
- * Contains metadata about formal parameters including name and access flags.
  */
-public class MethodParameter {
+public class MethodParameter
+{
     private final ConstPool constPool;
     private final int nameIndex, accessFlags;
 
     /**
      * Constructs a method parameter entry.
-     *
      * @param constPool the constant pool for resolving references
      * @param nameIndex constant pool index of the parameter name, or 0 if unnamed
      * @param accessFlags access flags for the parameter
      */
-    public MethodParameter(ConstPool constPool, int nameIndex, int accessFlags) {
+    public MethodParameter(ConstPool constPool, int nameIndex, int accessFlags)
+    {
         this.constPool = constPool;
         this.nameIndex = nameIndex;
         this.accessFlags = accessFlags;
     }
 
-    public int getNameIndex() {
+    /**
+     * @return the name index
+     */
+    public int getNameIndex()
+    {
         return nameIndex;
     }
 
-    public int getAccessFlags() {
+    /**
+     * @return the access flags
+     */
+    public int getAccessFlags()
+    {
         return accessFlags;
     }
 
     /**
      * Returns the parameter name.
-     *
      * @return the parameter name, or "&lt;unnamed&gt;" if not specified
      */
-    public String getName() {
-        if (nameIndex == 0) {
+    public String getName()
+    {
+        if (nameIndex == 0)
+        {
             return "<unnamed>";
         }
         Item<?> utf8Item = constPool.getItem(nameIndex);
-        if (utf8Item instanceof Utf8Item) {
+        if (utf8Item instanceof Utf8Item)
+        {
             return ((Utf8Item) utf8Item).getValue();
         }
         return "Unknown";
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodParameter{" +
                 "name='" + getName() + '\'' +
                 ", accessFlags=" + accessFlags +

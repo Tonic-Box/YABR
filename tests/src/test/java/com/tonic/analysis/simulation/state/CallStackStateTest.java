@@ -13,7 +13,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CallStackStateTest {
+class CallStackStateTest
+{
 
     private IRMethod method1;
     private IRMethod method2;
@@ -24,7 +25,8 @@ class CallStackStateTest {
     private IRBlock returnBlock;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         method1 = new IRMethod("TestClass", "testMethod1", "()V", false);
         method2 = new IRMethod("TestClass", "testMethod2", "(I)V", false);
         method3 = new IRMethod("TestClass", "testMethod3", "(II)I", true);
@@ -35,7 +37,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void emptyCallStack() {
+    void emptyCallStack()
+    {
         CallStackState stack = CallStackState.empty();
 
         assertTrue(stack.isEmpty());
@@ -46,7 +49,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void withFrameCreatesNonEmptyStack() {
+    void withFrameCreatesNonEmptyStack()
+    {
         CallStackState.CallFrame frame = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState stack = CallStackState.withFrame(frame);
 
@@ -57,7 +61,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void pushAndPopFrames() {
+    void pushAndPopFrames()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -82,7 +87,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void popOnEmptyReturnsSameStack() {
+    void popOnEmptyReturnsSameStack()
+    {
         CallStackState empty = CallStackState.empty();
         CallStackState afterPop = empty.pop();
 
@@ -91,7 +97,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void peekReturnsTopFrameWithoutRemoving() {
+    void peekReturnsTopFrameWithoutRemoving()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -107,13 +114,15 @@ class CallStackStateTest {
     }
 
     @Test
-    void peekOnEmptyReturnsNull() {
+    void peekOnEmptyReturnsNull()
+    {
         CallStackState empty = CallStackState.empty();
         assertNull(empty.peek());
     }
 
     @Test
-    void containsDetectsRecursion() {
+    void containsDetectsRecursion()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -125,13 +134,15 @@ class CallStackStateTest {
     }
 
     @Test
-    void containsOnEmptyReturnsFalse() {
+    void containsOnEmptyReturnsFalse()
+    {
         CallStackState empty = CallStackState.empty();
         assertFalse(empty.contains(method1));
     }
 
     @Test
-    void depthTrackingAfterMultipleOperations() {
+    void depthTrackingAfterMultipleOperations()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
         CallStackState.CallFrame frame3 = new CallStackState.CallFrame(method3, invoke1, state, returnBlock, 2);
@@ -156,7 +167,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void getFrameByIndex() {
+    void getFrameByIndex()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
         CallStackState.CallFrame frame3 = new CallStackState.CallFrame(method3, invoke1, state, returnBlock, 2);
@@ -173,7 +185,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void getCallChain() {
+    void getCallChain()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -186,14 +199,16 @@ class CallStackStateTest {
     }
 
     @Test
-    void getCallChainOnEmpty() {
+    void getCallChainOnEmpty()
+    {
         CallStackState empty = CallStackState.empty();
         List<IRMethod> chain = empty.getCallChain();
         assertTrue(chain.isEmpty());
     }
 
     @Test
-    void getCallChainString() {
+    void getCallChainString()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -206,13 +221,15 @@ class CallStackStateTest {
     }
 
     @Test
-    void getCallChainStringOnEmpty() {
+    void getCallChainStringOnEmpty()
+    {
         CallStackState empty = CallStackState.empty();
         assertEquals("<empty>", empty.getCallChainString());
     }
 
     @Test
-    void immutabilityAfterPush() {
+    void immutabilityAfterPush()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -226,7 +243,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void immutabilityAfterPop() {
+    void immutabilityAfterPop()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -240,19 +258,19 @@ class CallStackStateTest {
     }
 
     @Test
-    void getFramesReturnsUnmodifiableList() {
+    void getFramesReturnsUnmodifiableList()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState stack = CallStackState.empty().push(frame1);
 
         List<CallStackState.CallFrame> frames = stack.getFrames();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            frames.add(new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> frames.add(new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1)));
     }
 
     @Test
-    void callStackStateEquality() {
+    void callStackStateEquality()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
 
         CallStackState stack1 = CallStackState.empty().push(frame1);
@@ -263,7 +281,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callStackStateInequalityDifferentFrames() {
+    void callStackStateInequalityDifferentFrames()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1);
 
@@ -274,7 +293,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callStackStateToString() {
+    void callStackStateToString()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 0);
         CallStackState stack = CallStackState.empty().push(frame1);
 
@@ -284,7 +304,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameGetters() {
+    void callFrameGetters()
+    {
         CallStackState.CallFrame frame = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
 
         assertEquals(method1, frame.getMethod());
@@ -295,7 +316,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameEquality() {
+    void callFrameEquality()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
 
@@ -304,7 +326,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameInequalityDifferentMethod() {
+    void callFrameInequalityDifferentMethod()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method2, invoke1, state, returnBlock, 5);
 
@@ -312,7 +335,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameInequalityDifferentInstructionIndex() {
+    void callFrameInequalityDifferentInstructionIndex()
+    {
         CallStackState.CallFrame frame1 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
         CallStackState.CallFrame frame2 = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 10);
 
@@ -320,7 +344,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameToString() {
+    void callFrameToString()
+    {
         CallStackState.CallFrame frame = new CallStackState.CallFrame(method1, invoke1, state, returnBlock, 5);
 
         String str = frame.toString();
@@ -329,7 +354,8 @@ class CallStackStateTest {
     }
 
     @Test
-    void callFrameWithNullReturnBlock() {
+    void callFrameWithNullReturnBlock()
+    {
         CallStackState.CallFrame frame = new CallStackState.CallFrame(method1, invoke1, state, null, 0);
 
         assertNull(frame.getReturnBlock());

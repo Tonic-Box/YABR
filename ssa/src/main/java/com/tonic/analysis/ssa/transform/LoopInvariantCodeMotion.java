@@ -12,23 +12,21 @@ import java.util.*;
 
 /**
  * Loop-Invariant Code Motion (LICM) optimization transform.
- *
- * Moves loop-invariant computations outside the loop:
- * - An instruction is loop-invariant if all its operands are defined outside
- *   the loop or are constants
- * - Only pure computations (no side effects) are moved
- * - Instructions are moved to the loop preheader
  */
-public class LoopInvariantCodeMotion implements IRTransform {
+public class LoopInvariantCodeMotion implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "LoopInvariantCodeMotion";
     }
 
     @Override
-    public boolean run(IRMethod method) {
-        if (method.getEntryBlock() == null) {
+    public boolean run(IRMethod method)
+    {
+        if (method.getEntryBlock() == null)
+        {
             return false;
         }
 
@@ -38,56 +36,67 @@ public class LoopInvariantCodeMotion implements IRTransform {
         LoopAnalysis loopAnalysis = new LoopAnalysis(method, domTree);
         loopAnalysis.compute();
 
-        if (loopAnalysis.getLoops().isEmpty()) {
+        if (loopAnalysis.getLoops().isEmpty())
+        {
             return false;
         }
 
         boolean changed = false;
 
-        for (Loop loop : loopAnalysis.getLoops()) {
-            changed |= processLoop(loop, method, domTree);
+        for (Loop loop : loopAnalysis.getLoops())
+        {
+            changed |= processLoop(loop);
         }
 
         return changed;
     }
 
-    private boolean processLoop(Loop loop, IRMethod method, DominatorTree domTree) {
+    private boolean processLoop(Loop loop)
+    {
         IRBlock header = loop.getHeader();
 
         IRBlock preheader = findPreheader(header, loop);
-        if (preheader == null) {
+        if (preheader == null)
+        {
             return false;
         }
 
         List<IRInstruction> invariantInstructions = new ArrayList<>();
         Set<Integer> loopDefinedValues = collectLoopDefinedValues(loop);
 
-        for (IRBlock block : loop.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (isLoopInvariant(instr, loopDefinedValues, loop) && isSafeToHoist(instr)) {
+        for (IRBlock block : loop.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (isLoopInvariant(instr, loopDefinedValues, loop) && isSafeToHoist(instr))
+                {
                     invariantInstructions.add(instr);
                 }
             }
         }
 
-        if (invariantInstructions.isEmpty()) {
+        if (invariantInstructions.isEmpty())
+        {
             return false;
         }
 
-        for (IRInstruction instr : invariantInstructions) {
+        for (IRInstruction instr : invariantInstructions)
+        {
             IRBlock sourceBlock = instr.getBlock();
             sourceBlock.removeInstruction(instr);
 
             int insertPos = preheader.getInstructions().size();
             IRInstruction terminator = preheader.getTerminator();
-            if (terminator != null) {
+            if (terminator != null)
+            {
                 insertPos = preheader.getInstructions().indexOf(terminator);
             }
 
             instr.setBlock(preheader);
             preheader.insertInstruction(insertPos, instr);
 
-            if (instr.getResult() != null) {
+            if (instr.getResult() != null)
+            {
                 SSAValue movedValue = instr.getResult();
                 updatePhisForMovedValue(loop, movedValue, sourceBlock, preheader);
                 loopDefinedValues.remove(movedValue.getId());
@@ -97,14 +106,19 @@ public class LoopInvariantCodeMotion implements IRTransform {
         return true;
     }
 
-    private void updatePhisForMovedValue(Loop loop, SSAValue movedValue, IRBlock oldBlock, IRBlock newBlock) {
-        for (IRBlock block : loop.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
+    private void updatePhisForMovedValue(Loop loop, SSAValue movedValue, IRBlock oldBlock, IRBlock newBlock)
+    {
+        for (IRBlock block : loop.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
                 Map<IRBlock, Value> incoming = phi.getIncomingValues();
                 Value incomingFromOld = incoming.get(oldBlock);
-                if (incomingFromOld instanceof SSAValue) {
+                if (incomingFromOld instanceof SSAValue)
+                {
                     SSAValue ssaVal = (SSAValue) incomingFromOld;
-                    if (ssaVal.getId() == movedValue.getId()) {
+                    if (ssaVal.getId() == movedValue.getId())
+                    {
                         incoming.remove(oldBlock);
                         incoming.put(newBlock, movedValue);
                     }
@@ -113,27 +127,36 @@ public class LoopInvariantCodeMotion implements IRTransform {
         }
     }
 
-    private IRBlock findPreheader(IRBlock header, Loop loop) {
-        for (IRBlock pred : header.getPredecessors()) {
-            if (!loop.contains(pred)) {
+    private IRBlock findPreheader(IRBlock header, Loop loop)
+    {
+        for (IRBlock pred : header.getPredecessors())
+        {
+            if (!loop.contains(pred))
+            {
                 return pred;
             }
         }
         return null;
     }
 
-    private Set<Integer> collectLoopDefinedValues(Loop loop) {
+    private Set<Integer> collectLoopDefinedValues(Loop loop)
+    {
         Set<Integer> defined = new HashSet<>();
 
-        for (IRBlock block : loop.getBlocks()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                if (phi.getResult() != null) {
+        for (IRBlock block : loop.getBlocks())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                if (phi.getResult() != null)
+                {
                     defined.add(phi.getResult().getId());
                 }
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr.getResult() != null) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr.getResult() != null)
+                {
                     defined.add(instr.getResult().getId());
                 }
             }
@@ -142,33 +165,45 @@ public class LoopInvariantCodeMotion implements IRTransform {
         return defined;
     }
 
-    private boolean isLoopInvariant(IRInstruction instr, Set<Integer> loopDefinedValues, Loop loop) {
-        for (Value operand : instr.getOperands()) {
-            if (operand instanceof SSAValue) {
+    private boolean isLoopInvariant(IRInstruction instr, Set<Integer> loopDefinedValues, Loop loop)
+    {
+        for (Value operand : instr.getOperands())
+        {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssaOperand = (SSAValue) operand;
-                if (loopDefinedValues.contains(ssaOperand.getId())) {
+                if (loopDefinedValues.contains(ssaOperand.getId()))
+                {
                     return false;
                 }
             }
         }
 
-        if (instr.getResult() != null) {
+        if (instr.getResult() != null)
+        {
             int resultId = instr.getResult().getId();
             IRBlock header = loop.getHeader();
-            for (PhiInstruction phi : header.getPhiInstructions()) {
-                for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet()) {
+            for (PhiInstruction phi : header.getPhiInstructions())
+            {
+                for (Map.Entry<IRBlock, Value> entry : phi.getIncomingValues().entrySet())
+                {
                     Value v = entry.getValue();
-                    if (v instanceof SSAValue) {
+                    if (v instanceof SSAValue)
+                    {
                         SSAValue ssaVal = (SSAValue) v;
-                        if (ssaVal.getId() == resultId) {
+                        if (ssaVal.getId() == resultId)
+                        {
                             boolean hasOutsideEntry = false;
-                            for (IRBlock phiBlock : phi.getIncomingValues().keySet()) {
-                                if (!loop.contains(phiBlock)) {
+                            for (IRBlock phiBlock : phi.getIncomingValues().keySet())
+                            {
+                                if (!loop.contains(phiBlock))
+                                {
                                     hasOutsideEntry = true;
                                     break;
                                 }
                             }
-                            if (!hasOutsideEntry) {
+                            if (!hasOutsideEntry)
+                            {
                                 return false;
                             }
                         }
@@ -180,20 +215,20 @@ public class LoopInvariantCodeMotion implements IRTransform {
         return true;
     }
 
-    private boolean isSafeToHoist(IRInstruction instr) {
-        if (instr instanceof BinaryOpInstruction) {
+    private boolean isSafeToHoist(IRInstruction instr)
+    {
+        if (instr instanceof BinaryOpInstruction)
+        {
             return true;
         }
-        if (instr instanceof UnaryOpInstruction) {
+        if (instr instanceof UnaryOpInstruction)
+        {
             return true;
         }
-        if (instr instanceof ConstantInstruction) {
+        if (instr instanceof ConstantInstruction)
+        {
             return true;
         }
-        if (instr instanceof CopyInstruction) {
-            return true;
-        }
-
-        return false;
+        return instr instanceof CopyInstruction;
     }
 }

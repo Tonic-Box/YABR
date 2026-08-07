@@ -20,25 +20,31 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * identity targets relink + frames regenerate), and a String {@code ldc} (proving the constant is
  * added to the target pool and the spliced index resolves).
  */
-class CodeBuilderSnippetTest {
+class CodeBuilderSnippetTest
+{
 
-    private static MethodEntry method(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry method(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException(name);
     }
 
-    private static void replaceWith(ClassFile cf, String name, CodeWriter.ClonedRange snippet) throws Exception {
+    private static void replaceWith(ClassFile cf, String name, CodeWriter.ClonedRange snippet) throws Exception
+    {
         CodeWriter cw = new CodeWriter(method(cf, name));
         cw.replaceBody(snippet);
         cw.write();
     }
 
     @Test
-    void assembleAndSpliceDetachedSnippets() throws Exception {
+    void assembleAndSpliceDetachedSnippets() throws Exception
+    {
         ClassPool pool = TestUtils.emptyPool();
         pool.loadPlatformClass("java/lang/Object.class");
         pool.loadPlatformClass("java/lang/String.class");
@@ -83,7 +89,8 @@ class CodeBuilderSnippetTest {
     }
 
     @Test
-    void assembleAndSpliceInvokeDynamic() throws Exception {
+    void assembleAndSpliceInvokeDynamic() throws Exception
+    {
         // A detached invokedynamic must add its bootstrap to the target's BootstrapMethods (no parent
         // ClassBuilder). StringConcatFactory is on the Java 11 test JVM, so the spliced call links + runs.
         ClassPool pool = TestUtils.emptyPool();
@@ -117,7 +124,8 @@ class CodeBuilderSnippetTest {
     }
 
     @Test
-    void assembleAndSpliceTryCatch() throws Exception {
+    void assembleAndSpliceTryCatch() throws Exception
+    {
         // try { return o.hashCode(); } catch (NullPointerException e) { return -1; }
         ClassPool pool = TestUtils.emptyPool();
         pool.loadPlatformClass("java/lang/Object.class");

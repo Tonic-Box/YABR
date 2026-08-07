@@ -6,33 +6,53 @@ import com.tonic.analysis.query.planner.filter.StaticFilter;
 import java.util.Objects;
 
 /**
- * Compiled query plan: the scope prefilter plus the original query, whose {@code WHERE}
- * {@link com.tonic.analysis.query.ast.Condition} the runner evaluates via the attribute registry.
+ * Compiled query plan.
  */
-public final class ProbePlan {
+public final class ProbePlan
+{
 
     private final Query originalQuery;
     private final StaticFilter staticFilter;
 
-    public ProbePlan(Query originalQuery, StaticFilter staticFilter) {
+    /**
+     * Creates a plan.
+     * @param originalQuery the query the plan was compiled from
+     * @param staticFilter the scope prefilter, or null for no prefiltering
+     */
+    public ProbePlan(Query originalQuery, StaticFilter staticFilter)
+    {
         this.originalQuery = originalQuery;
         this.staticFilter = staticFilter;
     }
 
-    public Query originalQuery() {
+    /**
+     * @return the query the plan was compiled from
+     */
+    public Query originalQuery()
+    {
         return originalQuery;
     }
 
-    public StaticFilter staticFilter() {
+    /**
+     * @return the scope prefilter, or null if there is none
+     */
+    public StaticFilter staticFilter()
+    {
         return staticFilter;
     }
 
-    public static Builder builder(Query query) {
+    /**
+     * @param query the query to plan
+     * @return a new builder for that query
+     */
+    public static Builder builder(Query query)
+    {
         return new Builder(query);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ProbePlan)) return false;
         ProbePlan that = (ProbePlan) o;
@@ -41,29 +61,50 @@ public final class ProbePlan {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(originalQuery, staticFilter);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ProbePlan{query=" + originalQuery + "}";
     }
 
-    public static class Builder {
+    /**
+     * Mutable accumulator for a plan around a fixed query.
+     */
+    public static class Builder
+    {
         private final Query query;
         private StaticFilter staticFilter;
 
-        public Builder(Query query) {
+        /**
+         * Creates a builder for a query.
+         * @param query the query to plan
+         */
+        public Builder(Query query)
+        {
             this.query = query;
         }
 
-        public Builder staticFilter(StaticFilter filter) {
+        /**
+         * Sets the scope prefilter applied before conditions are evaluated.
+         * @param filter the prefilter, or null for none
+         * @return this builder
+         */
+        public Builder staticFilter(StaticFilter filter)
+        {
             this.staticFilter = filter;
             return this;
         }
 
-        public ProbePlan build() {
+        /**
+         * @return the plan holding the query and prefilter
+         */
+        public ProbePlan build()
+        {
             return new ProbePlan(query, staticFilter);
         }
     }

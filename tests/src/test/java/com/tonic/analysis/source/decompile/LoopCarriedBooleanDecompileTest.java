@@ -14,10 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * inside the loop body offers its mid-loop {@code = true} store as a bogus "entry" seed. Either flips
  * the flag to true at declaration; for this recursion guard that means it never terminates.
  */
-public class LoopCarriedBooleanDecompileTest {
+public class LoopCarriedBooleanDecompileTest
+{
 
     @Test
-    public void loopCarriedBooleanKeepsFalseEntry() throws Exception {
+    public void loopCarriedBooleanKeepsFalseEntry() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("LoopCarriedBooleanFlag");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");

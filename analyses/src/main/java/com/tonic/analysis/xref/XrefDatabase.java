@@ -7,15 +7,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Indexed database for cross-references with fast lookup capabilities.
- *
- * Provides efficient queries for:
- * - All references TO a class/method/field (incoming)
- * - All references FROM a class/method (outgoing)
- * - References by type
- * - References within a specific class
+ * Cross-reference store that keeps every xref indexed by source class, target
+ * class, target method, target field and reference type for constant-time lookup.
  */
-public class XrefDatabase {
+public class XrefDatabase
+{
 
     // Primary storage
     private final List<Xref> allXrefs = Collections.synchronizedList(new ArrayList<>());
@@ -44,9 +40,11 @@ public class XrefDatabase {
     private int totalMethods;
 
     /**
-     * Add a cross-reference to the database and update all indexes.
+     * Stores a cross-reference and files it into every index it belongs to.
+     * @param xref the reference to add
      */
-    public void addXref(Xref xref) {
+    public void addXref(Xref xref)
+    {
         allXrefs.add(xref);
 
         byTargetClass.computeIfAbsent(xref.getTargetClass(), k ->
@@ -55,83 +53,106 @@ public class XrefDatabase {
         bySourceClass.computeIfAbsent(xref.getSourceClass(), k ->
             Collections.synchronizedList(new ArrayList<>())).add(xref);
 
-        if (xref.isMethodRef()) {
+        if (xref.isMethodRef())
+        {
             MethodReference targetMethod = xref.getTargetMethodRef();
-            if (targetMethod != null) {
+            if (targetMethod != null)
+            {
                 byTargetMethod.computeIfAbsent(targetMethod, k ->
                     Collections.synchronizedList(new ArrayList<>())).add(xref);
             }
         }
 
         MethodReference sourceMethod = xref.getSourceMethodRef();
-        if (sourceMethod != null && sourceMethod.getName() != null) {
+        if (sourceMethod != null && sourceMethod.getName() != null)
+        {
             bySourceMethod.computeIfAbsent(sourceMethod, k ->
                 Collections.synchronizedList(new ArrayList<>())).add(xref);
         }
 
-        if (xref.isFieldRef()) {
+        if (xref.isFieldRef())
+        {
             FieldReference targetField = xref.getTargetFieldRef();
-            if (targetField != null) {
+            if (targetField != null)
+            {
                 byTargetField.computeIfAbsent(targetField, k ->
                     Collections.synchronizedList(new ArrayList<>())).add(xref);
             }
         }
 
-        byType.computeIfAbsent(xref.getType(), k ->
-            Collections.synchronizedList(new ArrayList<>())).add(xref);
+        byType.computeIfAbsent(xref.getType(), k -> Collections.synchronizedList(new ArrayList<>())).add(xref);
     }
 
     /**
-     * Add multiple xrefs at once.
+     * Stores a batch of cross-references.
+     * @param xrefs the references to add
      */
-    public void addAllXrefs(Collection<Xref> xrefs) {
-        for (Xref xref : xrefs) {
+    public void addAllXrefs(Collection<Xref> xrefs)
+    {
+        for (Xref xref : xrefs)
+        {
             addXref(xref);
         }
     }
 
-    // ==================== Query Methods ====================
+    // Query Methods
 
     /**
-     * Get all references TO a class (incoming).
+     * @param className internal name of the referenced class
+     * @return the references pointing at that class, empty if none
      */
-    public List<Xref> getRefsToClass(String className) {
+    public List<Xref> getRefsToClass(String className)
+    {
         return byTargetClass.getOrDefault(className, Collections.emptyList());
     }
 
     /**
-     * Get all references FROM a class (outgoing).
+     * @param className internal name of the referring class
+     * @return the references originating in that class, empty if none
      */
-    public List<Xref> getRefsFromClass(String className) {
+    public List<Xref> getRefsFromClass(String className)
+    {
         return bySourceClass.getOrDefault(className, Collections.emptyList());
     }
 
     /**
-     * Get all references TO a method (incoming - who calls this method?).
+     * @param method the called method
+     * @return the references calling it, empty if none
      */
-    public List<Xref> getRefsToMethod(MethodReference method) {
+    public List<Xref> getRefsToMethod(MethodReference method)
+    {
         return byTargetMethod.getOrDefault(method, Collections.emptyList());
     }
 
     /**
-     * Get all references TO a method by components.
+     * Looks up callers of a method named by its parts.
+     * @param owner internal name of the declaring class
+     * @param name the method name
+     * @param desc the method descriptor
+     * @return the references calling it, empty if none
      */
-    public List<Xref> getRefsToMethod(String owner, String name, String desc) {
+    public List<Xref> getRefsToMethod(String owner, String name, String desc)
+    {
         return getRefsToMethod(new MethodReference(owner, name, desc));
     }
 
     /**
-     * Get all references TO a method by owner and name, ignoring descriptor.
-     * Useful for queries that don't specify a descriptor (e.g., finding all calls to println).
+     * Looks up callers by owner and name only, for queries that carry no descriptor.
+     * @param owner internal name or simple name of the declaring class, or null for any
+     * @param name the method name, or null for any
+     * @return the references calling any matching method
      */
-    public List<Xref> getRefsToMethodByName(String owner, String name) {
+    public List<Xref> getRefsToMethodByName(String owner, String name)
+    {
         List<Xref> results = new ArrayList<>();
-        for (var entry : byTargetMethod.entrySet()) {
+        for (var entry : byTargetMethod.entrySet())
+        {
             MethodReference ref = entry.getKey();
             boolean ownerMatches = owner == null || owner.isEmpty() ||
                 ref.getOwner().equals(owner) || ref.getOwner().endsWith("/" + owner);
             boolean nameMatches = name == null || name.isEmpty() || ref.getName().equals(name);
-            if (ownerMatches && nameMatches) {
+            if (ownerMatches && nameMatches)
+            {
                 results.addAll(entry.getValue());
             }
         }
@@ -139,81 +160,106 @@ public class XrefDatabase {
     }
 
     /**
-     * Get all references FROM a method (outgoing - what does this method call?).
+     * @param method the calling method
+     * @return the references originating in its body, empty if none
      */
-    public List<Xref> getRefsFromMethod(MethodReference method) {
+    public List<Xref> getRefsFromMethod(MethodReference method)
+    {
         return bySourceMethod.getOrDefault(method, Collections.emptyList());
     }
 
     /**
-     * Get all references FROM a method by components.
+     * Looks up the references made by a method named by its parts.
+     * @param owner internal name of the declaring class
+     * @param name the method name
+     * @param desc the method descriptor
+     * @return the references originating in its body, empty if none
      */
-    public List<Xref> getRefsFromMethod(String owner, String name, String desc) {
+    public List<Xref> getRefsFromMethod(String owner, String name, String desc)
+    {
         return getRefsFromMethod(new MethodReference(owner, name, desc));
     }
 
     /**
-     * Get all references TO a field (incoming - who reads/writes this field?).
+     * @param field the accessed field
+     * @return the references reading or writing it, empty if none
      */
-    public List<Xref> getRefsToField(FieldReference field) {
+    public List<Xref> getRefsToField(FieldReference field)
+    {
         return byTargetField.getOrDefault(field, Collections.emptyList());
     }
 
     /**
-     * Get all references TO a field by components.
+     * Looks up accesses of a field named by its parts.
+     * @param owner internal name of the declaring class
+     * @param name the field name
+     * @param desc the field descriptor
+     * @return the references reading or writing it, empty if none
      */
-    public List<Xref> getRefsToField(String owner, String name, String desc) {
+    public List<Xref> getRefsToField(String owner, String name, String desc)
+    {
         return getRefsToField(new FieldReference(owner, name, desc));
     }
 
     /**
-     * Get all references of a specific type.
+     * @param type the reference kind to select
+     * @return the references of that kind, empty if none
      */
-    public List<Xref> getRefsByType(XrefType type) {
+    public List<Xref> getRefsByType(XrefType type)
+    {
         return byType.getOrDefault(type, Collections.emptyList());
     }
 
     /**
-     * Get all method calls in the database.
+     * @return every method-call reference
      */
-    public List<Xref> getAllMethodCalls() {
+    public List<Xref> getAllMethodCalls()
+    {
         return getRefsByType(XrefType.METHOD_CALL);
     }
 
     /**
-     * Get all field reads in the database.
+     * @return every field-read reference
      */
-    public List<Xref> getAllFieldReads() {
+    public List<Xref> getAllFieldReads()
+    {
         return getRefsByType(XrefType.FIELD_READ);
     }
 
     /**
-     * Get all field writes in the database.
+     * @return every field-write reference
      */
-    public List<Xref> getAllFieldWrites() {
+    public List<Xref> getAllFieldWrites()
+    {
         return getRefsByType(XrefType.FIELD_WRITE);
     }
 
     /**
-     * Get all class instantiations.
+     * @return every class-instantiation reference
      */
-    public List<Xref> getAllInstantiations() {
+    public List<Xref> getAllInstantiations()
+    {
         return getRefsByType(XrefType.CLASS_INSTANTIATE);
     }
 
     /**
-     * Get all xrefs.
+     * @return an unmodifiable view of every stored reference
      */
-    public List<Xref> getAllXrefs() {
+    public List<Xref> getAllXrefs()
+    {
         return Collections.unmodifiableList(allXrefs);
     }
 
-    // ==================== Combined Queries ====================
+    // Combined Queries
 
     /**
-     * Get all incoming refs to a symbol (class, method, or field by name search).
+     * Scans every reference for a target class or member containing the query,
+     * with dots in the query treated as package separators.
+     * @param query the substring to match
+     * @return the matching references
      */
-    public List<Xref> searchIncomingRefs(String query) {
+    public List<Xref> searchIncomingRefs(String query)
+    {
         String normalizedQuery = query.replace('.', '/');
 
         return allXrefs.stream()
@@ -227,9 +273,13 @@ public class XrefDatabase {
     }
 
     /**
-     * Get all outgoing refs from a symbol.
+     * Scans every reference for a source class or method containing the query,
+     * with dots in the query treated as package separators.
+     * @param query the substring to match
+     * @return the matching references
      */
-    public List<Xref> searchOutgoingRefs(String query) {
+    public List<Xref> searchOutgoingRefs(String query)
+    {
         String normalizedQuery = query.replace('.', '/');
 
         return allXrefs.stream()
@@ -243,9 +293,13 @@ public class XrefDatabase {
     }
 
     /**
-     * Find all callers of methods matching a pattern (for "find usages" style queries).
+     * Collects callers of every indexed method carrying a given name, whatever
+     * the owner or descriptor.
+     * @param methodName the exact method name to match
+     * @return the references calling any such method
      */
-    public List<Xref> findCallersOfMethodNamed(String methodName) {
+    public List<Xref> findCallersOfMethodNamed(String methodName)
+    {
         return byTargetMethod.entrySet().stream()
             .filter(e -> e.getKey().getName().equals(methodName))
             .flatMap(e -> e.getValue().stream())
@@ -253,131 +307,178 @@ public class XrefDatabase {
     }
 
     /**
-     * Find all references between two classes.
+     * Collects the references one class makes to another.
+     * @param sourceClass internal name of the referring class
+     * @param targetClass internal name of the referenced class
+     * @return the references from source to target
      */
-    public List<Xref> findRefsBetweenClasses(String sourceClass, String targetClass) {
+    public List<Xref> findRefsBetweenClasses(String sourceClass, String targetClass)
+    {
         return getRefsFromClass(sourceClass).stream()
             .filter(xref -> xref.getTargetClass().equals(targetClass))
             .collect(Collectors.toList());
     }
 
     /**
-     * Group incoming refs by type.
+     * @param className internal name of the referenced class
+     * @return the incoming references bucketed by reference kind
      */
-    public Map<XrefType, List<Xref>> groupIncomingByType(String className) {
+    public Map<XrefType, List<Xref>> groupIncomingByType(String className)
+    {
         return getRefsToClass(className).stream()
             .collect(Collectors.groupingBy(Xref::getType));
     }
 
     /**
-     * Group outgoing refs by type.
+     * @param className internal name of the referring class
+     * @return the outgoing references bucketed by reference kind
      */
-    public Map<XrefType, List<Xref>> groupOutgoingByType(String className) {
+    public Map<XrefType, List<Xref>> groupOutgoingByType(String className)
+    {
         return getRefsFromClass(className).stream()
             .collect(Collectors.groupingBy(Xref::getType));
     }
 
     /**
-     * Get all unique classes that reference a given class.
+     * @param className internal name of the referenced class
+     * @return the distinct classes that reference it
      */
-    public Set<String> getClassesReferencingClass(String className) {
+    public Set<String> getClassesReferencingClass(String className)
+    {
         return getRefsToClass(className).stream()
             .map(Xref::getSourceClass)
             .collect(Collectors.toSet());
     }
 
     /**
-     * Get all unique classes referenced by a given class.
+     * @param className internal name of the referring class
+     * @return the distinct classes it references
      */
-    public Set<String> getClassesReferencedByClass(String className) {
+    public Set<String> getClassesReferencedByClass(String className)
+    {
         return getRefsFromClass(className).stream()
             .map(Xref::getTargetClass)
             .collect(Collectors.toSet());
     }
 
-    // ==================== Statistics ====================
+    // Statistics
 
     /**
-     * Get total number of cross-references.
+     * @return the number of stored references
      */
-    public int getTotalXrefCount() {
+    public int getTotalXrefCount()
+    {
         return allXrefs.size();
     }
 
     /**
-     * Get count of xrefs by type.
+     * @return the reference count per reference kind
      */
-    public Map<XrefType, Integer> getXrefCountByType() {
+    public Map<XrefType, Integer> getXrefCountByType()
+    {
         return byType.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().size()));
     }
 
     /**
-     * Get number of unique target classes.
+     * @return the number of distinct referenced classes
      */
-    public int getUniqueTargetClassCount() {
+    public int getUniqueTargetClassCount()
+    {
         return byTargetClass.size();
     }
 
     /**
-     * Get number of unique source classes.
+     * @return the number of distinct referring classes
      */
-    public int getUniqueSourceClassCount() {
+    public int getUniqueSourceClassCount()
+    {
         return bySourceClass.size();
     }
 
     /**
-     * Get number of unique target methods.
+     * @return the number of distinct referenced methods
      */
-    public int getUniqueTargetMethodCount() {
+    public int getUniqueTargetMethodCount()
+    {
         return byTargetMethod.size();
     }
 
     /**
-     * Get number of unique target fields.
+     * @return the number of distinct referenced fields
      */
-    public int getUniqueTargetFieldCount() {
+    public int getUniqueTargetFieldCount()
+    {
         return byTargetField.size();
     }
 
-    public long getBuildTimeMs() {
+    /**
+     * @return the build time ms
+     */
+    public long getBuildTimeMs()
+    {
         return buildTimeMs;
     }
 
-    public void setBuildTimeMs(long buildTimeMs) {
+    /**
+     * Records how long the indexing run took.
+     * @param buildTimeMs elapsed build time in milliseconds
+     */
+    public void setBuildTimeMs(long buildTimeMs)
+    {
         this.buildTimeMs = buildTimeMs;
     }
 
-    public int getTotalClasses() {
+    /**
+     * @return the total classes
+     */
+    public int getTotalClasses()
+    {
         return totalClasses;
     }
 
-    public void setTotalClasses(int totalClasses) {
+    /**
+     * Records how many classes the indexing run scanned.
+     * @param totalClasses the scanned class count
+     */
+    public void setTotalClasses(int totalClasses)
+    {
         this.totalClasses = totalClasses;
     }
 
-    public int getTotalMethods() {
+    /**
+     * @return the total methods
+     */
+    public int getTotalMethods()
+    {
         return totalMethods;
     }
 
-    public void setTotalMethods(int totalMethods) {
+    /**
+     * Records how many methods the indexing run scanned.
+     * @param totalMethods the scanned method count
+     */
+    public void setTotalMethods(int totalMethods)
+    {
         this.totalMethods = totalMethods;
     }
 
     /**
-     * Get a summary string for display.
+     * @return a one-line summary of the reference, class and method counts and build time
      */
-    public String getSummary() {
+    public String getSummary()
+    {
         return String.format("XrefDatabase: %d xrefs, %d classes analyzed, %d methods, built in %dms",
             getTotalXrefCount(), totalClasses, totalMethods, buildTimeMs);
     }
 
-    // ==================== Management ====================
+    // Management
 
     /**
      * Clear all xrefs and indexes.
      */
-    public void clear() {
+    public void clear()
+    {
         allXrefs.clear();
         byTargetClass.clear();
         bySourceClass.clear();
@@ -392,8 +493,11 @@ public class XrefDatabase {
 
     /**
      * Check if the database is empty.
+     *
+     * @return true if no cross-references have been recorded
      */
-    public boolean isEmpty() {
+    public boolean isEmpty()
+    {
         return allXrefs.isEmpty();
     }
 }

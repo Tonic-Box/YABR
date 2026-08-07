@@ -7,54 +7,60 @@ import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.constpool.Utf8Item;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
 
-class DelegatingHandlerTest {
+class DelegatingHandlerTest
+{
 
     private InvocationContext context;
     private HeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         heapManager = new SimpleHeapManager();
         ClassResolver resolver = mock(ClassResolver.class);
         CallStack callStack = new CallStack(100);
 
         context = new InvocationContext() {
             @Override
-            public CallStack getCallStack() {
+            public CallStack getCallStack()
+            {
                 return callStack;
             }
 
             @Override
-            public HeapManager getHeapManager() {
+            public HeapManager getHeapManager()
+            {
                 return heapManager;
             }
 
             @Override
-            public ClassResolver getClassResolver() {
+            public ClassResolver getClassResolver()
+            {
                 return resolver;
             }
         };
     }
 
     @Test
-    void testConstructorWithNullCallback() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DelegatingHandler(null);
-        });
+    void testConstructorWithNullCallback()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new DelegatingHandler(null));
     }
 
     @Test
-    void testCallbackInvokedCorrectly() {
+    void testCallbackInvokedCorrectly()
+    {
         ConcreteValue expectedResult = ConcreteValue.intValue(42);
         boolean[] callbackInvoked = { false };
 
@@ -74,7 +80,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testCallbackReceivesCorrectArguments() {
+    void testCallbackReceivesCorrectArguments()
+    {
         MethodEntry expectedMethod = createTestMethod("TestClass", "method", "(I)V", 0x0001);
         ObjectInstance expectedReceiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] expectedArgs = new ConcreteValue[] { ConcreteValue.intValue(10) };
@@ -92,7 +99,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testCallbackReturnsValue() {
+    void testCallbackReturnsValue()
+    {
         ConcreteValue[] testValues = {
             ConcreteValue.intValue(42),
             ConcreteValue.longValue(100L),
@@ -101,7 +109,8 @@ class DelegatingHandlerTest {
             ConcreteValue.nullRef()
         };
 
-        for (ConcreteValue testValue : testValues) {
+        for (ConcreteValue testValue : testValues)
+        {
             DelegatingHandler handler = new DelegatingHandler((m, r, a) -> testValue);
             MethodEntry method = createTestMethod("Test", "m", "()V", 0x0001);
 
@@ -113,7 +122,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testCallbackThrowsException() {
+    void testCallbackThrowsException()
+    {
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> {
             throw new RuntimeException("Test exception");
         };
@@ -128,7 +138,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testExceptionCreation() {
+    void testExceptionCreation()
+    {
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> {
             throw new IllegalArgumentException("Invalid argument");
         };
@@ -145,7 +156,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testNullReceiverHandling() {
+    void testNullReceiverHandling()
+    {
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> {
             assertNull(receiver);
             return ConcreteValue.intValue(0);
@@ -160,7 +172,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testNonNullReceiverHandling() {
+    void testNonNullReceiverHandling()
+    {
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
 
         DelegatingHandler.InvocationCallback callback = (method, r, args) -> {
@@ -176,7 +189,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testEmptyArguments() {
+    void testEmptyArguments()
+    {
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> {
             assertNotNull(args);
             assertEquals(0, args.length);
@@ -190,7 +204,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testMultipleArguments() {
+    void testMultipleArguments()
+    {
         ConcreteValue[] args = new ConcreteValue[] {
             ConcreteValue.intValue(1),
             ConcreteValue.longValue(2L),
@@ -199,7 +214,8 @@ class DelegatingHandlerTest {
 
         DelegatingHandler.InvocationCallback callback = (method, receiver, a) -> {
             assertEquals(args.length, a.length);
-            for (int i = 0; i < args.length; i++) {
+            for (int i = 0; i < args.length; i++)
+            {
                 assertEquals(args[i], a[i]);
             }
             return ConcreteValue.intValue(0);
@@ -212,7 +228,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testCallbackReturnsNull() {
+    void testCallbackReturnsNull()
+    {
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> null;
 
         DelegatingHandler handler = new DelegatingHandler(callback);
@@ -225,7 +242,8 @@ class DelegatingHandlerTest {
     }
 
     @Test
-    void testExceptionMessagePreserved() {
+    void testExceptionMessagePreserved()
+    {
         String testMessage = "Custom error message";
         DelegatingHandler.InvocationCallback callback = (method, receiver, args) -> {
             throw new RuntimeException(testMessage);
@@ -238,29 +256,24 @@ class DelegatingHandlerTest {
 
         assertTrue(result.isException());
         ObjectInstance exception = result.getException();
-        Object messageField = exception.getField(
-            exception.getClassName(),
-            "detailMessage",
-            "Ljava/lang/String;"
-        );
+        Object messageField = exception.getField(exception.getClassName(), "detailMessage", "Ljava/lang/String;");
         assertNotNull(messageField);
     }
 
-    private MethodEntry createTestMethod(String owner, String name, String desc, int access) {
+    private MethodEntry createTestMethod(String owner, String name, String desc, int access)
+    {
         ClassFile classFile = mock(ClassFile.class);
         when(classFile.getClassName()).thenReturn(owner);
 
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
-        com.tonic.parser.constpool.Utf8Item nameItem = mock(com.tonic.parser.constpool.Utf8Item.class);
-        com.tonic.parser.constpool.Utf8Item descItem = mock(com.tonic.parser.constpool.Utf8Item.class);
+        ConstPool constPool = mock(ConstPool.class);
+        Utf8Item nameItem = mock(Utf8Item.class);
+        Utf8Item descItem = mock(Utf8Item.class);
         when(nameItem.getValue()).thenReturn(name);
         when(descItem.getValue()).thenReturn(desc);
         doReturn(nameItem).when(constPool).getItem(1);
         doReturn(descItem).when(constPool).getItem(2);
         when(classFile.getConstPool()).thenReturn(constPool);
 
-        MethodEntry method = new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
-
-        return method;
+        return new MethodEntry(classFile, access, 1, 2, new ArrayList<>());
     }
 }

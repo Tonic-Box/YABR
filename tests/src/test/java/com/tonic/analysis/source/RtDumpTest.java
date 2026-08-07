@@ -1,101 +1,127 @@
 package com.tonic.analysis.source;
 
-import com.tonic.analysis.source.ast.decl.ClassDecl;
-import com.tonic.analysis.source.ast.decl.CompilationUnit;
-import com.tonic.analysis.source.ast.decl.ConstructorDecl;
-import com.tonic.analysis.source.ast.decl.MethodDecl;
-import com.tonic.analysis.source.ast.decl.ParameterDecl;
-import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.decompile.ClassDecompiler;
-import com.tonic.analysis.source.lower.ASTLowerer;
-import com.tonic.analysis.source.lower.TypeResolver;
-import com.tonic.analysis.source.parser.JavaParser;
-import com.tonic.analysis.ssa.SSA;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.MethodEntry;
+import com.tonic.testutil.RoundTripCorpus;
+import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-class RtDumpTest {
-    private static final String DIR = "C:/Users/zacke/IdeaProjects/DemoApplication/build/classes/java/main";
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+/**
+ * Investigation aid for round-trip drift: decompiles a class, recompiles its own output, and
+ * decompiles again twice, writing all three generations to {@code %TEMP%/rt} so they can be diffed.
+ * It asserts nothing - {@link RoundTripIdempotenceTest} is the gate; this exists so that when that
+ * gate goes red, the differing text is one command away.
+ *
+ * Targets default to the classes that have historically drifted and can be overridden with
+ * {@code -Dyabr.rt.targets=A,B,C} (simple names, matched against the class name's tail).
+ */
+class RtDumpTest
+{
+
+    private static final String DEFAULT_TARGETS =
+            "SymbolicExecutionTests,Main,HeapAnalysisTest,AuthenticationCoordinator,SessionManager";
 
     @Test
-    void dump() throws Exception {
-        for (String target : new String[]{"SymbolicExecutionTests", "Main", "HeapAnalysisTest", "AuthenticationCoordinator"}) {
-            Path root = Path.of(DIR);
-            if (!Files.exists(root)) return;
+    void dump() throws Exception
+    {
+        Path root = RoundTripCorpus.path();
+        assumeTrue(Files.isDirectory(root), "demo classes not built at " + root);
+
+        String[] targets = System.getProperty("yabr.rt.targets", DEFAULT_TARGETS).split(",");
+        Path out = Path.of(System.getProperty("java.io.tmpdir"), "rt");
+        Files.createDirectories(out);
+
+        for (String target : targets)
+        {
+            String name = target.trim();
+            if (name.isEmpty())
+            {
+                continue;
+            }
             ClassPool pool = new ClassPool();
-            ClassFile cf = null;
-            try (Stream<Path> s = Files.walk(root)) {
-                for (Path q : (Iterable<Path>) s.filter(x -> x.toString().endsWith(".class")).sorted()::iterator) {
-                    ClassFile c = pool.loadClass(new ByteArrayInputStream(Files.readAllBytes(q)));
-                    if (c.getClassName().endsWith(target) && !c.getClassName().contains("$")) cf = c;
-                }
+            ClassFile cf = locate(root, pool, name);
+            if (cf == null)
+            {
+                System.out.println("RT " + name + " NOT FOUND");
+                continue;
             }
-            if (cf == null) continue;
             String owner = cf.getClassName();
-            Path out = Path.of(System.getProperty("java.io.tmpdir"), "rt");
-            Files.createDirectories(out);
-            try {
+            try
+            {
                 String d1 = ClassDecompiler.decompile(cf);
-                recompile(cf, pool, d1, owner);
+                if (!TestUtils.recompileSource(cf, pool, d1, owner))
+                {
+                    System.out.println("RT " + name + " NOT RECOMPILABLE");
+                    continue;
+                }
                 String d2 = ClassDecompiler.decompile(cf);
-                recompile(cf, pool, d2, owner);
+                TestUtils.recompileSource(cf, pool, d2, owner);
                 String d3 = ClassDecompiler.decompile(cf);
-                Files.writeString(out.resolve(target + "_d2.java"), d2);
-                Files.writeString(out.resolve(target + "_d3.java"), d3);
-                System.out.println("RT " + target + " d1==d2=" + d1.equals(d2) + " d2==d3=" + d2.equals(d3));
-            } catch (Exception e) {
-                System.out.println("RT " + target + " FAILED: " + e);
+
+                Files.writeString(out.resolve(name + "_d1.java"), d1);
+                Files.writeString(out.resolve(name + "_d2.java"), d2);
+                Files.writeString(out.resolve(name + "_d3.java"), d3);
+                System.out.println("RT " + name
+                        + " d1==d2=" + d1.equals(d2)
+                        + " d2==d3=" + d2.equals(d3)
+                        + (d1.equals(d2) ? "" : " firstDiff=" + firstDiff(d1, d2)));
+            }
+            catch (Exception failure)
+            {
+                System.out.println("RT " + name + " FAILED: " + failure);
             }
         }
+        System.out.println("RT dumps written to " + out);
     }
 
-    private static void recompile(ClassFile cf, ClassPool pool, String source, String owner) throws Exception {
-        CompilationUnit cu = JavaParser.create().parse(source);
-        ClassDecl decl = (ClassDecl) cu.getPrimaryType();
-        TypeResolver resolver = new TypeResolver(pool, owner);
-        resolver.setImports(cu.getImports());
-        resolver.setCurrentClassDecl(decl);
-        ASTLowerer lowerer = new ASTLowerer(cf.getConstPool(), pool);
-        lowerer.setCurrentClassDecl(decl);
-        lowerer.setImports(cu.getImports());
-        SSA ssa = new SSA(cf.getConstPool());
-        for (MethodDecl md : decl.getMethods()) {
-            if (md.getBody() == null) continue;
-            String d = desc(md.getParameters(), resolver.descriptorOf(md.getReturnType()), resolver);
-            MethodEntry t = find(cf, md.getName(), d);
-            if (t != null) ssa.lower(lowerer.lower(md, owner), t);
+    /**
+     * The last top-level class under {@code root} whose name ends with {@code target}.
+     */
+    private static ClassFile locate(Path root, ClassPool pool, String target) throws Exception
+    {
+        ClassFile found = null;
+        List<Path> paths = new ArrayList<>();
+        try (Stream<Path> s = Files.walk(root))
+        {
+            s.filter(x -> x.toString().endsWith(".class")).sorted().forEach(paths::add);
         }
-        for (ConstructorDecl ctor : decl.getConstructors()) {
-            if (ctor.getBody() == null) continue;
-            String d = desc(ctor.getParameters(), "V", resolver);
-            MethodEntry t = find(cf, "<init>", d);
-            if (t == null) continue;
-            MethodDecl init = new MethodDecl("<init>", VoidSourceType.INSTANCE).withModifiers(ctor.getModifiers());
-            for (ParameterDecl pp : ctor.getParameters()) init.addParameter(pp);
-            init.withBody(ctor.getBody());
-            ssa.lower(lowerer.lower(init, owner), t);
+        for (Path q : paths)
+        {
+            ClassFile c = pool.loadClass(new ByteArrayInputStream(Files.readAllBytes(q)));
+            if (c.getClassName().endsWith(target) && !c.getClassName().contains("$"))
+            {
+                found = c;
+            }
         }
-        cf.rebuild();
+        return found;
     }
 
-    private static String desc(List<ParameterDecl> params, String ret, TypeResolver resolver) {
-        StringBuilder d = new StringBuilder("(");
-        for (ParameterDecl pp : params) d.append(resolver.descriptorOf(pp.getType()));
-        return d.append(")").append(ret).toString();
+    /**
+     * A short window around the first differing character, to point at the drifting construct.
+     */
+    private static String firstDiff(String a, String b)
+    {
+        int i = 0;
+        while (i < a.length() && i < b.length() && a.charAt(i) == b.charAt(i))
+        {
+            i++;
+        }
+        int from = Math.max(0, i - 60);
+        return "@" + i + " a=[" + slice(a, from, i + 60) + "] b=[" + slice(b, from, i + 60) + "]";
     }
 
-    private static MethodEntry find(ClassFile cf, String name, String desc) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name) && m.getDesc().contentEquals(desc)) return m;
-        }
-        return null;
+    private static String slice(String s, int from, int to)
+    {
+        return s.substring(Math.min(from, s.length()), Math.min(to, s.length())).replace('\n', '|');
     }
 }

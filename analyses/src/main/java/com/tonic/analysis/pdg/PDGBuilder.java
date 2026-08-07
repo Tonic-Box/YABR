@@ -19,7 +19,12 @@ import com.tonic.analysis.ssa.value.Value;
 
 import java.util.*;
 
-public class PDGBuilder {
+/**
+ * Builder of a program dependence graph for one method, deriving control dependence from the post-dominator tree and
+ * data dependence from def-use chains.
+ */
+public class PDGBuilder
+{
 
     private final IRMethod method;
     private final PostDominatorTree postDomTree;
@@ -28,38 +33,71 @@ public class PDGBuilder {
 
     private final Map<IRBlock, PDGNode> blockTerminatorNodes = new HashMap<>();
 
-    public PDGBuilder(IRMethod method) {
+    /**
+     * Creates a builder and its post-dominator tree and def-use chains, neither of which is computed yet.
+     * @param method the method to analyze
+     */
+    public PDGBuilder(IRMethod method)
+    {
         this.method = method;
         this.postDomTree = new PostDominatorTree(method);
         this.defUseChains = new DefUseChains(method);
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public PostDominatorTree getPostDomTree() {
+    /**
+     * @return the post dom tree
+     */
+    public PostDominatorTree getPostDomTree()
+    {
         return postDomTree;
     }
 
-    public DefUseChains getDefUseChains() {
+    /**
+     * @return the def use chains
+     */
+    public DefUseChains getDefUseChains()
+    {
         return defUseChains;
     }
 
-    public PDG getPdg() {
+    /**
+     * @return the pdg
+     */
+    public PDG getPdg()
+    {
         return pdg;
     }
 
-    public Map<IRBlock, PDGNode> getBlockTerminatorNodes() {
+    /**
+     * @return the block terminator nodes
+     */
+    public Map<IRBlock, PDGNode> getBlockTerminatorNodes()
+    {
         return blockTerminatorNodes;
     }
 
-    public static PDG build(IRMethod method) {
+    /**
+     * Builds the dependence graph for a method: entry and exit regions, one node per phi and instruction, then
+     * control, data, and exception edges.
+     * @param method the method to analyze
+     * @return the completed graph
+     */
+    public static PDG build(IRMethod method)
+    {
         PDGBuilder builder = new PDGBuilder(method);
         return builder.buildInternal();
     }
 
-    private PDG buildInternal() {
+    private PDG buildInternal()
+    {
         postDomTree.compute();
         defUseChains.compute();
 
@@ -74,7 +112,8 @@ public class PDGBuilder {
         return pdg;
     }
 
-    private void createEntryExitNodes() {
+    private void createEntryExitNodes()
+    {
         IRBlock entryBlock = method.getEntryBlock();
         PDGRegionNode entry = PDGRegionNode.createEntry(pdg.allocateNodeId(), method.getName(), entryBlock);
         pdg.addNode(entry);
@@ -83,52 +122,65 @@ public class PDGBuilder {
         Set<IRBlock> exitBlocks = findExitBlocks();
         IRBlock primaryExit = exitBlocks.isEmpty() ? null : exitBlocks.iterator().next();
         PDGRegionNode exit = PDGRegionNode.createExit(pdg.allocateNodeId(), method.getName(), primaryExit);
-        for (IRBlock exitBlock : exitBlocks) {
+        for (IRBlock exitBlock : exitBlocks)
+        {
             exit.addCoveredBlock(exitBlock);
         }
         pdg.addNode(exit);
         pdg.setExitNode(exit);
     }
 
-    private Set<IRBlock> findExitBlocks() {
+    private Set<IRBlock> findExitBlocks()
+    {
         Set<IRBlock> exits = new HashSet<>();
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             IRInstruction terminator = block.getTerminator();
-            if (terminator instanceof ReturnInstruction) {
+            if (terminator instanceof ReturnInstruction)
+            {
                 exits.add(block);
-            } else if (block.getSuccessors().isEmpty()) {
+            }
+            else if (block.getSuccessors().isEmpty())
+            {
                 exits.add(block);
             }
         }
         return exits;
     }
 
-    private void createInstructionNodes() {
-        for (IRBlock block : method.getBlocks()) {
+    private void createInstructionNodes()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             int instrIndex = 0;
 
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                PDGInstructionNode node = new PDGInstructionNode(
-                    pdg.allocateNodeId(), phi, block, instrIndex++);
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                PDGInstructionNode node = new PDGInstructionNode(pdg.allocateNodeId(), phi, block, instrIndex++);
                 pdg.addNode(node);
             }
 
-            for (IRInstruction instr : block.getInstructions()) {
-                PDGInstructionNode node = new PDGInstructionNode(
-                    pdg.allocateNodeId(), instr, block, instrIndex++);
+            for (IRInstruction instr : block.getInstructions())
+            {
+                PDGInstructionNode node = new PDGInstructionNode(pdg.allocateNodeId(), instr, block, instrIndex++);
                 pdg.addNode(node);
 
-                if (instr.isTerminator()) {
+                if (instr.isTerminator())
+                {
                     blockTerminatorNodes.put(block, node);
                 }
             }
         }
     }
 
-    private void computeControlDependencies() {
-        for (IRBlock block : method.getBlocks()) {
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!postDomTree.strictlyPostDominates(succ, block)) {
+    private void computeControlDependencies()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!postDomTree.strictlyPostDominates(succ, block))
+                {
                     addControlDependenciesOnPath(block, succ);
                 }
             }
@@ -137,11 +189,13 @@ public class PDGBuilder {
         addEntryControlDependencies();
     }
 
-    private void addControlDependenciesOnPath(IRBlock branchBlock, IRBlock startBlock) {
+    private void addControlDependenciesOnPath(IRBlock branchBlock, IRBlock startBlock)
+    {
         IRBlock lca = findLCA(branchBlock, startBlock);
         PDGNode controllingNode = getControllingNodeForBlock(branchBlock);
 
-        if (controllingNode == null) {
+        if (controllingNode == null)
+        {
             return;
         }
 
@@ -152,30 +206,34 @@ public class PDGBuilder {
         Queue<IRBlock> worklist = new LinkedList<>();
         worklist.add(startBlock);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock current = worklist.poll();
             if (visited.contains(current)) continue;
             if (current == lca) continue;
 
             visited.add(current);
 
-            for (PDGNode node : pdg.getNodesInBlock(current)) {
-                PDGEdge edge = new PDGEdge(controllingNode, node, edgeType,
-                    null, null, branchCondition);
+            for (PDGNode node : pdg.getNodesInBlock(current))
+            {
+                PDGEdge edge = new PDGEdge(controllingNode, node, edgeType, null, null, branchCondition);
                 pdg.addEdge(edge);
             }
 
             IRBlock postDom = postDomTree.getImmediatePostDominator(current);
-            if (postDom != null && postDom != current && postDom != lca) {
+            if (postDom != null && postDom != current && postDom != lca)
+            {
                 worklist.add(postDom);
             }
         }
     }
 
-    private IRBlock findLCA(IRBlock block1, IRBlock block2) {
+    private IRBlock findLCA(IRBlock block1, IRBlock block2)
+    {
         Set<IRBlock> ancestors = new HashSet<>();
         IRBlock runner = block1;
-        while (runner != null) {
+        while (runner != null)
+        {
             ancestors.add(runner);
             IRBlock ipdom = postDomTree.getImmediatePostDominator(runner);
             if (ipdom == runner) break;
@@ -183,8 +241,10 @@ public class PDGBuilder {
         }
 
         runner = block2;
-        while (runner != null) {
-            if (ancestors.contains(runner)) {
+        while (runner != null)
+        {
+            if (ancestors.contains(runner))
+            {
                 return runner;
             }
             IRBlock ipdom = postDomTree.getImmediatePostDominator(runner);
@@ -195,9 +255,11 @@ public class PDGBuilder {
         return null;
     }
 
-    private PDGNode getControllingNodeForBlock(IRBlock block) {
+    private PDGNode getControllingNodeForBlock(IRBlock block)
+    {
         PDGNode termNode = blockTerminatorNodes.get(block);
-        if (termNode != null) {
+        if (termNode != null)
+        {
             return termNode;
         }
 
@@ -205,64 +267,79 @@ public class PDGBuilder {
         return nodesInBlock.isEmpty() ? pdg.getEntryNode() : nodesInBlock.get(nodesInBlock.size() - 1);
     }
 
-    private boolean determineBranchCondition(IRBlock branchBlock, IRBlock targetBlock) {
+    private boolean determineBranchCondition(IRBlock branchBlock, IRBlock targetBlock)
+    {
         IRInstruction terminator = branchBlock.getTerminator();
-        if (terminator instanceof BranchInstruction) {
+        if (terminator instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) terminator;
             return targetBlock == branch.getTrueTarget();
         }
         return true;
     }
 
-    private void addEntryControlDependencies() {
+    private void addEntryControlDependencies()
+    {
         PDGRegionNode entry = pdg.getEntryNode();
         IRBlock entryBlock = method.getEntryBlock();
 
         if (entryBlock == null) return;
 
-        for (PDGNode node : pdg.getNodesInBlock(entryBlock)) {
-            if (!hasControlDependency(node)) {
+        for (PDGNode node : pdg.getNodesInBlock(entryBlock))
+        {
+            if (!hasControlDependency(node))
+            {
                 pdg.addEdge(new PDGEdge(entry, node, PDGDependenceType.CONTROL_UNCONDITIONAL));
             }
         }
 
-        for (PDGNode node : pdg.getNodes()) {
-            if (node != entry && node != pdg.getExitNode() && !hasControlDependency(node)) {
+        for (PDGNode node : pdg.getNodes())
+        {
+            if (node != entry && node != pdg.getExitNode() && !hasControlDependency(node))
+            {
                 pdg.addEdge(new PDGEdge(entry, node, PDGDependenceType.CONTROL_UNCONDITIONAL));
             }
         }
     }
 
-    private boolean hasControlDependency(PDGNode node) {
-        for (PDGEdge edge : node.getIncomingEdges()) {
-            if (edge.isControlDependence()) {
+    private boolean hasControlDependency(PDGNode node)
+    {
+        for (PDGEdge edge : node.getIncomingEdges())
+        {
+            if (edge.isControlDependence())
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private void computeDataDependencies() {
+    private void computeDataDependencies()
+    {
         Map<SSAValue, Set<IRInstruction>> uses = defUseChains.getUses();
 
-        for (Map.Entry<SSAValue, Set<IRInstruction>> entry : uses.entrySet()) {
+        for (Map.Entry<SSAValue, Set<IRInstruction>> entry : uses.entrySet())
+        {
             SSAValue defValue = entry.getKey();
             Set<IRInstruction> useInstrs = entry.getValue();
 
             PDGNode sourceNode = pdg.getNodeForValue(defValue);
             if (sourceNode == null) continue;
 
-            for (IRInstruction useInstr : useInstrs) {
+            for (IRInstruction useInstr : useInstrs)
+            {
                 PDGNode targetNode = pdg.getNodeForInstruction(useInstr);
                 if (targetNode == null || sourceNode.equals(targetNode)) continue;
 
                 PDGDependenceType edgeType = determineDataEdgeType(useInstr, defValue);
                 String label = null;
 
-                if (useInstr instanceof PhiInstruction) {
+                if (useInstr instanceof PhiInstruction)
+                {
                     PhiInstruction phi = (PhiInstruction) useInstr;
                     IRBlock sourceBlock = findPhiSourceBlock(phi, defValue);
-                    if (sourceBlock != null) {
+                    if (sourceBlock != null)
+                    {
                         label = "B" + sourceBlock.getId();
                     }
                 }
@@ -274,35 +351,44 @@ public class PDGBuilder {
     }
 
     @SuppressWarnings("unused")
-    private PDGDependenceType determineDataEdgeType(IRInstruction useInstr, SSAValue value) {
+    private PDGDependenceType determineDataEdgeType(IRInstruction useInstr, SSAValue value)
+    {
         // TODO: use "value" for memory dependency analysis
-        if (useInstr instanceof PhiInstruction) {
+        if (useInstr instanceof PhiInstruction)
+        {
             return PDGDependenceType.DATA_PHI;
         }
         return PDGDependenceType.DATA_DEF_USE;
     }
 
-    private IRBlock findPhiSourceBlock(PhiInstruction phi, SSAValue value) {
+    private IRBlock findPhiSourceBlock(PhiInstruction phi, SSAValue value)
+    {
         Map<IRBlock, Value> incoming = phi.getIncomingValues();
-        for (Map.Entry<IRBlock, Value> entry : incoming.entrySet()) {
-            if (entry.getValue() == value) {
+        for (Map.Entry<IRBlock, Value> entry : incoming.entrySet())
+        {
+            if (entry.getValue() == value)
+            {
                 return entry.getKey();
             }
         }
         return null;
     }
 
-    private void handleExceptionEdges() {
-        for (IRBlock block : method.getBlocks()) {
-            for (IRBlock succ : block.getSuccessors()) {
+    private void handleExceptionEdges()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRBlock succ : block.getSuccessors())
+            {
                 EdgeType edgeType = block.getEdgeType(succ);
-                if (edgeType == EdgeType.EXCEPTION) {
+                if (edgeType == EdgeType.EXCEPTION)
+                {
                     PDGNode controllingNode = getControllingNodeForBlock(block);
                     if (controllingNode == null) continue;
 
-                    for (PDGNode node : pdg.getNodesInBlock(succ)) {
-                        PDGEdge edge = new PDGEdge(controllingNode, node,
-                            PDGDependenceType.CONTROL_EXCEPTION);
+                    for (PDGNode node : pdg.getNodesInBlock(succ))
+                    {
+                        PDGEdge edge = new PDGEdge(controllingNode, node, PDGDependenceType.CONTROL_EXCEPTION);
                         pdg.addEdge(edge);
                     }
                 }

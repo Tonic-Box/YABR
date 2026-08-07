@@ -2,8 +2,6 @@ package com.tonic.analysis.dependency;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.FieldEntry;
-import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,19 +19,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for the DependencyAnalyzer API.
  * Covers class dependency analysis, direct and transitive dependencies, and circular dependency detection.
  */
-class DependencyAnalyzerTest {
+class DependencyAnalyzerTest
+{
 
     private ClassPool pool;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         pool = TestUtils.emptyPool();
     }
 
-    // ========== Constructor and Basic Tests ==========
+    // Constructor and Basic Tests
 
     @Test
-    void constructorAnalyzesEmptyPool() {
+    void constructorAnalyzesEmptyPool()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         assertNotNull(analyzer);
@@ -41,7 +42,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void constructorAnalyzesSingleClass() throws IOException {
+    void constructorAnalyzesSingleClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Single", access);
 
@@ -52,7 +54,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void constructorAnalyzesMultipleClasses() throws IOException {
+    void constructorAnalyzesMultipleClasses() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ClassA", access);
         pool.createNewClass("com/test/ClassB", access);
@@ -63,10 +66,11 @@ class DependencyAnalyzerTest {
         assertTrue(analyzer.size() >= 2);
     }
 
-    // ========== Node Query Tests ==========
+    // Node Query Tests
 
     @Test
-    void getNodeReturnsNullForNonExistent() {
+    void getNodeReturnsNullForNonExistent()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         DependencyNode node = analyzer.getNode("com/test/NonExistent");
@@ -75,7 +79,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getNodeReturnsNodeForExistingClass() throws IOException {
+    void getNodeReturnsNodeForExistingClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Existing", access);
 
@@ -88,7 +93,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getAllNodesReturnsCollection() throws IOException {
+    void getAllNodesReturnsCollection() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Node1", access);
         pool.createNewClass("com/test/Node2", access);
@@ -102,7 +108,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getPoolNodesReturnsOnlyPoolClasses() throws IOException {
+    void getPoolNodesReturnsOnlyPoolClasses() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/InPool", access);
 
@@ -111,15 +118,17 @@ class DependencyAnalyzerTest {
         Collection<DependencyNode> poolNodes = analyzer.getPoolNodes();
 
         assertNotNull(poolNodes);
-        for (DependencyNode node : poolNodes) {
+        for (DependencyNode node : poolNodes)
+        {
             assertTrue(node.isInPool());
         }
     }
 
-    // ========== Direct Dependency Tests ==========
+    // Direct Dependency Tests
 
     @Test
-    void getDependenciesReturnsEmptyForNonExistent() {
+    void getDependenciesReturnsEmptyForNonExistent()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         Set<String> deps = analyzer.getDependencies("com/test/NonExistent");
@@ -129,7 +138,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getDependenciesForClassWithNoDeps() throws IOException {
+    void getDependenciesForClassWithNoDeps() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/NoDeps", access);
 
@@ -142,7 +152,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getDependenciesDetectsMethodParameterType() throws IOException {
+    void getDependenciesDetectsMethodParameterType() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile paramType = pool.createNewClass("com/test/ParamType", access);
         ClassFile owner = pool.createNewClass("com/test/MethodOwner", access);
@@ -159,7 +170,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getDependenciesDetectsReturnType() throws IOException {
+    void getDependenciesDetectsReturnType() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile returnType = pool.createNewClass("com/test/ReturnType", access);
         ClassFile owner = pool.createNewClass("com/test/ReturnOwner", access);
@@ -176,7 +188,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getDependentsReturnsEmptyForNonExistent() {
+    void getDependentsReturnsEmptyForNonExistent()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         Set<String> dependents = analyzer.getDependents("com/test/NonExistent");
@@ -186,12 +199,12 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getDependentsFindsReferencingClasses() throws IOException {
+    void getDependentsFindsReferencingClasses() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile target = pool.createNewClass("com/test/Target", access);
         ClassFile dependent = pool.createNewClass("com/test/Dependent", access);
 
-        // Add dependency through method parameter
         int methodAccess = new AccessBuilder().setPublic().build();
         dependent.createNewMethod(methodAccess, "method", "V", "Lcom/test/Target;");
 
@@ -203,10 +216,11 @@ class DependencyAnalyzerTest {
         assertTrue(dependents.contains("com/test/Dependent"));
     }
 
-    // ========== Transitive Dependency Tests ==========
+    // Transitive Dependency Tests
 
     @Test
-    void getTransitiveDependenciesForSingleClass() throws IOException {
+    void getTransitiveDependenciesForSingleClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Single", access);
 
@@ -219,7 +233,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getTransitiveDependenciesFollowsChain() throws IOException {
+    void getTransitiveDependenciesFollowsChain() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/A", access);
         ClassFile classB = pool.createNewClass("com/test/B", access);
@@ -241,7 +256,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getTransitiveDependentsForSingleClass() throws IOException {
+    void getTransitiveDependentsForSingleClass() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Alone", access);
 
@@ -254,7 +270,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getTransitiveDependentsFollowsChain() throws IOException {
+    void getTransitiveDependentsFollowsChain() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/Base", access);
         ClassFile classB = pool.createNewClass("com/test/Middle", access);
@@ -275,10 +292,11 @@ class DependencyAnalyzerTest {
         assertTrue(transitive.contains("com/test/Top"));
     }
 
-    // ========== Circular Dependency Tests ==========
+    // Circular Dependency Tests
 
     @Test
-    void findCircularDependenciesInEmptyPool() {
+    void findCircularDependenciesInEmptyPool()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         List<List<String>> cycles = analyzer.findCircularDependencies();
@@ -288,7 +306,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void findCircularDependenciesWithNoCycles() throws IOException {
+    void findCircularDependenciesWithNoCycles() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/NoCycleA", access);
         ClassFile classB = pool.createNewClass("com/test/NoCycleB", access);
@@ -305,7 +324,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void findCircularDependenciesDetectsMethodParameterCycle() throws IOException {
+    void findCircularDependenciesDetectsMethodParameterCycle() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/CycleA", access);
         ClassFile classB = pool.createNewClass("com/test/CycleB", access);
@@ -324,24 +344,26 @@ class DependencyAnalyzerTest {
         // Circular dependencies may be detected
     }
 
-    // ========== Query Tests ==========
+    // Query Tests
 
     @Test
-    void findClassesWithPredicate() throws IOException {
+    void findClassesWithPredicate() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Find1", access);
         pool.createNewClass("com/test/Find2", access);
 
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
-        Set<String> classes = analyzer.findClasses(node -> node.isInPool());
+        Set<String> classes = analyzer.findClasses(DependencyNode::isInPool);
 
         assertNotNull(classes);
         assertTrue(classes.size() >= 2);
     }
 
     @Test
-    void findLeafClassesWithNoDependencies() throws IOException {
+    void findLeafClassesWithNoDependencies() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Leaf", access);
 
@@ -353,7 +375,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void findRootClassesWithNoDependents() throws IOException {
+    void findRootClassesWithNoDependents() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Root", access);
 
@@ -365,7 +388,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void getClassesInPackageFindsMatches() throws IOException {
+    void getClassesInPackageFindsMatches() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/package1/ClassA", access);
         pool.createNewClass("com/test/package1/ClassB", access);
@@ -381,17 +405,19 @@ class DependencyAnalyzerTest {
         assertFalse(classes.contains("com/test/package2/ClassC"));
     }
 
-    // ========== Relationship Tests ==========
+    // Relationship Tests
 
     @Test
-    void dependsOnReturnsFalseForNonExistent() {
+    void dependsOnReturnsFalseForNonExistent()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         assertFalse(analyzer.dependsOn("com/test/A", "com/test/B"));
     }
 
     @Test
-    void dependsOnReturnsTrueForDirectDependency() throws IOException {
+    void dependsOnReturnsTrueForDirectDependency() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile parent = pool.createNewClass("com/test/DepParent", access);
         ClassFile child = pool.createNewClass("com/test/DepChild", access);
@@ -405,14 +431,16 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void transitivelyDependsOnReturnsFalseForUnrelated() {
+    void transitivelyDependsOnReturnsFalseForUnrelated()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         assertFalse(analyzer.transitivelyDependsOn("com/test/A", "com/test/B"));
     }
 
     @Test
-    void transitivelyDependsOnReturnsTrueForTransitive() throws IOException {
+    void transitivelyDependsOnReturnsTrueForTransitive() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/TransA", access);
         ClassFile classB = pool.createNewClass("com/test/TransB", access);
@@ -427,10 +455,11 @@ class DependencyAnalyzerTest {
         assertTrue(analyzer.transitivelyDependsOn("com/test/TransC", "com/test/TransA"));
     }
 
-    // ========== Metadata Tests ==========
+    // Metadata Tests
 
     @Test
-    void sizeReturnsClassCount() throws IOException {
+    void sizeReturnsClassCount() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/Size1", access);
         pool.createNewClass("com/test/Size2", access);
@@ -441,7 +470,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void edgeCountReturnsDependencyCount() {
+    void edgeCountReturnsDependencyCount()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         int edges = analyzer.edgeCount();
@@ -450,7 +480,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void toStringContainsBasicInfo() throws IOException {
+    void toStringContainsBasicInfo() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/ToString", access);
 
@@ -462,10 +493,11 @@ class DependencyAnalyzerTest {
         assertTrue(str.contains("DependencyAnalyzer"));
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void handlesArrayTypes() throws IOException {
+    void handlesArrayTypes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile owner = pool.createNewClass("com/test/ArrayOwner", access);
 
@@ -479,7 +511,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void handlesPrimitiveTypes() throws IOException {
+    void handlesPrimitiveTypes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile owner = pool.createNewClass("com/test/PrimitiveOwner", access);
 
@@ -495,15 +528,15 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void handlesMultipleParameterTypes() throws IOException {
+    void handlesMultipleParameterTypes() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile typeA = pool.createNewClass("com/test/TypeA", access);
         ClassFile typeB = pool.createNewClass("com/test/TypeB", access);
         ClassFile owner = pool.createNewClass("com/test/MultiParam", access);
 
         int methodAccess = new AccessBuilder().setPublic().build();
-        owner.createNewMethod(methodAccess, "method", "V",
-            "Lcom/test/TypeA;", "Lcom/test/TypeB;");
+        owner.createNewMethod(methodAccess, "method", "V", "Lcom/test/TypeA;", "Lcom/test/TypeB;");
 
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
@@ -515,7 +548,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void handlesSelfReference() throws IOException {
+    void handlesSelfReference() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile self = pool.createNewClass("com/test/SelfRef", access);
 
@@ -524,12 +558,12 @@ class DependencyAnalyzerTest {
 
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
-        // Should handle self-references gracefully
         assertNotNull(analyzer);
     }
 
     @Test
-    void handlesEmptyClassName() {
+    void handlesEmptyClassName()
+    {
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
         Set<String> deps = analyzer.getDependencies("");
@@ -539,7 +573,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void dependencyNodeReturnsCorrectInfo() throws IOException {
+    void dependencyNodeReturnsCorrectInfo() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         pool.createNewClass("com/test/NodeInfo", access);
 
@@ -552,7 +587,8 @@ class DependencyAnalyzerTest {
     }
 
     @Test
-    void dependencyNodeCountersWork() throws IOException {
+    void dependencyNodeCountersWork() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         ClassFile classA = pool.createNewClass("com/test/CounterA", access);
         ClassFile classB = pool.createNewClass("com/test/CounterB", access);
@@ -570,13 +606,15 @@ class DependencyAnalyzerTest {
         assertTrue(nodeA.getDependentCount() >= 1);
     }
 
-    // ========== Dependency Class Tests ==========
+    // Dependency Class Tests
 
     @Nested
-    class DependencyTests {
+    class DependencyTests
+    {
 
         @Test
-        void constructorCreatesValidDependency() {
+        void constructorCreatesValidDependency()
+        {
             Dependency dep = new Dependency("com/test/From", "com/test/To", DependencyType.EXTENDS);
 
             assertNotNull(dep);
@@ -586,7 +624,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void constructorHandlesNullParameters() {
+        void constructorHandlesNullParameters()
+        {
             Dependency dep = new Dependency(null, null, null);
 
             assertNull(dep.getFromClass());
@@ -595,7 +634,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsTrueForSameDependency() {
+        void equalsReturnsTrueForSameDependency()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_TYPE);
             Dependency dep2 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_TYPE);
 
@@ -603,7 +643,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentFromClass() {
+        void equalsReturnsFalseForDifferentFromClass()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_TYPE);
             Dependency dep2 = new Dependency("com/test/C", "com/test/B", DependencyType.FIELD_TYPE);
 
@@ -611,7 +652,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentToClass() {
+        void equalsReturnsFalseForDifferentToClass()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_TYPE);
             Dependency dep2 = new Dependency("com/test/A", "com/test/C", DependencyType.FIELD_TYPE);
 
@@ -619,7 +661,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentType() {
+        void equalsReturnsFalseForDifferentType()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_TYPE);
             Dependency dep2 = new Dependency("com/test/A", "com/test/B", DependencyType.METHOD_CALL);
 
@@ -627,28 +670,32 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsTrueForSameObject() {
+        void equalsReturnsTrueForSameObject()
+        {
             Dependency dep = new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS);
 
             assertEquals(dep, dep);
         }
 
         @Test
-        void equalsReturnsFalseForNull() {
+        void equalsReturnsFalseForNull()
+        {
             Dependency dep = new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS);
 
             assertNotEquals(dep, null);
         }
 
         @Test
-        void equalsReturnsFalseForDifferentClass() {
+        void equalsReturnsFalseForDifferentClass()
+        {
             Dependency dep = new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS);
 
             assertNotEquals(dep, "not a dependency");
         }
 
         @Test
-        void hashCodeConsistentForEqualObjects() {
+        void hashCodeConsistentForEqualObjects()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.METHOD_CALL);
             Dependency dep2 = new Dependency("com/test/A", "com/test/B", DependencyType.METHOD_CALL);
 
@@ -656,7 +703,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void hashCodeDifferentForUnequalObjects() {
+        void hashCodeDifferentForUnequalObjects()
+        {
             Dependency dep1 = new Dependency("com/test/A", "com/test/B", DependencyType.METHOD_CALL);
             Dependency dep2 = new Dependency("com/test/A", "com/test/B", DependencyType.FIELD_ACCESS);
 
@@ -664,7 +712,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void toStringContainsClassNames() {
+        void toStringContainsClassNames()
+        {
             Dependency dep = new Dependency("com/test/Source", "com/test/Target", DependencyType.IMPLEMENTS);
 
             String str = dep.toString();
@@ -676,8 +725,10 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void allDependencyTypesCreateValidObjects() {
-            for (DependencyType type : DependencyType.values()) {
+        void allDependencyTypesCreateValidObjects()
+        {
+            for (DependencyType type : DependencyType.values())
+            {
                 Dependency dep = new Dependency("com/test/From", "com/test/To", type);
 
                 assertNotNull(dep);
@@ -686,7 +737,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void extendsTypeRepresentation() {
+        void extendsTypeRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Child", "com/test/Parent", DependencyType.EXTENDS);
 
             assertEquals("com/test/Child", dep.getFromClass());
@@ -695,7 +747,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void implementsTypeRepresentation() {
+        void implementsTypeRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Impl", "com/test/Interface", DependencyType.IMPLEMENTS);
 
             assertEquals("com/test/Impl", dep.getFromClass());
@@ -704,48 +757,55 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void fieldTypeRepresentation() {
+        void fieldTypeRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Owner", "com/test/FieldType", DependencyType.FIELD_TYPE);
 
             assertEquals(DependencyType.FIELD_TYPE, dep.getType());
         }
 
         @Test
-        void methodCallRepresentation() {
+        void methodCallRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Caller", "com/test/Callee", DependencyType.METHOD_CALL);
 
             assertEquals(DependencyType.METHOD_CALL, dep.getType());
         }
 
         @Test
-        void fieldAccessRepresentation() {
+        void fieldAccessRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Accessor", "com/test/Owner", DependencyType.FIELD_ACCESS);
 
             assertEquals(DependencyType.FIELD_ACCESS, dep.getType());
         }
 
         @Test
-        void parameterTypeRepresentation() {
+        void parameterTypeRepresentation()
+        {
             Dependency dep = new Dependency("com/test/Method", "com/test/ParamType", DependencyType.PARAMETER_TYPE);
 
             assertEquals(DependencyType.PARAMETER_TYPE, dep.getType());
         }
 
         @Test
-        void classLiteralRepresentation() {
+        void classLiteralRepresentation()
+        {
             Dependency dep = new Dependency("com/test/User", "com/test/Referenced", DependencyType.CLASS_LITERAL);
 
             assertEquals(DependencyType.CLASS_LITERAL, dep.getType());
         }
     }
 
-    // ========== DependencyNode Class Tests ==========
+    // DependencyNode Class Tests
 
     @Nested
-    class DependencyNodeTests {
+    class DependencyNodeTests
+    {
 
         @Test
-        void constructorWithClassFile() throws IOException {
+        void constructorWithClassFile() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/NodeTest", access);
             DependencyNode node = new DependencyNode("com/test/NodeTest", cf);
@@ -757,7 +817,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void constructorWithNullClassFile() {
+        void constructorWithNullClassFile()
+        {
             DependencyNode node = new DependencyNode("com/external/Library", null);
 
             assertNotNull(node);
@@ -767,14 +828,16 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getClassNameReturnsCorrectValue() {
+        void getClassNameReturnsCorrectValue()
+        {
             DependencyNode node = new DependencyNode("com/test/MyClass", null);
 
             assertEquals("com/test/MyClass", node.getClassName());
         }
 
         @Test
-        void isInPoolReturnsTrueForPoolClass() throws IOException {
+        void isInPoolReturnsTrueForPoolClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             ClassFile cf = pool.createNewClass("com/test/InPool", access);
             DependencyNode node = new DependencyNode("com/test/InPool", cf);
@@ -783,14 +846,16 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void isInPoolReturnsFalseForExternalClass() {
+        void isInPoolReturnsFalseForExternalClass()
+        {
             DependencyNode node = new DependencyNode("java/lang/String", null);
 
             assertFalse(node.isInPool());
         }
 
         @Test
-        void getOutgoingDependenciesReturnsEmptyInitially() {
+        void getOutgoingDependenciesReturnsEmptyInitially()
+        {
             DependencyNode node = new DependencyNode("com/test/Empty", null);
 
             Set<Dependency> outgoing = node.getOutgoingDependencies();
@@ -800,7 +865,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getIncomingDependenciesReturnsEmptyInitially() {
+        void getIncomingDependenciesReturnsEmptyInitially()
+        {
             DependencyNode node = new DependencyNode("com/test/Empty", null);
 
             Set<Dependency> incoming = node.getIncomingDependencies();
@@ -810,7 +876,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void addOutgoingDependencyWorks() {
+        void addOutgoingDependencyWorks()
+        {
             DependencyNode node = new DependencyNode("com/test/From", null);
             Dependency dep = new Dependency("com/test/From", "com/test/To", DependencyType.EXTENDS);
 
@@ -822,7 +889,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void addIncomingDependencyWorks() {
+        void addIncomingDependencyWorks()
+        {
             DependencyNode node = new DependencyNode("com/test/To", null);
             Dependency dep = new Dependency("com/test/From", "com/test/To", DependencyType.IMPLEMENTS);
 
@@ -834,7 +902,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependenciesReturnsClassNames() {
+        void getDependenciesReturnsClassNames()
+        {
             DependencyNode node = new DependencyNode("com/test/From", null);
             node.addOutgoingDependency(new Dependency("com/test/From", "com/test/To1", DependencyType.FIELD_TYPE));
             node.addOutgoingDependency(new Dependency("com/test/From", "com/test/To2", DependencyType.METHOD_CALL));
@@ -847,7 +916,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependentsReturnsClassNames() {
+        void getDependentsReturnsClassNames()
+        {
             DependencyNode node = new DependencyNode("com/test/To", null);
             node.addIncomingDependency(new Dependency("com/test/From1", "com/test/To", DependencyType.EXTENDS));
             node.addIncomingDependency(new Dependency("com/test/From2", "com/test/To", DependencyType.IMPLEMENTS));
@@ -860,7 +930,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependencyCountReturnsCorrectValue() {
+        void getDependencyCountReturnsCorrectValue()
+        {
             DependencyNode node = new DependencyNode("com/test/Node", null);
             node.addOutgoingDependency(new Dependency("com/test/Node", "com/test/Dep1", DependencyType.FIELD_TYPE));
             node.addOutgoingDependency(new Dependency("com/test/Node", "com/test/Dep2", DependencyType.METHOD_CALL));
@@ -870,7 +941,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependentCountReturnsCorrectValue() {
+        void getDependentCountReturnsCorrectValue()
+        {
             DependencyNode node = new DependencyNode("com/test/Node", null);
             node.addIncomingDependency(new Dependency("com/test/From1", "com/test/Node", DependencyType.EXTENDS));
             node.addIncomingDependency(new Dependency("com/test/From2", "com/test/Node", DependencyType.IMPLEMENTS));
@@ -879,7 +951,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependenciesByTypeFiltersCorrectly() {
+        void getDependenciesByTypeFiltersCorrectly()
+        {
             DependencyNode node = new DependencyNode("com/test/Filter", null);
             node.addOutgoingDependency(new Dependency("com/test/Filter", "com/test/Field1", DependencyType.FIELD_TYPE));
             node.addOutgoingDependency(new Dependency("com/test/Filter", "com/test/Field2", DependencyType.FIELD_TYPE));
@@ -894,7 +967,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void getDependenciesByTypeReturnsEmptyForNoMatch() {
+        void getDependenciesByTypeReturnsEmptyForNoMatch()
+        {
             DependencyNode node = new DependencyNode("com/test/Node", null);
             node.addOutgoingDependency(new Dependency("com/test/Node", "com/test/Other", DependencyType.FIELD_TYPE));
 
@@ -905,7 +979,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsTrueForSameClassName() {
+        void equalsReturnsTrueForSameClassName()
+        {
             DependencyNode node1 = new DependencyNode("com/test/Same", null);
             DependencyNode node2 = new DependencyNode("com/test/Same", null);
 
@@ -913,7 +988,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsFalseForDifferentClassName() {
+        void equalsReturnsFalseForDifferentClassName()
+        {
             DependencyNode node1 = new DependencyNode("com/test/A", null);
             DependencyNode node2 = new DependencyNode("com/test/B", null);
 
@@ -921,28 +997,32 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void equalsReturnsTrueForSameObject() {
+        void equalsReturnsTrueForSameObject()
+        {
             DependencyNode node = new DependencyNode("com/test/Same", null);
 
             assertEquals(node, node);
         }
 
         @Test
-        void equalsReturnsFalseForNull() {
+        void equalsReturnsFalseForNull()
+        {
             DependencyNode node = new DependencyNode("com/test/Node", null);
 
             assertNotEquals(node, null);
         }
 
         @Test
-        void equalsReturnsFalseForDifferentClass() {
+        void equalsReturnsFalseForDifferentClass()
+        {
             DependencyNode node = new DependencyNode("com/test/Node", null);
 
             assertNotEquals(node, "not a node");
         }
 
         @Test
-        void hashCodeConsistentForEqualNodes() {
+        void hashCodeConsistentForEqualNodes()
+        {
             DependencyNode node1 = new DependencyNode("com/test/Hash", null);
             DependencyNode node2 = new DependencyNode("com/test/Hash", null);
 
@@ -950,7 +1030,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void toStringContainsClassName() {
+        void toStringContainsClassName()
+        {
             DependencyNode node = new DependencyNode("com/test/ToString", null);
 
             String str = node.toString();
@@ -960,7 +1041,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void toStringContainsDependencyCounts() {
+        void toStringContainsDependencyCounts()
+        {
             DependencyNode node = new DependencyNode("com/test/Counts", null);
             node.addOutgoingDependency(new Dependency("com/test/Counts", "com/test/A", DependencyType.FIELD_TYPE));
             node.addIncomingDependency(new Dependency("com/test/B", "com/test/Counts", DependencyType.EXTENDS));
@@ -972,27 +1054,26 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void outgoingDependenciesSetIsUnmodifiable() {
+        void outgoingDependenciesSetIsUnmodifiable()
+        {
             DependencyNode node = new DependencyNode("com/test/Unmod", null);
             Set<Dependency> outgoing = node.getOutgoingDependencies();
 
-            assertThrows(UnsupportedOperationException.class, () -> {
-                outgoing.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS));
-            });
+            assertThrows(UnsupportedOperationException.class, () -> outgoing.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS)));
         }
 
         @Test
-        void incomingDependenciesSetIsUnmodifiable() {
+        void incomingDependenciesSetIsUnmodifiable()
+        {
             DependencyNode node = new DependencyNode("com/test/Unmod", null);
             Set<Dependency> incoming = node.getIncomingDependencies();
 
-            assertThrows(UnsupportedOperationException.class, () -> {
-                incoming.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS));
-            });
+            assertThrows(UnsupportedOperationException.class, () -> incoming.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS)));
         }
 
         @Test
-        void multipleOutgoingDependenciesToSameClass() {
+        void multipleOutgoingDependenciesToSameClass()
+        {
             DependencyNode node = new DependencyNode("com/test/Multi", null);
             node.addOutgoingDependency(new Dependency("com/test/Multi", "com/test/Target", DependencyType.FIELD_TYPE));
             node.addOutgoingDependency(new Dependency("com/test/Multi", "com/test/Target", DependencyType.METHOD_CALL));
@@ -1006,7 +1087,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void noDuplicateDependenciesInOutgoing() {
+        void noDuplicateDependenciesInOutgoing()
+        {
             DependencyNode node = new DependencyNode("com/test/NoDup", null);
             Dependency dep = new Dependency("com/test/NoDup", "com/test/Target", DependencyType.EXTENDS);
             node.addOutgoingDependency(dep);
@@ -1017,7 +1099,8 @@ class DependencyAnalyzerTest {
         }
 
         @Test
-        void noDuplicateDependenciesInIncoming() {
+        void noDuplicateDependenciesInIncoming()
+        {
             DependencyNode node = new DependencyNode("com/test/NoDup", null);
             Dependency dep = new Dependency("com/test/Source", "com/test/NoDup", DependencyType.IMPLEMENTS);
             node.addIncomingDependency(dep);

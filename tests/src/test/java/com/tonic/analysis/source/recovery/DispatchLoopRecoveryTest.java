@@ -23,16 +23,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * cannot represent the flow, recovery falls back to a faithful dispatch loop, so every reachable
  * call still appears.
  */
-class DispatchLoopRecoveryTest {
+class DispatchLoopRecoveryTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void irreducibleControlFlowKeepsAllReachableCalls() throws IOException {
+    void irreducibleControlFlowKeepsAllReachableCalls() throws IOException
+    {
         // A <-> B two-entry cycle: B is entered from the entry (ifeq) AND from A (goto); A is
         // entered from the entry fall-through AND from B (goto). This multi-entry cycle is
         // irreducible, so the structured recovery cannot place every block on its spine.
@@ -68,9 +71,12 @@ class DispatchLoopRecoveryTest {
         assertTrue(src.contains("markerB"), "markerB call must not be dropped:\n" + src);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }

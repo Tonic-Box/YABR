@@ -7,27 +7,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Metrics container for allocation operations.
- *
- * <p>This class provides a clean interface to allocation statistics
- * collected during simulation.
+ * Immutable snapshot of the allocations counted during a simulation.
  */
-public class AllocationMetrics {
+public class AllocationMetrics
+{
 
     private final int objectCount;
     private final int arrayCount;
     private final Map<String, Integer> allocationsByType;
 
-    private AllocationMetrics(int objectCount, int arrayCount, Map<String, Integer> allocationsByType) {
+    private AllocationMetrics(int objectCount, int arrayCount, Map<String, Integer> allocationsByType)
+    {
         this.objectCount = objectCount;
         this.arrayCount = arrayCount;
-        this.allocationsByType = Collections.unmodifiableMap(new HashMap<>(allocationsByType));
+        this.allocationsByType = Map.copyOf(allocationsByType);
     }
 
     /**
-     * Creates metrics from an AllocationListener.
+     * Snapshots the counts a listener collected during simulation.
+     *
+     * @param listener the listener to read counts from
+     * @return the metrics snapshot
      */
-    public static AllocationMetrics from(AllocationListener listener) {
+    public static AllocationMetrics from(AllocationListener listener)
+    {
         return new AllocationMetrics(
             listener.getObjectAllocationCount(),
             listener.getArrayAllocationCount(),
@@ -36,69 +39,87 @@ public class AllocationMetrics {
     }
 
     /**
-     * Creates empty metrics.
+     * Creates metrics with no recorded allocations.
+     *
+     * @return the empty metrics
      */
-    public static AllocationMetrics empty() {
+    public static AllocationMetrics empty()
+    {
         return new AllocationMetrics(0, 0, Collections.emptyMap());
     }
 
     /**
-     * Gets the number of object allocations.
+     * @return the number of object allocations
      */
-    public int getObjectCount() {
+    public int getObjectCount()
+    {
         return objectCount;
     }
 
     /**
-     * Gets the number of array allocations.
+     * @return the number of array allocations
      */
-    public int getArrayCount() {
+    public int getArrayCount()
+    {
         return arrayCount;
     }
 
     /**
-     * Gets the total allocation count.
+     * @return the object and array allocation counts summed
      */
-    public int getTotalCount() {
+    public int getTotalCount()
+    {
         return objectCount + arrayCount;
     }
 
     /**
-     * Gets allocation counts by type.
+     * @return an unmodifiable map of type name to allocation count
      */
-    public Map<String, Integer> getAllocationsByType() {
+    public Map<String, Integer> getAllocationsByType()
+    {
         return allocationsByType;
     }
 
     /**
-     * Gets the allocation count for a specific type.
+     * Looks up one type's tally.
+     *
+     * @param typeName the allocated type to look up
+     * @return the count for that type, or 0 if it was never allocated
      */
-    public int getCountForType(String typeName) {
+    public int getCountForType(String typeName)
+    {
         return allocationsByType.getOrDefault(typeName, 0);
     }
 
     /**
-     * Gets the number of distinct types allocated.
+     * @return the number of distinct types allocated
      */
-    public int getDistinctTypeCount() {
+    public int getDistinctTypeCount()
+    {
         return allocationsByType.size();
     }
 
     /**
-     * Returns true if any allocations occurred.
+     * @return true if any object or array was allocated
      */
-    public boolean hasAllocations() {
+    public boolean hasAllocations()
+    {
         return objectCount > 0 || arrayCount > 0;
     }
 
     /**
-     * Gets the most allocated type.
+     * Scans the per-type tally for the highest count.
+     *
+     * @return the type name allocated most often, or null if nothing was allocated
      */
-    public String getMostAllocatedType() {
+    public String getMostAllocatedType()
+    {
         String maxType = null;
         int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : allocationsByType.entrySet()) {
-            if (entry.getValue() > maxCount) {
+        for (Map.Entry<String, Integer> entry : allocationsByType.entrySet())
+        {
+            if (entry.getValue() > maxCount)
+            {
                 maxCount = entry.getValue();
                 maxType = entry.getKey();
             }
@@ -107,11 +128,16 @@ public class AllocationMetrics {
     }
 
     /**
-     * Combines this metrics with another.
+     * Adds the counts and per-type tallies of both metrics.
+     *
+     * @param other the metrics to add
+     * @return a new metrics holding the summed counts
      */
-    public AllocationMetrics combine(AllocationMetrics other) {
+    public AllocationMetrics combine(AllocationMetrics other)
+    {
         Map<String, Integer> combined = new HashMap<>(this.allocationsByType);
-        for (Map.Entry<String, Integer> entry : other.allocationsByType.entrySet()) {
+        for (Map.Entry<String, Integer> entry : other.allocationsByType.entrySet())
+        {
             combined.merge(entry.getKey(), entry.getValue(), Integer::sum);
         }
         return new AllocationMetrics(
@@ -122,7 +148,8 @@ public class AllocationMetrics {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "AllocationMetrics[objects=" + objectCount +
             ", arrays=" + arrayCount +
             ", types=" + allocationsByType.size() + "]";

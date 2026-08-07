@@ -8,17 +8,29 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Represents a simulated value during execution simulation.
- * Tracks the value's type, source instruction, and optionally concrete value.
- * For reference types, also tracks points-to sets and null state.
- *
- * <p>SimValues are immutable and can be used as map keys.
+ * Immutable simulated value carrying its type, defining instruction and, for
+ * references, a points-to set and null state; usable as a map key.
  */
-public class SimValue {
+public class SimValue
+{
 
-    public enum NullState {
+    /**
+     * What is known about a reference value's nullness.
+     */
+    public enum NullState
+    {
+        /**
+         * The value is null on every path reaching this point, as for a simulated null constant.
+         */
         DEFINITELY_NULL,
+        /**
+         * The value is non-null on every path, as for a fresh allocation.
+         */
         DEFINITELY_NOT_NULL,
+        /**
+         * Nullness is unknown; also the result of merging two values whose states disagree, and
+         * the default for a value with no null information.
+         */
         MAYBE_NULL
     }
 
@@ -32,12 +44,13 @@ public class SimValue {
 
     private static int nextId = 0;
 
-    private SimValue(IRType type, IRInstruction sourceInstruction, Value ssaValue, Object constantValue) {
+    private SimValue(IRType type, IRInstruction sourceInstruction, Value ssaValue, Object constantValue)
+    {
         this(type, sourceInstruction, ssaValue, constantValue, Collections.emptySet(), NullState.MAYBE_NULL);
     }
 
-    private SimValue(IRType type, IRInstruction sourceInstruction, Value ssaValue, Object constantValue,
-                     Set<AllocationSite> pointsTo, NullState nullState) {
+    private SimValue(IRType type, IRInstruction sourceInstruction, Value ssaValue, Object constantValue, Set<AllocationSite> pointsTo, NullState nullState)
+    {
         this.type = type;
         this.sourceInstruction = sourceInstruction;
         this.ssaValue = ssaValue;
@@ -48,237 +61,314 @@ public class SimValue {
     }
 
     /**
-     * Creates a SimValue from an SSA value.
+     * Wraps an SSA value, adopting its type when it is present.
+     *
+     * @param value SSA value being simulated, may be null
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue fromSSA(Value value, IRInstruction source) {
+    public static SimValue fromSSA(Value value, IRInstruction source)
+    {
         IRType type = value != null ? value.getType() : null;
         return new SimValue(type, source, value, null);
     }
 
     /**
-     * Creates a SimValue with a known constant value.
+     * Creates a value with a known constant.
+     *
+     * @param value the constant
+     * @param type type of the constant
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue constant(Object value, IRType type, IRInstruction source) {
+    public static SimValue constant(Object value, IRType type, IRInstruction source)
+    {
         return new SimValue(type, source, null, value);
     }
 
     /**
-     * Creates a SimValue with just type information.
+     * Creates a value carrying only type information.
+     *
+     * @param type type of the value
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue ofType(IRType type, IRInstruction source) {
+    public static SimValue ofType(IRType type, IRInstruction source)
+    {
         return new SimValue(type, source, null, null);
     }
 
     /**
-     * Creates an unknown/untyped SimValue.
+     * Creates an untyped value about which nothing is known.
+     *
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue unknown(IRInstruction source) {
+    public static SimValue unknown(IRInstruction source)
+    {
         return new SimValue(null, source, null, null);
     }
 
     /**
-     * Creates a placeholder for wide value second slot.
+     * @return the placeholder occupying the second slot of a long or double
      */
-    public static SimValue wideSecondSlot() {
+    public static SimValue wideSecondSlot()
+    {
         return new SimValue(null, null, null, "WIDE_SECOND_SLOT");
     }
 
     /**
-     * Creates a SimValue for an allocation that points to a specific allocation site.
+     * Creates a definitely non-null reference pointing at one allocation site.
+     *
+     * @param site site the reference points to
+     * @param type type of the allocated object
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue ofAllocation(AllocationSite site, IRType type, IRInstruction source) {
-        return new SimValue(type, source, null, null,
-            Collections.singleton(site), NullState.DEFINITELY_NOT_NULL);
+    public static SimValue ofAllocation(AllocationSite site, IRType type, IRInstruction source)
+    {
+        return new SimValue(type, source, null, null, Collections.singleton(site), NullState.DEFINITELY_NOT_NULL);
     }
 
     /**
-     * Creates a definitely null SimValue.
+     * Creates a definitely null reference with an empty points-to set.
+     *
+     * @param type static type of the reference
+     * @param source instruction that produced the value
+     * @return the new simulated value
      */
-    public static SimValue ofNull(IRType type, IRInstruction source) {
-        return new SimValue(type, source, null, null,
-            Collections.emptySet(), NullState.DEFINITELY_NULL);
+    public static SimValue ofNull(IRType type, IRInstruction source)
+    {
+        return new SimValue(type, source, null, null, Collections.emptySet(), NullState.DEFINITELY_NULL);
     }
 
     /**
-     * Creates a SimValue with specific points-to set and null state.
+     * Creates a reference with a caller-supplied points-to set and null state.
+     *
+     * @param type static type of the reference
+     * @param source instruction that produced the value
+     * @param pointsTo allocation sites the reference may point to
+     * @param nullState what is known about its nullness
+     * @return the new simulated value
      */
-    public static SimValue ofReference(IRType type, IRInstruction source,
-                                        Set<AllocationSite> pointsTo, NullState nullState) {
+    public static SimValue ofReference(IRType type, IRInstruction source, Set<AllocationSite> pointsTo, NullState nullState)
+    {
         return new SimValue(type, source, null, null, pointsTo, nullState);
     }
 
     /**
-     * Merges multiple SimValues into one with unioned points-to sets.
+     * Folds a collection into one value, unioning points-to sets and widening disagreeing null states to
+     * MAYBE_NULL.
+     *
+     * @param values values to merge
+     * @return null if the collection is null or empty, the sole element if there is one,
+     *         otherwise the merged value
      */
-    public static SimValue merge(Collection<SimValue> values) {
-        if (values == null || values.isEmpty()) {
+    public static SimValue merge(Collection<SimValue> values)
+    {
+        if (values == null || values.isEmpty())
+        {
             return null;
         }
-        if (values.size() == 1) {
+        if (values.size() == 1)
+        {
             return values.iterator().next();
         }
 
         Iterator<SimValue> it = values.iterator();
         SimValue first = it.next();
-        IRType mergedType = first.type;
         Set<AllocationSite> mergedPointsTo = new HashSet<>(first.pointsTo);
         NullState mergedNullState = first.nullState;
 
-        while (it.hasNext()) {
+        while (it.hasNext())
+        {
             SimValue other = it.next();
             mergedPointsTo.addAll(other.pointsTo);
             mergedNullState = mergeNullStates(mergedNullState, other.nullState);
         }
 
-        return new SimValue(mergedType, first.sourceInstruction, null, null,
-            mergedPointsTo, mergedNullState);
+        return new SimValue(first.type, first.sourceInstruction, null, null, mergedPointsTo, mergedNullState);
     }
 
-    private static NullState mergeNullStates(NullState a, NullState b) {
+    private static NullState mergeNullStates(NullState a, NullState b)
+    {
         if (a == b) return a;
         return NullState.MAYBE_NULL;
     }
 
     /**
-     * Gets the type of this value.
+     * @return the type, or null if untyped
      */
-    public IRType getType() {
+    public IRType getType()
+    {
         return type;
     }
 
     /**
-     * Gets the instruction that produced this value.
+     * @return the instruction that produced this value
      */
-    public IRInstruction getSourceInstruction() {
+    public IRInstruction getSourceInstruction()
+    {
         return sourceInstruction;
     }
 
     /**
-     * Gets the underlying SSA value if available.
+     * @return the underlying SSA value, or null if there is none
      */
-    public Value getSSAValue() {
+    public Value getSSAValue()
+    {
         return ssaValue;
     }
 
     /**
-     * Gets the constant value if this is a constant.
+     * @return the constant, or null if the value is not constant
      */
-    public Object getConstantValue() {
+    public Object getConstantValue()
+    {
         return constantValue;
     }
 
     /**
-     * Returns true if this value has a known constant.
+     * @return true if a constant is known and it is not the wide-slot placeholder
      */
-    public boolean isConstant() {
+    public boolean isConstant()
+    {
         return constantValue != null && !"WIDE_SECOND_SLOT".equals(constantValue);
     }
 
     /**
-     * Returns true if this is the second slot of a wide (long/double) value.
+     * @return true if this is the second slot of a long or double
      */
-    public boolean isWideSecondSlot() {
+    public boolean isWideSecondSlot()
+    {
         return "WIDE_SECOND_SLOT".equals(constantValue);
     }
 
     /**
-     * Returns true if this is a wide type (long or double).
+     * @return true if the type occupies two slots
      */
-    public boolean isWide() {
+    public boolean isWide()
+    {
         if (type == null) return false;
         return type.isTwoSlot();
     }
 
     /**
-     * Returns true if this is a reference type.
+     * @return true if the type is a reference type
      */
-    public boolean isReference() {
+    public boolean isReference()
+    {
         return type != null && type.isReference();
     }
 
     /**
-     * Returns true if this is an unknown/untyped value.
+     * @return true if there is no type, SSA value, constant, or wide-slot marker
      */
-    public boolean isUnknown() {
+    public boolean isUnknown()
+    {
         return type == null && ssaValue == null && !isConstant() && !isWideSecondSlot();
     }
 
     /**
-     * Gets the unique ID of this value.
+     * @return the identity used by equals and hashCode
      */
-    public int getId() {
+    public int getId()
+    {
         return id;
     }
 
     /**
-     * Gets the set of allocation sites this reference may point to.
+     * @return an unmodifiable view of the allocation sites this reference may point to
      */
-    public Set<AllocationSite> getPointsTo() {
+    public Set<AllocationSite> getPointsTo()
+    {
         return Collections.unmodifiableSet(pointsTo);
     }
 
     /**
-     * Returns true if this value has points-to information.
+     * @return true if the points-to set is non-empty
      */
-    public boolean hasPointsTo() {
+    public boolean hasPointsTo()
+    {
         return !pointsTo.isEmpty();
     }
 
     /**
-     * Gets the null state of this value.
+     * @return what is known about this value's nullness
      */
-    public NullState getNullState() {
+    public NullState getNullState()
+    {
         return nullState;
     }
 
     /**
-     * Returns true if this value may be null.
+     * @return true unless the value is known to be non-null
      */
-    public boolean mayBeNull() {
+    public boolean mayBeNull()
+    {
         return nullState != NullState.DEFINITELY_NOT_NULL;
     }
 
     /**
-     * Returns true if this value is definitely null.
+     * @return true if the value is known to be null
      */
-    public boolean isDefinitelyNull() {
+    public boolean isDefinitelyNull()
+    {
         return nullState == NullState.DEFINITELY_NULL;
     }
 
     /**
-     * Returns true if this value is definitely not null.
+     * @return true if the value is known to be non-null
      */
-    public boolean isDefinitelyNotNull() {
+    public boolean isDefinitelyNotNull()
+    {
         return nullState == NullState.DEFINITELY_NOT_NULL;
     }
 
     /**
-     * Returns a new SimValue with the pointsTo set updated.
+     * Copies this value with a replaced points-to set.
+     *
+     * @param newPointsTo allocation sites for the copy
+     * @return the copy
      */
-    public SimValue withPointsTo(Set<AllocationSite> newPointsTo) {
+    public SimValue withPointsTo(Set<AllocationSite> newPointsTo)
+    {
         return new SimValue(type, sourceInstruction, ssaValue, constantValue, newPointsTo, nullState);
     }
 
     /**
-     * Returns a new SimValue with an additional allocation site in pointsTo.
+     * Copies this value with one more allocation site in its points-to set.
+     *
+     * @param site site to add
+     * @return the copy
      */
-    public SimValue withAdditionalPointsTo(AllocationSite site) {
+    public SimValue withAdditionalPointsTo(AllocationSite site)
+    {
         Set<AllocationSite> newPointsTo = new HashSet<>(pointsTo);
         newPointsTo.add(site);
         return new SimValue(type, sourceInstruction, ssaValue, constantValue, newPointsTo, nullState);
     }
 
     /**
-     * Returns a new SimValue with the null state updated.
+     * Copies this value with a replaced null state.
+     *
+     * @param newNullState null state for the copy
+     * @return the copy
      */
-    public SimValue withNullState(NullState newNullState) {
+    public SimValue withNullState(NullState newNullState)
+    {
         return new SimValue(type, sourceInstruction, ssaValue, constantValue, pointsTo, newNullState);
     }
 
     /**
-     * Merges this SimValue with another, unioning points-to sets.
+     * Merges another value into this one, unioning points-to sets and widening disagreeing null states to
+     * MAYBE_NULL.
+     *
+     * @param other value to merge, may be null
+     * @return this value if the other is null or equal, otherwise the merged value
      */
-    public SimValue merge(SimValue other) {
+    public SimValue merge(SimValue other)
+    {
         if (other == null) return this;
         if (this.equals(other)) return this;
 
@@ -287,12 +377,12 @@ public class SimValue {
 
         NullState mergedNullState = mergeNullStates(this.nullState, other.nullState);
 
-        return new SimValue(this.type, this.sourceInstruction, null, null,
-            mergedPointsTo, mergedNullState);
+        return new SimValue(this.type, this.sourceInstruction, null, null, mergedPointsTo, mergedNullState);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof SimValue)) return false;
         SimValue simValue = (SimValue) o;
@@ -300,27 +390,34 @@ public class SimValue {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(id);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder("SimValue[");
         sb.append("id=").append(id);
-        if (type != null) {
+        if (type != null)
+        {
             sb.append(", type=").append(type);
         }
-        if (isConstant()) {
+        if (isConstant())
+        {
             sb.append(", const=").append(constantValue);
         }
-        if (isWideSecondSlot()) {
+        if (isWideSecondSlot())
+        {
             sb.append(", WIDE_SLOT_2");
         }
-        if (!pointsTo.isEmpty()) {
+        if (!pointsTo.isEmpty())
+        {
             sb.append(", pointsTo=").append(pointsTo.size()).append(" sites");
         }
-        if (nullState != NullState.MAYBE_NULL) {
+        if (nullState != NullState.MAYBE_NULL)
+        {
             sb.append(", ").append(nullState);
         }
         sb.append("]");

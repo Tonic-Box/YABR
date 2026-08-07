@@ -4,7 +4,11 @@ import com.tonic.analysis.cpg.node.CPGNode;
 
 import java.util.*;
 
-public class TaintPath {
+/**
+ * A single tainted data flow from a source to a sink, with the CPG nodes traversed and any sanitizers seen along the way.
+ */
+public class TaintPath
+{
 
     private final TaintSource source;
     private final TaintSink sink;
@@ -13,90 +17,158 @@ public class TaintPath {
     private final List<CPGNode> path;
     private final Set<String> sanitizers;
 
-    private TaintPath(TaintSource source, TaintSink sink, CPGNode sourceNode,
-                      CPGNode sinkNode, List<CPGNode> path) {
+    private TaintPath(TaintSource source, TaintSink sink, CPGNode sourceNode, CPGNode sinkNode, List<CPGNode> path)
+    {
         this.source = source;
         this.sink = sink;
         this.sourceNode = sourceNode;
         this.sinkNode = sinkNode;
-        this.path = Collections.unmodifiableList(new ArrayList<>(path));
+        this.path = List.copyOf(path);
         this.sanitizers = new LinkedHashSet<>();
     }
 
-    public TaintSource getSource() {
+    /**
+     * @return the source
+     */
+    public TaintSource getSource()
+    {
         return source;
     }
 
-    public TaintSink getSink() {
+    /**
+     * @return the sink
+     */
+    public TaintSink getSink()
+    {
         return sink;
     }
 
-    public CPGNode getSourceNode() {
+    /**
+     * @return the source node
+     */
+    public CPGNode getSourceNode()
+    {
         return sourceNode;
     }
 
-    public CPGNode getSinkNode() {
+    /**
+     * @return the sink node
+     */
+    public CPGNode getSinkNode()
+    {
         return sinkNode;
     }
 
-    public List<CPGNode> getPath() {
+    /**
+     * @return the path
+     */
+    public List<CPGNode> getPath()
+    {
         return path;
     }
 
-    public Set<String> getSanitizers() {
+    /**
+     * @return the sanitizers
+     */
+    public Set<String> getSanitizers()
+    {
         return sanitizers;
     }
 
-    public static Builder builder() {
+    /**
+     * @return a new empty builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public int getPathLength() {
+    /**
+     * @return the number of nodes on the path
+     */
+    public int getPathLength()
+    {
         return path.size();
     }
 
-    public boolean isSanitized() {
+    /**
+     * @return true if at least one sanitizer was recorded
+     */
+    public boolean isSanitized()
+    {
         return !sanitizers.isEmpty();
     }
 
-    public void addSanitizer(String sanitizer) {
+    /**
+     * Records a sanitizer applied along this path.
+     * @param sanitizer name of the sanitizing routine
+     */
+    public void addSanitizer(String sanitizer)
+    {
         sanitizers.add(sanitizer);
     }
 
-    public VulnerabilityType getVulnerabilityType() {
+    /**
+     * @return the vulnerability type reported by the sink
+     */
+    public VulnerabilityType getVulnerabilityType()
+    {
         return sink.getVulnerabilityType();
     }
 
-    public Severity getSeverity() {
+    /**
+     * Severity of the sink, downgraded to INFO once the path is sanitized.
+     * @return the effective severity
+     */
+    public Severity getSeverity()
+    {
         return isSanitized() ? Severity.INFO : sink.getSeverity();
     }
 
-    public String getSourceLocation() {
+    /**
+     * Renders the source node position as "method:line", falling back to the node label.
+     * @return the formatted location, or "unknown" when there is no source node
+     */
+    public String getSourceLocation()
+    {
         if (sourceNode == null) return "unknown";
         Object line = sourceNode.getProperty("line");
         Object method = sourceNode.getProperty("methodName");
-        if (line != null && method != null) {
+        if (line != null && method != null)
+        {
             return method + ":" + line;
         }
         return sourceNode.getLabel();
     }
 
-    public String getSinkLocation() {
+    /**
+     * Renders the sink node position as "method:line", falling back to the node label.
+     * @return the formatted location, or "unknown" when there is no sink node
+     */
+    public String getSinkLocation()
+    {
         if (sinkNode == null) return "unknown";
         Object line = sinkNode.getProperty("line");
         Object method = sinkNode.getProperty("methodName");
-        if (line != null && method != null) {
+        if (line != null && method != null)
+        {
             return method + ":" + line;
         }
         return sinkNode.getLabel();
     }
 
-    public String formatPath() {
+    /**
+     * Builds a multi-line report listing the source, every hop, the sink, and any sanitizers.
+     * @return the formatted report
+     */
+    public String formatPath()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("Source: ").append(source.getName()).append(" at ").append(getSourceLocation());
         sb.append("\n");
 
-        for (int i = 0; i < path.size(); i++) {
+        for (int i = 0; i < path.size(); i++)
+        {
             CPGNode node = path.get(i);
             sb.append("  ").append(i + 1).append(". ").append(node.getLabel());
             sb.append("\n");
@@ -104,14 +176,20 @@ public class TaintPath {
 
         sb.append("Sink: ").append(sink.getName()).append(" at ").append(getSinkLocation());
 
-        if (!sanitizers.isEmpty()) {
+        if (!sanitizers.isEmpty())
+        {
             sb.append("\n[SANITIZED by: ").append(String.join(", ", sanitizers)).append("]");
         }
 
         return sb.toString();
     }
 
-    public String toShortString() {
+    /**
+     * Builds a one-line summary of the flow, its severity, hop count, and sanitization state.
+     * @return the summary line
+     */
+    public String toShortString()
+    {
         return String.format("%s -> %s (%s, %d hops%s)",
             source.getName(),
             sink.getName(),
@@ -121,12 +199,14 @@ public class TaintPath {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return formatPath();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TaintPath that = (TaintPath) o;
@@ -136,49 +216,95 @@ public class TaintPath {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(sourceNode, sinkNode, path);
     }
 
-    public static class Builder {
+    /**
+     * Accumulator for the endpoints and hop list of a TaintPath.
+     */
+    public static class Builder
+    {
         private TaintSource source;
         private TaintSink sink;
         private CPGNode sourceNode;
         private CPGNode sinkNode;
         private final List<CPGNode> path = new ArrayList<>();
 
-        public Builder source(TaintSource source) {
+        /**
+         * Sets the source definition the flow originates from.
+         * @param source the matched taint source
+         * @return this builder
+         */
+        public Builder source(TaintSource source)
+        {
             this.source = source;
             return this;
         }
 
-        public Builder sink(TaintSink sink) {
+        /**
+         * Sets the sink definition the flow terminates at.
+         * @param sink the matched taint sink
+         * @return this builder
+         */
+        public Builder sink(TaintSink sink)
+        {
             this.sink = sink;
             return this;
         }
 
-        public Builder sourceNode(CPGNode node) {
+        /**
+         * Sets the CPG node where the taint enters.
+         * @param node the source call site
+         * @return this builder
+         */
+        public Builder sourceNode(CPGNode node)
+        {
             this.sourceNode = node;
             return this;
         }
 
-        public Builder sinkNode(CPGNode node) {
+        /**
+         * Sets the CPG node where the taint is consumed.
+         * @param node the sink call site
+         * @return this builder
+         */
+        public Builder sinkNode(CPGNode node)
+        {
             this.sinkNode = node;
             return this;
         }
 
-        public Builder addToPath(CPGNode node) {
+        /**
+         * Appends one hop to the end of the path.
+         * @param node the node traversed
+         * @return this builder
+         */
+        public Builder addToPath(CPGNode node)
+        {
             this.path.add(node);
             return this;
         }
 
-        public Builder path(List<CPGNode> path) {
+        /**
+         * Replaces the accumulated hops with the given sequence.
+         * @param path the nodes traversed, in order
+         * @return this builder
+         */
+        public Builder path(List<CPGNode> path)
+        {
             this.path.clear();
             this.path.addAll(path);
             return this;
         }
 
-        public TaintPath build() {
+        /**
+         * Creates the path from the accumulated state; the hop list is copied.
+         * @return the new path, with no sanitizers recorded yet
+         */
+        public TaintPath build()
+        {
             return new TaintPath(source, sink, sourceNode, sinkNode, path);
         }
     }

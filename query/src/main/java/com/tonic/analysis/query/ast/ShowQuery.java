@@ -4,9 +4,9 @@ import java.util.Objects;
 
 /**
  * SHOW query - displays all matching items without filtering.
- * Example: SHOW all strings DURING clinit OF classes matching /Config/
  */
-public final class ShowQuery implements Query {
+public final class ShowQuery implements Query
+{
 
     private final Target target;
     private final Scope scope;
@@ -15,8 +15,17 @@ public final class ShowQuery implements Query {
     private final Integer limit;
     private final OrderBy orderBy;
 
-    public ShowQuery(Target target, Scope scope, Condition condition,
-                     RunSpec runSpec, Integer limit, OrderBy orderBy) {
+    /**
+     * Creates a SHOW query.
+     * @param target the entity kind being displayed
+     * @param scope the scope restricting the search, may be null
+     * @param condition the WHERE condition, may be null
+     * @param runSpec optional execution settings, may be null
+     * @param limit optional result cap, may be null
+     * @param orderBy optional result ordering, may be null
+     */
+    public ShowQuery(Target target, Scope scope, Condition condition, RunSpec runSpec, Integer limit, OrderBy orderBy)
+    {
         this.target = target;
         this.scope = scope;
         this.condition = condition;
@@ -26,38 +35,45 @@ public final class ShowQuery implements Query {
     }
 
     @Override
-    public Target target() {
+    public Target target()
+    {
         return target;
     }
 
     @Override
-    public Scope scope() {
+    public Scope scope()
+    {
         return scope;
     }
 
     @Override
-    public Condition condition() {
+    public Condition condition()
+    {
         return condition;
     }
 
     @Override
-    public RunSpec runSpec() {
+    public RunSpec runSpec()
+    {
         return runSpec;
     }
 
     @Override
-    public Integer limit() {
+    public Integer limit()
+    {
         return limit;
     }
 
     @Override
-    public OrderBy orderBy() {
+    public OrderBy orderBy()
+    {
         return orderBy;
     }
 
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ShowQuery)) return false;
         ShowQuery that = (ShowQuery) o;
@@ -70,12 +86,14 @@ public final class ShowQuery implements Query {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(target, scope, condition, runSpec, limit, orderBy);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "ShowQuery{target=" + target + ", scope=" + scope +
                ", condition=" + condition + ", limit=" + limit + "}";
     }

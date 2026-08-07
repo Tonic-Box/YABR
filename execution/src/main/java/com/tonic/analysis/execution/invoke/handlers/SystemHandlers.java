@@ -7,33 +7,37 @@ import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
-public final class SystemHandlers implements NativeHandlerProvider {
+/**
+ * Native handlers for the JDK core natives on Object, Class, System and Thread.
+ */
+public final class SystemHandlers implements NativeHandlerProvider
+{
 
     @Override
-    public void register(NativeRegistry registry) {
+    public void register(NativeRegistry registry)
+    {
         registerJdkCoreHandlers(registry);
         registerMoreSystemHandlers(registry);
     }
 
-    private void registerJdkCoreHandlers(NativeRegistry registry) {
-        registry.register("java/lang/Object", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+    private void registerJdkCoreHandlers(NativeRegistry registry)
+    {
+        registry.register("java/lang/Object", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Class", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Class", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/System", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/System", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Class", "getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     String typeName = ctx.getHeapManager().extractString(args[0].asReference());
-                    if (typeName != null) {
+                    if (typeName != null)
+                    {
                         classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[0].asReference());
                     }
                 }
@@ -46,7 +50,8 @@ public final class SystemHandlers implements NativeHandlerProvider {
         registry.register("java/lang/Class", "forName0", "(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", args[0].asReference());
                 }
                 return ConcreteValue.reference(classObj);
@@ -94,12 +99,12 @@ public final class SystemHandlers implements NativeHandlerProvider {
                 return ConcreteValue.reference(thread);
             });
 
-        registry.register("jdk/internal/misc/Unsafe", "registerNatives", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "registerNatives", "()V", (receiver, args, ctx) -> null);
 
         registry.register("jdk/internal/misc/Unsafe", "compareAndSetInt", "(Ljava/lang/Object;JII)Z",
             (receiver, args, ctx) -> {
-                if (args != null && args.length >= 4) {
+                if (args != null && args.length >= 4)
+                {
                     ObjectInstance obj = args[0].isNull() ? null : args[0].asReference();
                     int expected = args[2].asInt();
                     int update = args[3].asInt();
@@ -156,14 +161,11 @@ public final class SystemHandlers implements NativeHandlerProvider {
         registry.register("jdk/internal/misc/Unsafe", "unalignedAccess0", "()Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
-        registry.register("jdk/internal/misc/Unsafe", "storeFence", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "storeFence", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("jdk/internal/misc/Unsafe", "loadFence", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "loadFence", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("jdk/internal/misc/Unsafe", "fullFence", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "fullFence", "()V", (receiver, args, ctx) -> null);
 
         registry.register("jdk/internal/misc/Unsafe", "ensureClassInitialized0", "(Ljava/lang/Class;)V",
             (receiver, args, ctx) -> null);
@@ -234,8 +236,7 @@ public final class SystemHandlers implements NativeHandlerProvider {
         registry.register("jdk/internal/misc/Unsafe", "allocateMemory0", "(J)J",
             (receiver, args, ctx) -> ConcreteValue.longValue(0L));
 
-        registry.register("jdk/internal/misc/Unsafe", "freeMemory0", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "freeMemory0", "(J)V", (receiver, args, ctx) -> null);
 
         registry.register("jdk/internal/misc/Unsafe", "setMemory0", "(Ljava/lang/Object;JJB)V",
             (receiver, args, ctx) -> null);
@@ -246,23 +247,25 @@ public final class SystemHandlers implements NativeHandlerProvider {
         registry.register("jdk/internal/misc/Unsafe", "getLoadAverage0", "([DI)I",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("jdk/internal/misc/Unsafe", "park", "(ZJ)V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "park", "(ZJ)V", (receiver, args, ctx) -> null);
 
-        registry.register("jdk/internal/misc/Unsafe", "unpark", "(Ljava/lang/Object;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("jdk/internal/misc/Unsafe", "unpark", "(Ljava/lang/Object;)V", (receiver, args, ctx) -> null);
     }
 
-    private void registerMoreSystemHandlers(NativeRegistry registry) {
+    private void registerMoreSystemHandlers(NativeRegistry registry)
+    {
         registry.register("java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V",
             (receiver, args, ctx) -> {
-                if (args == null || args.length < 5) {
+                if (args == null || args.length < 5)
+                {
                     throw new NativeException("java/lang/NullPointerException", "arraycopy null args");
                 }
-                if (args[0].isNull()) {
+                if (args[0].isNull())
+                {
                     throw new NativeException("java/lang/NullPointerException", "arraycopy source is null");
                 }
-                if (args[2].isNull()) {
+                if (args[2].isNull())
+                {
                     throw new NativeException("java/lang/NullPointerException", "arraycopy dest is null");
                 }
                 ObjectInstance srcObj = args[0].asReference();
@@ -270,38 +273,42 @@ public final class SystemHandlers implements NativeHandlerProvider {
                 ObjectInstance destObj = args[2].asReference();
                 int destPos = args[3].asInt();
                 int length = args[4].asInt();
-                if (!(srcObj instanceof ArrayInstance) || !(destObj instanceof ArrayInstance)) {
+                if (!(srcObj instanceof ArrayInstance) || !(destObj instanceof ArrayInstance))
+                {
                     throw new NativeException("java/lang/ArrayStoreException", "arraycopy requires arrays");
                 }
                 ArrayInstance src = (ArrayInstance) srcObj;
                 ArrayInstance dest = (ArrayInstance) destObj;
                 if (srcPos < 0 || destPos < 0 || length < 0 ||
-                    srcPos + length > src.getLength() || destPos + length > dest.getLength()) {
+                    srcPos + length > src.getLength() || destPos + length > dest.getLength())
+                    {
                     throw new NativeException("java/lang/ArrayIndexOutOfBoundsException", "arraycopy bounds");
                 }
-                for (int i = 0; i < length; i++) {
+                for (int i = 0; i < length; i++)
+                {
                     Object val = src.get(srcPos + i);
-                    if (val instanceof ConcreteValue) {
-                        dest.set(destPos + i, (ConcreteValue) val);
-                    } else {
+                    if (val instanceof ConcreteValue)
+                    {
+                        dest.set(destPos + i, val);
+                    }
+                    else
+                    {
                         dest.set(destPos + i, val);
                     }
                 }
                 return null;
             });
 
-        registry.register("java/lang/System", "setIn0", "(Ljava/io/InputStream;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/System", "setIn0", "(Ljava/io/InputStream;)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/System", "setOut0", "(Ljava/io/PrintStream;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/System", "setOut0", "(Ljava/io/PrintStream;)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/System", "setErr0", "(Ljava/io/PrintStream;)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/System", "setErr0", "(Ljava/io/PrintStream;)V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/System", "mapLibraryName", "(Ljava/lang/String;)Ljava/lang/String;",
             (receiver, args, ctx) -> {
-                if (args == null || args.length == 0 || args[0].isNull()) {
+                if (args == null || args.length == 0 || args[0].isNull())
+                {
                     return ConcreteValue.nullRef();
                 }
                 String libName = ctx.getHeapManager().extractString(args[0].asReference());
@@ -312,7 +319,8 @@ public final class SystemHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/System", "initProperties", "(Ljava/util/Properties;)Ljava/util/Properties;",
             (receiver, args, ctx) -> {
-                if (args != null && args.length > 0 && !args[0].isNull()) {
+                if (args != null && args.length > 0 && !args[0].isNull())
+                {
                     return ConcreteValue.reference(args[0].asReference());
                 }
                 return ConcreteValue.nullRef();
@@ -326,7 +334,8 @@ public final class SystemHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/System", "identityHashCode", "(Ljava/lang/Object;)I",
             (receiver, args, ctx) -> {
-                if (args == null || args.length == 0 || args[0].isNull()) {
+                if (args == null || args.length == 0 || args[0].isNull())
+                {
                     return ConcreteValue.intValue(0);
                 }
                 return ConcreteValue.intValue(args[0].asReference().getIdentityHashCode());
@@ -335,7 +344,8 @@ public final class SystemHandlers implements NativeHandlerProvider {
         registry.register("java/lang/Object", "getClass", "()Ljava/lang/Class;",
             (receiver, args, ctx) -> {
                 ObjectInstance classObj = ctx.getHeapManager().newObject("java/lang/Class");
-                if (receiver != null) {
+                if (receiver != null)
+                {
                     ObjectInstance nameStr = ctx.getHeapManager().internString(receiver.getClassName());
                     classObj.setField("java/lang/Class", "name", "Ljava/lang/String;", nameStr);
                 }
@@ -344,7 +354,8 @@ public final class SystemHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Object", "hashCode", "()I",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     return ConcreteValue.intValue(0);
                 }
                 return ConcreteValue.intValue(receiver.getIdentityHashCode());
@@ -352,20 +363,18 @@ public final class SystemHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/Object", "clone", "()Ljava/lang/Object;",
             (receiver, args, ctx) -> {
-                if (receiver == null) {
+                if (receiver == null)
+                {
                     throw new NativeException("java/lang/NullPointerException", "clone on null");
                 }
                 return ConcreteValue.reference(receiver);
             });
 
-        registry.register("java/lang/Object", "notifyAll", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Object", "notifyAll", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Object", "notify", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Object", "notify", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Object", "wait", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Object", "wait", "(J)V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Float", "floatToRawIntBits", "(F)I",
             (receiver, args, ctx) -> {
@@ -438,26 +447,20 @@ public final class SystemHandlers implements NativeHandlerProvider {
             (receiver, args, ctx) -> ConcreteValue.doubleValue(
                 Math.rint(args != null && args.length > 0 ? args[0].asDouble() : 0.0)));
 
-        registry.register("java/lang/Thread", "sleep", "(J)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "sleep", "(J)V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "yield", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "yield", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "interrupt0", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "interrupt0", "()V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Thread", "isInterrupted", "(Z)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
 
-        registry.register("java/lang/Thread", "isAlive", "()Z",
-            (receiver, args, ctx) -> ConcreteValue.intValue(1));
+        registry.register("java/lang/Thread", "isAlive", "()Z", (receiver, args, ctx) -> ConcreteValue.intValue(1));
 
-        registry.register("java/lang/Thread", "start0", "()V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "start0", "()V", (receiver, args, ctx) -> null);
 
-        registry.register("java/lang/Thread", "setPriority0", "(I)V",
-            (receiver, args, ctx) -> null);
+        registry.register("java/lang/Thread", "setPriority0", "(I)V", (receiver, args, ctx) -> null);
 
         registry.register("java/lang/Thread", "holdsLock", "(Ljava/lang/Object;)Z",
             (receiver, args, ctx) -> ConcreteValue.intValue(0));
@@ -483,11 +486,13 @@ public final class SystemHandlers implements NativeHandlerProvider {
 
         registry.register("java/lang/reflect/Array", "getLength", "(Ljava/lang/Object;)I",
             (receiver, args, ctx) -> {
-                if (args == null || args.length == 0 || args[0].isNull()) {
+                if (args == null || args.length == 0 || args[0].isNull())
+                {
                     return ConcreteValue.intValue(0);
                 }
                 ObjectInstance obj = args[0].asReference();
-                if (obj instanceof ArrayInstance) {
+                if (obj instanceof ArrayInstance)
+                {
                     return ConcreteValue.intValue(((ArrayInstance) obj).getLength());
                 }
                 return ConcreteValue.intValue(0);

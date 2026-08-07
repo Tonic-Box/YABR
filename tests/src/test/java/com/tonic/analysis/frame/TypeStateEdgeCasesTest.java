@@ -16,14 +16,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TypeStateEdgeCasesTest {
+class TypeStateEdgeCasesTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/EdgeCases", access);
@@ -31,10 +33,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class DescriptorParsingEdgeCases {
+    class DescriptorParsingEdgeCases
+    {
 
         @Test
-        void testParseMethodParametersWithAllPrimitiveTypes() throws IOException {
+        void testParseMethodParametersWithAllPrimitiveTypes() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "allPrimitives", "(BCISZFDJJ)V");
 
@@ -52,7 +56,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testParseMethodParametersWithMultidimensionalArray() throws IOException {
+        void testParseMethodParametersWithMultidimensionalArray() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "multiArray",
                     "([[[Ljava/lang/String;)V");
@@ -64,45 +69,52 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testParseMethodParametersWithPrimitiveArrays() throws IOException {
+        void testParseMethodParametersWithPrimitiveArrays() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
-            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "primitiveArrays",
-                    "([I[J[F[D)V");
+            MethodEntry method = classFile.createNewMethodWithDescriptor(access, "primitiveArrays", "([I[J[F[D)V");
 
             TypeState state = TypeState.fromMethodEntry(method, constPool);
 
             assertEquals(4, state.getLocalsCount());
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 assertTrue(state.getLocal(i) instanceof VerificationType.ObjectType);
             }
         }
     }
 
     @Nested
-    class ReturnTypeEdgeCases {
+    class ReturnTypeEdgeCases
+    {
 
         @Test
-        void testGetReturnTypeForByte() {
+        void testGetReturnTypeForByte()
+        {
             assertEquals(VerificationType.INTEGER, TypeState.getReturnType("()B", constPool));
         }
 
         @Test
-        void testGetReturnTypeForChar() {
+        void testGetReturnTypeForChar()
+        {
             assertEquals(VerificationType.INTEGER, TypeState.getReturnType("()C", constPool));
         }
 
         @Test
-        void testGetReturnTypeForShort() {
+        void testGetReturnTypeForShort()
+        {
             assertEquals(VerificationType.INTEGER, TypeState.getReturnType("()S", constPool));
         }
 
         @Test
-        void testGetReturnTypeForBoolean() {
+        void testGetReturnTypeForBoolean()
+        {
             assertEquals(VerificationType.INTEGER, TypeState.getReturnType("()Z", constPool));
         }
 
         @Test
-        void testGetReturnTypeForMultidimensionalArray() {
+        void testGetReturnTypeForMultidimensionalArray()
+        {
             VerificationType type = TypeState.getReturnType("()[[[I", constPool);
 
             assertNotNull(type);
@@ -111,10 +123,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class StackOperationBoundaryTests {
+    class StackOperationBoundaryTests
+    {
 
         @Test
-        void testPeekBeyondStackBounds() {
+        void testPeekBeyondStackBounds()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER);
 
@@ -122,7 +136,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testPopExactStackSize() {
+        void testPopExactStackSize()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.FLOAT);
@@ -132,7 +147,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testPushAfterMultiplePops() {
+        void testPushAfterMultiplePops()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.FLOAT)
@@ -146,10 +162,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class LocalVariableBoundaryTests {
+    class LocalVariableBoundaryTests
+    {
 
         @Test
-        void testSetLocalAtLargeIndex() {
+        void testSetLocalAtLargeIndex()
+        {
             TypeState state = TypeState.empty();
 
             TypeState result = state.setLocal(100, VerificationType.INTEGER);
@@ -159,7 +177,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testSetTwoSlotLocalAtExactBoundary() {
+        void testSetTwoSlotLocalAtExactBoundary()
+        {
             TypeState state = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER);
 
@@ -170,7 +189,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testSetTwoSlotLocalExpandsLocals() {
+        void testSetTwoSlotLocalExpandsLocals()
+        {
             TypeState state = TypeState.empty();
 
             TypeState result = state.setLocal(5, VerificationType.DOUBLE);
@@ -181,7 +201,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testGetLocalFromGap() {
+        void testGetLocalFromGap()
+        {
             TypeState state = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .setLocal(5, VerificationType.FLOAT);
@@ -191,10 +212,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class MergeEdgeCases {
+    class MergeEdgeCases
+    {
 
         @Test
-        void testMergeWithEmptyStack() {
+        void testMergeWithEmptyStack()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER);
 
@@ -211,7 +234,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testMergeWithOneEmptyStack() {
+        void testMergeWithOneEmptyStack()
+        {
             TypeState state1 = TypeState.empty()
                     .push(VerificationType.INTEGER);
 
@@ -225,7 +249,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testMergeDifferentStackSameLocals() {
+        void testMergeDifferentStackSameLocals()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .push(VerificationType.FLOAT);
@@ -243,7 +268,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testMergeSameStackDifferentLocals() {
+        void testMergeSameStackDifferentLocals()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .push(VerificationType.FLOAT);
@@ -259,7 +285,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testMergeWithDifferentLocalsSizes() {
+        void testMergeWithDifferentLocalsSizes()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER);
 
@@ -276,7 +303,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testMergePreservesMatchingLocals() {
+        void testMergePreservesMatchingLocals()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .setLocal(1, VerificationType.FLOAT)
@@ -295,10 +323,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class WithMethodsEdgeCases {
+    class WithMethodsEdgeCases
+    {
 
         @Test
-        void testWithStackPreservesLocals() {
+        void testWithStackPreservesLocals()
+        {
             TypeState state = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .setLocal(1, VerificationType.FLOAT);
@@ -314,7 +344,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testWithLocalsPreservesStack() {
+        void testWithLocalsPreservesStack()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.FLOAT);
@@ -331,10 +362,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class EqualityEdgeCases {
+    class EqualityEdgeCases
+    {
 
         @Test
-        void testEqualsSameInstance() {
+        void testEqualsSameInstance()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER);
 
@@ -342,21 +375,24 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testEqualsWithNull() {
+        void testEqualsWithNull()
+        {
             TypeState state = TypeState.empty();
 
             assertNotEquals(null, state);
         }
 
         @Test
-        void testEqualsWithDifferentType() {
+        void testEqualsWithDifferentType()
+        {
             TypeState state = TypeState.empty();
 
             assertNotEquals("string", state);
         }
 
         @Test
-        void testEqualsDifferentLocals() {
+        void testEqualsDifferentLocals()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER);
 
@@ -367,7 +403,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testHashCodeConsistency() {
+        void testHashCodeConsistency()
+        {
             TypeState state1 = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .push(VerificationType.FLOAT);
@@ -380,7 +417,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testHashCodeDifference() {
+        void testHashCodeDifference()
+        {
             TypeState state1 = TypeState.empty()
                     .push(VerificationType.INTEGER);
 
@@ -392,10 +430,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class ConversionEdgeCases {
+    class ConversionEdgeCases
+    {
 
         @Test
-        void testLocalsToVerificationTypeInfoWithTwoSlotTypes() {
+        void testLocalsToVerificationTypeInfoWithTwoSlotTypes()
+        {
             TypeState state = TypeState.empty()
                     .setLocal(0, VerificationType.LONG)
                     .setLocal(2, VerificationType.DOUBLE);
@@ -408,7 +448,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testStackToVerificationTypeInfoWithTwoSlotTypes() {
+        void testStackToVerificationTypeInfoWithTwoSlotTypes()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.LONG)
                     .push(VerificationType.DOUBLE);
@@ -420,7 +461,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testLocalsToVerificationTypeInfoEmpty() {
+        void testLocalsToVerificationTypeInfoEmpty()
+        {
             TypeState state = TypeState.empty();
 
             var infos = state.localsToVerificationTypeInfo();
@@ -429,7 +471,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testStackToVerificationTypeInfoEmpty() {
+        void testStackToVerificationTypeInfoEmpty()
+        {
             TypeState state = TypeState.empty();
 
             var infos = state.stackToVerificationTypeInfo();
@@ -439,10 +482,12 @@ class TypeStateEdgeCasesTest {
     }
 
     @Nested
-    class ComplexStateManipulation {
+    class ComplexStateManipulation
+    {
 
         @Test
-        void testSequentialLocalModifications() {
+        void testSequentialLocalModifications()
+        {
             TypeState state = TypeState.empty()
                     .setLocal(0, VerificationType.INTEGER)
                     .setLocal(1, VerificationType.FLOAT)
@@ -456,7 +501,8 @@ class TypeStateEdgeCasesTest {
         }
 
         @Test
-        void testComplexStackPushPopSequence() {
+        void testComplexStackPushPopSequence()
+        {
             TypeState state = TypeState.empty()
                     .push(VerificationType.INTEGER)
                     .push(VerificationType.FLOAT)

@@ -5,6 +5,8 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,38 +17,113 @@ import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NodeListTest {
+class NodeListTest
+{
 
     private BlockStmt owner;
     private NodeList<Statement> nodeList;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         owner = new BlockStmt();
         nodeList = new NodeList<>(owner);
     }
 
     @Nested
-    class ConstructorTests {
+    class IdentityMatchingTests
+    {
+
+        private NodeList<SourceType> listOfEqualTypes(ReferenceSourceType first, ReferenceSourceType second)
+        {
+            assertEquals(first, second, "the fixture needs two equal but distinct nodes");
+            assertNotSame(first, second);
+
+            NodeList<SourceType> list = new NodeList<>(owner);
+            list.add(first);
+            list.add(second);
+            return list;
+        }
 
         @Test
-        void constructorWithOwner() {
+        void removeDetachesTheGivenInstanceNotAnEqualSibling()
+        {
+            ReferenceSourceType first = new ReferenceSourceType("java/lang/String");
+            ReferenceSourceType second = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = listOfEqualTypes(first, second);
+
+            assertTrue(list.remove(second));
+
+            assertEquals(1, list.size());
+            assertSame(first, list.get(0), "the instance that was not asked for must survive");
+        }
+
+        @Test
+        void replaceSwapsTheGivenInstanceNotAnEqualSibling()
+        {
+            ReferenceSourceType first = new ReferenceSourceType("java/lang/String");
+            ReferenceSourceType second = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = listOfEqualTypes(first, second);
+
+            ReferenceSourceType replacement = new ReferenceSourceType("java/lang/Integer");
+            list.replace(second, replacement);
+
+            assertSame(first, list.get(0), "the equal sibling at index 0 must be left alone");
+            assertSame(replacement, list.get(1));
+        }
+
+        @Test
+        void removingAnEqualButAbsentInstanceChangesNothing()
+        {
+            ReferenceSourceType present = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = new NodeList<>(owner);
+            list.add(present);
+
+            assertFalse(list.remove(new ReferenceSourceType("java/lang/String")),
+                "an equal node this list does not hold must not be removable");
+            assertEquals(1, list.size());
+            assertSame(present, list.get(0));
+        }
+    }
+
+    @Nested
+    class ConstructorTests
+    {
+
+        @Test
+        void constructorWithOwner()
+        {
             NodeList<Statement> list = new NodeList<>(owner);
 
             assertSame(owner, list.getOwner());
             assertTrue(list.isEmpty());
+
+            ReturnStmt added = new ReturnStmt();
+            list.add(added);
+
+            assertEquals(1, list.size());
+            assertSame(owner, added.getParent(), "the constructed owner must parent later additions");
         }
 
         @Test
-        void constructorWithOwnerAndCapacity() {
-            NodeList<Statement> list = new NodeList<>(owner, 10);
+        void constructorWithOwnerAndCapacity()
+        {
+            NodeList<Statement> list = new NodeList<>(owner, 1);
 
             assertSame(owner, list.getOwner());
-            assertTrue(list.isEmpty());
+            assertTrue(list.isEmpty(), "a capacity hint must not pre-populate the list");
+
+            for (int i = 0; i < 4; i++)
+            {
+                list.add(new ReturnStmt());
+            }
+
+            assertEquals(4, list.size(), "the capacity hint must not cap how many elements fit");
         }
 
         @Test
-        void constructorWithElements() {
+        void constructorWithElements()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             NodeList<Statement> list = new NodeList<>(owner, Arrays.asList(stmt1, stmt2));
@@ -57,16 +134,19 @@ class NodeListTest {
         }
 
         @Test
-        void constructorThrowsOnNullOwner() {
+        void constructorThrowsOnNullOwner()
+        {
             assertThrows(NullPointerException.class, () -> new NodeList<Statement>(null));
         }
     }
 
     @Nested
-    class ParentManagementTests {
+    class ParentManagementTests
+    {
 
         @Test
-        void addSetsParent() {
+        void addSetsParent()
+        {
             ReturnStmt stmt = new ReturnStmt();
             assertNull(stmt.getParent());
 
@@ -76,7 +156,8 @@ class NodeListTest {
         }
 
         @Test
-        void addAtIndexSetsParent() {
+        void addAtIndexSetsParent()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(0, stmt);
 
@@ -84,7 +165,8 @@ class NodeListTest {
         }
 
         @Test
-        void setSetsParentAndClearsOld() {
+        void setSetsParentAndClearsOld()
+        {
             ReturnStmt old = new ReturnStmt();
             ReturnStmt newStmt = new ReturnStmt();
             nodeList.add(old);
@@ -96,7 +178,8 @@ class NodeListTest {
         }
 
         @Test
-        void removeClearsParent() {
+        void removeClearsParent()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -106,7 +189,8 @@ class NodeListTest {
         }
 
         @Test
-        void removeObjectClearsParent() {
+        void removeObjectClearsParent()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -116,7 +200,8 @@ class NodeListTest {
         }
 
         @Test
-        void clearClearsAllParents() {
+        void clearClearsAllParents()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.add(stmt1);
@@ -130,7 +215,8 @@ class NodeListTest {
         }
 
         @Test
-        void addAllSetsParents() {
+        void addAllSetsParents()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
 
@@ -141,25 +227,27 @@ class NodeListTest {
         }
 
         @Test
-        void removeAllClearsParents() {
+        void removeAllClearsParents()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
 
-            nodeList.removeAll(Arrays.asList(stmt1));
+            nodeList.removeAll(List.of(stmt1));
 
             assertNull(stmt1.getParent());
             assertSame(owner, stmt2.getParent());
         }
 
         @Test
-        void retainAllClearsRemovedParents() {
+        void retainAllClearsRemovedParents()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             ReturnStmt stmt3 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2, stmt3));
 
-            nodeList.retainAll(Arrays.asList(stmt2));
+            nodeList.retainAll(List.of(stmt2));
 
             assertNull(stmt1.getParent());
             assertSame(owner, stmt2.getParent());
@@ -167,7 +255,8 @@ class NodeListTest {
         }
 
         @Test
-        void removeIfClearsParents() {
+        void removeIfClearsParents()
+        {
             ReturnStmt stmt1 = new ReturnStmt(new LiteralExpr(1, PrimitiveSourceType.INT));
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
@@ -179,17 +268,20 @@ class NodeListTest {
         }
 
         @Test
-        void addNullDoesNotThrow() {
+        void addNullDoesNotThrow()
+        {
             assertDoesNotThrow(() -> nodeList.add(null));
             assertEquals(1, nodeList.size());
         }
     }
 
     @Nested
-    class FluentApiTests {
+    class FluentApiTests
+    {
 
         @Test
-        void addNodeReturnsSelf() {
+        void addNodeReturnsSelf()
+        {
             ReturnStmt stmt = new ReturnStmt();
 
             NodeList<Statement> result = nodeList.addNode(stmt);
@@ -199,7 +291,8 @@ class NodeListTest {
         }
 
         @Test
-        void addNodesReturnsSelf() {
+        void addNodesReturnsSelf()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
 
@@ -210,7 +303,8 @@ class NodeListTest {
         }
 
         @Test
-        void chainedAddNodes() {
+        void chainedAddNodes()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             ReturnStmt stmt3 = new ReturnStmt();
@@ -227,10 +321,12 @@ class NodeListTest {
     }
 
     @Nested
-    class AccessorTests {
+    class AccessorTests
+    {
 
         @Test
-        void getFirstReturnsFirstElement() {
+        void getFirstReturnsFirstElement()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
@@ -239,12 +335,14 @@ class NodeListTest {
         }
 
         @Test
-        void getFirstThrowsOnEmpty() {
+        void getFirstThrowsOnEmpty()
+        {
             assertThrows(NoSuchElementException.class, () -> nodeList.getFirst());
         }
 
         @Test
-        void getFirstOptionalReturnsOptional() {
+        void getFirstOptionalReturnsOptional()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -253,12 +351,14 @@ class NodeListTest {
         }
 
         @Test
-        void getFirstOptionalEmptyOnEmptyList() {
+        void getFirstOptionalEmptyOnEmptyList()
+        {
             assertTrue(nodeList.getFirstOptional().isEmpty());
         }
 
         @Test
-        void getLastReturnsLastElement() {
+        void getLastReturnsLastElement()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
@@ -267,12 +367,14 @@ class NodeListTest {
         }
 
         @Test
-        void getLastThrowsOnEmpty() {
+        void getLastThrowsOnEmpty()
+        {
             assertThrows(NoSuchElementException.class, () -> nodeList.getLast());
         }
 
         @Test
-        void getLastOptionalReturnsOptional() {
+        void getLastOptionalReturnsOptional()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -281,16 +383,19 @@ class NodeListTest {
         }
 
         @Test
-        void getLastOptionalEmptyOnEmptyList() {
+        void getLastOptionalEmptyOnEmptyList()
+        {
             assertTrue(nodeList.getLastOptional().isEmpty());
         }
     }
 
     @Nested
-    class ReplaceTests {
+    class ReplaceTests
+    {
 
         @Test
-        void replaceSwapsNodes() {
+        void replaceSwapsNodes()
+        {
             ReturnStmt old = new ReturnStmt();
             ReturnStmt newStmt = new ReturnStmt();
             nodeList.add(old);
@@ -304,7 +409,8 @@ class NodeListTest {
         }
 
         @Test
-        void replaceNoOpIfNotFound() {
+        void replaceNoOpIfNotFound()
+        {
             ReturnStmt old = new ReturnStmt();
             ReturnStmt newStmt = new ReturnStmt();
 
@@ -315,10 +421,12 @@ class NodeListTest {
     }
 
     @Nested
-    class IterationTests {
+    class IterationTests
+    {
 
         @Test
-        void forEachNodeIteratesAll() {
+        void forEachNodeIteratesAll()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
@@ -330,7 +438,8 @@ class NodeListTest {
         }
 
         @Test
-        void nodeStreamReturnsStream() {
+        void nodeStreamReturnsStream()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
@@ -342,10 +451,12 @@ class NodeListTest {
     }
 
     @Nested
-    class StaticFactoryTests {
+    class StaticFactoryTests
+    {
 
         @Test
-        void emptyCreatesEmptyList() {
+        void emptyCreatesEmptyList()
+        {
             NodeList<Statement> list = NodeList.empty(owner);
 
             assertTrue(list.isEmpty());
@@ -353,7 +464,8 @@ class NodeListTest {
         }
 
         @Test
-        void ofCreatesListWithElements() {
+        void ofCreatesListWithElements()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
 
@@ -365,7 +477,8 @@ class NodeListTest {
         }
 
         @Test
-        void copyOfCreatesListFromCollection() {
+        void copyOfCreatesListFromCollection()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             List<Statement> source = Arrays.asList(stmt1, stmt2);
@@ -379,10 +492,12 @@ class NodeListTest {
     }
 
     @Nested
-    class ListInterfaceTests {
+    class ListInterfaceTests
+    {
 
         @Test
-        void getSizeIsEmptyWork() {
+        void getSizeIsEmptyWork()
+        {
             assertTrue(nodeList.isEmpty());
             assertEquals(0, nodeList.size());
 
@@ -393,7 +508,8 @@ class NodeListTest {
         }
 
         @Test
-        void getByIndexWorks() {
+        void getByIndexWorks()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -401,7 +517,8 @@ class NodeListTest {
         }
 
         @Test
-        void containsWorks() {
+        void containsWorks()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -410,7 +527,8 @@ class NodeListTest {
         }
 
         @Test
-        void indexOfWorks() {
+        void indexOfWorks()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 
@@ -419,20 +537,23 @@ class NodeListTest {
         }
 
         @Test
-        void iteratorWorks() {
+        void iteratorWorks()
+        {
             ReturnStmt stmt1 = new ReturnStmt();
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
 
             int count = 0;
-            for (Statement s : nodeList) {
+            for (Statement s : nodeList)
+            {
                 count++;
             }
             assertEquals(2, count);
         }
 
         @Test
-        void toArrayWorks() {
+        void toArrayWorks()
+        {
             ReturnStmt stmt = new ReturnStmt();
             nodeList.add(stmt);
 

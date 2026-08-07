@@ -18,11 +18,13 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherSwitchLdcTest {
+class OpcodeDispatcherSwitchLdcTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -30,13 +32,17 @@ class OpcodeDispatcherSwitchLdcTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -44,9 +50,11 @@ class OpcodeDispatcherSwitchLdcTest {
     }
 
     @Nested
-    class TableSwitchTests {
+    class TableSwitchTests
+    {
         @Test
-        void testTableSwitchCase0() throws IOException {
+        void testTableSwitchCase0() throws IOException
+        {
             BytecodeBuilder.Label case0 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case1 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case2 = new BytecodeBuilder.Label();
@@ -82,7 +90,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testTableSwitchCase1() throws IOException {
+        void testTableSwitchCase1() throws IOException
+        {
             BytecodeBuilder.Label case0 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case1 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label defaultCase = new BytecodeBuilder.Label();
@@ -113,7 +122,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testTableSwitchDefault() throws IOException {
+        void testTableSwitchDefault() throws IOException
+        {
             BytecodeBuilder.Label case0 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label defaultCase = new BytecodeBuilder.Label();
             BytecodeBuilder.Label end = new BytecodeBuilder.Label();
@@ -140,9 +150,11 @@ class OpcodeDispatcherSwitchLdcTest {
     }
 
     @Nested
-    class LookupSwitchTests {
+    class LookupSwitchTests
+    {
         @Test
-        void testLookupSwitchHit() throws IOException {
+        void testLookupSwitchHit() throws IOException
+        {
             BytecodeBuilder.Label case10 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case100 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label defaultCase = new BytecodeBuilder.Label();
@@ -173,7 +185,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testLookupSwitchDefault() throws IOException {
+        void testLookupSwitchDefault() throws IOException
+        {
             BytecodeBuilder.Label case1 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label defaultCase = new BytecodeBuilder.Label();
             BytecodeBuilder.Label end = new BytecodeBuilder.Label();
@@ -199,7 +212,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testLookupSwitchNegativeKeys() throws IOException {
+        void testLookupSwitchNegativeKeys() throws IOException
+        {
             BytecodeBuilder.Label caseNeg10 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case0 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case10 = new BytecodeBuilder.Label();
@@ -236,9 +250,11 @@ class OpcodeDispatcherSwitchLdcTest {
     }
 
     @Nested
-    class LdcStringTests {
+    class LdcStringTests
+    {
         @Test
-        void testLdcString() throws IOException {
+        void testLdcString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcString")
                     .publicStaticMethod("test", "()Ljava/lang/String;")
                         .ldc("Hello World")
@@ -250,7 +266,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testLdcEmptyString() throws IOException {
+        void testLdcEmptyString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestLdcEmpty")
                     .publicStaticMethod("test", "()Ljava/lang/String;")
                         .ldc("")
@@ -262,7 +279,8 @@ class OpcodeDispatcherSwitchLdcTest {
         }
 
         @Test
-        void testLdcMultipleStrings() throws IOException {
+        void testLdcMultipleStrings() throws IOException
+        {
             BytecodeBuilder.Label skip = new BytecodeBuilder.Label();
             ClassFile cf = BytecodeBuilder.forClass("TestLdcMulti")
                     .publicStaticMethod("test", "(I)Ljava/lang/String;")
@@ -283,9 +301,11 @@ class OpcodeDispatcherSwitchLdcTest {
     }
 
     @Nested
-    class CombinedSwitchTests {
+    class CombinedSwitchTests
+    {
         @Test
-        void testSwitchWithComputation() throws IOException {
+        void testSwitchWithComputation() throws IOException
+        {
             BytecodeBuilder.Label case1 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label case2 = new BytecodeBuilder.Label();
             BytecodeBuilder.Label defaultCase = new BytecodeBuilder.Label();

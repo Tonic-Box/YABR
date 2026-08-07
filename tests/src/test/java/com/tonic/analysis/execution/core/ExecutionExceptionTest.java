@@ -1,17 +1,17 @@
 package com.tonic.analysis.execution.core;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class ExecutionExceptionTest {
+class ExecutionExceptionTest
+{
 
     @Test
-    void testConstructionWithMessage() {
+    void testConstructionWithMessage()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.testMethod()V");
         when(frame.getLineNumber()).thenReturn(42);
@@ -30,7 +30,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testConstructionWithCause() {
+    void testConstructionWithCause()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.testMethod()V");
         when(frame.getLineNumber()).thenReturn(-1);
@@ -45,7 +46,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testMessageFormattingWithoutLineNumber() {
+    void testMessageFormattingWithoutLineNumber()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.method()V");
         when(frame.getLineNumber()).thenReturn(-1);
@@ -58,7 +60,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testMessageFormattingWithNullFrame() {
+    void testMessageFormattingWithNullFrame()
+    {
         ExecutionException ex = new ExecutionException("Standalone error", null, 0, "RETURN");
 
         assertTrue(ex.getMessage().contains("Standalone error"));
@@ -67,7 +70,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testMessageFormattingWithNullOpcode() {
+    void testMessageFormattingWithNullOpcode()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("TestClass.method()V");
 
@@ -79,7 +83,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testGettersReturnCorrectValues() {
+    void testGettersReturnCorrectValues()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.m()V");
 
@@ -91,7 +96,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testExceptionIsThrowable() {
+    void testExceptionIsThrowable()
+    {
         StackFrame frame = mock(StackFrame.class);
         when(frame.getMethodSignature()).thenReturn("Test.m()V");
 
@@ -103,7 +109,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testExceptionInheritanceChain() {
+    void testExceptionInheritanceChain()
+    {
         ExecutionException ex = new ExecutionException("Test", null, 0, null);
 
         assertTrue(ex instanceof RuntimeException);
@@ -112,7 +119,8 @@ class ExecutionExceptionTest {
     }
 
     @Test
-    void testMultipleExceptionsAreIndependent() {
+    void testMultipleExceptionsAreIndependent()
+    {
         StackFrame frame1 = mock(StackFrame.class);
         StackFrame frame2 = mock(StackFrame.class);
         when(frame1.getMethodSignature()).thenReturn("Class1.m1()V");

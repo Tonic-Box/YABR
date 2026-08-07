@@ -16,9 +16,20 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.FileInputStream;
 
-public class DebugAnalyzeLoop {
-    public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
+/**
+ * Debug demo showing loop analysis and dominator information for one method of a class file.
+ */
+public class DebugAnalyzeLoop
+{
+    /**
+     * Lifts the named method to IR and prints its loop and dominator analysis.
+     * @param args class file path followed by the method name
+     * @throws Exception if the class file cannot be read or parsed
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length < 2)
+        {
             System.out.println("Usage: DebugAnalyzeLoop <classfile> <methodName>");
             return;
         }
@@ -27,8 +38,10 @@ public class DebugAnalyzeLoop {
         ConstPool constPool = cf.getConstPool();
         String methodName = args[1];
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(methodName)) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(methodName))
+            {
                 System.out.println("=== Method: " + method.getName() + " ===");
 
                 SSA ssa = new SSA(constPool);
@@ -41,13 +54,15 @@ public class DebugAnalyzeLoop {
                 loopAnalysis.compute();
 
                 System.out.println("\n=== Analyzing loops ===");
-                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops()) {
+                for (LoopAnalysis.Loop loop : loopAnalysis.getLoops())
+                {
                     IRBlock header = loop.getHeader();
                     System.out.println("\n--- Loop header: " + header.getName() + " ---");
                     System.out.println("Loop blocks: " + loop.getBlocks().stream().map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
 
                     IRInstruction terminator = header.getTerminator();
-                    if (terminator instanceof BranchInstruction) {
+                    if (terminator instanceof BranchInstruction)
+                    {
                         BranchInstruction branch = (BranchInstruction) terminator;
                         IRBlock trueTarget = branch.getTrueTarget();
                         IRBlock falseTarget = branch.getFalseTarget();
@@ -57,57 +72,70 @@ public class DebugAnalyzeLoop {
                         System.out.println("loop.contains(trueTarget): " + loop.contains(trueTarget));
                         System.out.println("loop.contains(falseTarget): " + loop.contains(falseTarget));
 
-                        // Simulate analyzeLoop logic
                         IRBlock bodyBlock;
                         IRBlock exitBlock;
                         boolean conditionNegated;
 
-                        if (loop.contains(trueTarget) && !loop.contains(falseTarget)) {
+                        if (loop.contains(trueTarget) && !loop.contains(falseTarget))
+                        {
                             bodyBlock = trueTarget;
                             exitBlock = falseTarget;
                             conditionNegated = false;
                             System.out.println("Case 1: true in loop, false out -> body=" + bodyBlock.getName() + ", exit=" + exitBlock.getName());
-                        } else if (loop.contains(falseTarget) && !loop.contains(trueTarget)) {
+                        }
+                        else if (loop.contains(falseTarget) && !loop.contains(trueTarget))
+                        {
                             bodyBlock = falseTarget;
                             exitBlock = trueTarget;
                             conditionNegated = true;
                             System.out.println("Case 2: false in loop, true out -> body=" + bodyBlock.getName() + ", exit=" + exitBlock.getName() + " NEGATED");
-                        } else if (loop.contains(trueTarget) && loop.contains(falseTarget)) {
+                        }
+                        else if (loop.contains(trueTarget) && loop.contains(falseTarget))
+                        {
                             bodyBlock = trueTarget;
                             exitBlock = null;
                             conditionNegated = false;
                             System.out.println("Case 3: both in loop -> body=" + bodyBlock.getName() + ", exit=null");
-                        } else {
+                        }
+                        else
+                        {
                             System.out.println("Case 4: IRREDUCIBLE (both outside)");
                             continue;
                         }
 
-                        // Check isDoWhilePattern
                         boolean isDoWhile = true;
-                        for (IRBlock pred : header.getPredecessors()) {
-                            if (!loop.contains(pred)) {
+                        for (IRBlock pred : header.getPredecessors())
+                        {
+                            if (!loop.contains(pred))
+                            {
                                 System.out.println("isDoWhilePattern: pred " + pred.getName() + " is OUTSIDE loop -> NOT do-while");
                                 isDoWhile = false;
                                 break;
-                            } else {
+                            }
+                            else
+                            {
                                 System.out.println("isDoWhilePattern: pred " + pred.getName() + " is INSIDE loop");
                             }
                         }
                         System.out.println("isDoWhilePattern result: " + isDoWhile);
 
-                        // Check isForLoopPattern (simplified)
                         boolean isForLoop = false;
-                        for (IRBlock block : loop.getBlocks()) {
+                        for (IRBlock block : loop.getBlocks())
+                        {
                             if (block == header) continue;
-                            for (IRBlock succ : block.getSuccessors()) {
-                                if (succ == header) {
+                            for (IRBlock succ : block.getSuccessors())
+                            {
+                                if (succ == header)
+                                {
                                     System.out.println("isForLoopPattern: " + block.getName() + " has back-edge to header");
-                                    // Check for increment
-                                    for (IRInstruction instr : block.getInstructions()) {
-                                        if (instr instanceof BinaryOpInstruction) {
+                                    for (IRInstruction instr : block.getInstructions())
+                                    {
+                                        if (instr instanceof BinaryOpInstruction)
+                                        {
                                             BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
                                             BinaryOp op = binOp.getOp();
-                                            if (op == BinaryOp.ADD || op == BinaryOp.SUB) {
+                                            if (op == BinaryOp.ADD || op == BinaryOp.SUB)
+                                            {
                                                 System.out.println("  Found increment: " + op);
                                                 isForLoop = true;
                                             }
@@ -120,16 +148,23 @@ public class DebugAnalyzeLoop {
 
                         // Final decision
                         String loopType;
-                        if (isDoWhile) {
+                        if (isDoWhile)
+                        {
                             loopType = "DO_WHILE_LOOP";
-                        } else if (isForLoop) {
+                        }
+                        else if (isForLoop)
+                        {
                             loopType = "FOR_LOOP";
-                        } else {
+                        }
+                        else
+                        {
                             loopType = "WHILE_LOOP";
                         }
                         System.out.println("FINAL: " + loopType + " body=" + (bodyBlock != null ? bodyBlock.getName() : "null") +
                             " exit=" + (exitBlock != null ? exitBlock.getName() : "null"));
-                    } else {
+                    }
+                    else
+                    {
                         System.out.println("Header terminator is NOT a branch: " + (terminator != null ? terminator.getClass().getSimpleName() : "null"));
                     }
                 }

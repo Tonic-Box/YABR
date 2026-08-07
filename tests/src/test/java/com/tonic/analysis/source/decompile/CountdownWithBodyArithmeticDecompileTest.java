@@ -13,10 +13,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * loop was then routed to the for-loop fallback, which dropped the header's decrement and produced an
  * infinite {@code while (i >= 0)}. The decrement must survive.
  */
-public class CountdownWithBodyArithmeticDecompileTest {
+public class CountdownWithBodyArithmeticDecompileTest
+{
 
     @Test
-    public void bodyArithmeticNotMistakenForCounter() throws Exception {
+    public void bodyArithmeticNotMistakenForCounter() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("CountdownWithBodyArithmetic");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");

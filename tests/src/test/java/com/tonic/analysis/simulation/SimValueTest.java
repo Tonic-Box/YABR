@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for SimValue.
+ * * Tests for SimValue.
  */
-class SimValueTest {
+class SimValueTest
+{
 
     @Test
-    void testConstantCreation() {
+    void testConstantCreation()
+    {
         SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
         assertTrue(value.isConstant());
         assertEquals(42, value.getConstantValue());
@@ -20,7 +22,8 @@ class SimValueTest {
     }
 
     @Test
-    void testOfTypeCreation() {
+    void testOfTypeCreation()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
         assertFalse(value.isConstant());
         assertEquals(PrimitiveType.LONG, value.getType());
@@ -28,52 +31,60 @@ class SimValueTest {
     }
 
     @Test
-    void testUnknownCreation() {
+    void testUnknownCreation()
+    {
         SimValue value = SimValue.unknown(null);
         assertFalse(value.isConstant());
         assertNull(value.getType());
     }
 
     @Test
-    void testWideSecondSlot() {
+    void testWideSecondSlot()
+    {
         SimValue value = SimValue.wideSecondSlot();
         assertTrue(value.isWideSecondSlot());
         assertFalse(value.isConstant());
     }
 
     @Test
-    void testIsWideForLong() {
+    void testIsWideForLong()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
         assertTrue(value.isWide());
     }
 
     @Test
-    void testIsWideForDouble() {
+    void testIsWideForDouble()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.DOUBLE, null);
         assertTrue(value.isWide());
     }
 
     @Test
-    void testIsNotWideForInt() {
+    void testIsNotWideForInt()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.INT, null);
         assertFalse(value.isWide());
     }
 
     @Test
-    void testIsNotWideForFloat() {
+    void testIsNotWideForFloat()
+    {
         SimValue value = SimValue.ofType(PrimitiveType.FLOAT, null);
         assertFalse(value.isWide());
     }
 
     @Test
-    void testUniqueIds() {
+    void testUniqueIds()
+    {
         SimValue v1 = SimValue.unknown(null);
         SimValue v2 = SimValue.unknown(null);
         assertNotEquals(v1.getId(), v2.getId());
     }
 
     @Test
-    void testEquality() {
+    void testEquality()
+    {
         SimValue v1 = SimValue.unknown(null);
         SimValue v2 = SimValue.unknown(null);
         assertNotEquals(v1, v2); // Different IDs
@@ -81,7 +92,8 @@ class SimValueTest {
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         SimValue value = SimValue.constant(100, PrimitiveType.INT, null);
         String str = value.toString();
         assertTrue(str.contains("INT") || str.contains("int"));

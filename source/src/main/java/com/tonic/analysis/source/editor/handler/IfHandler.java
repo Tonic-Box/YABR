@@ -6,14 +6,13 @@ import com.tonic.analysis.source.editor.Replacement;
 
 /**
  * Handler for if statements.
- * Use this to intercept and transform conditional logic.
  */
 @FunctionalInterface
-public interface IfHandler {
+public interface IfHandler
+{
 
     /**
      * Handle an if statement.
-     *
      * @param ctx    the editing context
      * @param ifStmt the if statement
      * @return the replacement action

@@ -1,34 +1,40 @@
 package com.tonic.analysis.source.editor.matcher;
 
+import com.tonic.analysis.source.ast.ASTNode;
+import com.tonic.analysis.source.ast.SourceLocation;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
-import org.junit.jupiter.api.Test;
-
+import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Comprehensive test suite for ExprMatcher predicate-based expression matching.
+ * * Comprehensive test suite for ExprMatcher predicate-based expression matching.
  */
-class ExprMatcherTest {
+class ExprMatcherTest
+{
 
     // Helper method to create a simple variable reference for use as receiver/operand
-    private VarRefExpr createVar(String name) {
+    private VarRefExpr createVar(String name)
+    {
         return new VarRefExpr(name, PrimitiveSourceType.INT);
     }
 
     // Helper method to create a simple literal expression
-    private LiteralExpr createIntLiteral(int value) {
+    private LiteralExpr createIntLiteral(int value)
+    {
         return LiteralExpr.ofInt(value);
     }
 
-    // ===== Basic Matching Tests =====
+    // Basic Matching Tests
 
     @Test
-    void testMatches_returnsTrueForMatchingExpression() {
+    void testMatches_returnsTrueForMatchingExpression()
+    {
         MethodCallExpr call = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
 
@@ -38,7 +44,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testMatches_returnsFalseForNonMatchingExpression() {
+    void testMatches_returnsFalseForNonMatchingExpression()
+    {
         MethodCallExpr call = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
 
@@ -48,22 +55,23 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testMatches_returnsFalseForNullExpression() {
+    void testMatches_returnsFalseForNullExpression()
+    {
         ExprMatcher matcher = ExprMatcher.methodCall("abs");
 
         assertFalse(matcher.matches(null));
     }
 
-    // ===== Method Call Matcher Tests =====
+    // Method Call Matcher Tests
 
     @Test
-    void testMethodCall_matchesByMethodNameOnly() {
+    void testMethodCall_matchesByMethodNameOnly()
+    {
         MethodCallExpr call1 = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
         MethodCallExpr call2 = MethodCallExpr.staticCall("java/lang/Integer", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
 
         ExprMatcher matcher = ExprMatcher.methodCall("abs");
 
@@ -73,7 +81,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testMethodCall_matchesByOwnerClassAndMethodName() {
+    void testMethodCall_matchesByOwnerClassAndMethodName()
+    {
         MethodCallExpr mathAbs = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
         MethodCallExpr integerAbs = MethodCallExpr.staticCall("java/lang/Integer", "abs",
@@ -86,7 +95,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testMethodCall_matchesByOwnerClassMethodNameAndArgCount() {
+    void testMethodCall_matchesByOwnerClassMethodNameAndArgCount()
+    {
         MethodCallExpr oneArg = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
         MethodCallExpr twoArgs = MethodCallExpr.staticCall("java/lang/Math", "max",
@@ -101,11 +111,11 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testMethodCall_ownerClassNormalizesDotsToSlashes() {
+    void testMethodCall_ownerClassNormalizesDotsToSlashes()
+    {
         MethodCallExpr call = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
 
-        // Should match with dot notation
         ExprMatcher matcherDots = ExprMatcher.methodCall("java.lang.Math", "abs");
         ExprMatcher matcherSlashes = ExprMatcher.methodCall("java/lang/Math", "abs");
 
@@ -113,14 +123,13 @@ class ExprMatcherTest {
         assertTrue(matcherSlashes.matches(call));
     }
 
-    // ===== Field Access Matcher Tests =====
+    // Field Access Matcher Tests
 
     @Test
-    void testFieldAccess_matchesByFieldNameOnly() {
-        FieldAccessExpr field1 = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
-        FieldAccessExpr field2 = FieldAccessExpr.staticField("com/example/Logger", "out",
-            ReferenceSourceType.OBJECT);
+    void testFieldAccess_matchesByFieldNameOnly()
+    {
+        FieldAccessExpr field1 = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
+        FieldAccessExpr field2 = FieldAccessExpr.staticField("com/example/Logger", "out", ReferenceSourceType.OBJECT);
         MethodCallExpr method = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
 
@@ -132,9 +141,9 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testFieldAccess_matchesByOwnerClassAndFieldName() {
-        FieldAccessExpr sysOut = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+    void testFieldAccess_matchesByOwnerClassAndFieldName()
+    {
+        FieldAccessExpr sysOut = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
         FieldAccessExpr loggerOut = FieldAccessExpr.staticField("com/example/Logger", "out",
             ReferenceSourceType.OBJECT);
 
@@ -145,9 +154,9 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testFieldAccess_ownerClassNormalizesDotsToSlashes() {
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+    void testFieldAccess_ownerClassNormalizesDotsToSlashes()
+    {
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
 
         ExprMatcher matcherDots = ExprMatcher.fieldAccess("java.lang.System", "out");
         ExprMatcher matcherSlashes = ExprMatcher.fieldAccess("java/lang/System", "out");
@@ -156,10 +165,11 @@ class ExprMatcherTest {
         assertTrue(matcherSlashes.matches(field));
     }
 
-    // ===== Creation Matcher Tests =====
+    // Creation Matcher Tests
 
     @Test
-    void testNewExpr_matchesByClassName() {
+    void testNewExpr_matchesByClassName()
+    {
         NewExpr stringNew = new NewExpr("java/lang/String", List.of());
         NewExpr listNew = new NewExpr("java/util/ArrayList", List.of());
         NewArrayExpr arrayNew = NewArrayExpr.withSize(PrimitiveSourceType.INT, createIntLiteral(10));
@@ -172,7 +182,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testNewExpr_normalizesDotsToSlashes() {
+    void testNewExpr_normalizesDotsToSlashes()
+    {
         NewExpr stringNew = new NewExpr("java/lang/String", List.of());
 
         ExprMatcher matcherDots = ExprMatcher.newExpr("java.lang.String");
@@ -183,7 +194,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testNewArray_matchesAnyNewArrayExpression() {
+    void testNewArray_matchesAnyNewArrayExpression()
+    {
         NewArrayExpr intArray = NewArrayExpr.withSize(PrimitiveSourceType.INT, createIntLiteral(10));
         NewArrayExpr stringArray = NewArrayExpr.withSize(
             new ReferenceSourceType("java/lang/String"), createIntLiteral(5));
@@ -196,10 +208,11 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(objectNew));
     }
 
-    // ===== Type Operation Matcher Tests =====
+    // Type Operation Matcher Tests
 
     @Test
-    void testCast_matchesByTargetType() {
+    void testCast_matchesByTargetType()
+    {
         CastExpr intCast = new CastExpr(PrimitiveSourceType.INT, createVar("x"));
         CastExpr doubleCast = new CastExpr(PrimitiveSourceType.DOUBLE, createVar("x"));
         CastExpr stringCast = new CastExpr(ReferenceSourceType.STRING, createVar("x"));
@@ -214,7 +227,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyCast_matchesAnyCastExpression() {
+    void testAnyCast_matchesAnyCastExpression()
+    {
         CastExpr intCast = new CastExpr(PrimitiveSourceType.INT, createVar("x"));
         CastExpr stringCast = new CastExpr(ReferenceSourceType.STRING, createVar("x"));
         BinaryExpr binary = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
@@ -228,7 +242,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testInstanceOf_matchesByCheckedType() {
+    void testInstanceOf_matchesByCheckedType()
+    {
         InstanceOfExpr stringCheck = new InstanceOfExpr(createVar("obj"), ReferenceSourceType.STRING);
         InstanceOfExpr integerCheck = new InstanceOfExpr(createVar("obj"),
             new ReferenceSourceType("java/lang/Integer"));
@@ -242,7 +257,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyInstanceOf_matchesAnyInstanceOfExpression() {
+    void testAnyInstanceOf_matchesAnyInstanceOfExpression()
+    {
         InstanceOfExpr stringCheck = new InstanceOfExpr(createVar("obj"), ReferenceSourceType.STRING);
         InstanceOfExpr integerCheck = new InstanceOfExpr(createVar("obj"),
             new ReferenceSourceType("java/lang/Integer"));
@@ -255,10 +271,11 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(cast));
     }
 
-    // ===== Type-Based Matcher Tests =====
+    // Type-Based Matcher Tests
 
     @Test
-    void testOfType_matchesExpressionByClass() {
+    void testOfType_matchesExpressionByClass()
+    {
         MethodCallExpr methodCall = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
         FieldAccessExpr fieldAccess = FieldAccessExpr.staticField("java/lang/System", "out",
@@ -278,13 +295,13 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyMethodCall_matchesAllMethodCallExpressions() {
+    void testAnyMethodCall_matchesAllMethodCallExpressions()
+    {
         MethodCallExpr call1 = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
         MethodCallExpr call2 = MethodCallExpr.staticCall("java/lang/String", "valueOf",
             List.of(createIntLiteral(5)), ReferenceSourceType.STRING);
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
 
         ExprMatcher matcher = ExprMatcher.anyMethodCall();
 
@@ -294,11 +311,10 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyFieldAccess_matchesAllFieldAccessExpressions() {
-        FieldAccessExpr field1 = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
-        FieldAccessExpr field2 = FieldAccessExpr.staticField("java/lang/Math", "PI",
-            PrimitiveSourceType.DOUBLE);
+    void testAnyFieldAccess_matchesAllFieldAccessExpressions()
+    {
+        FieldAccessExpr field1 = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
+        FieldAccessExpr field2 = FieldAccessExpr.staticField("java/lang/Math", "PI", PrimitiveSourceType.DOUBLE);
         MethodCallExpr method = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
 
@@ -310,13 +326,13 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyBinary_matchesAllBinaryExpressions() {
+    void testAnyBinary_matchesAllBinaryExpressions()
+    {
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
             createIntLiteral(5), PrimitiveSourceType.INT);
-        UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5),
-            PrimitiveSourceType.INT);
+        UnaryExpr unary = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5), PrimitiveSourceType.INT);
 
         ExprMatcher matcher = ExprMatcher.anyBinary();
 
@@ -326,11 +342,10 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyUnary_matchesAllUnaryExpressions() {
-        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5),
-            PrimitiveSourceType.INT);
-        UnaryExpr not = new UnaryExpr(UnaryOperator.NOT,
-            LiteralExpr.ofBoolean(true), PrimitiveSourceType.BOOLEAN);
+    void testAnyUnary_matchesAllUnaryExpressions()
+    {
+        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5), PrimitiveSourceType.INT);
+        UnaryExpr not = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true), PrimitiveSourceType.BOOLEAN);
         BinaryExpr binary = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
 
@@ -342,7 +357,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyLiteral_matchesAllLiteralExpressions() {
+    void testAnyLiteral_matchesAllLiteralExpressions()
+    {
         LiteralExpr intLit = LiteralExpr.ofInt(42);
         LiteralExpr stringLit = LiteralExpr.ofString("hello");
         LiteralExpr nullLit = LiteralExpr.ofNull();
@@ -358,11 +374,10 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAnyArrayAccess_matchesAllArrayAccessExpressions() {
-        ArrayAccessExpr access1 = new ArrayAccessExpr(createVar("arr"), createIntLiteral(0),
-            PrimitiveSourceType.INT);
-        ArrayAccessExpr access2 = new ArrayAccessExpr(createVar("arr"), createVar("i"),
-            PrimitiveSourceType.INT);
+    void testAnyArrayAccess_matchesAllArrayAccessExpressions()
+    {
+        ArrayAccessExpr access1 = new ArrayAccessExpr(createVar("arr"), createIntLiteral(0), PrimitiveSourceType.INT);
+        ArrayAccessExpr access2 = new ArrayAccessExpr(createVar("arr"), createVar("i"), PrimitiveSourceType.INT);
         NewArrayExpr newArray = NewArrayExpr.withSize(PrimitiveSourceType.INT, createIntLiteral(10));
 
         ExprMatcher matcher = ExprMatcher.anyArrayAccess();
@@ -372,10 +387,11 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(newArray));
     }
 
-    // ===== Operator Matcher Tests =====
+    // Operator Matcher Tests
 
     @Test
-    void testBinaryOp_matchesByOperator() {
+    void testBinaryOp_matchesByOperator()
+    {
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
         BinaryExpr mul = new BinaryExpr(BinaryOperator.MUL, createIntLiteral(3),
@@ -395,13 +411,11 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testUnaryOp_matchesByOperator() {
-        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5),
-            PrimitiveSourceType.INT);
-        UnaryExpr not = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true),
-            PrimitiveSourceType.BOOLEAN);
-        UnaryExpr preInc = new UnaryExpr(UnaryOperator.PRE_INC, createVar("x"),
-            PrimitiveSourceType.INT);
+    void testUnaryOp_matchesByOperator()
+    {
+        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5), PrimitiveSourceType.INT);
+        UnaryExpr not = new UnaryExpr(UnaryOperator.NOT, LiteralExpr.ofBoolean(true), PrimitiveSourceType.BOOLEAN);
+        UnaryExpr preInc = new UnaryExpr(UnaryOperator.PRE_INC, createVar("x"), PrimitiveSourceType.INT);
 
         ExprMatcher negMatcher = ExprMatcher.unaryOp(UnaryOperator.NEG);
         ExprMatcher notMatcher = ExprMatcher.unaryOp(UnaryOperator.NOT);
@@ -415,7 +429,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAssignment_matchesAssignmentExpressions() {
+    void testAssignment_matchesAssignmentExpressions()
+    {
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
             createIntLiteral(5), PrimitiveSourceType.INT);
         BinaryExpr addAssign = new BinaryExpr(BinaryOperator.ADD_ASSIGN, createVar("x"),
@@ -431,7 +446,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testComparison_matchesComparisonExpressions() {
+    void testComparison_matchesComparisonExpressions()
+    {
         BinaryExpr eq = new BinaryExpr(BinaryOperator.EQ, createIntLiteral(1),
             createIntLiteral(1), PrimitiveSourceType.BOOLEAN);
         BinaryExpr lt = new BinaryExpr(BinaryOperator.LT, createIntLiteral(1),
@@ -449,16 +465,16 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(add));
     }
 
-    // ===== Combinator Tests =====
+    // Combinator Tests
 
     @Test
-    void testAnd_requiresBothMatchersToMatch() {
+    void testAnd_requiresBothMatchersToMatch()
+    {
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
             createIntLiteral(5), PrimitiveSourceType.INT);
-        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5),
-            PrimitiveSourceType.INT);
+        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5), PrimitiveSourceType.INT);
 
         ExprMatcher matcher = ExprMatcher.anyBinary().and(ExprMatcher.assignment());
 
@@ -468,11 +484,11 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testOr_matchesIfEitherMatcherMatches() {
+    void testOr_matchesIfEitherMatcherMatches()
+    {
         MethodCallExpr method = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
         BinaryExpr binary = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
 
@@ -484,7 +500,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testNot_invertsMatchResult() {
+    void testNot_invertsMatchResult()
+    {
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
@@ -497,11 +514,11 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testAny_matchesAllExpressions() {
+    void testAny_matchesAllExpressions()
+    {
         MethodCallExpr method = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
         BinaryExpr binary = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
         LiteralExpr literal = LiteralExpr.ofInt(42);
@@ -515,11 +532,11 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testNone_matchesNoExpressions() {
+    void testNone_matchesNoExpressions()
+    {
         MethodCallExpr method = MethodCallExpr.staticCall("java/lang/Math", "abs",
             List.of(createIntLiteral(5)), PrimitiveSourceType.INT);
-        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out",
-            ReferenceSourceType.OBJECT);
+        FieldAccessExpr field = FieldAccessExpr.staticField("java/lang/System", "out", ReferenceSourceType.OBJECT);
         BinaryExpr binary = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
 
@@ -531,7 +548,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testComplexCombination_multipleCombinatorsWork() {
+    void testComplexCombination_multipleCombinatorsWork()
+    {
         // Match binary expressions that are either assignments OR comparisons
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
             createIntLiteral(5), PrimitiveSourceType.INT);
@@ -539,8 +557,7 @@ class ExprMatcherTest {
             createIntLiteral(1), PrimitiveSourceType.BOOLEAN);
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
             createIntLiteral(2), PrimitiveSourceType.INT);
-        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5),
-            PrimitiveSourceType.INT);
+        UnaryExpr neg = new UnaryExpr(UnaryOperator.NEG, createIntLiteral(5), PrimitiveSourceType.INT);
 
         ExprMatcher matcher = ExprMatcher.anyBinary()
             .and(ExprMatcher.assignment().or(ExprMatcher.comparison()));
@@ -551,10 +568,11 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(neg));  // Not binary
     }
 
-    // ===== Custom Matcher Tests =====
+    // Custom Matcher Tests
 
     @Test
-    void testCustom_withPredicateOnly() {
+    void testCustom_withPredicateOnly()
+    {
         LiteralExpr intLit = LiteralExpr.ofInt(42);
         LiteralExpr stringLit = LiteralExpr.ofString("hello");
 
@@ -567,7 +585,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testCustom_withPredicateAndDescription() {
+    void testCustom_withPredicateAndDescription()
+    {
         LiteralExpr intLit = LiteralExpr.ofInt(42);
         LiteralExpr stringLit = LiteralExpr.ofString("hello");
 
@@ -582,7 +601,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testCustom_canBeUsedInCombinators() {
+    void testCustom_canBeUsedInCombinators()
+    {
         LiteralExpr intLit = LiteralExpr.ofInt(42);
         LiteralExpr stringLit = LiteralExpr.ofString("hello");
         BinaryExpr add = new BinaryExpr(BinaryOperator.ADD, createIntLiteral(1),
@@ -597,10 +617,11 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(add));
     }
 
-    // ===== ToString Tests =====
+    // ToString Tests
 
     @Test
-    void testToString_providesDescriptiveOutput() {
+    void testToString_providesDescriptiveOutput()
+    {
         ExprMatcher methodMatcher = ExprMatcher.methodCall("abs");
         ExprMatcher fieldMatcher = ExprMatcher.fieldAccess("java/lang/System", "out");
         ExprMatcher combinedMatcher = ExprMatcher.anyBinary().and(ExprMatcher.assignment());
@@ -610,10 +631,11 @@ class ExprMatcherTest {
         assertTrue(combinedMatcher.toString().contains("&&"));
     }
 
-    // ===== Edge Cases =====
+    // Edge Cases
 
     @Test
-    void testMethodCall_withZeroArguments() {
+    void testMethodCall_withZeroArguments()
+    {
         MethodCallExpr noArgs = MethodCallExpr.staticCall("com/example/Utils", "init",
             List.of(), PrimitiveSourceType.INT);
 
@@ -623,7 +645,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testNewExpr_withInnerClass() {
+    void testNewExpr_withInnerClass()
+    {
         NewExpr innerClass = new NewExpr("com/example/Outer$Inner", List.of());
 
         ExprMatcher matcherSlash = ExprMatcher.newExpr("com/example/Outer$Inner");
@@ -634,7 +657,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testCombinators_preserveNullSafety() {
+    void testCombinators_preserveNullSafety()
+    {
         ExprMatcher matcher = ExprMatcher.anyBinary()
             .and(ExprMatcher.assignment())
             .or(ExprMatcher.comparison())
@@ -645,7 +669,8 @@ class ExprMatcherTest {
     }
 
     @Test
-    void testComplexNesting_andOrNotCombinations() {
+    void testComplexNesting_andOrNotCombinations()
+    {
         // (binary && assignment) || (!comparison)
         BinaryExpr assign = new BinaryExpr(BinaryOperator.ASSIGN, createVar("x"),
             createIntLiteral(5), PrimitiveSourceType.INT);
@@ -663,48 +688,56 @@ class ExprMatcherTest {
         assertFalse(matcher.matches(eq));     // comparison (so !comparison is false)
     }
 
-    // ===== VarRefExpr Class for Testing =====
+    // VarRefExpr Class for Testing
 
     /**
-     * Simple VarRefExpr implementation for testing purposes.
+     * * Simple VarRefExpr implementation for testing purposes.
      */
-    private static class VarRefExpr implements Expression {
+    private static class VarRefExpr implements Expression
+    {
         private final String name;
         private final SourceType type;
-        private com.tonic.analysis.source.ast.ASTNode parent;
+        private ASTNode parent;
 
-        VarRefExpr(String name, SourceType type) {
+        VarRefExpr(String name, SourceType type)
+        {
             this.name = name;
             this.type = type;
         }
 
         @Override
-        public SourceType getType() {
+        public SourceType getType()
+        {
             return type;
         }
 
         @Override
-        public com.tonic.analysis.source.ast.SourceLocation getLocation() {
-            return com.tonic.analysis.source.ast.SourceLocation.UNKNOWN;
+        public SourceLocation getLocation()
+        {
+            return SourceLocation.UNKNOWN;
         }
 
         @Override
-        public com.tonic.analysis.source.ast.ASTNode getParent() {
+        public ASTNode getParent()
+        {
             return parent;
         }
 
         @Override
-        public void setParent(com.tonic.analysis.source.ast.ASTNode parent) {
+        public void setParent(ASTNode parent)
+        {
             this.parent = parent;
         }
 
         @Override
-        public <T> T accept(com.tonic.analysis.source.visitor.SourceVisitor<T> visitor) {
+        public <T> T accept(SourceVisitor<T> visitor)
+        {
             return null;
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return name;
         }
     }

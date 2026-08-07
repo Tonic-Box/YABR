@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Validates the verbose method-level disassembly against a javac-compiled fixture that exercises
  * line numbers, local variables, an exception table, and invokedynamic (lambda + string concat).
  */
-class VerboseDisassemblyTest {
+class VerboseDisassemblyTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -37,12 +38,14 @@ class VerboseDisassemblyTest {
             "    }\n" +
             "}\n";
 
-    private CodeAttribute compileRunMethod() throws Exception {
+    private CodeAttribute compileRunMethod() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available in this runtime");
 
         Path dir = Files.createTempDirectory("yabr-verbose");
-        try {
+        try
+        {
             Path src = dir.resolve("Verbose.java");
             Files.writeString(src, SOURCE);
             int rc = compiler.run(null, null, null, "-g", "-d", dir.toString(), src.toString());
@@ -55,13 +58,19 @@ class VerboseDisassemblyTest {
                     .findFirst()
                     .orElseThrow();
             return run.getCodeAttribute();
-        } finally {
-            try (var paths = Files.walk(dir)) {
+        }
+        finally
+        {
+            try (var paths = Files.walk(dir))
+            {
                 paths.sorted((a, b) -> b.getNameCount() - a.getNameCount())
                         .forEach(p -> {
-                            try {
+                            try
+                            {
                                 Files.deleteIfExists(p);
-                            } catch (Exception ignored) {
+                            }
+                            catch (Exception ignored)
+                            {
                             }
                         });
             }
@@ -69,7 +78,8 @@ class VerboseDisassemblyTest {
     }
 
     @Test
-    void verboseIncludesAllEnrichments() throws Exception {
+    void verboseIncludesAllEnrichments() throws Exception
+    {
         CodeAttribute code = compileRunMethod();
 
         String verbose = CodePrinter.prettyPrintCode(code, DisassemblyOptions.verbose());
@@ -85,7 +95,8 @@ class VerboseDisassemblyTest {
     }
 
     @Test
-    void terseOptionMatchesLegacyOutput() throws Exception {
+    void terseOptionMatchesLegacyOutput() throws Exception
+    {
         CodeAttribute code = compileRunMethod();
 
         String legacy = CodePrinter.prettyPrintCode(code);
@@ -95,15 +106,18 @@ class VerboseDisassemblyTest {
     }
 
     @Test
-    void verboseContainsEveryTerseInstructionLine() throws Exception {
+    void verboseContainsEveryTerseInstructionLine() throws Exception
+    {
         CodeAttribute code = compileRunMethod();
 
         String terse = CodePrinter.prettyPrintCode(code, DisassemblyOptions.terse());
         String verbose = CodePrinter.prettyPrintCode(code, DisassemblyOptions.verbose());
 
-        for (String line : terse.split("\n")) {
+        for (String line : terse.split("\n"))
+        {
             String instruction = line.trim();
-            if (instruction.matches("\\d{4}:.*")) {
+            if (instruction.matches("\\d{4}:.*"))
+            {
                 String offset = instruction.substring(0, instruction.indexOf(':'));
                 assertTrue(verbose.contains(offset + ":"),
                         "verbose output should retain instruction at offset " + offset);

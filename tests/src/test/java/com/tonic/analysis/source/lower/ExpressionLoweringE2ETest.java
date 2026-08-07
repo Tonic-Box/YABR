@@ -22,25 +22,28 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ExpressionLoweringE2ETest {
+public class ExpressionLoweringE2ETest
+{
 
     private JavaParser parser;
     private ClassPool pool;
     private int classCounter = 0;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         parser = JavaParser.create();
         pool = TestUtils.emptyPool();
         TestUtils.resetSSACounters();
     }
 
-    private String uniqueClassName() {
+    private String uniqueClassName()
+    {
         return "com/test/E2E" + (classCounter++);
     }
 
-    private ClassFile createClassWithMethod(String className, String methodName, String descriptor,
-                                            boolean isStatic) throws IOException {
+    private ClassFile createClassWithMethod(String className, String methodName, String descriptor, boolean isStatic) throws IOException
+    {
         int classAccess = new AccessBuilder().setPublic().build();
         ClassFile cf = ClassFactory.createClass(pool, className, classAccess);
         int methodAccess = isStatic
@@ -50,9 +53,11 @@ public class ExpressionLoweringE2ETest {
         return cf;
     }
 
-    private Class<?> compileAndLoad(MethodDecl methodDecl, String ownerClass) throws Exception {
+    private Class<?> compileAndLoad(MethodDecl methodDecl, String ownerClass) throws Exception
+    {
         List<SourceType> params = new ArrayList<>();
-        for (ParameterDecl p : methodDecl.getParameters()) {
+        for (ParameterDecl p : methodDecl.getParameters())
+        {
             params.add(p.getType());
         }
         SourceType returnType = methodDecl.getReturnType();
@@ -72,9 +77,11 @@ public class ExpressionLoweringE2ETest {
         return TestUtils.loadAndVerify(cf);
     }
 
-    private String buildDescriptor(List<SourceType> params, SourceType returnType) {
+    private String buildDescriptor(List<SourceType> params, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SourceType p : params) {
+        for (SourceType p : params)
+        {
             sb.append(p.toIRType().getDescriptor());
         }
         sb.append(")");
@@ -82,9 +89,12 @@ public class ExpressionLoweringE2ETest {
         return sb.toString();
     }
 
-    private static MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private static MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -92,10 +102,12 @@ public class ExpressionLoweringE2ETest {
     }
 
     @Nested
-    class MainMethodTests {
+    class MainMethodTests
+    {
 
         @Test
-        void mainMethodWithPrintln() throws Exception {
+        void mainMethodWithPrintln() throws Exception
+        {
             String source = "class Test { " +
                     "static int main() { " +
                     "    int result = 42; " +
@@ -114,7 +126,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void mainMethodWithArithmetic() throws Exception {
+        void mainMethodWithArithmetic() throws Exception
+        {
             String source = "class Test { " +
                     "static int main() { " +
                     "    int a = 10; " +
@@ -135,7 +148,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void mainMethodWithControlFlow() throws Exception {
+        void mainMethodWithControlFlow() throws Exception
+        {
             String source = "class Test { " +
                     "static int main() { " +
                     "    int x = 5; " +
@@ -158,7 +172,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void mainMethodWithLoop() throws Exception {
+        void mainMethodWithLoop() throws Exception
+        {
             String source = "class Test { " +
                     "static int main() { " +
                     "    int sum = 0; " +
@@ -181,10 +196,12 @@ public class ExpressionLoweringE2ETest {
     }
 
     @Nested
-    class ComprehensiveExpressionTests {
+    class ComprehensiveExpressionTests
+    {
 
         @Test
-        void allBasicExpressionTypes() throws Exception {
+        void allBasicExpressionTypes() throws Exception
+        {
             String source = "class Test { " +
                     "static int compute(int a, int b) { " +
                     "    int sum = a + b; " +
@@ -206,7 +223,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void ternaryAndComparisons() throws Exception {
+        void ternaryAndComparisons() throws Exception
+        {
             String source = "class Test { " +
                     "static int max3(int a, int b, int c) { " +
                     "    int maxAB = a > b ? a : b; " +
@@ -227,7 +245,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void bitwiseOperations() throws Exception {
+        void bitwiseOperations() throws Exception
+        {
             String source = "class Test { " +
                     "static int bitwise(int a, int b) { " +
                     "    int and = a & b; " +
@@ -251,7 +270,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void incrementDecrement() throws Exception {
+        void incrementDecrement() throws Exception
+        {
             String source = "class Test { " +
                     "static int incdec() { " +
                     "    int x = 10; " +
@@ -272,10 +292,12 @@ public class ExpressionLoweringE2ETest {
     }
 
     @Nested
-    class SuperExprTests {
+    class SuperExprTests
+    {
 
         @Test
-        void superHashCode() throws Exception {
+        void superHashCode() throws Exception
+        {
             String source = "class Test { " +
                     "int getSuperHash() { " +
                     "    return super.hashCode(); " +
@@ -295,7 +317,8 @@ public class ExpressionLoweringE2ETest {
         }
 
         @Test
-        void superToString() throws Exception {
+        void superToString() throws Exception
+        {
             String source = "class Test { " +
                     "String getSuperString() { " +
                     "    return super.toString(); " +

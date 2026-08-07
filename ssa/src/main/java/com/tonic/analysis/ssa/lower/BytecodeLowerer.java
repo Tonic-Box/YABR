@@ -1,5 +1,6 @@
 package com.tonic.analysis.ssa.lower;
 
+import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
 import com.tonic.analysis.ssa.cfg.ExceptionHandler;
@@ -8,46 +9,76 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.LoadLocalInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
-import com.tonic.analysis.frame.FrameGenerator;
 import com.tonic.analysis.ssa.transform.DeadCodeElimination;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.LineNumberTableAttribute;
 import com.tonic.parser.attribute.LocalVariableTableAttribute;
+import com.tonic.parser.attribute.LocalVariableTypeTableAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
+import com.tonic.parser.attribute.table.LocalVariableTableEntry;
+import com.tonic.parser.attribute.table.LocalVariableTypeTableEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Lowers SSA-form IR back to JVM bytecode.
+ * The lowering pipeline from SSA-form IR back to JVM bytecode.
  */
-public class BytecodeLowerer {
+public class BytecodeLowerer
+{
 
     private final ConstPool constPool;
     private final boolean emitLocalVariableTable;
 
-    public BytecodeLowerer(ConstPool constPool) {
+    /**
+     * Creates a lowerer that emits a LocalVariableTable.
+     * @param constPool the constant pool to emit against
+     */
+    public BytecodeLowerer(ConstPool constPool)
+    {
         this(constPool, true);
     }
 
-    public BytecodeLowerer(ConstPool constPool, boolean emitLocalVariableTable) {
+    /**
+     * Creates a lowerer.
+     * @param constPool the constant pool to emit against
+     * @param emitLocalVariableTable whether to build a LocalVariableTable for the lowered code
+     */
+    public BytecodeLowerer(ConstPool constPool, boolean emitLocalVariableTable)
+    {
         this.constPool = constPool;
         this.emitLocalVariableTable = emitLocalVariableTable;
     }
 
-    public ConstPool getConstPool() {
+    /**
+     * @return the const pool
+     */
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
-    public boolean isEmitLocalVariableTable() {
+    /**
+     * @return whether emit local variable table
+     */
+    public boolean isEmitLocalVariableTable()
+    {
         return emitLocalVariableTable;
     }
 
-    public void lower(IRMethod irMethod, MethodEntry targetMethod) {
+    /**
+     * Lowers the SSA method to bytecode and installs the result on the target method.
+     * @param irMethod the SSA method to lower
+     * @param targetMethod the class-file method receiving the new code
+     */
+    public void lower(IRMethod irMethod, MethodEntry targetMethod)
+    {
         // Remove now-dead LoadLocal/StoreLocal artifacts that reference stale local indices.
         removeLocalInstructionArtifacts(irMethod);
 
@@ -74,7 +105,8 @@ public class BytecodeLowerer {
         byte[] bytecode = emitter.emit();
 
         CodeAttribute codeAttr = targetMethod.getCodeAttribute();
-        if (codeAttr != null) {
+        if (codeAttr != null)
+        {
             codeAttr.setCode(bytecode);
             codeAttr.setMaxStack(scheduler.getMaxStack());
             codeAttr.setMaxLocals(regAlloc.getMaxLocals());
@@ -83,15 +115,46 @@ public class BytecodeLowerer {
             codeAttr.getExceptionTable().clear();
             codeAttr.getExceptionTable().addAll(newExceptionTable);
 
+            // Capture the original generic-local signatures (keyed by slot + name-index) before dropping the stale
+            // tables, so the LocalVariableTypeTable can be rebuilt against the regenerated LocalVariableTable ranges
+            // rather than left with the source class's offsets - a mismatch the class loader rejects.
+            Map<Long, Integer> genericSignatures = new HashMap<>();
+            for (Attribute attr : codeAttr.getAttributes())
+            {
+                if (attr instanceof LocalVariableTypeTableAttribute)
+                {
+                    for (LocalVariableTypeTableEntry e
+                            : ((LocalVariableTypeTableAttribute) attr).getLocalVariableTypeTable())
+                    {
+                        genericSignatures.put(lvKey(e.getIndex(), e.getNameIndex()), e.getSignatureIndex());
+                    }
+                }
+            }
+
             codeAttr.getAttributes().removeIf(attr ->
                 attr instanceof LocalVariableTableAttribute ||
+                attr instanceof LocalVariableTypeTableAttribute ||
                 attr instanceof LineNumberTableAttribute);
 
-            if (emitLocalVariableTable) {
-                LocalVariableTableAttribute lvt = new LocalVariableTableBuilder(
-                        irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod).build();
-                if (lvt != null) {
+            if (emitLocalVariableTable)
+            {
+                LocalVariableTableBuilder builder = new LocalVariableTableBuilder(
+                        irMethod, regAlloc, emitter, bytecode.length, constPool, targetMethod);
+                LocalVariableTableAttribute lvt = builder.build();
+                if (lvt != null)
+                {
                     codeAttr.getAttributes().add(lvt);
+                    // Signatures synthesized from the declared source types take precedence; the
+                    // preserved originals fill in variables the source view did not carry.
+                    for (Map.Entry<Long, String> e : builder.getSignaturesByLvKey().entrySet())
+                    {
+                        genericSignatures.put(e.getKey(), constPool.findOrAddUtf8(e.getValue()).getIndex(constPool));
+                    }
+                    LocalVariableTypeTableAttribute lvtt = rebuildTypeTable(lvt, genericSignatures, targetMethod);
+                    if (lvtt != null)
+                    {
+                        codeAttr.getAttributes().add(lvtt);
+                    }
                 }
             }
 
@@ -109,25 +172,67 @@ public class BytecodeLowerer {
         }
     }
 
-    private List<ExceptionTableEntry> regenerateExceptionTable(IRMethod irMethod, BytecodeEmitter emitter) {
+    private static long lvKey(int slot, int nameIndex)
+    {
+        return (((long) slot) << 32) | (nameIndex & 0xffffffffL);
+    }
+
+    /**
+     * Rebuilds the LocalVariableTypeTable against the regenerated LocalVariableTable.
+     */
+    private LocalVariableTypeTableAttribute rebuildTypeTable(LocalVariableTableAttribute lvt, Map<Long, Integer> genericSignatures, MethodEntry targetMethod)
+    {
+        if (genericSignatures.isEmpty())
+        {
+            return null;
+        }
+        List<LocalVariableTypeTableEntry> entries = new ArrayList<>();
+        for (LocalVariableTableEntry e : lvt.getLocalVariableTable())
+        {
+            Integer signatureIndex = genericSignatures.get(lvKey(e.getIndex(), e.getNameIndex()));
+            if (signatureIndex != null)
+            {
+                entries.add(new LocalVariableTypeTableEntry(constPool, e.getStartPc(), e.getLengthPc(),
+                        e.getNameIndex(), signatureIndex, e.getIndex()));
+            }
+        }
+        if (entries.isEmpty())
+        {
+            return null;
+        }
+        int attrNameIndex = constPool.findOrAddUtf8("LocalVariableTypeTable").getIndex(constPool);
+        LocalVariableTypeTableAttribute attr =
+                new LocalVariableTypeTableAttribute("LocalVariableTypeTable", targetMethod, attrNameIndex, 0);
+        attr.setLocalVariableTypeTable(entries);
+        attr.updateLength();
+        return attr;
+    }
+
+    private List<ExceptionTableEntry> regenerateExceptionTable(IRMethod irMethod, BytecodeEmitter emitter)
+    {
         List<ExceptionTableEntry> entries = new ArrayList<>();
         Map<IRBlock, Integer> offsets = emitter.getBlockOffsets();
         Map<IRBlock, Integer> endOffsets = emitter.getBlockEndOffsets();
 
-        for (ExceptionHandler handler : irMethod.getExceptionHandlers()) {
+        for (ExceptionHandler handler : irMethod.getExceptionHandlers())
+        {
             IRBlock handlerBlock = handler.getHandlerBlock();
-            if (!offsets.containsKey(handlerBlock)) {
+            if (!offsets.containsKey(handlerBlock))
+            {
                 continue;
             }
             int handlerPc = offsets.get(handlerBlock);
 
             int catchType = 0;
-            if (handler.getCatchType() != null) {
+            if (handler.getCatchType() != null)
+            {
                 catchType = constPool.findOrAddClass(handler.getCatchType().getInternalName()).getIndex(constPool);
             }
 
-            if (handler.getTryBlocks() != null && !handler.getTryBlocks().isEmpty()) {
-                for (int[] run : contiguousRuns(handler.getTryBlocks(), offsets, endOffsets)) {
+            if (handler.getTryBlocks() != null && !handler.getTryBlocks().isEmpty())
+            {
+                for (int[] run : contiguousRuns(handler.getTryBlocks(), offsets, endOffsets))
+                {
                     entries.add(new ExceptionTableEntry(run[0], run[1], handlerPc, catchType));
                 }
                 continue;
@@ -135,17 +240,22 @@ public class BytecodeLowerer {
 
             IRBlock tryStart = handler.getTryStart();
             IRBlock tryEnd = handler.getTryEnd();
-            if (!offsets.containsKey(tryStart)) {
+            if (!offsets.containsKey(tryStart))
+            {
                 continue;
             }
             int startPc = offsets.get(tryStart);
             int endPc;
-            if (tryEnd != null && endOffsets.containsKey(tryEnd)) {
+            if (tryEnd != null && endOffsets.containsKey(tryEnd))
+            {
                 endPc = endOffsets.get(tryEnd);
-            } else {
+            }
+            else
+            {
                 endPc = endOffsets.getOrDefault(tryStart, startPc + 1);
             }
-            if (startPc < endPc) {
+            if (startPc < endPc)
+            {
                 entries.add(new ExceptionTableEntry(startPc, endPc, handlerPc, catchType));
             }
         }
@@ -154,18 +264,19 @@ public class BytecodeLowerer {
     }
 
     /**
-     * Collapses the emitted byte ranges of a protected region's blocks into maximal contiguous runs. A nested
-     * try whose body is interrupted by an interleaved handler emits as several non-adjacent ranges; each run
-     * becomes one exception-table entry, matching how javac splits such a region.
+     * Collapses the emitted byte ranges of a protected region's blocks into maximal contiguous runs.
      */
-    private List<int[]> contiguousRuns(Set<IRBlock> tryBlocks, Map<IRBlock, Integer> offsets,
-                                       Map<IRBlock, Integer> endOffsets) {
+    private List<int[]> contiguousRuns(Set<IRBlock> tryBlocks, Map<IRBlock, Integer> offsets, Map<IRBlock, Integer> endOffsets)
+    {
         List<int[]> intervals = new ArrayList<>();
-        for (IRBlock block : tryBlocks) {
-            if (offsets.containsKey(block) && endOffsets.containsKey(block)) {
+        for (IRBlock block : tryBlocks)
+        {
+            if (offsets.containsKey(block) && endOffsets.containsKey(block))
+            {
                 int start = offsets.get(block);
                 int end = endOffsets.get(block);
-                if (start < end) {
+                if (start < end)
+                {
                     intervals.add(new int[]{start, end});
                 }
             }
@@ -173,11 +284,15 @@ public class BytecodeLowerer {
         intervals.sort(Comparator.comparingInt(a -> a[0]));
 
         List<int[]> runs = new ArrayList<>();
-        for (int[] interval : intervals) {
-            if (!runs.isEmpty() && interval[0] <= runs.get(runs.size() - 1)[1]) {
+        for (int[] interval : intervals)
+        {
+            if (!runs.isEmpty() && interval[0] <= runs.get(runs.size() - 1)[1])
+            {
                 int[] last = runs.get(runs.size() - 1);
                 last[1] = Math.max(last[1], interval[1]);
-            } else {
+            }
+            else
+            {
                 runs.add(new int[]{interval[0], interval[1]});
             }
         }
@@ -186,29 +301,27 @@ public class BytecodeLowerer {
 
     /**
      * Removes LoadLocalInstruction and StoreLocalInstruction artifacts from the IR.
-     * <p>
-     * After SSA lifting, these instructions are artifacts from the initial bytecode
-     * conversion. The VariableRenamer replaces their results with actual SSA values,
-     * making them dead. Keeping them causes incorrect bytecode because:
-     * 1. LoadLocalInstruction references stale local indices from the original method
-     * 2. StoreLocalInstruction stores to indices that may not exist in the current frame
-     * 3. For inlined code, these indices reference the callee's frame, not the caller's
-     * <p>
-     * In proper SSA form, all data flow is through SSAValue uses, not local variable slots.
      */
-    private void removeLocalInstructionArtifacts(IRMethod method) {
-        for (IRBlock block : method.getBlocks()) {
+    private void removeLocalInstructionArtifacts(IRMethod method)
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             List<IRInstruction> toRemove = new ArrayList<>();
 
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof LoadLocalInstruction) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof LoadLocalInstruction)
+                {
                     toRemove.add(instr);
-                } else if (instr instanceof StoreLocalInstruction) {
+                }
+                else if (instr instanceof StoreLocalInstruction)
+                {
                     toRemove.add(instr);
                 }
             }
 
-            for (IRInstruction instr : toRemove) {
+            for (IRInstruction instr : toRemove)
+            {
                 block.removeInstruction(instr);
             }
         }

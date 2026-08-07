@@ -22,9 +22,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * Exercises the {@code flowsTo}/{@code flowsFrom} data-flow relations through the live pipeline:
  * forward def-use reachability from a {@code param(n)} value to a {@code return}, evaluated over the
- * lazily-lifted SSA IR (no YABR change — uses {@code IRMethod.getParameters()} + {@code DefUseChains}).
+ * lazily-lifted SSA IR (no YABR change - uses {@code IRMethod.getParameters()} + {@code DefUseChains}).
  */
-class DataFlowQueryTest {
+class DataFlowQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -41,7 +42,8 @@ class DataFlowQueryTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("query-flow");
@@ -52,7 +54,8 @@ class DataFlowQueryTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Flow.class")));
     }
 
-    private List<String> methods(String query) throws Exception {
+    private List<String> methods(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         return new QueryBatchRunner(pool).run(plan, null).matches().stream()
@@ -62,25 +65,26 @@ class DataFlowQueryTest {
     }
 
     @Test
-    void firstParamFlowsToReturn() throws Exception {
-        assertEquals(List.of("derived", "echo", "id", "wrap"),
-                methods("FIND methods WHERE param(0) flowsTo return"));
+    void firstParamFlowsToReturn() throws Exception
+    {
+        assertEquals(List.of("derived", "echo", "id", "wrap"), methods("FIND methods WHERE param(0) flowsTo return"));
     }
 
     @Test
-    void secondParamFlowsToReturn() throws Exception {
+    void secondParamFlowsToReturn() throws Exception
+    {
         assertEquals(List.of("second"), methods("FIND methods WHERE param(1) flowsTo return"));
     }
 
     @Test
-    void flowsFromIsTheSwappedRelation() throws Exception {
-        assertEquals(List.of("derived", "echo", "id", "wrap"),
-                methods("FIND methods WHERE return flowsFrom param(0)"));
+    void flowsFromIsTheSwappedRelation() throws Exception
+    {
+        assertEquals(List.of("derived", "echo", "id", "wrap"), methods("FIND methods WHERE return flowsFrom param(0)"));
     }
 
     @Test
-    void callArgFlowsFromParam() throws Exception {
-        assertEquals(List.of("wrap"),
-                methods("FIND methods WHERE has call where (arg(0) flowsFrom param(0))"));
+    void callArgFlowsFromParam() throws Exception
+    {
+        assertEquals(List.of("wrap"), methods("FIND methods WHERE has call where (arg(0) flowsFrom param(0))"));
     }
 }

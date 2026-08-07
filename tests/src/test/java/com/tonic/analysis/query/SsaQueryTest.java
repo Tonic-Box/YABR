@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Exercises the SSA/CFG tier through the live pipeline: {@code recursive} (static self-call scan) and
  * {@code method.loops} (lazy SSA loop analysis) select the right methods.
  */
-class SsaQueryTest {
+class SsaQueryTest
+{
 
     private static final String SOURCE =
             "package t;\n" +
@@ -38,7 +39,8 @@ class SsaQueryTest {
     private static ClassPool pool;
 
     @BeforeAll
-    static void setup() throws Exception {
+    static void setup() throws Exception
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assumeTrue(compiler != null, "no JDK compiler available");
         Path dir = Files.createTempDirectory("query-ssa");
@@ -49,7 +51,8 @@ class SsaQueryTest {
         pool.loadClass(Files.readAllBytes(dir.resolve("t").resolve("Cfg.class")));
     }
 
-    private List<String> methods(String query) throws Exception {
+    private List<String> methods(String query) throws Exception
+    {
         Query parsed = new QueryParser().parse(query);
         ProbePlan plan = new QueryPlanner().plan(parsed);
         return new QueryBatchRunner(pool).run(plan, null).matches().stream()
@@ -59,17 +62,20 @@ class SsaQueryTest {
     }
 
     @Test
-    void recursiveSelectsSelfCallingMethod() throws Exception {
+    void recursiveSelectsSelfCallingMethod() throws Exception
+    {
         assertEquals(List.of("fact"), methods("FIND methods WHERE recursive"));
     }
 
     @Test
-    void loopsSelectsLoopingMethod() throws Exception {
+    void loopsSelectsLoopingMethod() throws Exception
+    {
         assertEquals(List.of("loopCall", "sum"), methods("FIND methods WHERE method.loops > 0"));
     }
 
     @Test
-    void inLoopSelectsCallInsideLoop() throws Exception {
+    void inLoopSelectsCallInsideLoop() throws Exception
+    {
         assertEquals(List.of("loopCall"), methods("FIND methods WHERE has call where (inLoop)"));
     }
 }

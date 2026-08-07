@@ -7,45 +7,50 @@ import java.util.Objects;
 
 /**
  * Represents a MethodType constant loaded via ldc.
- * Corresponds to CONSTANT_MethodType in the constant pool.
- *
- * A MethodType represents a method signature (parameter types and return type)
- * and is commonly used with invokedynamic and method handles.
  */
-public final class MethodTypeConstant extends Constant {
+public final class MethodTypeConstant extends Constant
+{
 
     private final String descriptor;  // Method descriptor, e.g., "(II)V"
 
     /**
      * Creates a MethodType constant.
-     *
      * @param descriptor the method descriptor
      */
-    public MethodTypeConstant(String descriptor) {
+    public MethodTypeConstant(String descriptor)
+    {
         this.descriptor = descriptor;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
     @Override
-    public IRType getType() {
+    public IRType getType()
+    {
         return new ReferenceType("java/lang/invoke/MethodType");
     }
 
     @Override
-    public Object getValue() {
+    public Object getValue()
+    {
         return descriptor;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "MethodType[" + descriptor + "]";
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof MethodTypeConstant)) return false;
         MethodTypeConstant that = (MethodTypeConstant) o;
@@ -53,7 +58,8 @@ public final class MethodTypeConstant extends Constant {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(descriptor);
     }
 }

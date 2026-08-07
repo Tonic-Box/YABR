@@ -1,27 +1,43 @@
 package com.tonic.parser.constpool.structure;
 
 /**
- * Represents an InvokeDynamic in the constant pool.
+ * The index pair carried by a CONSTANT_InvokeDynamic pool entry.
  */
-public class InvokeDynamic {
+public class InvokeDynamic
+{
     private final int bootstrapMethodAttrIndex;
     private final int nameAndTypeIndex;
 
-    public InvokeDynamic(int bootstrapMethodAttrIndex, int nameAndTypeIndex) {
+    /**
+     * Creates an invokedynamic reference from its raw indices.
+     * @param bootstrapMethodAttrIndex index into the BootstrapMethods attribute
+     * @param nameAndTypeIndex constant pool index of the call site name and type
+     */
+    public InvokeDynamic(int bootstrapMethodAttrIndex, int nameAndTypeIndex)
+    {
         this.bootstrapMethodAttrIndex = bootstrapMethodAttrIndex;
         this.nameAndTypeIndex = nameAndTypeIndex;
     }
 
-    public int getBootstrapMethodAttrIndex() {
+    /**
+     * @return the bootstrap method attr index
+     */
+    public int getBootstrapMethodAttrIndex()
+    {
         return bootstrapMethodAttrIndex;
     }
 
-    public int getNameAndTypeIndex() {
+    /**
+     * @return the name and type index
+     */
+    public int getNameAndTypeIndex()
+    {
         return nameAndTypeIndex;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "InvokeDynamic{" +
                 "bootstrapMethodAttrIndex=" + bootstrapMethodAttrIndex +
                 ", nameAndTypeIndex=" + nameAndTypeIndex +

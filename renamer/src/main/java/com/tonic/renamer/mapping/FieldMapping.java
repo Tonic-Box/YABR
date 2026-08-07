@@ -5,7 +5,8 @@ import java.util.Objects;
 /**
  * Represents a field rename mapping.
  */
-public final class FieldMapping implements RenameMapping {
+public final class FieldMapping implements RenameMapping
+{
 
     private final String owner;
     private final String oldName;
@@ -14,26 +15,31 @@ public final class FieldMapping implements RenameMapping {
 
     /**
      * Creates a new field mapping.
-     *
      * @param owner      The internal name of the class owning the field (e.g., "com/example/MyClass")
      * @param oldName    The old field name (e.g., "data")
      * @param descriptor The field descriptor (e.g., "Ljava/lang/String;")
      * @param newName    The new field name (e.g., "content")
      */
-    public FieldMapping(String owner, String oldName, String descriptor, String newName) {
-        if (owner == null || owner.isEmpty()) {
+    public FieldMapping(String owner, String oldName, String descriptor, String newName)
+    {
+        if (owner == null || owner.isEmpty())
+        {
             throw new IllegalArgumentException("owner cannot be null or empty");
         }
-        if (oldName == null || oldName.isEmpty()) {
+        if (oldName == null || oldName.isEmpty())
+        {
             throw new IllegalArgumentException("oldName cannot be null or empty");
         }
-        if (descriptor == null || descriptor.isEmpty()) {
+        if (descriptor == null || descriptor.isEmpty())
+        {
             throw new IllegalArgumentException("descriptor cannot be null or empty");
         }
-        if (newName == null || newName.isEmpty()) {
+        if (newName == null || newName.isEmpty())
+        {
             throw new IllegalArgumentException("newName cannot be null or empty");
         }
-        if (oldName.equals(newName)) {
+        if (oldName.equals(newName))
+        {
             throw new IllegalArgumentException("oldName and newName cannot be the same");
         }
         this.owner = owner;
@@ -42,33 +48,45 @@ public final class FieldMapping implements RenameMapping {
         this.newName = newName;
     }
 
-    public String getOwner() {
+    /**
+     * @return the owner
+     */
+    public String getOwner()
+    {
         return owner;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
     @Override
-    public String getOldName() {
+    public String getOldName()
+    {
         return oldName;
     }
 
     @Override
-    public String getNewName() {
+    public String getNewName()
+    {
         return newName;
     }
 
     /**
-     * Returns the fully qualified field identifier (owner.name:descriptor).
+     * @return the field identifier as owner.oldName:descriptor
      */
-    public String getFullyQualifiedName() {
+    public String getFullyQualifiedName()
+    {
         return owner + "." + oldName + ":" + descriptor;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof FieldMapping)) return false;
         FieldMapping that = (FieldMapping) o;
@@ -79,12 +97,14 @@ public final class FieldMapping implements RenameMapping {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(owner, oldName, descriptor, newName);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "FieldMapping{" + owner + "." + oldName + ":" + descriptor + " -> " + newName + "}";
     }
 }

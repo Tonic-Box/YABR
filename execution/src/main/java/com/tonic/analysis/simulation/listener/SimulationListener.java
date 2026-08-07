@@ -14,45 +14,29 @@ import java.util.Set;
 
 /**
  * Listener interface for simulation events.
- *
- * <p>Implement this interface to receive callbacks during simulation execution.
- * All methods have default no-op implementations, so listeners can override
- * only the methods they care about.
- *
- * <p>Example usage:
- * <pre>
- * SimulationListener listener = new SimulationListener() {
- *     {@literal @}Override
- *     public void onStackPush(SimValue value, IRInstruction source) {
- *         System.out.println("Push: " + value);
- *     }
- * };
- * </pre>
  */
-public interface SimulationListener {
+public interface SimulationListener
+{
 
-    // ========== Lifecycle Events ==========
+    // Lifecycle Events
 
     /**
      * Called when simulation starts.
-     *
      * @param method the IR method being simulated
      */
     default void onSimulationStart(IRMethod method) {}
 
     /**
      * Called when simulation ends.
-     *
      * @param method the IR method that was simulated
      * @param result the simulation result
      */
     default void onSimulationEnd(IRMethod method, SimulationResult result) {}
 
-    // ========== Block Events ==========
+    // Block Events
 
     /**
      * Called when entering a block.
-     *
      * @param block the block being entered
      * @param state the simulation state at entry
      */
@@ -60,17 +44,15 @@ public interface SimulationListener {
 
     /**
      * Called when exiting a block.
-     *
      * @param block the block being exited
      * @param state the simulation state at exit
      */
     default void onBlockExit(IRBlock block, SimulationState state) {}
 
-    // ========== Instruction Events ==========
+    // Instruction Events
 
     /**
      * Called before executing an instruction.
-     *
      * @param instr the instruction about to execute
      * @param state the state before execution
      */
@@ -78,18 +60,16 @@ public interface SimulationListener {
 
     /**
      * Called after executing an instruction.
-     *
      * @param instr the instruction that executed
      * @param before the state before execution
      * @param after the state after execution
      */
     default void onAfterInstruction(IRInstruction instr, SimulationState before, SimulationState after) {}
 
-    // ========== Stack Events ==========
+    // Stack Events
 
     /**
      * Called when a value is pushed onto the stack.
-     *
      * @param value the pushed value
      * @param source the instruction that produced the value
      */
@@ -97,17 +77,15 @@ public interface SimulationListener {
 
     /**
      * Called when a value is popped from the stack.
-     *
      * @param value the popped value
      * @param consumer the instruction consuming the value
      */
     default void onStackPop(SimValue value, IRInstruction consumer) {}
 
-    // ========== Allocation Events ==========
+    // Allocation Events
 
     /**
      * Called when a new object is allocated.
-     *
      * @param instr the NEW instruction
      * @param state the current state
      */
@@ -115,17 +93,15 @@ public interface SimulationListener {
 
     /**
      * Called when a new array is allocated.
-     *
      * @param instr the NEWARRAY instruction
      * @param state the current state
      */
     default void onArrayAllocation(NewArrayInstruction instr, SimulationState state) {}
 
-    // ========== Field Access Events ==========
+    // Field Access Events
 
     /**
      * Called when a field is read.
-     *
      * @param instr the field access instruction (LOAD mode)
      * @param state the current state
      */
@@ -133,17 +109,15 @@ public interface SimulationListener {
 
     /**
      * Called when a field is written.
-     *
      * @param instr the field access instruction (STORE mode)
      * @param state the current state
      */
     default void onFieldWrite(FieldAccessInstruction instr, SimulationState state) {}
 
-    // ========== Array Access Events ==========
+    // Array Access Events
 
     /**
      * Called when an array element is read.
-     *
      * @param instr the array access instruction (LOAD mode)
      * @param state the current state
      */
@@ -151,17 +125,15 @@ public interface SimulationListener {
 
     /**
      * Called when an array element is written.
-     *
      * @param instr the array access instruction (STORE mode)
      * @param state the current state
      */
     default void onArrayWrite(ArrayAccessInstruction instr, SimulationState state) {}
 
-    // ========== Control Flow Events ==========
+    // Control Flow Events
 
     /**
      * Called when a branch instruction is encountered.
-     *
      * @param instr the branch instruction
      * @param taken true if the branch is taken (for conditional branches)
      * @param state the current state
@@ -170,18 +142,16 @@ public interface SimulationListener {
 
     /**
      * Called when a switch instruction is encountered.
-     *
      * @param instr the switch instruction
      * @param targetIndex the selected case index (-1 for default)
      * @param state the current state
      */
     default void onSwitch(SwitchInstruction instr, int targetIndex, SimulationState state) {}
 
-    // ========== Method Call Events ==========
+    // Method Call Events
 
     /**
      * Called when a method is invoked.
-     *
      * @param instr the invoke instruction
      * @param state the current state
      */
@@ -189,27 +159,24 @@ public interface SimulationListener {
 
     /**
      * Called when a method returns.
-     *
      * @param instr the return instruction
      * @param state the current state
      */
     default void onMethodReturn(ReturnInstruction instr, SimulationState state) {}
 
-    // ========== Exception Events ==========
+    // Exception Events
 
     /**
      * Called when an exception is thrown.
-     *
      * @param instr the simple instruction (ATHROW)
      * @param state the current state
      */
     default void onException(SimpleInstruction instr, SimulationState state) {}
 
-    // ========== Monitor Events ==========
+    // Monitor Events
 
     /**
      * Called when a monitor is entered.
-     *
      * @param instr the simple instruction (MONITORENTER)
      * @param state the current state
      */
@@ -217,17 +184,15 @@ public interface SimulationListener {
 
     /**
      * Called when a monitor is exited.
-     *
      * @param instr the simple instruction (MONITOREXIT)
      * @param state the current state
      */
     default void onMonitorExit(SimpleInstruction instr, SimulationState state) {}
 
-    // ========== Heap Tracking Events ==========
+    // Heap Tracking Events
 
     /**
      * Called when an object is allocated on the simulation heap.
-     *
      * @param site the allocation site
      * @param ref the reference to the allocated object
      */
@@ -235,7 +200,6 @@ public interface SimulationListener {
 
     /**
      * Called when an array is allocated on the simulation heap.
-     *
      * @param site the allocation site
      * @param ref the reference to the allocated array
      * @param length the array length
@@ -244,7 +208,6 @@ public interface SimulationListener {
 
     /**
      * Called when a field is written on the simulation heap.
-     *
      * @param objectRef the object reference
      * @param field the field being written
      * @param value the value being stored
@@ -253,7 +216,6 @@ public interface SimulationListener {
 
     /**
      * Called when a field is read from the simulation heap.
-     *
      * @param objectRef the object reference
      * @param field the field being read
      * @param values the possible values (may be multiple due to imprecision)
@@ -262,7 +224,6 @@ public interface SimulationListener {
 
     /**
      * Called when an array element is stored on the simulation heap.
-     *
      * @param arrayRef the array reference
      * @param index the array index
      * @param value the value being stored
@@ -271,7 +232,6 @@ public interface SimulationListener {
 
     /**
      * Called when an array element is loaded from the simulation heap.
-     *
      * @param arrayRef the array reference
      * @param index the array index
      * @param values the possible values
@@ -280,7 +240,6 @@ public interface SimulationListener {
 
     /**
      * Called when an object escapes its allocation scope.
-     *
      * @param site the allocation site
      * @param escapeState the escape state
      */
@@ -288,7 +247,6 @@ public interface SimulationListener {
 
     /**
      * Called when an aliasing relationship is detected.
-     *
      * @param ref1 first reference
      * @param ref2 second reference
      * @param mustAlias true if definitely aliased, false if may-alias

@@ -7,6 +7,7 @@ import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.Attribute;
@@ -23,7 +24,8 @@ import java.util.*;
 /**
  * Emits JVM bytecode from IR instructions.
  */
-public class BytecodeEmitter {
+public class BytecodeEmitter
+{
 
     private final IRMethod method;
     private final ConstPool constPool;
@@ -37,41 +39,59 @@ public class BytecodeEmitter {
     private final Map<IRInstruction, Integer> instructionOffsets = new HashMap<>();
     private final List<PendingJump> pendingJumps;
     private int currentOffset;
+    private final Map<SSAValue, Integer> storeEndOffsets = new HashMap<>();
+    private final Set<Integer> writtenSlots = new HashSet<>();
 
     private final Set<SSAValue> stackResidentValues;
-    /** Per-block register operand pushed at the block head so a condition's bound stays on the stack. */
+    /**
+     * Values of locals the source declared; they always spill to their slot so the name survives.
+     */
+    private Set<SSAValue> namedSourceLocals = java.util.Collections.emptySet();
+    /**
+     * Per-block register operand pushed at the block head so a condition's bound stays on the stack.
+     */
     private final Map<IRBlock, SSAValue> blockHeadPreload;
-    /** Values already pushed onto the stack ahead of their use (a head preload), to be skipped at the use. */
+    /**
+     * Values already pushed onto the stack ahead of their use (a head preload), to be skipped at the use.
+     */
     private final Set<SSAValue> preloadedOnStack;
     private final Set<SSAValue> inlinedConstants;
     private final Map<SSAValue, Constant> inlinedConstantValue;
     /**
-     * Caught-exception values captured at handler entry. The lift marks each handler block with a self-copy
-     * of the value the JVM pushes onto the entry stack; this set drives the emitter to store that stack
-     * value into the value's local (an {@code astore}) so a later use re-loads it correctly.
+     * Caught-exception values captured at handler entry.
      */
     private final Set<SSAValue> handlerExceptionCaptures;
 
-    /** Maps each {@code new} to its paired {@code <init>} so the pair emits {@code new; dup; args; invokespecial}. */
+    /**
+     * Maps each {@code new} to its paired {@code <init>} so the pair emits {@code new; dup; args; invokespecial}.
+     */
     private final Map<NewInstruction, InvokeInstruction> newToInit;
     private final Map<InvokeInstruction, NewInstruction> initToNew;
 
-    /** A receiver value to push just before this instruction (the start of a call argument's build window). */
+    /**
+     * A receiver value to push just before this instruction (the start of a call argument's build window).
+     */
     private final Map<IRInstruction, SSAValue> receiverPreload = new HashMap<>();
-    /** Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use
-     *  (a call receiver before its argument, or a binary op's left operand before its computed right operand). */
+    /**
+     * Instructions whose operand 0 was preloaded ahead of operand 1's window, so skip loading it at the use.
+     */
     private final Set<IRInstruction> skipReceiver = new HashSet<>();
-    /** For an array store {@code arr[i] = new X()}: the array and index (re-loadable, loaded on-demand at the
-     *  store) pushed just before the value's construction, so the paired-new value stays resident on top of them
-     *  (javac's {@code <array>; <index>; new; dup; init; aastore}) instead of spilling to a local. Keyed by the
-     *  value's defining instruction; the store itself skips those operand loads (see {@link #skipStorePrefix}). */
+    /**
+     * For an array store {@code arr[i] = new X()}.
+     */
     private final Map<IRInstruction, List<SSAValue>> arrayStorePrefixPreload = new HashMap<>();
-    /** Array-store instructions whose array+index were preloaded ahead of the value - skip loading operands 0/1
-     *  at the store (the value, operand 2, is separately stack-resident). */
+    /**
+     * Array-store instructions whose array+index were preloaded ahead of the value - skip loading operands 0/1 at
+     * the store.
+     */
     private final Set<IRInstruction> skipStorePrefix = new HashSet<>();
-    /** Operand use count per value (across instructions and phis), so an unused result can be popped not stored. */
+    /**
+     * Operand use count per value (across instructions and phis), so an unused result can be popped not stored.
+     */
     private final Map<SSAValue, Integer> valueUseCounts = new HashMap<>();
-    /** Values that back a named source local; a store to one is kept (not popped) even when the value is unused. */
+    /**
+     * Values that back a named source local; a store to one is kept (not popped) even when the value is unused.
+     */
     private final Set<SSAValue> namedValues = new HashSet<>();
 
     // For fall-through optimization
@@ -79,13 +99,13 @@ public class BytecodeEmitter {
 
     /**
      * Creates a new bytecode emitter.
-     *
      * @param method the IR method to emit
      * @param constPool the constant pool
      * @param regAlloc the register allocator
      * @param scheduler the stack scheduler
      */
-    public BytecodeEmitter(IRMethod method, ConstPool constPool, RegisterAllocator regAlloc, StackScheduler scheduler) {
+    public BytecodeEmitter(IRMethod method, ConstPool constPool, RegisterAllocator regAlloc, StackScheduler scheduler)
+    {
         this.method = method;
         this.constPool = constPool;
         this.regAlloc = regAlloc;
@@ -103,85 +123,183 @@ public class BytecodeEmitter {
         this.initToNew = new HashMap<>();
     }
 
-    public IRMethod getMethod() {
+    /**
+     * @return the method
+     */
+    public IRMethod getMethod()
+    {
         return method;
     }
 
-    public ConstPool getConstPool() {
+    /**
+     * @return the const pool
+     */
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
-    public RegisterAllocator getRegAlloc() {
+    /**
+     * @return the reg alloc
+     */
+    public RegisterAllocator getRegAlloc()
+    {
         return regAlloc;
     }
 
-    public StackScheduler getScheduler() {
+    /**
+     * @return the scheduler
+     */
+    public StackScheduler getScheduler()
+    {
         return scheduler;
     }
 
-    public ByteArrayOutputStream getBytecode() {
+    /**
+     * @return the bytecode
+     */
+    public ByteArrayOutputStream getBytecode()
+    {
         return bytecode;
     }
 
-    public DataOutputStream getDos() {
+    /**
+     * @return the dos
+     */
+    public DataOutputStream getDos()
+    {
         return dos;
     }
 
-    public Map<IRBlock, Integer> getBlockOffsets() {
+    /**
+     * @return the block offsets
+     */
+    public Map<IRBlock, Integer> getBlockOffsets()
+    {
         return blockOffsets;
     }
 
-    public Map<IRBlock, Integer> getBlockEndOffsets() {
+    /**
+     * @return the block end offsets
+     */
+    public Map<IRBlock, Integer> getBlockEndOffsets()
+    {
         return blockEndOffsets;
     }
 
-    /** Start bytecode offset of each emitted instruction, for instruction-precise local-variable scopes. */
-    public Map<IRInstruction, Integer> getInstructionOffsets() {
+    /**
+     * @return the start bytecode offset of each emitted instruction, for instruction-precise
+     *         local-variable scopes
+     */
+    public Map<IRInstruction, Integer> getInstructionOffsets()
+    {
         return instructionOffsets;
     }
 
-    public int getCurrentOffset() {
+    /**
+     * @return the current offset
+     */
+    public int getCurrentOffset()
+    {
         return currentOffset;
     }
 
-    public Set<SSAValue> getStackResidentValues() {
+    /**
+     * @return for each stored value, the pc immediately after its slot store - javac's LVT range start
+     */
+    public Map<SSAValue, Integer> getStoreEndOffsets()
+    {
+        return storeEndOffsets;
+    }
+
+    /**
+     * @return every local slot some emitted instruction actually writes
+     */
+    public Set<Integer> getWrittenSlots()
+    {
+        return writtenSlots;
+    }
+
+    private void recordSlotStore(SSAValue value, int reg, IRType type)
+    {
+        writtenSlots.add(reg);
+        if (type != null && type.isTwoSlot())
+        {
+            writtenSlots.add(reg + 1);
+        }
+        if (value != null)
+        {
+            storeEndOffsets.put(value, currentOffset);
+        }
+    }
+
+    /**
+     * @return the stack resident values
+     */
+    public Set<SSAValue> getStackResidentValues()
+    {
         return stackResidentValues;
     }
 
-    public Set<SSAValue> getInlinedConstants() {
+    /**
+     * @return the inlined constants
+     */
+    public Set<SSAValue> getInlinedConstants()
+    {
         return inlinedConstants;
     }
 
-    public Map<SSAValue, Constant> getInlinedConstantValue() {
+    /**
+     * @return the inlined constant value
+     */
+    public Map<SSAValue, Constant> getInlinedConstantValue()
+    {
         return inlinedConstantValue;
     }
 
-    public Set<SSAValue> getHandlerExceptionCaptures() {
+    /**
+     * @return the handler exception captures
+     */
+    public Set<SSAValue> getHandlerExceptionCaptures()
+    {
         return handlerExceptionCaptures;
     }
 
-    public Map<NewInstruction, InvokeInstruction> getNewToInit() {
+    /**
+     * @return the new to init
+     */
+    public Map<NewInstruction, InvokeInstruction> getNewToInit()
+    {
         return newToInit;
     }
 
-    public Map<InvokeInstruction, NewInstruction> getInitToNew() {
+    /**
+     * @return the init to new
+     */
+    public Map<InvokeInstruction, NewInstruction> getInitToNew()
+    {
         return initToNew;
     }
 
-    public IRBlock getNextBlock() {
+    /**
+     * @return the next block
+     */
+    public IRBlock getNextBlock()
+    {
         return nextBlock;
     }
 
     /**
      * Emits bytecode for the IR method.
-     *
      * @return the generated bytecode
      */
-    public byte[] emit() {
+    public byte[] emit()
+    {
         bytecode = new ByteArrayOutputStream();
         dos = new DataOutputStream(bytecode);
         currentOffset = 0;
 
+        namedSourceLocals = namedSourceLocalValues();
         analyzeInlinedConstants();
         analyzeStackResidentValues();
         analyzeConstructorPairs();
@@ -189,16 +307,20 @@ public class BytecodeEmitter {
         computeValueUseCounts();
         identifyHandlerExceptionCaptures();
 
-        try {
+        try
+        {
             List<IRBlock> orderedBlocks = computeOptimalBlockOrder();
-            for (int i = 0; i < orderedBlocks.size(); i++) {
+            for (int i = 0; i < orderedBlocks.size(); i++)
+            {
                 IRBlock block = orderedBlocks.get(i);
                 // Track what block comes next for fall-through optimization
                 nextBlock = (i + 1 < orderedBlocks.size()) ? orderedBlocks.get(i + 1) : null;
                 emitBlock(block);
             }
             fixupJumps();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException("Failed to emit bytecode", e);
         }
 
@@ -207,21 +329,23 @@ public class BytecodeEmitter {
 
     /**
      * Computes an optimal block ordering that maximizes fall-through opportunities.
-     * Uses a greedy algorithm that places fall-through successors immediately after their predecessors.
      */
-    private List<IRBlock> computeOptimalBlockOrder() {
+    private List<IRBlock> computeOptimalBlockOrder()
+    {
         List<IRBlock> order = new ArrayList<>();
         Set<IRBlock> placed = new HashSet<>();
         Deque<IRBlock> worklist = new ArrayDeque<>();
 
         IRBlock entry = method.getEntryBlock();
-        if (entry == null) {
+        if (entry == null)
+        {
             return method.getBlocksInOrder(); // Fallback to original order
         }
 
         worklist.add(entry);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.pollFirst();
             if (placed.contains(block)) continue;
 
@@ -231,20 +355,25 @@ public class BytecodeEmitter {
             IRBlock fallThrough = getFallThroughSuccessor(block);
 
             // Add fall-through first (will be processed next)
-            if (fallThrough != null && !placed.contains(fallThrough)) {
+            if (fallThrough != null && !placed.contains(fallThrough))
+            {
                 worklist.addFirst(fallThrough);
             }
 
-            for (IRBlock succ : block.getSuccessors()) {
-                if (!placed.contains(succ)) {
+            for (IRBlock succ : block.getSuccessors())
+            {
+                if (!placed.contains(succ))
+                {
                     worklist.addLast(succ);
                 }
             }
         }
 
         // Add any remaining blocks (shouldn't happen with well-formed CFG)
-        for (IRBlock block : method.getBlocks()) {
-            if (!placed.contains(block)) {
+        for (IRBlock block : method.getBlocks())
+        {
+            if (!placed.contains(block))
+            {
                 order.add(block);
             }
         }
@@ -254,18 +383,20 @@ public class BytecodeEmitter {
 
     /**
      * Determines the preferred fall-through successor for a block.
-     * For branches, prefers the false target as fall-through.
-     * For gotos, the only successor is the fall-through candidate.
      */
-    private IRBlock getFallThroughSuccessor(IRBlock block) {
+    private IRBlock getFallThroughSuccessor(IRBlock block)
+    {
         IRInstruction term = block.getTerminator();
-        if (term instanceof BranchInstruction) {
+        if (term instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) term;
             return branch.getFalseTarget();
         }
-        if (term instanceof SimpleInstruction) {
+        if (term instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) term;
-            if (simple.getOp() == SimpleOp.GOTO) {
+            if (simple.getOp() == SimpleOp.GOTO)
+            {
                 return simple.getTarget();
             }
         }
@@ -273,25 +404,25 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Identifies single-use literal constants that can be emitted inline at their use site
-     * (e.g. {@code iconst_1}) rather than materialized into a local slot and reloaded. This
-     * mirrors how javac emits constants and avoids spurious local variables on the round-trip.
-     *
-     * <p>A constant is inlinable only when it is used exactly once and that use routes its
-     * operands through {@link #emitOperandLoads} (i.e. not a copy/goto), so the constant can
-     * be pushed at the exact point the consumer reads it, in operand order.
+     * Identifies single-use literal constants that can be emitted inline at their use site (e.g. {@code iconst_1})
+     * rather than materialized into a local slot and reloaded.
      */
-    private void analyzeInlinedConstants() {
+    private void analyzeInlinedConstants()
+    {
         inlinedConstants.clear();
         inlinedConstantValue.clear();
 
         Map<SSAValue, Constant> literalResults = new HashMap<>();
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof ConstantInstruction) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof ConstantInstruction)
+                {
                     ConstantInstruction ci = (ConstantInstruction) instr;
                     SSAValue result = ci.getResult();
-                    if (result != null && isInlinableConstant(ci.getConstant())) {
+                    if (result != null && isInlinableConstant(ci.getConstant()))
+                    {
                         literalResults.put(result, ci.getConstant());
                     }
                 }
@@ -300,10 +431,14 @@ public class BytecodeEmitter {
 
         Map<SSAValue, Integer> useCounts = new HashMap<>();
         Map<SSAValue, IRInstruction> singleUser = new HashMap<>();
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value operand : instr.getOperands()) {
-                    if (operand instanceof SSAValue && literalResults.containsKey(operand)) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                for (Value operand : instr.getOperands())
+                {
+                    if (operand instanceof SSAValue && literalResults.containsKey(operand))
+                    {
                         SSAValue ssa = (SSAValue) operand;
                         useCounts.merge(ssa, 1, Integer::sum);
                         singleUser.put(ssa, instr);
@@ -312,9 +447,12 @@ public class BytecodeEmitter {
             }
         }
 
-        for (Map.Entry<SSAValue, Constant> entry : literalResults.entrySet()) {
+        Set<SSAValue> pinned = slotPinnedValues();
+        for (Map.Entry<SSAValue, Constant> entry : literalResults.entrySet())
+        {
             SSAValue result = entry.getKey();
             if (useCounts.getOrDefault(result, 0) != 1) continue;
+            if (pinned.contains(result)) continue;
             if (!routesOperandsThroughLoads(singleUser.get(result))) continue;
             inlinedConstants.add(result);
             inlinedConstantValue.put(result, entry.getValue());
@@ -322,10 +460,18 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Constants {@link #emitConstantValue} knows how to push. Method-handle/type and dynamic
-     * constants are excluded since they have no inline push form here.
+     * Values the register allocator placed in an affinity home slot.
      */
-    private boolean isInlinableConstant(Constant constant) {
+    private Set<SSAValue> slotPinnedValues()
+    {
+        return regAlloc.getAffinityPinnedValues();
+    }
+
+    /**
+     * Constants {@link #emitConstantValue} knows how to push.
+     */
+    private boolean isInlinableConstant(Constant constant)
+    {
         return constant instanceof IntConstant
             || constant instanceof LongConstant
             || constant instanceof FloatConstant
@@ -336,37 +482,45 @@ public class BytecodeEmitter {
     }
 
     /**
-     * True when an instruction's SSA operands are pushed via {@link #emitOperandLoads}. Copies
-     * (from phi elimination) and gotos read their source directly, so a constant consumed by
-     * them cannot be inlined.
+     * True when an instruction's SSA operands are pushed via {@link #emitOperandLoads}.
      */
-    private boolean routesOperandsThroughLoads(IRInstruction instr) {
+    private boolean routesOperandsThroughLoads(IRInstruction instr)
+    {
         if (instr == null) return false;
         if (instr instanceof ConstantInstruction
             || instr instanceof CopyInstruction
-            || instr instanceof PhiInstruction) {
+            || instr instanceof PhiInstruction)
+        {
             return false;
         }
         return !(instr instanceof SimpleInstruction)
                 || ((SimpleInstruction) instr).getOp() != SimpleOp.GOTO;
     }
 
-    /** Whether {@code instr} captures a caught exception (the handler-entry CATCH), whose slot must be kept. */
-    private boolean isCatchCapture(IRInstruction instr) {
+    /**
+     * Whether {@code instr} captures a caught exception (the handler-entry CATCH), whose slot must be kept.
+     */
+    private boolean isCatchCapture(IRInstruction instr)
+    {
         return instr instanceof SimpleInstruction && ((SimpleInstruction) instr).getOp() == SimpleOp.CATCH;
     }
 
-    private void identifyHandlerExceptionCaptures() {
+    private void identifyHandlerExceptionCaptures()
+    {
         handlerExceptionCaptures.clear();
-        for (ExceptionHandler handler : method.getExceptionHandlers()) {
+        for (ExceptionHandler handler : method.getExceptionHandlers())
+        {
             IRBlock handlerBlock = handler.getHandlerBlock();
-            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty()) {
+            if (handlerBlock == null || handlerBlock.getInstructions().isEmpty())
+            {
                 continue;
             }
             IRInstruction first = handlerBlock.getInstructions().get(0);
-            if (first instanceof CopyInstruction) {
+            if (first instanceof CopyInstruction)
+            {
                 CopyInstruction copy = (CopyInstruction) first;
-                if (copy.getResult() != null && copy.getSource() == copy.getResult()) {
+                if (copy.getResult() != null && copy.getSource() == copy.getResult())
+                {
                     handlerExceptionCaptures.add(copy.getResult());
                 }
             }
@@ -374,18 +528,58 @@ public class BytecodeEmitter {
     }
 
     /**
+     * Keeps a call argument on the operand stack instead of storing it, unless the source declared it as a local.
+     */
+    private void markResident(SSAValue value)
+    {
+        if (!namedSourceLocals.contains(value))
+        {
+            stackResidentValues.add(value);
+        }
+    }
+
+    /**
+     * Every value that belongs to a named local declared by the source this IR was lowered from.
+     */
+    private Set<SSAValue> namedSourceLocalValues()
+    {
+        Set<SSAValue> named = new HashSet<>();
+        for (IRMethod.SourceLocal local : method.getSourceLocals())
+        {
+            if (local.getName() != null && !local.isParameter())
+            {
+                named.addAll(local.getValues());
+            }
+        }
+        return named;
+    }
+
+    /**
      * Identifies values that can remain on the stack instead of being stored to a register.
      */
-    private void analyzeStackResidentValues() {
+    private void analyzeStackResidentValues()
+    {
         stackResidentValues.clear();
         blockHeadPreload.clear();
         preloadedOnStack.clear();
 
+        // A stack-resident phi carries its value on the operand stack across the merge: each predecessor leaves
+        // the incoming value on top (so it must not be stored), and the merge consumes the phi result off the
+        // stack (so it must not be loaded). The phi itself emits nothing - the value is already where the merge's
+        stackResidentValues.addAll(method.getStackResidentPhiIncomings());
+        stackResidentValues.addAll(method.getStackResidentPhiResults());
+        Set<SSAValue> pinned = slotPinnedValues();
+        stackResidentValues.removeAll(pinned);
+
         Map<SSAValue, Integer> useCounts = new HashMap<>();
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value operand : instr.getOperands()) {
-                    if (operand instanceof SSAValue) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                for (Value operand : instr.getOperands())
+                {
+                    if (operand instanceof SSAValue)
+                    {
                         SSAValue ssa = (SSAValue) operand;
                         useCounts.merge(ssa, 1, Integer::sum);
                     }
@@ -393,17 +587,21 @@ public class BytecodeEmitter {
             }
         }
 
-        for (IRBlock block : method.getBlocksInOrder()) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
             List<IRInstruction> instructions = block.getInstructions();
             Map<SSAValue, Integer> defIdxOf = new HashMap<>();
-            for (int k = 0; k < instructions.size(); k++) {
+            for (int k = 0; k < instructions.size(); k++)
+            {
                 SSAValue r = instructions.get(k).getResult();
-                if (r != null) {
+                if (r != null)
+                {
                     defIdxOf.put(r, k);
                 }
             }
 
-            for (int i = 0; i < instructions.size() - 1; i++) {
+            for (int i = 0; i < instructions.size() - 1; i++)
+            {
                 IRInstruction current = instructions.get(i);
 
                 if (!current.hasResult()) continue;
@@ -414,6 +612,7 @@ public class BytecodeEmitter {
                 // used once, so the slot - and its LocalVariableTable name - survive the round trip. Never keep
                 // it resident.
                 if (isCatchCapture(current)) continue;
+                if (pinned.contains(result)) continue;
 
                 int useCount = useCounts.getOrDefault(result, 0);
                 if (useCount != 1) continue;
@@ -433,9 +632,12 @@ public class BytecodeEmitter {
                 // initToNew, has not run yet when this residency pass runs.)
                 boolean nextPairedInit = isPairedInitConsumer(next, nextOperands, instructions, defIdxOf, i);
                 if (p >= 0 && prefixResidentInOrder(nextOperands, p, defIdxOf, i, nextPairedInit)
-                        && suffixSimple(nextOperands, p)) {
+                        && suffixSimple(nextOperands, p))
+                {
                     stackResidentValues.add(result);
-                } else if (isReceiverStackResident(instructions, defIdxOf, useCounts, i, result)) {
+                }
+                else if (isReceiverStackResident(instructions, defIdxOf, useCounts, i, result))
+                {
                     stackResidentValues.add(result);
                 }
             }
@@ -445,42 +647,45 @@ public class BytecodeEmitter {
     }
 
     /**
-     * For a condition block ending in a two-operand comparison branch {@code if reg <cmp> bound} where the
-     * bound is a closed sub-computation filling the rest of the block and the first operand is loaded from a
-     * register (e.g. a loop induction variable), the register operand is pushed at the block head so the bound
-     * stays on the operand stack - matching javac's {@code iload i; <bound>; if_icmplt} rather than spilling
-     * the bound to a header local. That spill is what forces the decompiler into a {@code while(true)}+break
-     * loop (and reuses the bound's slot) on round trip. Safe because the emitter never emits a {@code dup_x}
-     * or {@code swap}, so the preloaded register stays at the bottom while the bound's closed sub-tree is
-     * computed above it.
+     * Whether a comparison branch's register operand is pushed at the block head so its bound stays on the
+     * operand stack.
      */
-    private void computeBlockHeadPreloads(Map<SSAValue, Integer> useCounts) {
-        for (IRBlock block : method.getBlocksInOrder()) {
+    private void computeBlockHeadPreloads(Map<SSAValue, Integer> useCounts)
+    {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
             List<IRInstruction> instrs = block.getInstructions();
-            if (instrs.size() < 2) {
+            if (instrs.size() < 2)
+            {
                 continue;
             }
             IRInstruction term = instrs.get(instrs.size() - 1);
-            if (!(term instanceof BranchInstruction)) {
+            if (!(term instanceof BranchInstruction))
+            {
                 continue;
             }
             List<Value> ops = term.getOperands();
-            if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+            if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue))
+            {
                 continue;
             }
             SSAValue reg = (SSAValue) ops.get(0);
             SSAValue bound = (SSAValue) ops.get(1);
-            if (useCounts.getOrDefault(bound, 0) != 1) {
+            if (useCounts.getOrDefault(bound, 0) != 1)
+            {
                 continue; // the bound must be consumed only by this branch
             }
 
             Set<SSAValue> blockResults = new HashSet<>();
-            for (IRInstruction in : instrs) {
-                if (in.getResult() != null) {
+            for (IRInstruction in : instrs)
+            {
+                if (in.getResult() != null)
+                {
                     blockResults.add(in.getResult());
                 }
             }
-            if (blockResults.contains(reg) || !blockResults.contains(bound)) {
+            if (blockResults.contains(reg) || !blockResults.contains(bound))
+            {
                 continue; // reg must be a plain register load; bound must be computed in this block
             }
 
@@ -488,15 +693,21 @@ public class BytecodeEmitter {
             Set<SSAValue> closure = new HashSet<>();
             List<SSAValue> work = new ArrayList<>();
             work.add(bound);
-            while (!work.isEmpty()) {
+            while (!work.isEmpty())
+            {
                 SSAValue v = work.remove(work.size() - 1);
-                if (!closure.add(v)) {
+                if (!closure.add(v))
+                {
                     continue;
                 }
-                for (int k = 0; k < instrs.size() - 1; k++) {
-                    if (v.equals(instrs.get(k).getResult())) {
-                        for (Value o : instrs.get(k).getOperands()) {
-                            if (o instanceof SSAValue) {
+                for (int k = 0; k < instrs.size() - 1; k++)
+                {
+                    if (v.equals(instrs.get(k).getResult()))
+                    {
+                        for (Value o : instrs.get(k).getOperands())
+                        {
+                            if (o instanceof SSAValue)
+                            {
                                 work.add((SSAValue) o);
                             }
                         }
@@ -507,7 +718,8 @@ public class BytecodeEmitter {
             // Every non-terminator instruction must feed the bound and stay on the stack (be resident), and
             // none may consume reg early, so emitting the block leaves exactly the bound above the preloaded reg.
             boolean clean = true;
-            for (int k = 0; k < instrs.size() - 1; k++) {
+            for (int k = 0; k < instrs.size() - 1; k++)
+            {
                 IRInstruction in = instrs.get(k);
                 SSAValue r = in.getResult();
                 // Each non-terminator must feed the bound and either stay on the stack (be the bound or a
@@ -515,12 +727,14 @@ public class BytecodeEmitter {
                 // and none may consume the preloaded register early.
                 if (r == null || !closure.contains(r)
                         || !(r.equals(bound) || stackResidentValues.contains(r) || inlinedConstants.contains(r))
-                        || in.getOperands().contains(reg)) {
+                        || in.getOperands().contains(reg))
+                {
                     clean = false;
                     break;
                 }
             }
-            if (!clean) {
+            if (!clean)
+            {
                 continue;
             }
 
@@ -530,38 +744,42 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Whether operands 0..p-1 of an instruction are all stack-resident and defined in strictly increasing order
-     * ending just before {@code resultDefIdx} - so this value (operand p, computed last) sits on top of them in
-     * the exact operand order the instruction needs. This lets a call argument stay on the stack once its
-     * receiver (and earlier arguments) are already resident, instead of being spilled to a local and reloaded.
+     * Whether operands 0..p-1 are all stack-resident and defined in strictly increasing order ending just
+     * before {@code resultDefIdx}.
      */
-    private boolean isPairedInitConsumer(IRInstruction invoke, List<Value> ops, List<IRInstruction> instructions,
-                                         Map<SSAValue, Integer> defIdxOf, int consumerIdx) {
-        if (!(invoke instanceof InvokeInstruction)) {
+    private boolean isPairedInitConsumer(IRInstruction invoke, List<Value> ops, List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, int consumerIdx)
+    {
+        if (!(invoke instanceof InvokeInstruction))
+        {
             return false;
         }
         InvokeInstruction inv = (InvokeInstruction) invoke;
         if (inv.getInvokeType() != InvokeType.SPECIAL || !"<init>".equals(inv.getName())
-                || ops.isEmpty() || !(ops.get(0) instanceof SSAValue)) {
+                || ops.isEmpty() || !(ops.get(0) instanceof SSAValue))
+        {
             return false;
         }
         Integer nd = defIdxOf.get((SSAValue) ops.get(0));
         return nd != null && nd < consumerIdx && instructions.get(nd) instanceof NewInstruction;
     }
 
-    private boolean prefixResidentInOrder(List<Value> ops, int p, Map<SSAValue, Integer> defIdxOf,
-                                          int resultDefIdx, boolean firstOperandOnStack) {
+    private boolean prefixResidentInOrder(List<Value> ops, int p, Map<SSAValue, Integer> defIdxOf, int resultDefIdx, boolean firstOperandOnStack)
+    {
         int prev = -1;
-        for (int q = 0; q < p; q++) {
-            if (q == 0 && firstOperandOnStack) {
+        for (int q = 0; q < p; q++)
+        {
+            if (q == 0 && firstOperandOnStack)
+            {
                 continue; // operand 0 (a paired-init receiver) is already on the stack from `new; dup`
             }
             Value o = ops.get(q);
-            if (!(o instanceof SSAValue) || !stackResidentValues.contains((SSAValue) o)) {
+            if (!(o instanceof SSAValue) || !stackResidentValues.contains((SSAValue) o))
+            {
                 return false;
             }
             Integer di = defIdxOf.get((SSAValue) o);
-            if (di == null || di <= prev || di >= resultDefIdx) {
+            if (di == null || di <= prev || di >= resultDefIdx)
+            {
                 return false;
             }
             prev = di;
@@ -569,10 +787,15 @@ public class BytecodeEmitter {
         return true;
     }
 
-    /** Whether operands after position p are all simple - loaded fresh at the use, on top of operand p. */
-    private boolean suffixSimple(List<Value> ops, int p) {
-        for (int q = p + 1; q < ops.size(); q++) {
-            if (!isSimpleOperand(ops.get(q))) {
+    /**
+     * Whether operands after position p are all simple - loaded fresh at the use, on top of operand p.
+     */
+    private boolean suffixSimple(List<Value> ops, int p)
+    {
+        for (int q = p + 1; q < ops.size(); q++)
+        {
+            if (!isSimpleOperand(ops.get(q)))
+            {
                 return false;
             }
         }
@@ -580,36 +803,34 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Whether a single-use value that is the FIRST operand (the receiver) of a later instruction can stay on
-     * the operand stack across the instructions that compute that instruction's remaining operands - matching
-     * how javac keeps a call receiver below its arguments, instead of spilling it to a (type-reused) local.
-     *
-     * <p>Safe because (a) the emitter never emits {@code dup_x*}/{@code swap}, so nothing computed on top of
-     * the receiver can reach below it, and (b) the window between the receiver's definition and its use is
-     * "closed" - every value it produces is consumed inside the window or by the use - so it computes exactly
-     * the use's later operands and leaves the receiver undisturbed at the bottom. The later operands must all
-     * be produced within the window, in operand order, so the use sees {@code [receiver, op1, op2, ...]}.
+     * Whether a single-use receiver can stay on the operand stack across the instructions computing the
+     * remaining operands.
      */
-    private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
-                                            Map<SSAValue, Integer> useCounts, int defIdx, SSAValue result) {
+    private boolean isReceiverStackResident(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, Map<SSAValue, Integer> useCounts, int defIdx, SSAValue result)
+    {
         // The single use, found by scanning operands (the emitter's reliable use source - getUses() can be stale).
         IRInstruction use = null;
         int useIdx = -1;
-        for (int j = defIdx + 1; j < instructions.size(); j++) {
-            if (instructions.get(j).getOperands().contains(result)) {
+        for (int j = defIdx + 1; j < instructions.size(); j++)
+        {
+            if (instructions.get(j).getOperands().contains(result))
+            {
                 use = instructions.get(j);
                 useIdx = j;
                 break;
             }
         }
-        if (use == null || (use instanceof InvokeInstruction && initToNew.containsKey((InvokeInstruction) use))) {
+        if (use == null || (use instanceof InvokeInstruction && initToNew.containsKey((InvokeInstruction) use)))
+        {
             return false; // use not in this block, or a new/<init> pairing we must not disturb
         }
-        if (useIdx <= defIdx + 1) {
+        if (useIdx <= defIdx + 1)
+        {
             return false; // empty window - the adjacent case is handled above
         }
         List<Value> ops = use.getOperands();
-        if (ops.isEmpty() || !result.equals(ops.get(0))) {
+        if (ops.isEmpty() || !result.equals(ops.get(0)))
+        {
             return false; // result must be the receiver (first operand)
         }
 
@@ -617,30 +838,38 @@ public class BytecodeEmitter {
         // Every later operand must be produced inside the window, strictly in operand order, so the use sees
         // [receiver, op1, op2, ...] with nothing loaded out of order on top.
         int prevDefIdx = defIdx;
-        for (int k = 1; k < ops.size(); k++) {
-            if (!(ops.get(k) instanceof SSAValue)) {
+        for (int k = 1; k < ops.size(); k++)
+        {
+            if (!(ops.get(k) instanceof SSAValue))
+            {
                 return false;
             }
             Integer opDefIdx = defIdxOf.get((SSAValue) ops.get(k));
-            if (opDefIdx == null || opDefIdx < wStart || opDefIdx >= wEnd || opDefIdx <= prevDefIdx) {
+            if (opDefIdx == null || opDefIdx < wStart || opDefIdx >= wEnd || opDefIdx <= prevDefIdx)
+            {
                 return false;
             }
             prevDefIdx = opDefIdx;
         }
         // Window closed: every value the window produces is consumed inside the window or by the use - so it
         // computes exactly the use's later operands and leaves the receiver undisturbed below them.
-        for (int j = wStart; j < wEnd; j++) {
+        for (int j = wStart; j < wEnd; j++)
+        {
             SSAValue r = instructions.get(j).getResult();
-            if (r == null) {
+            if (r == null)
+            {
                 continue;
             }
             int within = 0;
-            for (int q = wStart; q <= wEnd; q++) {
-                for (Value op : instructions.get(q).getOperands()) {
+            for (int q = wStart; q <= wEnd; q++)
+            {
+                for (Value op : instructions.get(q).getOperands())
+                {
                     if (r.equals(op)) within++;
                 }
             }
-            if (within != useCounts.getOrDefault(r, 0)) {
+            if (within != useCounts.getOrDefault(r, 0))
+            {
                 return false; // some use escapes the window
             }
         }
@@ -648,17 +877,15 @@ public class BytecodeEmitter {
     }
 
     /**
-     * The next instruction after {@code afterIndex} that actually emits code. Inlined-constant
-     * definitions emit nothing (they are pushed at their use site), so they must be skipped when
-     * testing whether a value's consumer is adjacent — otherwise a single-use binop result feeding
-     * a comparison like {@code i * i <= n} or {@code n % i == 0} would be needlessly spilled to a
-     * slot just because the comparison's constant operand sits between them.
+     * The next instruction after {@code afterIndex} that actually emits code.
      */
-    private IRInstruction nextEmittedInstruction(List<IRInstruction> instructions, int afterIndex) {
-        for (int j = afterIndex + 1; j < instructions.size(); j++) {
+    private IRInstruction nextEmittedInstruction(List<IRInstruction> instructions, int afterIndex)
+    {
+        for (int j = afterIndex + 1; j < instructions.size(); j++)
+        {
             IRInstruction candidate = instructions.get(j);
-            if (candidate instanceof ConstantInstruction
-                    && inlinedConstants.contains(candidate.getResult())) {
+            if (candidate instanceof ConstantInstruction && inlinedConstants.contains(candidate.getResult()))
+            {
                 continue;
             }
             return candidate;
@@ -668,31 +895,30 @@ public class BytecodeEmitter {
 
     /**
      * Whether an operand can be pushed after a stack-resident first operand without disturbing it.
-     * The second operand is emitted after the first is already on the stack, so it must be a single
-     * fresh push that leaves the first untouched: a constant, or any value loaded from a
-     * register/parameter. The only unsafe case is an operand that is itself stack-resident — and a
-     * second operand never is, since stack-residency keys on being the <em>first</em> operand of the
-     * immediately-following instruction (params/locals reach here with a dangling load definition,
-     * so a definition-based test is unreliable; stack-residency membership is the correct one).
      */
-    private boolean isSimpleOperand(Value operand) {
+    private boolean isSimpleOperand(Value operand)
+    {
         if (operand instanceof Constant) return true;
-        if (operand instanceof SSAValue) {
+        if (operand instanceof SSAValue)
+        {
             return !stackResidentValues.contains((SSAValue) operand);
         }
         return false;
     }
 
-    private void emitBlock(IRBlock block) throws IOException {
+    private void emitBlock(IRBlock block) throws IOException
+    {
         blockOffsets.put(block, currentOffset);
 
         SSAValue preload = blockHeadPreload.get(block);
-        if (preload != null) {
+        if (preload != null)
+        {
             emitLoadValue(preload);
             preloadedOnStack.add(preload);
         }
 
-        for (IRInstruction instr : block.getInstructions()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
             instructionOffsets.put(instr, currentOffset);
             emitInstruction(instr);
         }
@@ -700,78 +926,114 @@ public class BytecodeEmitter {
         blockEndOffsets.put(block, currentOffset);
     }
 
-    private void emitInstruction(IRInstruction instr) throws IOException {
-        if (instr instanceof ConstantInstruction && inlinedConstants.contains(instr.getResult())) {
+    private void emitInstruction(IRInstruction instr) throws IOException
+    {
+        if (instr instanceof ConstantInstruction && inlinedConstants.contains(instr.getResult()))
+        {
             return;
         }
 
         SSAValue preload = receiverPreload.get(instr);
-        if (preload != null) {
+        if (preload != null)
+        {
             emitLoadValue(preload); // push the call receiver beneath the argument it's about to build
         }
 
         List<SSAValue> storePrefix = arrayStorePrefixPreload.get(instr);
-        if (storePrefix != null) {
-            for (SSAValue p : storePrefix) {
+        if (storePrefix != null)
+        {
+            for (SSAValue p : storePrefix)
+            {
                 emitLoadValue(p); // push the array store's array+index beneath the value it's about to build
             }
         }
 
-        if (instr instanceof NewInstruction && newToInit.containsKey(instr)) {
+        if (instr instanceof NewInstruction && newToInit.containsKey(instr))
+        {
             emitNew((NewInstruction) instr);
             emit(Opcode.DUP.getCode());
             return;
         }
-        if (instr instanceof InvokeInstruction && initToNew.containsKey(instr)) {
+        if (instr instanceof InvokeInstruction && initToNew.containsKey(instr))
+        {
             emitPairedInit((InvokeInstruction) instr);
             return;
         }
 
         emitOperandLoads(instr);
 
-        if (instr instanceof ConstantInstruction) {
+        if (instr instanceof ConstantInstruction)
+        {
             ConstantInstruction constInstr = (ConstantInstruction) instr;
             emitConstant(constInstr);
-        } else if (instr instanceof LoadLocalInstruction) {
+        }
+        else if (instr instanceof LoadLocalInstruction)
+        {
             LoadLocalInstruction load = (LoadLocalInstruction) instr;
             emitLoad(load);
-        } else if (instr instanceof BinaryOpInstruction) {
+        }
+        else if (instr instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             emitBinaryOp(binOp);
-        } else if (instr instanceof UnaryOpInstruction) {
+        }
+        else if (instr instanceof UnaryOpInstruction)
+        {
             UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             emitUnaryOp(unaryOp);
-        } else if (instr instanceof SimpleInstruction) {
+        }
+        else if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
             emitSimple(simple);
-        } else if (instr instanceof BranchInstruction) {
+        }
+        else if (instr instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) instr;
             emitBranch(branch);
-        } else if (instr instanceof ReturnInstruction) {
+        }
+        else if (instr instanceof ReturnInstruction)
+        {
             ReturnInstruction ret = (ReturnInstruction) instr;
             emitReturn(ret);
-        } else if (instr instanceof InvokeInstruction) {
+        }
+        else if (instr instanceof InvokeInstruction)
+        {
             InvokeInstruction invoke = (InvokeInstruction) instr;
             emitInvoke(invoke);
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
             emitFieldAccess(fieldAccess);
-        } else if (instr instanceof NewInstruction) {
+        }
+        else if (instr instanceof NewInstruction)
+        {
             NewInstruction newInstr = (NewInstruction) instr;
             emitNew(newInstr);
-        } else if (instr instanceof NewArrayInstruction) {
+        }
+        else if (instr instanceof NewArrayInstruction)
+        {
             NewArrayInstruction newArray = (NewArrayInstruction) instr;
             emitNewArray(newArray);
-        } else if (instr instanceof ArrayAccessInstruction) {
+        }
+        else if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
             emitArrayAccess(arrayAccess);
-        } else if (instr instanceof TypeCheckInstruction) {
+        }
+        else if (instr instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
             emitTypeCheck(typeCheck);
-        } else if (instr instanceof SwitchInstruction) {
+        }
+        else if (instr instanceof SwitchInstruction)
+        {
             SwitchInstruction switchInstr = (SwitchInstruction) instr;
             emitSwitch(switchInstr);
-        } else if (instr instanceof CopyInstruction) {
+        }
+        else if (instr instanceof CopyInstruction)
+        {
             CopyInstruction copy = (CopyInstruction) instr;
             emitCopy(copy);
         }
@@ -779,29 +1041,39 @@ public class BytecodeEmitter {
         emitResultStore(instr);
     }
 
-    /** Pairs each {@code new} with the same-block {@code <init>} whose receiver is the new's result. */
-    private void analyzeConstructorPairs() {
+    /**
+     * Pairs each {@code new} with the same-block {@code <init>} whose receiver is the new's result.
+     */
+    private void analyzeConstructorPairs()
+    {
         newToInit.clear();
         initToNew.clear();
-        for (IRBlock block : method.getBlocksInOrder()) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
             List<IRInstruction> instructions = block.getInstructions();
-            for (int i = 0; i < instructions.size(); i++) {
-                if (!(instructions.get(i) instanceof NewInstruction)) {
+            for (int i = 0; i < instructions.size(); i++)
+            {
+                if (!(instructions.get(i) instanceof NewInstruction))
+                {
                     continue;
                 }
                 NewInstruction newInstr = (NewInstruction) instructions.get(i);
                 SSAValue result = newInstr.getResult();
-                if (result == null) {
+                if (result == null)
+                {
                     continue;
                 }
-                for (int j = i + 1; j < instructions.size(); j++) {
-                    if (!(instructions.get(j) instanceof InvokeInstruction)) {
+                for (int j = i + 1; j < instructions.size(); j++)
+                {
+                    if (!(instructions.get(j) instanceof InvokeInstruction))
+                    {
                         continue;
                     }
                     InvokeInstruction invoke = (InvokeInstruction) instructions.get(j);
                     List<Value> ops = invoke.getOperands();
                     if (invoke.getInvokeType() == InvokeType.SPECIAL && "<init>".equals(invoke.getName())
-                            && !ops.isEmpty() && result.equals(ops.get(0))) {
+                            && !ops.isEmpty() && result.equals(ops.get(0)))
+                    {
                         newToInit.put(newInstr, invoke);
                         initToNew.put(invoke, newInstr);
                         // A paired construction stores its result to a local after invokespecial; it must never be
@@ -816,62 +1088,70 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Detects {@code recv.method(buildArg)} where the receiver is a re-loadable value and the single argument is
-     * built in a closed window immediately before the call (e.g. {@code setLayout(new BoxLayout(...))},
-     * {@code setBorder(BorderFactory.create...())}). The emitter would otherwise spill the argument to a local
-     * (whose slot is then reused for unrelated types, surfacing as {@code Object} on round trip) because it can't
-     * place the receiver beneath an already-built argument. Here the receiver is preloaded before the argument's
-     * build window and the argument is kept stack-resident, matching javac's {@code aload recv; <build arg>;
-     * invoke}. Safe: window and use sit in one block (no branch), so the resident argument never crosses a join,
-     * and the receiver's other uses (e.g. a constructor argument) load fresh from its slot.
+     * Detects {@code recv.method(buildArg)} where the receiver is re-loadable and the argument is built in
+     * a closed window before the call.
      */
-    private void analyzeReceiverPreloads() {
+    private void analyzeReceiverPreloads()
+    {
         receiverPreload.clear();
         skipReceiver.clear();
         arrayStorePrefixPreload.clear();
         skipStorePrefix.clear();
 
         Map<SSAValue, Integer> useCounts = new HashMap<>();
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value op : instr.getOperands()) {
-                    if (op instanceof SSAValue) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                for (Value op : instr.getOperands())
+                {
+                    if (op instanceof SSAValue)
+                    {
                         useCounts.merge((SSAValue) op, 1, Integer::sum);
                     }
                 }
             }
         }
 
-        for (IRBlock block : method.getBlocksInOrder()) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
             List<IRInstruction> instructions = block.getInstructions();
             Map<SSAValue, Integer> defIdxOf = new HashMap<>();
-            for (int k = 0; k < instructions.size(); k++) {
+            for (int k = 0; k < instructions.size(); k++)
+            {
                 SSAValue r = instructions.get(k).getResult();
-                if (r != null) {
+                if (r != null)
+                {
                     defIdxOf.put(r, k);
                 }
             }
-            for (int k = 0; k < instructions.size(); k++) {
-                if (!(instructions.get(k) instanceof InvokeInstruction)) {
+            for (int k = 0; k < instructions.size(); k++)
+            {
+                if (!(instructions.get(k) instanceof InvokeInstruction))
+                {
                     continue;
                 }
                 InvokeInstruction inv = (InvokeInstruction) instructions.get(k);
                 boolean pairedInit = initToNew.containsKey(inv);
-                if (!pairedInit && "<init>".equals(inv.getName())) {
+                if (!pairedInit && "<init>".equals(inv.getName()))
+                {
                     continue; // a chained constructor (super/this) - special stack handling, never touch
                 }
                 List<Value> ops = inv.getOperands();
-                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue))
+                {
                     continue; // exactly receiver/new + one argument
                 }
                 SSAValue recv = (SSAValue) ops.get(0);
                 SSAValue arg = (SSAValue) ops.get(1);
                 Integer argDef = defIdxOf.get(arg);
-                if (argDef == null || argDef >= k) {
+                if (argDef == null || argDef >= k)
+                {
                     continue; // the argument is built in this block before the call
                 }
                 IRInstruction argDefInstr = instructions.get(argDef);
-                if (!(argDefInstr instanceof NewInstruction) && !(argDefInstr instanceof InvokeInstruction)) {
+                if (!(argDefInstr instanceof NewInstruction) && !(argDefInstr instanceof InvokeInstruction))
+                {
                     continue; // only genuinely constructed args (new / call result), not constants or loads
                 }
                 // The argument must be consumed ONLY by this call - plus its own <init> when it's a paired new
@@ -879,55 +1159,80 @@ public class BytecodeEmitter {
                 // can't be made resident, so exclude it.
                 int expectedUses = (argDefInstr instanceof NewInstruction
                         && newToInit.containsKey(argDefInstr)) ? 2 : 1;
-                if (useCounts.getOrDefault(arg, 0) != expectedUses) {
+                if (useCounts.getOrDefault(arg, 0) != expectedUses)
+                {
                     continue;
                 }
-                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, argDef, k, recv)) {
+                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, argDef, k, recv))
+                {
                     continue;
                 }
-                if (pairedInit) {
+                if (pairedInit)
+                {
                     // The receiver is the freshly-new'd object, already on the stack (new; dup); just keep the
                     // argument resident so it builds on top of it (e.g. new JPanel(new FlowLayout(0))).
-                    stackResidentValues.add(arg);
-                } else if (stackResidentValues.contains(recv)) {
+                    markResident(arg);
+                }
+                else if (stackResidentValues.contains(recv))
+                {
                     // The receiver already stays on the stack (e.g. a cast kept resident by the receiver-window
                     // analysis). Just keep the paired-new argument resident on top of it - no preload needed, so
                     // the argument builds directly above the receiver (javac's `<recv>; new; dup; init; invoke`)
                     // instead of spilling to a local.
-                    stackResidentValues.add(arg);
-                } else {
+                    markResident(arg);
+                }
+                else
+                {
                     // Method call with a re-loadable, multi-use slot receiver: preload it beneath the argument
                     // window so the argument need not spill to a local.
-                    if (useCounts.getOrDefault(recv, 0) <= 1 || inlinedConstants.contains(recv)) {
+                    if (useCounts.getOrDefault(recv, 0) <= 1 || inlinedConstants.contains(recv))
+                    {
+                        continue;
+                    }
+                    // The preload goes immediately before the instruction that produces the argument, which
+                    // is only beneath the WHOLE argument when that one instruction evaluates all of it. When
+                    // the argument's value is built over several instructions
+                    // (`p.getModelTransform().invert()` produces it at the last), the receiver would land in
+                    // the middle of the argument's own stack and its trailing call would consume the receiver
+                    // instead of its own - so the argument spills to a local instead, as it did before any
+                    // preload existed.
+                    if (windowStartIndex(arg, instructions, defIdxOf, k) != argDef)
+                    {
                         continue;
                     }
                     receiverPreload.put(instructions.get(argDef), recv);
                     skipReceiver.add(inv);
-                    stackResidentValues.add(arg);
+                    markResident(arg);
                 }
             }
 
             // A paired-new consumed by a return stays on the stack (`new; dup; init; areturn`) instead of
             // spilling to a temp - javac keeps it resident. analyzeConstructorPairs stripped its residency; re-add
             // it only when the <init> immediately precedes the return, so the new is provably on top of the stack.
-            for (int k = 1; k < instructions.size(); k++) {
-                if (!(instructions.get(k) instanceof ReturnInstruction)) {
+            for (int k = 1; k < instructions.size(); k++)
+            {
+                if (!(instructions.get(k) instanceof ReturnInstruction))
+                {
                     continue;
                 }
                 ReturnInstruction ret = (ReturnInstruction) instructions.get(k);
-                if (ret.isVoidReturn() || !(ret.getReturnValue() instanceof SSAValue)) {
+                if (ret.isVoidReturn() || !(ret.getReturnValue() instanceof SSAValue))
+                {
                     continue;
                 }
                 SSAValue val = (SSAValue) ret.getReturnValue();
                 Integer valDef = defIdxOf.get(val);
-                if (valDef == null || !(instructions.get(valDef) instanceof NewInstruction)) {
+                if (valDef == null || !(instructions.get(valDef) instanceof NewInstruction))
+                {
                     continue;
                 }
                 NewInstruction newInstr = (NewInstruction) instructions.get(valDef);
-                if (!newToInit.containsKey(newInstr) || useCounts.getOrDefault(val, 0) != 2) {
+                if (!newToInit.containsKey(newInstr) || useCounts.getOrDefault(val, 0) != 2)
+                {
                     continue; // a paired-new used only by its own <init> and this return
                 }
-                if (instructions.get(k - 1) != newToInit.get(newInstr)) {
+                if (instructions.get(k - 1) != newToInit.get(newInstr))
+                {
                     continue;
                 }
                 stackResidentValues.add(val);
@@ -937,26 +1242,31 @@ public class BytecodeEmitter {
             // window. Preload left beneath right's window so right stays on the stack instead of spilling to a
             // temp - matching javac's `load left; <compute right>; OP`. Operand order is preserved (no
             // commutative swap), so it works for non-commutative ops too.
-            for (int k = 0; k < instructions.size(); k++) {
-                if (!(instructions.get(k) instanceof BinaryOpInstruction)) {
+            for (int k = 0; k < instructions.size(); k++)
+            {
+                if (!(instructions.get(k) instanceof BinaryOpInstruction))
+                {
                     continue;
                 }
                 IRInstruction op = instructions.get(k);
                 List<Value> ops = op.getOperands();
-                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue)) {
+                if (ops.size() != 2 || !(ops.get(0) instanceof SSAValue) || !(ops.get(1) instanceof SSAValue))
+                {
                     continue;
                 }
                 SSAValue left = (SSAValue) ops.get(0);
                 SSAValue right = (SSAValue) ops.get(1);
                 // left must be a re-loadable register value (defined outside this block), not a constant.
-                if (left.equals(right) || defIdxOf.containsKey(left) || inlinedConstants.contains(left)) {
+                if (left.equals(right) || defIdxOf.containsKey(left) || inlinedConstants.contains(left))
+                {
                     continue;
                 }
                 // right must be computed in this block before the op, consumed only by it, and not already
                 // resident (the adjacent-operand case is handled by analyzeStackResidentValues).
                 Integer rightDef = defIdxOf.get(right);
                 if (rightDef == null || rightDef >= k || useCounts.getOrDefault(right, 0) != 1
-                        || stackResidentValues.contains(right)) {
+                        || stackResidentValues.contains(right))
+                {
                     continue;
                 }
                 // right must be a genuine computation that would otherwise spill - never a constant or a plain
@@ -964,18 +1274,28 @@ public class BytecodeEmitter {
                 // for an inlined constant, would attach the preload to an instruction that emits nothing).
                 IRInstruction rightInstr = instructions.get(rightDef);
                 if (inlinedConstants.contains(right) || rightInstr instanceof ConstantInstruction
-                        || rightInstr instanceof LoadLocalInstruction || rightInstr instanceof CopyInstruction) {
+                        || rightInstr instanceof LoadLocalInstruction || rightInstr instanceof CopyInstruction)
+                {
                     continue;
                 }
                 int windowStart = windowStartIndex(right, instructions, defIdxOf, k);
-                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, windowStart, k, left)) {
+                if (!argWindowClosedForPreload(instructions, defIdxOf, useCounts, windowStart, k, left))
+                {
                     continue;
                 }
                 // At most one preload per instruction: nested binary ops (e.g. `c + (a + (b + c))` from a dup)
                 // can share a window-start, and a Map would silently drop one while both still skip their left
                 // operand - a stack underflow. Yield to the preload already placed there (the inner op).
                 IRInstruction windowStartInstr = instructions.get(windowStart);
-                if (receiverPreload.containsKey(windowStartInstr)) {
+                if (receiverPreload.containsKey(windowStartInstr))
+                {
+                    continue;
+                }
+                // A handler-entry CATCH captures the exception the JVM left on the stack and must be the
+                // block's first emitted operation. Preloading `left` before it would push a value under the
+                // exception, and the CATCH's astore would then capture that value instead. Leave `left` to
+                if (isCatchCapture(windowStartInstr))
+                {
                     continue;
                 }
                 receiverPreload.put(windowStartInstr, left);
@@ -987,30 +1307,43 @@ public class BytecodeEmitter {
             // index are re-loadable values loaded on-demand AT the store (after the value) - forcing the value to
             // spill. Preload the array+index just before the value's construction so it stays resident on top of
             // them, matching javac's `<array>; <index>; new; dup; init; aastore`.
-            for (int k = 0; k < instructions.size(); k++) {
-                if (!(instructions.get(k) instanceof ArrayAccessInstruction)) {
+            for (int k = 0; k < instructions.size(); k++)
+            {
+                if (!(instructions.get(k) instanceof ArrayAccessInstruction))
+                {
                     continue;
                 }
                 ArrayAccessInstruction store = (ArrayAccessInstruction) instructions.get(k);
-                if (!store.isStore() || !(store.getValue() instanceof SSAValue)) {
+                if (!store.isStore() || !(store.getValue() instanceof SSAValue))
+                {
                     continue;
                 }
                 SSAValue value = (SSAValue) store.getValue();
                 Integer valDef = defIdxOf.get(value);
-                if (valDef == null || valDef >= k) {
+                if (valDef == null || valDef >= k)
+                {
                     continue; // value built in this block before the store
                 }
                 IRInstruction valDefInstr = instructions.get(valDef);
-                if (!(valDefInstr instanceof NewInstruction) || !newToInit.containsKey(valDefInstr)
-                        || useCounts.getOrDefault(value, 0) != 2) {
-                    continue; // a paired-new value used only by its <init> and this store
+                // Either a paired new used only by its own <init> and this store, or any other value this
+                // store alone consumes whose computation is a single instruction. A longer computation begins
+                // before its defining instruction, and the array+index pushed there would land inside it.
+                boolean pairedNewValue = valDefInstr instanceof NewInstruction
+                        && newToInit.containsKey(valDefInstr)
+                        && useCounts.getOrDefault(value, 0) == 2;
+                boolean singleInstructionValue = useCounts.getOrDefault(value, 0) == 1
+                        && windowStartIndex(value, instructions, defIdxOf, k) == valDef;
+                if (!pairedNewValue && !singleInstructionValue)
+                {
+                    continue;
                 }
                 SSAValue arraySv = store.getArray() instanceof SSAValue ? (SSAValue) store.getArray() : null;
                 SSAValue indexSv = store.getIndex() instanceof SSAValue ? (SSAValue) store.getIndex() : null;
                 if (arraySv == null || indexSv == null
                         || stackResidentValues.contains(arraySv) || stackResidentValues.contains(indexSv)
                         || inlinedConstants.contains(arraySv) || inlinedConstants.contains(indexSv)
-                        || regAlloc.getRegister(arraySv) < 0 || regAlloc.getRegister(indexSv) < 0) {
+                        || regAlloc.getRegister(arraySv) < 0 || regAlloc.getRegister(indexSv) < 0)
+                {
                     continue;
                 }
                 Integer arrayD = defIdxOf.get(arraySv);
@@ -1021,77 +1354,142 @@ public class BytecodeEmitter {
                 // (operand 1) sits above it, so it must be a re-loadable on-demand value (preloaded on top).
                 List<SSAValue> prefix = new ArrayList<>();
                 SSAValue residentArray = null;
-                if (indexD != null) {
+                if (indexD != null)
+                {
                     continue; // an in-block index would have to be reordered above the array - out of scope
                 }
-                if (arrayD == null) {
+                if (arrayD == null)
+                {
                     prefix.add(arraySv); // on-demand array: preload it first
-                } else if (arrayD == valDef - 1 && useCounts.getOrDefault(arraySv, 0) == 1) {
+                }
+                else if (arrayD == valDef - 1 && useCounts.getOrDefault(arraySv, 0) == 1)
+                {
                     residentArray = arraySv; // 2-D sub-array computed just before the value: keep it resident
-                } else {
+                }
+                else
+                {
                     continue;
                 }
                 prefix.add(indexSv);
-                if (!arrayStoreWindowClosed(instructions, valDef, k, useCounts, value)) {
+                if (!arrayStoreWindowClosed(instructions, valDef, k, useCounts, value))
+                {
                     continue;
                 }
-                if (residentArray != null) {
+                if (residentArray != null)
+                {
                     stackResidentValues.add(residentArray);
                 }
                 arrayStorePrefixPreload.put(valDefInstr, prefix);
                 skipStorePrefix.add(store);
                 stackResidentValues.add(value);
             }
+
+            // Field store: this.f = <expr>. The receiver is a re-loadable value loaded on-demand AT the store,
+            // which is AFTER the value - so the value has to spill to a local and reload. Preload the receiver
+            // just before the value's computation and the value stays resident on top of it, matching javac's
+            // `aload_0; <expr>; putfield`. Restricted to a value produced by a single instruction: a longer
+            // computation starts earlier than its defining instruction, and a receiver pushed there would land
+            // inside the value's own stack.
+            for (int k = 0; k < instructions.size(); k++)
+            {
+                if (!(instructions.get(k) instanceof FieldAccessInstruction))
+                {
+                    continue;
+                }
+                FieldAccessInstruction store = (FieldAccessInstruction) instructions.get(k);
+                if (!store.isStore() || store.isStatic())
+                {
+                    continue;
+                }
+                if (!(store.getObjectRef() instanceof SSAValue) || !(store.getValue() instanceof SSAValue))
+                {
+                    continue;
+                }
+                SSAValue recv = (SSAValue) store.getObjectRef();
+                SSAValue value = (SSAValue) store.getValue();
+                Integer valDef = defIdxOf.get(value);
+                if (valDef == null || valDef >= k || useCounts.getOrDefault(value, 0) != 1)
+                {
+                    continue; // the value is built in this block, for this store alone
+                }
+                if (stackResidentValues.contains(recv) || inlinedConstants.contains(recv)
+                        || regAlloc.getRegister(recv) < 0 || defIdxOf.get(recv) != null)
+                {
+                    continue; // the receiver must be re-loadable on demand, so it can be pushed early
+                }
+                if (windowStartIndex(value, instructions, defIdxOf, k) != valDef)
+                {
+                    continue;
+                }
+                if (!arrayStoreWindowClosed(instructions, valDef, k, useCounts, value))
+                {
+                    continue;
+                }
+                receiverPreload.put(instructions.get(valDef), recv);
+                skipReceiver.add(store);
+                markResident(value);
+            }
         }
     }
 
     /**
-     * Whether the window {@code (valDef, storeIdx]} building an array store's paired-new value is self-contained:
-     * every value produced strictly inside it is consumed only inside it, so preloading the array/index ahead of
-     * {@code valDef} leaves the value's construction (and nothing else) stacked cleanly above them.
+     * Whether the window {@code (valDef, storeIdx]} building an array store's paired-new value is self-contained.
      */
-    private boolean arrayStoreWindowClosed(List<IRInstruction> instructions, int valDef, int storeIdx,
-                                           Map<SSAValue, Integer> useCounts, SSAValue value) {
-        for (int j = valDef; j < storeIdx; j++) {
+    private boolean arrayStoreWindowClosed(List<IRInstruction> instructions, int valDef, int storeIdx, Map<SSAValue, Integer> useCounts, SSAValue value)
+    {
+        for (int j = valDef; j < storeIdx; j++)
+        {
             SSAValue r = instructions.get(j).getResult();
-            if (r == null || r.equals(value)) {
+            if (r == null || r.equals(value))
+            {
                 continue;
             }
             int within = 0;
-            for (int q = valDef; q <= storeIdx; q++) {
-                for (Value op : instructions.get(q).getOperands()) {
-                    if (r.equals(op)) {
+            for (int q = valDef; q <= storeIdx; q++)
+            {
+                for (Value op : instructions.get(q).getOperands())
+                {
+                    if (r.equals(op))
+                    {
                         within++;
                     }
                 }
             }
-            if (within != useCounts.getOrDefault(r, 0)) {
+            if (within != useCounts.getOrDefault(r, 0))
+            {
                 return false;
             }
         }
         return true;
     }
 
-    /** The earliest def index reached from {@code value} through its in-block operands (its computation
-     *  window's start), bounded by {@code useIdx}. A register operand (no in-block def) is not part of it. */
-    private int windowStartIndex(SSAValue value, List<IRInstruction> instructions,
-                                 Map<SSAValue, Integer> defIdxOf, int useIdx) {
+    /**
+     * The earliest def index reached from {@code value} through its in-block operands (its computation window's
+     * start), bounded by {@code useIdx}.
+     */
+    private int windowStartIndex(SSAValue value, List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, int useIdx)
+    {
         Set<SSAValue> seen = new HashSet<>();
         List<SSAValue> work = new ArrayList<>();
         work.add(value);
         int min = useIdx;
-        while (!work.isEmpty()) {
+        while (!work.isEmpty())
+        {
             SSAValue v = work.remove(work.size() - 1);
-            if (!seen.add(v)) {
+            if (!seen.add(v))
+            {
                 continue;
             }
             Integer di = defIdxOf.get(v);
-            if (di == null || inlinedConstants.contains(v)) {
+            if (di == null || inlinedConstants.contains(v))
+            {
                 continue; // a register operand or an inlined constant - emitted at its use, not a window position
             }
             min = Math.min(min, di);
-            for (Value o : instructions.get(di).getOperands()) {
-                if (o instanceof SSAValue) {
+            for (Value o : instructions.get(di).getOperands())
+            {
+                if (o instanceof SSAValue)
+                {
                     work.add((SSAValue) o);
                 }
             }
@@ -1099,35 +1497,37 @@ public class BytecodeEmitter {
         return min;
     }
 
-    /**
-     * Whether {@code [windowStart, invIdx)} is a closed build window for an argument preceded by a preloaded
-     * receiver: the receiver is defined before the window, and every value the window produces is consumed
-     * inside the window or by the call - so the receiver stays undisturbed at the bottom (no {@code dup_x}/swap).
-     */
-    private boolean argWindowClosedForPreload(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf,
-                                              Map<SSAValue, Integer> useCounts, int windowStart, int invIdx,
-                                              SSAValue recv) {
+    private boolean argWindowClosedForPreload(List<IRInstruction> instructions, Map<SSAValue, Integer> defIdxOf, Map<SSAValue, Integer> useCounts, int windowStart, int invIdx, SSAValue recv)
+    {
         Integer recvDef = defIdxOf.get(recv);
-        if (recvDef != null && recvDef >= windowStart) {
+        if (recvDef != null && recvDef >= windowStart)
+        {
             return false;
         }
-        for (int j = windowStart; j < invIdx; j++) {
+        for (int j = windowStart; j < invIdx; j++)
+        {
             SSAValue r = instructions.get(j).getResult();
-            if (r == null) {
+            if (r == null)
+            {
                 continue;
             }
-            if (r.equals(recv)) {
+            if (r.equals(recv))
+            {
                 return false;
             }
             int within = 0;
-            for (int q = windowStart; q <= invIdx; q++) {
-                for (Value op : instructions.get(q).getOperands()) {
-                    if (r.equals(op)) {
+            for (int q = windowStart; q <= invIdx; q++)
+            {
+                for (Value op : instructions.get(q).getOperands())
+                {
+                    if (r.equals(op))
+                    {
                         within++;
                     }
                 }
             }
-            if (within != useCounts.getOrDefault(r, 0)) {
+            if (within != useCounts.getOrDefault(r, 0))
+            {
                 return false;
             }
         }
@@ -1135,43 +1535,56 @@ public class BytecodeEmitter {
     }
 
     /**
-     * Emits a paired constructor {@code <init>}: the receiver is already on the stack (from {@code new; dup}), so only
-     * the constructor arguments are loaded; after {@code invokespecial} the initialized reference is stored as the
-     * paired {@code new}'s result.
+     * Emits a paired constructor {@code <init>}.
      */
-    private void emitPairedInit(InvokeInstruction instr) throws IOException {
+    private void emitPairedInit(InvokeInstruction instr) throws IOException
+    {
         List<Value> operands = instr.getOperands();
-        for (int i = 1; i < operands.size(); i++) {
+        for (int i = 1; i < operands.size(); i++)
+        {
             Value operand = operands.get(i);
-            if (operand instanceof SSAValue) {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) operand;
-                if (inlinedConstants.contains(ssa)) {
+                if (inlinedConstants.contains(ssa))
+                {
                     emitConstantValue(inlinedConstantValue.get(ssa));
-                } else if (!stackResidentValues.contains(ssa)) {
+                }
+                else if (!stackResidentValues.contains(ssa))
+                {
                     emitLoadValue(ssa);
                 }
-            } else if (operand instanceof Constant) {
+            }
+            else if (operand instanceof Constant)
+            {
                 emitConstantValue((Constant) operand);
             }
         }
         emitInvoke(instr);
 
         SSAValue result = initToNew.get(instr).getResult();
-        if (result != null && !stackResidentValues.contains(result)) {
-            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), regAlloc.getRegister(result));
+        if (result != null && !stackResidentValues.contains(result))
+        {
+            int reg = regAlloc.getRegister(result);
+            emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), reg);
+            recordSlotStore(result, reg, result.getType());
         }
     }
 
-    private void emitOperandLoads(IRInstruction instr) throws IOException {
+    private void emitOperandLoads(IRInstruction instr) throws IOException
+    {
         if (instr instanceof ConstantInstruction ||
             instr instanceof LoadLocalInstruction ||
             instr instanceof StoreLocalInstruction ||
-            instr instanceof CopyInstruction) {
+            instr instanceof CopyInstruction)
+            {
             return;
         }
-        if (instr instanceof SimpleInstruction) {
+        if (instr instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) instr;
-            if (simple.getOp() == SimpleOp.GOTO) {
+            if (simple.getOp() == SimpleOp.GOTO)
+            {
                 return;
             }
         }
@@ -1179,43 +1592,56 @@ public class BytecodeEmitter {
         boolean skipFirst = skipReceiver.contains(instr);
         boolean skipTwo = skipStorePrefix.contains(instr);
         List<Value> operands = instr.getOperands();
-        for (int oi = 0; oi < operands.size(); oi++) {
-            if (oi == 0 && skipFirst) {
+        for (int oi = 0; oi < operands.size(); oi++)
+        {
+            if (oi == 0 && skipFirst)
+            {
                 continue; // receiver preloaded beneath the argument window
             }
-            if (oi <= 1 && skipTwo) {
+            if (oi <= 1 && skipTwo)
+            {
                 continue; // array store's array+index preloaded beneath the value window
             }
             Value operand = operands.get(oi);
-            if (operand instanceof SSAValue) {
+            if (operand instanceof SSAValue)
+            {
                 SSAValue ssa = (SSAValue) operand;
-                if (preloadedOnStack.remove(ssa)) {
+                if (preloadedOnStack.remove(ssa))
+                {
                     continue; // pushed at the block head, already on the stack
                 }
-                if (inlinedConstants.contains(ssa)) {
+                if (inlinedConstants.contains(ssa))
+                {
                     emitConstantValue(inlinedConstantValue.get(ssa));
                     continue;
                 }
-                if (stackResidentValues.contains(ssa)) {
+                if (stackResidentValues.contains(ssa))
+                {
                     continue;
                 }
                 emitLoadValue(ssa);
-            } else if (operand instanceof Constant) {
+            }
+            else if (operand instanceof Constant)
+            {
                 emitConstantValue((Constant) operand);
             }
         }
     }
 
-    private void emitLoadValue(SSAValue value) throws IOException {
+    private void emitLoadValue(SSAValue value) throws IOException
+    {
         int reg = regAlloc.getRegister(value);
-        if (reg < 0) {
+        if (reg < 0)
+        {
             throw new IllegalStateException("No register allocated for value: " + value + " (name=" + value.getName() + ")");
         }
         IRType type = value.getType();
 
-        if (type instanceof PrimitiveType) {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -1233,88 +1659,125 @@ public class BytecodeEmitter {
                     emitVarInsn(Opcode.DLOAD.getCode(), Opcode.DLOAD_0.getCode(), reg);
                     break;
             }
-        } else {
+        }
+        else
+        {
             emitVarInsn(Opcode.ALOAD.getCode(), Opcode.ALOAD_0.getCode(), reg);
         }
     }
 
-    private void emitConstantValue(Constant constant) throws IOException {
-        if (constant instanceof IntConstant) {
+    private void emitConstantValue(Constant constant) throws IOException
+    {
+        if (constant instanceof IntConstant)
+        {
             IntConstant intConst = (IntConstant) constant;
             int value = intConst.getValue();
-            if (value >= -1 && value <= 5) {
+            if (value >= -1 && value <= 5)
+            {
                 emit(Opcode.ICONST_0.getCode() + value);
-            } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+            }
+            else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE)
+            {
                 emit(Opcode.BIPUSH.getCode());
                 emit((byte) value);
-            } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+            }
+            else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE)
+            {
                 emit(Opcode.SIPUSH.getCode());
                 emitShort((short) value);
-            } else {
+            }
+            else
+            {
                 int index = constPool.findOrAddInteger(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof LongConstant) {
+        }
+        else if (constant instanceof LongConstant)
+        {
             LongConstant longConst = (LongConstant) constant;
             long value = longConst.getValue();
             if (value == 0L) emit(Opcode.LCONST_0.getCode());
             else if (value == 1L) emit(Opcode.LCONST_1.getCode());
-            else {
+            else
+            {
                 int index = constPool.findOrAddLong(value).getIndex(constPool);
                 emit(Opcode.LDC2_W.getCode());
                 emitShort((short) index);
             }
-        } else if (constant instanceof FloatConstant) {
+        }
+        else if (constant instanceof FloatConstant)
+        {
             FloatConstant floatConst = (FloatConstant) constant;
             float value = floatConst.getValue();
             if (value == 0.0f) emit(Opcode.FCONST_0.getCode());
             else if (value == 1.0f) emit(Opcode.FCONST_1.getCode());
             else if (value == 2.0f) emit(Opcode.FCONST_2.getCode());
-            else {
+            else
+            {
                 int index = constPool.findOrAddFloat(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof DoubleConstant) {
+        }
+        else if (constant instanceof DoubleConstant)
+        {
             DoubleConstant doubleConst = (DoubleConstant) constant;
             double value = doubleConst.getValue();
             if (value == 0.0) emit(Opcode.DCONST_0.getCode());
             else if (value == 1.0) emit(Opcode.DCONST_1.getCode());
-            else {
+            else
+            {
                 int index = constPool.findOrAddDouble(value).getIndex(constPool);
                 emit(Opcode.LDC2_W.getCode());
                 emitShort((short) index);
             }
-        } else if (constant instanceof StringConstant) {
+        }
+        else if (constant instanceof StringConstant)
+        {
             StringConstant stringConst = (StringConstant) constant;
             int index = constPool.findOrAddString(stringConst.getValue()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof NullConstant) {
+        }
+        else if (constant instanceof NullConstant)
+        {
             emit(Opcode.ACONST_NULL.getCode());
-        } else if (constant instanceof ClassConstant) {
+        }
+        else if (constant instanceof ClassConstant)
+        {
             ClassConstant classConst = (ClassConstant) constant;
             int index = constPool.findOrAddClass(classConst.getClassName()).getIndex(constPool);
             emitLdc(index);
         }
     }
 
-    /** Operand use count per value across phis and instructions; an unused result is popped, not stored. */
-    private void computeValueUseCounts() {
+    /**
+     * Operand use count per value across phis and instructions; an unused result is popped, not stored.
+     */
+    private void computeValueUseCounts()
+    {
         valueUseCounts.clear();
         namedValues.clear();
-        for (IRMethod.SourceLocal local : method.getSourceLocals()) {
+        for (IRMethod.SourceLocal local : method.getSourceLocals())
+        {
             namedValues.addAll(local.getValues());
         }
-        for (IRBlock block : method.getBlocksInOrder()) {
-            for (PhiInstruction phi : block.getPhiInstructions()) {
-                for (Value op : phi.getOperands()) {
-                    if (op instanceof SSAValue) {
+        for (IRBlock block : method.getBlocksInOrder())
+        {
+            for (PhiInstruction phi : block.getPhiInstructions())
+            {
+                for (Value op : phi.getOperands())
+                {
+                    if (op instanceof SSAValue)
+                    {
                         valueUseCounts.merge((SSAValue) op, 1, Integer::sum);
                     }
                 }
             }
-            for (IRInstruction instr : block.getInstructions()) {
-                for (Value op : instr.getOperands()) {
-                    if (op instanceof SSAValue) {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                for (Value op : instr.getOperands())
+                {
+                    if (op instanceof SSAValue)
+                    {
                         valueUseCounts.merge((SSAValue) op, 1, Integer::sum);
                     }
                 }
@@ -1322,23 +1785,26 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitResultStore(IRInstruction instr) throws IOException {
+    private void emitResultStore(IRInstruction instr) throws IOException
+    {
         if (!instr.hasResult()) return;
         SSAValue result = instr.getResult();
         if (result == null) return;
 
         if (instr instanceof CopyInstruction ||
             instr instanceof LoadLocalInstruction ||
-            instr instanceof StoreLocalInstruction) {
+            instr instanceof StoreLocalInstruction)
+            {
             return;
         }
 
-        if (stackResidentValues.contains(result)) {
+        if (stackResidentValues.contains(result))
+        {
             return;
         }
 
-        if (valueUseCounts.getOrDefault(result, 0) == 0 && !isCatchCapture(instr)
-                && !namedValues.contains(result)) {
+        if (valueUseCounts.getOrDefault(result, 0) == 0 && !isCatchCapture(instr) && !namedValues.contains(result))
+        {
             // An unused result (e.g. a discarded `panel.add(child)`) is popped, not stored into a local whose
             // slot is then reused for unrelated types and widened to Object on round trip - matching javac's
             // `invoke; pop`. Exempt: a catch variable and a named source local (e.g. `num = num + 2` in a
@@ -1351,9 +1817,11 @@ public class BytecodeEmitter {
         int reg = regAlloc.getRegister(result);
         IRType type = result.getType();
 
-        if (type instanceof PrimitiveType) {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -1371,77 +1839,120 @@ public class BytecodeEmitter {
                     emitVarInsn(Opcode.DSTORE.getCode(), Opcode.DSTORE_0.getCode(), reg);
                     break;
             }
-        } else {
+        }
+        else
+        {
             emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), reg);
         }
+        recordSlotStore(result, reg, type);
     }
 
-    private void emitConstant(ConstantInstruction instr) throws IOException {
+    private void emitConstant(ConstantInstruction instr) throws IOException
+    {
         Constant constant = instr.getConstant();
 
-        if (constant instanceof IntConstant) {
+        if (constant instanceof IntConstant)
+        {
             IntConstant intConst = (IntConstant) constant;
             int value = intConst.getValue();
-            if (value >= -1 && value <= 5) {
+            if (value >= -1 && value <= 5)
+            {
                 emit(Opcode.ICONST_0.getCode() + value);
-            } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+            }
+            else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE)
+            {
                 emit(Opcode.BIPUSH.getCode());
                 emit((byte) value);
-            } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+            }
+            else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE)
+            {
                 emit(Opcode.SIPUSH.getCode());
                 emitShort((short) value);
-            } else {
+            }
+            else
+            {
                 int index = constPool.findOrAddInteger(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof LongConstant) {
+        }
+        else if (constant instanceof LongConstant)
+        {
             LongConstant longConst = (LongConstant) constant;
             long value = longConst.getValue();
-            if (value == 0L) {
+            if (value == 0L)
+            {
                 emit(Opcode.LCONST_0.getCode());
-            } else if (value == 1L) {
+            }
+            else if (value == 1L)
+            {
                 emit(Opcode.LCONST_1.getCode());
-            } else {
+            }
+            else
+            {
                 int index = constPool.findOrAddLong(value).getIndex(constPool);
                 emit(Opcode.LDC2_W.getCode());
                 emitShort((short) index);
             }
-        } else if (constant instanceof FloatConstant) {
+        }
+        else if (constant instanceof FloatConstant)
+        {
             FloatConstant floatConst = (FloatConstant) constant;
             float value = floatConst.getValue();
-            if (value == 0.0f) {
+            if (value == 0.0f)
+            {
                 emit(Opcode.FCONST_0.getCode());
-            } else if (value == 1.0f) {
+            }
+            else if (value == 1.0f)
+            {
                 emit(Opcode.FCONST_1.getCode());
-            } else if (value == 2.0f) {
+            }
+            else if (value == 2.0f)
+            {
                 emit(Opcode.FCONST_2.getCode());
-            } else {
+            }
+            else
+            {
                 int index = constPool.findOrAddFloat(value).getIndex(constPool);
                 emitLdc(index);
             }
-        } else if (constant instanceof DoubleConstant) {
+        }
+        else if (constant instanceof DoubleConstant)
+        {
             DoubleConstant doubleConst = (DoubleConstant) constant;
             double value = doubleConst.getValue();
-            if (value == 0.0) {
+            if (value == 0.0)
+            {
                 emit(Opcode.DCONST_0.getCode());
-            } else if (value == 1.0) {
+            }
+            else if (value == 1.0)
+            {
                 emit(Opcode.DCONST_1.getCode());
-            } else {
+            }
+            else
+            {
                 int index = constPool.findOrAddDouble(value).getIndex(constPool);
                 emit(Opcode.LDC2_W.getCode());
                 emitShort((short) index);
             }
-        } else if (constant instanceof StringConstant) {
+        }
+        else if (constant instanceof StringConstant)
+        {
             StringConstant stringConst = (StringConstant) constant;
             int index = constPool.findOrAddString(stringConst.getValue()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof NullConstant) {
+        }
+        else if (constant instanceof NullConstant)
+        {
             emit(Opcode.ACONST_NULL.getCode());
-        } else if (constant instanceof ClassConstant) {
+        }
+        else if (constant instanceof ClassConstant)
+        {
             ClassConstant classConst = (ClassConstant) constant;
             int index = constPool.findOrAddClass(classConst.getClassName()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof MethodHandleConstant) {
+        }
+        else if (constant instanceof MethodHandleConstant)
+        {
             MethodHandleConstant mhConst = (MethodHandleConstant) constant;
             int index = constPool.findOrAddMethodHandle(
                     mhConst.getReferenceKind(),
@@ -1450,11 +1961,15 @@ public class BytecodeEmitter {
                     mhConst.getDescriptor()
             ).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof MethodTypeConstant) {
+        }
+        else if (constant instanceof MethodTypeConstant)
+        {
             MethodTypeConstant mtConst = (MethodTypeConstant) constant;
             int index = constPool.findOrAddMethodType(mtConst.getDescriptor()).getIndex(constPool);
             emitLdc(index);
-        } else if (constant instanceof DynamicConstant) {
+        }
+        else if (constant instanceof DynamicConstant)
+        {
             DynamicConstant dynConst = (DynamicConstant) constant;
             int migratedBsmIndex = migrateBootstrapMethod(dynConst);
             int cpIndex = constPool.findOrAddConstantDynamic(
@@ -1462,35 +1977,45 @@ public class BytecodeEmitter {
                     dynConst.getName(),
                     dynConst.getDescriptor()
             ).getIndex(constPool);
-            if (dynConst.getType().isTwoSlot()) {
+            if (dynConst.getType().isTwoSlot())
+            {
                 emit(Opcode.LDC2_W.getCode());
                 emitShort((short) cpIndex);
-            } else {
+            }
+            else
+            {
                 emitLdc(cpIndex);
             }
         }
     }
 
-    private void emitLdc(int index) throws IOException {
-        if (index <= 0) {
+    private void emitLdc(int index) throws IOException
+    {
+        if (index <= 0)
+        {
             throw new IllegalStateException("Invalid LDC constant pool index: " + index +
                 " (must be > 0). This indicates a constant pool lookup failure.");
         }
-        if (index <= 255) {
+        if (index <= 255)
+        {
             emit(Opcode.LDC.getCode());
             emit((byte) index);
-        } else {
+        }
+        else
+        {
             emit(Opcode.LDC_W.getCode());
             emitShort((short) index);
         }
     }
 
-    private void emitLoad(LoadLocalInstruction instr) throws IOException {
+    private void emitLoad(LoadLocalInstruction instr) throws IOException
+    {
         // Use the RegisterAllocator's slot for the result value, not the original local index.
         // The original local index may be stale after transformations like method inlining.
         SSAValue result = instr.getResult();
         int index = regAlloc.getRegister(result);
-        if (index < 0) {
+        if (index < 0)
+        {
             // No register allocation for this result - it was likely replaced by replaceAllUsesWith
             // during inlining. Skip emitting this instruction entirely.
             // The value has been replaced with another SSAValue that will be loaded when needed.
@@ -1498,9 +2023,11 @@ public class BytecodeEmitter {
         }
         IRType type = result.getType();
 
-        if (type instanceof PrimitiveType) {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -1518,33 +2045,44 @@ public class BytecodeEmitter {
                     emitVarInsn(Opcode.DLOAD.getCode(), Opcode.DLOAD_0.getCode(), index);
                     break;
             }
-        } else {
+        }
+        else
+        {
             emitVarInsn(Opcode.ALOAD.getCode(), Opcode.ALOAD_0.getCode(), index);
         }
     }
 
-    private void emitVarInsn(int wideOp, int shortOpBase, int index) throws IOException {
-        if (index <= 3) {
+    private void emitVarInsn(int wideOp, int shortOpBase, int index) throws IOException
+    {
+        if (index <= 3)
+        {
             emit(shortOpBase + index);
-        } else if (index <= 255) {
+        }
+        else if (index <= 255)
+        {
             emit(wideOp);
             emit((byte) index);
-        } else {
+        }
+        else
+        {
             emit(Opcode.WIDE.getCode());
             emit(wideOp);
             emitShort((short) index);
         }
     }
 
-    private void emitBinaryOp(BinaryOpInstruction instr) throws IOException {
+    private void emitBinaryOp(BinaryOpInstruction instr) throws IOException
+    {
         IRType type = instr.getResult().getType();
         int baseOpcode = getBinaryOpcode(instr.getOp(), type);
         emit(baseOpcode);
     }
 
-    private int getBinaryOpcode(BinaryOp op, IRType type) {
+    private int getBinaryOpcode(BinaryOp op, IRType type)
+    {
         int typeOffset = getTypeOffset(type);
-        switch (op) {
+        switch (op)
+        {
             case ADD:
                 return Opcode.IADD.getCode() + typeOffset;
             case SUB:
@@ -1582,7 +2120,8 @@ public class BytecodeEmitter {
         }
     }
 
-    private int getTypeOffset(IRType type) {
+    private int getTypeOffset(IRType type)
+    {
         if (type == PrimitiveType.INT) return 0;
         if (type == PrimitiveType.LONG) return 1;
         if (type == PrimitiveType.FLOAT) return 2;
@@ -1590,10 +2129,13 @@ public class BytecodeEmitter {
         return 0;
     }
 
-    private void emitUnaryOp(UnaryOpInstruction instr) throws IOException {
+    private void emitUnaryOp(UnaryOpInstruction instr) throws IOException
+    {
         int opcode;
-        switch (instr.getOp()) {
-            case NEG: {
+        switch (instr.getOp())
+        {
+            case NEG:
+            {
                 IRType type = instr.getOperand().getType();
                 opcode = Opcode.INEG.getCode() + getTypeOffset(type);
                 break;
@@ -1649,9 +2191,11 @@ public class BytecodeEmitter {
         emit(opcode);
     }
 
-    private void emitBranch(BranchInstruction instr) throws IOException {
+    private void emitBranch(BranchInstruction instr) throws IOException
+    {
         int opcode;
-        switch (instr.getCondition()) {
+        switch (instr.getCondition())
+        {
             case IFEQ:
                 opcode = Opcode.IFEQ.getCode();
                 break;
@@ -1709,22 +2253,29 @@ public class BytecodeEmitter {
         emitShort((short) 0);
 
         // Skip false-branch goto if target is the next block (fall-through optimization)
-        if (instr.getFalseTarget() != nextBlock) {
+        if (instr.getFalseTarget() != nextBlock)
+        {
             emit(Opcode.GOTO.getCode());
             pendingJumps.add(new PendingJump(currentOffset, instr.getFalseTarget(), false));
             emitShort((short) 0);
         }
     }
 
-    private void emitReturn(ReturnInstruction instr) throws IOException {
-        if (instr.isVoidReturn()) {
+    private void emitReturn(ReturnInstruction instr) throws IOException
+    {
+        if (instr.isVoidReturn())
+        {
             emit(Opcode.RETURN_.getCode());
-        } else {
+        }
+        else
+        {
             IRType type = instr.getReturnValue().getType();
-            if (type instanceof PrimitiveType) {
+            if (type instanceof PrimitiveType)
+            {
                 PrimitiveType prim = (PrimitiveType) type;
                 int opcode;
-                switch (prim) {
+                switch (prim)
+                {
                     case INT:
                     case BOOLEAN:
                     case BYTE:
@@ -1745,15 +2296,19 @@ public class BytecodeEmitter {
                         throw new IllegalStateException("Unknown primitive type: " + prim);
                 }
                 emit(opcode);
-            } else {
+            }
+            else
+            {
                 emit(Opcode.ARETURN.getCode());
             }
         }
     }
 
-    private void emitInvoke(InvokeInstruction instr) throws IOException {
+    private void emitInvoke(InvokeInstruction instr) throws IOException
+    {
         int opcode;
-        switch (instr.getInvokeType()) {
+        switch (instr.getInvokeType())
+        {
             case VIRTUAL:
                 opcode = Opcode.INVOKEVIRTUAL.getCode();
                 break;
@@ -1773,18 +2328,24 @@ public class BytecodeEmitter {
                 throw new IllegalStateException("Unknown invoke type: " + instr.getInvokeType());
         }
 
-        if (instr.getInvokeType() == InvokeType.DYNAMIC) {
+        if (instr.getInvokeType() == InvokeType.DYNAMIC)
+        {
             int cpIndex = instr.getOriginalCpIndex();
-            if (cpIndex > 0) {
+            if (cpIndex > 0)
+            {
                 emit(opcode);
                 emitShort((short) cpIndex);
                 emitShort((short) 0);
-            } else if (instr.getBootstrapInfo() != null) {
+            }
+            else if (instr.getBootstrapInfo() != null)
+            {
                 cpIndex = createInvokeDynamicEntry(instr);
                 emit(opcode);
                 emitShort((short) cpIndex);
                 emitShort((short) 0);
-            } else {
+            }
+            else
+            {
                 throw new UnsupportedOperationException(
                     "Cannot emit INVOKEDYNAMIC without original constant pool index or bootstrap info. " +
                     "Method: " + instr.getName() + instr.getDescriptor());
@@ -1793,11 +2354,14 @@ public class BytecodeEmitter {
         }
 
         int cpIndex;
-        if (instr.getInvokeType() == InvokeType.INTERFACE) {
+        if (instr.getInvokeType() == InvokeType.INTERFACE)
+        {
             cpIndex = constPool.findOrAddInterfaceRef(
                     instr.getOwner(), instr.getName(), instr.getDescriptor()
             ).getIndex(constPool);
-        } else {
+        }
+        else
+        {
             cpIndex = constPool.findOrAddMethodRef(
                     instr.getOwner(), instr.getName(), instr.getDescriptor()
             ).getIndex(constPool);
@@ -1806,11 +2370,13 @@ public class BytecodeEmitter {
         emit(opcode);
         emitShort((short) cpIndex);
 
-        if (instr.getInvokeType() == InvokeType.INTERFACE) {
+        if (instr.getInvokeType() == InvokeType.INTERFACE)
+        {
             // invokeinterface count = total argument slots including the receiver (already present
             // in the arguments list), with long/double occupying two slots.
             int count = 0;
-            for (Value arg : instr.getArguments()) {
+            for (Value arg : instr.getArguments())
+            {
                 count += arg.getType() != null && arg.getType().isTwoSlot() ? 2 : 1;
             }
             emit((byte) count);
@@ -1818,20 +2384,35 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitNew(NewInstruction instr) throws IOException {
+    private void emitNew(NewInstruction instr) throws IOException
+    {
         int classRef = constPool.findOrAddClass(instr.getClassName()).getIndex(constPool);
         emit(Opcode.NEW.getCode());
         emitShort((short) classRef);
     }
 
-    private void emitNewArray(NewArrayInstruction instr) throws IOException {
+    private void emitNewArray(NewArrayInstruction instr) throws IOException
+    {
         IRType elemType = instr.getElementType();
 
-        if (elemType instanceof PrimitiveType) {
+        // A multi-count allocation is always MULTIANEWARRAY, even when the base element is primitive
+        // (`new int[2][3]` builds int[][] from two counts). This must precede the primitive check, which
+        // otherwise emits a single-dimension NEWARRAY and drops the extra counts.
+        if (instr.isMultiDimensional())
+        {
+            String desc = instr.getResult().getType().getDescriptor();
+            int classRef = constPool.findOrAddClass(desc).getIndex(constPool);
+            emit(Opcode.MULTIANEWARRAY.getCode());
+            emitShort((short) classRef);
+            emit((byte) instr.getDimensions().size());
+        }
+        else if (elemType instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) elemType;
             emit(Opcode.NEWARRAY.getCode());
             int atype;
-            switch (prim) {
+            switch (prim)
+            {
                 case BOOLEAN:
                     atype = AccessFlags.T_BOOLEAN;
                     break;
@@ -1860,15 +2441,12 @@ public class BytecodeEmitter {
                     throw new IllegalStateException("Unknown primitive type: " + prim);
             }
             emit((byte) atype);
-        } else if (instr.isMultiDimensional()) {
-            String desc = instr.getResult().getType().getDescriptor();
-            int classRef = constPool.findOrAddClass(desc).getIndex(constPool);
-            emit(Opcode.MULTIANEWARRAY.getCode());
-            emitShort((short) classRef);
-            emit((byte) instr.getDimensions().size());
-        } else {
+        }
+        else
+        {
             String className = elemType.getDescriptor();
-            if (className.startsWith("L") && className.endsWith(";")) {
+            if (className.startsWith("L") && className.endsWith(";"))
+            {
                 className = className.substring(1, className.length() - 1);
             }
             int classRef = constPool.findOrAddClass(className).getIndex(constPool);
@@ -1877,26 +2455,34 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitFieldAccess(FieldAccessInstruction instr) throws IOException {
+    private void emitFieldAccess(FieldAccessInstruction instr) throws IOException
+    {
         int fieldRef = constPool.findOrAddFieldRef(
                 instr.getOwner(), instr.getName(), instr.getDescriptor()
         ).getIndex(constPool);
 
-        if (instr.isLoad()) {
+        if (instr.isLoad())
+        {
             emit(instr.isStatic() ? Opcode.GETSTATIC.getCode() : Opcode.GETFIELD.getCode());
-        } else {
+        }
+        else
+        {
             emit(instr.isStatic() ? Opcode.PUTSTATIC.getCode() : Opcode.PUTFIELD.getCode());
         }
         emitShort((short) fieldRef);
     }
 
-    private void emitArrayAccess(ArrayAccessInstruction instr) throws IOException {
-        if (instr.isLoad()) {
-            IRType elemType = instr.getResult().getType();
+    private void emitArrayAccess(ArrayAccessInstruction instr) throws IOException
+    {
+        if (instr.isLoad())
+        {
+            IRType elemType = arrayElementTypeOr(instr, instr.getResult().getType());
             int opcode;
-            if (elemType instanceof PrimitiveType) {
+            if (elemType instanceof PrimitiveType)
+            {
                 PrimitiveType prim = (PrimitiveType) elemType;
-                switch (prim) {
+                switch (prim)
+                {
                     case INT:
                         opcode = Opcode.IALOAD.getCode();
                         break;
@@ -1922,16 +2508,22 @@ public class BytecodeEmitter {
                     default:
                         throw new IllegalStateException("Unknown primitive type: " + prim);
                 }
-            } else {
+            }
+            else
+            {
                 opcode = Opcode.AALOAD.getCode();
             }
             emit(opcode);
-        } else {
-            IRType elemType = instr.getValue().getType();
+        }
+        else
+        {
+            IRType elemType = arrayElementTypeOr(instr, instr.getValue().getType());
             int opcode;
-            if (elemType instanceof PrimitiveType) {
+            if (elemType instanceof PrimitiveType)
+            {
                 PrimitiveType prim = (PrimitiveType) elemType;
-                switch (prim) {
+                switch (prim)
+                {
                     case INT:
                         opcode = Opcode.IASTORE.getCode();
                         break;
@@ -1957,30 +2549,57 @@ public class BytecodeEmitter {
                     default:
                         throw new IllegalStateException("Unknown primitive type: " + prim);
                 }
-            } else {
+            }
+            else
+            {
                 opcode = Opcode.AASTORE.getCode();
             }
             emit(opcode);
         }
     }
 
-    private void emitTypeCheck(TypeCheckInstruction instr) throws IOException {
+    /**
+     * The accessed array's own element type - the authority for the xALOAD/xASTORE opcode.
+     */
+    private IRType arrayElementTypeOr(ArrayAccessInstruction instr, IRType fallback)
+    {
+        IRType arrayType = instr.getArray().getType();
+        if (arrayType instanceof ArrayType)
+        {
+            ArrayType at = (ArrayType) arrayType;
+            if (at.getDimensions() > 1)
+            {
+                return new ArrayType(at.getElementType(), at.getDimensions() - 1);
+            }
+            return at.getElementType();
+        }
+        return fallback;
+    }
+
+    private void emitTypeCheck(TypeCheckInstruction instr) throws IOException
+    {
         String typeName = instr.getTargetType().getDescriptor();
-        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+        if (typeName.startsWith("L") && typeName.endsWith(";"))
+        {
             typeName = typeName.substring(1, typeName.length() - 1);
         }
         int classRef = constPool.findOrAddClass(typeName).getIndex(constPool);
 
-        if (instr.isCast()) {
+        if (instr.isCast())
+        {
             emit(Opcode.CHECKCAST.getCode());
-        } else {
+        }
+        else
+        {
             emit(Opcode.INSTANCEOF.getCode());
         }
         emitShort((short) classRef);
     }
 
-    private void emitSimple(SimpleInstruction instr) throws IOException {
-        switch (instr.getOp()) {
+    private void emitSimple(SimpleInstruction instr) throws IOException
+    {
+        switch (instr.getOp())
+        {
             case ARRAYLENGTH:
                 emit(Opcode.ARRAYLENGTH.getCode());
                 break;
@@ -1994,7 +2613,8 @@ public class BytecodeEmitter {
                 emit(Opcode.ATHROW.getCode());
                 break;
             case GOTO:
-                if (instr.getTarget() != nextBlock) {
+                if (instr.getTarget() != nextBlock)
+                {
                     emit(Opcode.GOTO.getCode());
                     pendingJumps.add(new PendingJump(currentOffset, instr.getTarget(), false));
                     emitShort((short) 0);
@@ -2010,12 +2630,14 @@ public class BytecodeEmitter {
         }
     }
 
-    private void emitSwitch(SwitchInstruction instr) throws IOException {
+    private void emitSwitch(SwitchInstruction instr) throws IOException
+    {
         Map<Integer, IRBlock> cases = instr.getCases();
         List<Integer> keys = new ArrayList<>(cases.keySet());
         Collections.sort(keys);
 
-        if (keys.isEmpty()) {
+        if (keys.isEmpty())
+        {
             emit(Opcode.GOTO.getCode());
             pendingJumps.add(new PendingJump(currentOffset, instr.getDefaultTarget(), false));
             emitShort((short) 0);
@@ -2028,30 +2650,39 @@ public class BytecodeEmitter {
         boolean useTableSwitch = tableSize > 0 && tableSize <= keys.size() * 2L && tableSize <= 65536;
 
         int switchStart = currentOffset;
-        if (useTableSwitch) {
+        if (useTableSwitch)
+        {
             emit(Opcode.TABLESWITCH.getCode());
-        } else {
+        }
+        else
+        {
             emit(Opcode.LOOKUPSWITCH.getCode());
         }
 
-        while (currentOffset % 4 != 0) {
+        while (currentOffset % 4 != 0)
+        {
             emit(Opcode.NOP.getCode());
         }
 
         pendingJumps.add(new PendingJump(currentOffset, instr.getDefaultTarget(), true, switchStart));
         emitInt(0);
 
-        if (useTableSwitch) {
+        if (useTableSwitch)
+        {
             emitInt(low);
             emitInt(high);
-            for (int key = low; key <= high; key++) {
+            for (int key = low; key <= high; key++)
+            {
                 IRBlock target = cases.getOrDefault(key, instr.getDefaultTarget());
                 pendingJumps.add(new PendingJump(currentOffset, target, true, switchStart));
                 emitInt(0);
             }
-        } else {
+        }
+        else
+        {
             emitInt(keys.size());
-            for (int key : keys) {
+            for (int key : keys)
+            {
                 emitInt(key);
                 pendingJumps.add(new PendingJump(currentOffset, cases.get(key), true, switchStart));
                 emitInt(0);
@@ -2061,15 +2692,18 @@ public class BytecodeEmitter {
 
     /**
      * For phi copy values, returns the phi result's register slot.
-     * Returns -1 if the value is not a phi copy.
      */
-    private int getPhiCopyDestination(SSAValue copyValue) {
+    private int getPhiCopyDestination(SSAValue copyValue)
+    {
         Map<SSAValue, List<CopyInfo>> phiCopies = method.getPhiCopyMapping();
         if (phiCopies == null) return -1;
 
-        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet()) {
-            for (CopyInfo copyInfo : entry.getValue()) {
-                if (copyInfo.copyValue().equals(copyValue)) {
+        for (Map.Entry<SSAValue, List<CopyInfo>> entry : phiCopies.entrySet())
+        {
+            for (CopyInfo copyInfo : entry.getValue())
+            {
+                if (copyInfo.copyValue().equals(copyValue))
+                {
                     return regAlloc.getRegister(entry.getKey());
                 }
             }
@@ -2077,28 +2711,59 @@ public class BytecodeEmitter {
         return -1;
     }
 
-    private void emitCopy(CopyInstruction instr) throws IOException {
+    private void emitCopy(CopyInstruction instr) throws IOException
+    {
         Value source = instr.getSource();
 
+        // A copy whose result rides the stack into a merge pushes its source and leaves it on top - the
+        // predecessor-tail materialization of a stack-resident phi incoming that is not already there.
+        if (stackResidentValues.contains(instr.getResult()))
+        {
+            if (source instanceof SSAValue)
+            {
+                SSAValue ssa = (SSAValue) source;
+                if (inlinedConstants.contains(ssa))
+                {
+                    emitConstantValue(inlinedConstantValue.get(ssa));
+                }
+                else if (!stackResidentValues.contains(ssa))
+                {
+                    emitLoadValue(ssa);
+                }
+            }
+            else if (source instanceof Constant)
+            {
+                emitConstantValue((Constant) source);
+            }
+            return;
+        }
+
         int dstReg = getPhiCopyDestination(instr.getResult());
-        if (dstReg < 0) {
+        if (dstReg < 0)
+        {
             dstReg = regAlloc.getRegister(instr.getResult());
         }
 
         // Caught-exception capture: the JVM has placed the exception (a reference) on the handler-entry
         // stack. Store it into the exception value's local so later handler code can re-load it.
-        if (source == instr.getResult() && handlerExceptionCaptures.contains(instr.getResult())) {
+        if (source == instr.getResult() && handlerExceptionCaptures.contains(instr.getResult()))
+        {
             emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
+            recordSlotStore(instr.getResult(), dstReg, instr.getResult().getType());
             return;
         }
 
-        if (source instanceof SSAValue) {
+        if (source instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) source;
-            if (stackResidentValues.contains(ssa)) {
+            if (stackResidentValues.contains(ssa))
+            {
                 IRType type = ssa.getType();
-                if (type instanceof PrimitiveType) {
+                if (type instanceof PrimitiveType)
+                {
                     PrimitiveType prim = (PrimitiveType) type;
-                    switch (prim) {
+                    switch (prim)
+                    {
                         case INT:
                         case BOOLEAN:
                         case BYTE:
@@ -2116,24 +2781,35 @@ public class BytecodeEmitter {
                             emitVarInsn(Opcode.DSTORE.getCode(), Opcode.DSTORE_0.getCode(), dstReg);
                             break;
                     }
-                } else {
+                }
+                else
+                {
                     emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
                 }
-            } else {
+                recordSlotStore(instr.getResult(), dstReg, ssa.getType());
+            }
+            else
+            {
                 int srcReg = regAlloc.getRegister(ssa);
-                if (srcReg != dstReg) {
+                if (srcReg != dstReg)
+                {
                     IRType type = ssa.getType();
                     emitVarInsn(getLoadOpcode(type), getLoadShortBase(type), srcReg);
                     emitVarInsn(getStoreOpcode(type), getStoreShortBase(type), dstReg);
+                    recordSlotStore(instr.getResult(), dstReg, type);
                 }
             }
-        } else if (source instanceof Constant) {
+        }
+        else if (source instanceof Constant)
+        {
             Constant constant = (Constant) source;
             emitConstantValue(constant);
             IRType type = constant.getType();
-            if (type instanceof PrimitiveType) {
+            if (type instanceof PrimitiveType)
+            {
                 PrimitiveType prim = (PrimitiveType) type;
-                switch (prim) {
+                switch (prim)
+                {
                     case INT:
                     case BOOLEAN:
                     case BYTE:
@@ -2151,16 +2827,22 @@ public class BytecodeEmitter {
                         emitVarInsn(Opcode.DSTORE.getCode(), Opcode.DSTORE_0.getCode(), dstReg);
                         break;
                 }
-            } else {
+            }
+            else
+            {
                 emitVarInsn(Opcode.ASTORE.getCode(), Opcode.ASTORE_0.getCode(), dstReg);
             }
+            recordSlotStore(instr.getResult(), dstReg, type);
         }
     }
 
-    private int getLoadOpcode(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private int getLoadOpcode(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -2178,10 +2860,13 @@ public class BytecodeEmitter {
         return Opcode.ALOAD.getCode();
     }
 
-    private int getLoadShortBase(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private int getLoadShortBase(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -2199,10 +2884,13 @@ public class BytecodeEmitter {
         return Opcode.ALOAD_0.getCode();
     }
 
-    private int getStoreOpcode(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private int getStoreOpcode(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -2220,10 +2908,13 @@ public class BytecodeEmitter {
         return Opcode.ASTORE.getCode();
     }
 
-    private int getStoreShortBase(IRType type) {
-        if (type instanceof PrimitiveType) {
+    private int getStoreShortBase(IRType type)
+    {
+        if (type instanceof PrimitiveType)
+        {
             PrimitiveType prim = (PrimitiveType) type;
-            switch (prim) {
+            switch (prim)
+            {
                 case INT:
                 case BOOLEAN:
                 case BYTE:
@@ -2241,14 +2932,17 @@ public class BytecodeEmitter {
         return Opcode.ASTORE_0.getCode();
     }
 
-    private int createInvokeDynamicEntry(InvokeInstruction instr) {
+    private int createInvokeDynamicEntry(InvokeInstruction instr)
+    {
         BootstrapMethodInfo bsInfo = instr.getBootstrapInfo();
-        if (bsInfo == null) {
+        if (bsInfo == null)
+        {
             throw new IllegalStateException("No bootstrap info for INVOKEDYNAMIC: " + instr.getName());
         }
 
         ClassFile classFile = constPool.getClassFile();
-        if (classFile == null) {
+        if (classFile == null)
+        {
             throw new IllegalStateException("No ClassFile available for creating INVOKEDYNAMIC entry");
         }
 
@@ -2259,11 +2953,13 @@ public class BytecodeEmitter {
             mh.getReferenceKind(),
             mh.getOwner(),
             mh.getName(),
-            mh.getDescriptor()
+            mh.getDescriptor(),
+            ownerIsInterface(mh.getOwner())
         ).getIndex(constPool);
 
         List<Integer> bsArgIndices = new ArrayList<>();
-        for (Constant arg : bsInfo.getBootstrapArguments()) {
+        for (Constant arg : bsInfo.getBootstrapArguments())
+        {
             int argIndex = addConstantToPool(arg);
             bsArgIndices.add(argIndex);
         }
@@ -2276,9 +2972,43 @@ public class BytecodeEmitter {
         return constPool.addInvokeDynamic(bootstrapMethodIndex, nameAndTypeIndex);
     }
 
-    private BootstrapMethodsAttribute findOrCreateBootstrapMethodsAttribute(ClassFile classFile) {
-        for (Attribute attr : classFile.getClassAttributes()) {
-            if (attr instanceof BootstrapMethodsAttribute) {
+    /**
+     * Whether a method handle's owner is an interface - the class being emitted, a pooled class, or a platform
+     * class via reflection.
+     */
+    private boolean ownerIsInterface(String owner)
+    {
+        if (owner == null)
+        {
+            return false;
+        }
+        ClassFile emitting = constPool.getClassFile();
+        if (emitting != null && owner.equals(emitting.getClassName()))
+        {
+            return (emitting.getAccess() & 0x0200) != 0;
+        }
+        ClassPool pool = emitting != null ? emitting.getClassPool() : null;
+        ClassFile cf = pool != null ? pool.get(owner) : null;
+        if (cf != null)
+        {
+            return (cf.getAccess() & 0x0200) != 0;
+        }
+        try
+        {
+            return Class.forName(owner.replace('/', '.'), false, getClass().getClassLoader()).isInterface();
+        }
+        catch (Throwable t)
+        {
+            return false;
+        }
+    }
+
+    private BootstrapMethodsAttribute findOrCreateBootstrapMethodsAttribute(ClassFile classFile)
+    {
+        for (Attribute attr : classFile.getClassAttributes())
+        {
+            if (attr instanceof BootstrapMethodsAttribute)
+            {
                 return (BootstrapMethodsAttribute) attr;
             }
         }
@@ -2287,49 +3017,74 @@ public class BytecodeEmitter {
         return bsmAttr;
     }
 
-    private int addConstantToPool(Constant constant) {
-        if (constant instanceof StringConstant) {
+    private int addConstantToPool(Constant constant)
+    {
+        if (constant instanceof StringConstant)
+        {
             return constPool.findOrAddString(((StringConstant) constant).getValue()).getIndex(constPool);
-        } else if (constant instanceof IntConstant) {
+        }
+        else if (constant instanceof IntConstant)
+        {
             return constPool.findOrAddInteger(((IntConstant) constant).getValue()).getIndex(constPool);
-        } else if (constant instanceof LongConstant) {
+        }
+        else if (constant instanceof LongConstant)
+        {
             return constPool.findOrAddLong(((LongConstant) constant).getValue()).getIndex(constPool);
-        } else if (constant instanceof FloatConstant) {
+        }
+        else if (constant instanceof FloatConstant)
+        {
             return constPool.findOrAddFloat(((FloatConstant) constant).getValue()).getIndex(constPool);
-        } else if (constant instanceof DoubleConstant) {
+        }
+        else if (constant instanceof DoubleConstant)
+        {
             return constPool.findOrAddDouble(((DoubleConstant) constant).getValue()).getIndex(constPool);
-        } else if (constant instanceof MethodHandleConstant) {
+        }
+        else if (constant instanceof MethodHandleConstant)
+        {
             MethodHandleConstant mh = (MethodHandleConstant) constant;
             return constPool.findOrAddMethodHandle(
                 mh.getReferenceKind(),
                 mh.getOwner(),
                 mh.getName(),
-                mh.getDescriptor()
+                mh.getDescriptor(),
+                ownerIsInterface(mh.getOwner())
             ).getIndex(constPool);
-        } else if (constant instanceof MethodTypeConstant) {
+        }
+        else if (constant instanceof MethodTypeConstant)
+        {
             MethodTypeConstant mt = (MethodTypeConstant) constant;
             return constPool.addMethodType(mt.getDescriptor());
-        } else if (constant instanceof ClassConstant) {
+        }
+        else if (constant instanceof ClassConstant)
+        {
             return constPool.findOrAddClass(((ClassConstant) constant).getClassName()).getIndex(constPool);
-        } else {
+        }
+        else
+        {
             throw new IllegalArgumentException("Unsupported bootstrap argument type: " + constant.getClass().getName());
         }
     }
 
-    private void fixupJumps() {
+    private void fixupJumps()
+    {
         byte[] code = bytecode.toByteArray();
-        for (PendingJump jump : pendingJumps) {
+        for (PendingJump jump : pendingJumps)
+        {
             int targetOffset = blockOffsets.getOrDefault(jump.target(), 0);
             int relativeOffset = targetOffset - jump.baseOffset();
 
-            if (jump.isWide()) {
+            if (jump.isWide())
+            {
                 code[jump.offset()] = (byte) (relativeOffset >> 24);
                 code[jump.offset() + 1] = (byte) (relativeOffset >> 16);
                 code[jump.offset() + 2] = (byte) (relativeOffset >> 8);
                 code[jump.offset() + 3] = (byte) relativeOffset;
-            } else {
+            }
+            else
+            {
                 // Check for overflow - offset must fit in signed 16-bit
-                if (relativeOffset < Short.MIN_VALUE || relativeOffset > Short.MAX_VALUE) {
+                if (relativeOffset < Short.MIN_VALUE || relativeOffset > Short.MAX_VALUE)
+                {
                     throw new IllegalStateException(
                         "Branch offset " + relativeOffset + " exceeds 16-bit range. " +
                         "Method is too large and requires wide branch instructions (goto_w).");
@@ -2339,52 +3094,64 @@ public class BytecodeEmitter {
             }
         }
         bytecode = new ByteArrayOutputStream();
-        try {
+        try
+        {
             bytecode.write(code);
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             throw new RuntimeException(e);
         }
     }
 
-    private void emit(int b) throws IOException {
+    private void emit(int b) throws IOException
+    {
         dos.writeByte(b);
         currentOffset++;
     }
 
-    private void emitShort(short s) throws IOException {
+    private void emitShort(short s) throws IOException
+    {
         dos.writeShort(s);
         currentOffset += 2;
     }
 
-    private void emitInt(int i) throws IOException {
+    private void emitInt(int i) throws IOException
+    {
         dos.writeInt(i);
         currentOffset += 4;
     }
 
-    private int migrateBootstrapMethod(DynamicConstant dynConst) {
+    private int migrateBootstrapMethod(DynamicConstant dynConst)
+    {
         MethodEntry sourceMethod = method.getSourceMethod();
-        if (sourceMethod == null) {
+        if (sourceMethod == null)
+        {
             return dynConst.getBootstrapMethodIndex();
         }
 
         ClassFile sourceClass = sourceMethod.getClassFile();
-        if (sourceClass == null) {
+        if (sourceClass == null)
+        {
             return dynConst.getBootstrapMethodIndex();
         }
 
         ClassFile targetClass = constPool.getClassFile();
-        if (targetClass == null || sourceClass == targetClass) {
+        if (targetClass == null || sourceClass == targetClass)
+        {
             return dynConst.getBootstrapMethodIndex();
         }
 
         BootstrapMethodsAttribute sourceBsmAttr = findBootstrapMethodsAttribute(sourceClass);
-        if (sourceBsmAttr == null) {
+        if (sourceBsmAttr == null)
+        {
             return dynConst.getBootstrapMethodIndex();
         }
 
         List<BootstrapMethod> sourceBsms = sourceBsmAttr.getBootstrapMethods();
         int bsmIndex = dynConst.getBootstrapMethodIndex();
-        if (bsmIndex < 0 || bsmIndex >= sourceBsms.size()) {
+        if (bsmIndex < 0 || bsmIndex >= sourceBsms.size())
+        {
             return bsmIndex;
         }
 
@@ -2394,7 +3161,8 @@ public class BytecodeEmitter {
         int newMethodHandleIndex = migrateConstantPoolItem(sourceCP, sourceBsm.getBootstrapMethodRef());
 
         List<Integer> newArguments = new ArrayList<>();
-        for (int argIndex : sourceBsm.getBootstrapArguments()) {
+        for (int argIndex : sourceBsm.getBootstrapArguments())
+        {
             newArguments.add(migrateConstantPoolItem(sourceCP, argIndex));
         }
 
@@ -2404,68 +3172,94 @@ public class BytecodeEmitter {
         return targetBsmAttr.getBootstrapMethods().size() - 1;
     }
 
-    private int migrateConstantPoolItem(ConstPool sourceCP, int sourceIndex) {
+    private int migrateConstantPoolItem(ConstPool sourceCP, int sourceIndex)
+    {
         Item<?> item = sourceCP.getItem(sourceIndex);
-        if (item == null) {
+        if (item == null)
+        {
             return sourceIndex;
         }
 
-        if (item instanceof IntegerItem) {
+        if (item instanceof IntegerItem)
+        {
             int value = ((IntegerItem) item).getValue();
             return constPool.findOrAddInteger(value).getIndex(constPool);
-        } else if (item instanceof LongItem) {
+        }
+        else if (item instanceof LongItem)
+        {
             long value = ((LongItem) item).getValue();
             return constPool.findOrAddLong(value).getIndex(constPool);
-        } else if (item instanceof FloatItem) {
+        }
+        else if (item instanceof FloatItem)
+        {
             float value = ((FloatItem) item).getValue();
             return constPool.findOrAddFloat(value).getIndex(constPool);
-        } else if (item instanceof DoubleItem) {
+        }
+        else if (item instanceof DoubleItem)
+        {
             double value = ((DoubleItem) item).getValue();
             return constPool.findOrAddDouble(value).getIndex(constPool);
-        } else if (item instanceof StringRefItem) {
+        }
+        else if (item instanceof StringRefItem)
+        {
             Utf8Item utf8 = (Utf8Item) sourceCP.getItem(((StringRefItem) item).getValue());
             return constPool.findOrAddString(utf8.getValue()).getIndex(constPool);
-        } else if (item instanceof ClassRefItem) {
+        }
+        else if (item instanceof ClassRefItem)
+        {
             Utf8Item utf8 = (Utf8Item) sourceCP.getItem(((ClassRefItem) item).getValue());
             return constPool.findOrAddClass(utf8.getValue()).getIndex(constPool);
-        } else if (item instanceof MethodTypeItem) {
+        }
+        else if (item instanceof MethodTypeItem)
+        {
             int descIndex = ((MethodTypeItem) item).getValue();
             Utf8Item descUtf8 = (Utf8Item) sourceCP.getItem(descIndex);
             return constPool.findOrAddMethodType(descUtf8.getValue()).getIndex(constPool);
-        } else if (item instanceof MethodHandleItem) {
+        }
+        else if (item instanceof MethodHandleItem)
+        {
             MethodHandleItem mhItem = (MethodHandleItem) item;
             int refKind = mhItem.getValue().getReferenceKind();
             int refIndex = mhItem.getValue().getReferenceIndex();
             Item<?> refItem = sourceCP.getItem(refIndex);
 
             String owner, name, desc;
-            if (refItem instanceof FieldRefItem) {
+            if (refItem instanceof FieldRefItem)
+            {
                 FieldRefItem fieldRef = (FieldRefItem) refItem;
                 owner = resolveClassName(sourceCP, fieldRef.getValue().getClassIndex());
                 int natIndex = fieldRef.getValue().getNameAndTypeIndex();
                 NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
                 name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
                 desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
-            } else if (refItem instanceof MethodRefItem) {
+            }
+            else if (refItem instanceof MethodRefItem)
+            {
                 MethodRefItem methodRef = (MethodRefItem) refItem;
                 owner = resolveClassName(sourceCP, methodRef.getValue().getClassIndex());
                 int natIndex = methodRef.getValue().getNameAndTypeIndex();
                 NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
                 name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
                 desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
-            } else if (refItem instanceof InterfaceRefItem) {
+            }
+            else if (refItem instanceof InterfaceRefItem)
+            {
                 InterfaceRefItem ifaceRef = (InterfaceRefItem) refItem;
                 owner = resolveClassName(sourceCP, ifaceRef.getValue().getClassIndex());
                 int natIndex = ifaceRef.getValue().getNameAndTypeIndex();
                 NameAndTypeRefItem nat = (NameAndTypeRefItem) sourceCP.getItem(natIndex);
                 name = ((Utf8Item) sourceCP.getItem(nat.getValue().getNameIndex())).getValue();
                 desc = ((Utf8Item) sourceCP.getItem(nat.getValue().getDescriptorIndex())).getValue();
-            } else {
+            }
+            else
+            {
                 return sourceIndex;
             }
 
             return constPool.findOrAddMethodHandle(refKind, owner, name, desc).getIndex(constPool);
-        } else if (item instanceof ConstantDynamicItem) {
+        }
+        else if (item instanceof ConstantDynamicItem)
+        {
             ConstantDynamicItem cdItem = (ConstantDynamicItem) item;
             String name = cdItem.getName();
             String desc = cdItem.getDescriptor();
@@ -2476,59 +3270,83 @@ public class BytecodeEmitter {
         return sourceIndex;
     }
 
-    private String resolveClassName(ConstPool cp, int classIndex) {
+    private String resolveClassName(ConstPool cp, int classIndex)
+    {
         ClassRefItem classRef = (ClassRefItem) cp.getItem(classIndex);
         Utf8Item utf8 = (Utf8Item) cp.getItem(classRef.getValue());
         return utf8.getValue();
     }
 
-    private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile classFile) {
-        for (Attribute attr : classFile.getClassAttributes()) {
-            if (attr instanceof BootstrapMethodsAttribute) {
+    private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile classFile)
+    {
+        for (Attribute attr : classFile.getClassAttributes())
+        {
+            if (attr instanceof BootstrapMethodsAttribute)
+            {
                 return (BootstrapMethodsAttribute) attr;
             }
         }
         return null;
     }
 
-    private static final class PendingJump {
+    private static final class PendingJump
+    {
         private final int offset;
         private final IRBlock target;
         private final boolean isWide;
         private final int baseOffset;
 
-        public PendingJump(int offset, IRBlock target, boolean isWide) {
+        public PendingJump(int offset, IRBlock target, boolean isWide)
+        {
             this.offset = offset;
             this.target = target;
             this.isWide = isWide;
             this.baseOffset = offset - 1;
         }
 
-        public PendingJump(int offset, IRBlock target, boolean isWide, int baseOffset) {
+        public PendingJump(int offset, IRBlock target, boolean isWide, int baseOffset)
+        {
             this.offset = offset;
             this.target = target;
             this.isWide = isWide;
             this.baseOffset = baseOffset;
         }
 
-        public int offset() {
+        /**
+         * @return the code offset where the branch operand is patched in
+         */
+        public int offset()
+        {
             return offset;
         }
 
-        public IRBlock target() {
+        /**
+         * @return the block the jump targets
+         */
+        public IRBlock target()
+        {
             return target;
         }
 
-        public boolean isWide() {
+        /**
+         * @return whether wide
+         */
+        public boolean isWide()
+        {
             return isWide;
         }
 
-        public int baseOffset() {
+        /**
+         * @return the offset the branch displacement is computed relative to
+         */
+        public int baseOffset()
+        {
             return baseOffset;
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(Object obj)
+        {
             if (this == obj) return true;
             if (obj == null || getClass() != obj.getClass()) return false;
             PendingJump that = (PendingJump) obj;
@@ -2538,12 +3356,14 @@ public class BytecodeEmitter {
         }
 
         @Override
-        public int hashCode() {
+        public int hashCode()
+        {
             return Objects.hash(offset, target, isWide);
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
             return "PendingJump{" +
                    "offset=" + offset +
                    ", target=" + target +

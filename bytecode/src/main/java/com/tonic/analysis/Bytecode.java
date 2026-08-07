@@ -16,9 +16,9 @@ import java.util.Map;
 
 /**
  * High-level bytecode manipulation API.
- * Provides convenient methods for inserting common bytecode instructions into a method.
  */
-public class Bytecode {
+public class Bytecode
+{
     private final CodeWriter codeWriter;
     private final ConstPool constPool;
     private boolean insertBefore = false;
@@ -29,10 +29,10 @@ public class Bytecode {
 
     /**
      * Constructs a Bytecode utility for the given MethodEntry.
-     *
      * @param methodEntry The MethodEntry whose bytecode is to be manipulated.
      */
-    public Bytecode(MethodEntry methodEntry) {
+    public Bytecode(MethodEntry methodEntry)
+    {
         this.codeWriter = new CodeWriter(methodEntry);
         this.constPool = codeWriter.getConstPool();
         this.isStatic = Modifiers.isStatic(methodEntry.getAccess());
@@ -40,46 +40,74 @@ public class Bytecode {
 
     /**
      * Constructs a Bytecode utility for the given CodeWriter.
-     *
      * @param codeWriter The CodeWriter instance to use for bytecode manipulation.
      */
-    public Bytecode(CodeWriter codeWriter) {
+    public Bytecode(CodeWriter codeWriter)
+    {
         this.codeWriter = codeWriter;
         this.constPool = codeWriter.getConstPool();
         this.isStatic = Modifiers.isStatic(codeWriter.getMethodEntry().getAccess());
     }
 
-    public CodeWriter getCodeWriter() {
+    /**
+     * @return the code writer
+     */
+    public CodeWriter getCodeWriter()
+    {
         return codeWriter;
     }
 
-    public ConstPool getConstPool() {
+    /**
+     * @return the const pool
+     */
+    public ConstPool getConstPool()
+    {
         return constPool;
     }
 
-    public boolean isInsertBefore() {
+    /**
+     * @return whether insert before
+     */
+    public boolean isInsertBefore()
+    {
         return insertBefore;
     }
 
-    public int getInsertBeforeOffset() {
+    /**
+     * @return the insert before offset
+     */
+    public int getInsertBeforeOffset()
+    {
         return insertBeforeOffset;
     }
 
-    public void setInsertBeforeOffset(int insertBeforeOffset) {
+    /**
+     * Sets the bytecode offset at which insert-before emission places new instructions.
+     * @param insertBeforeOffset the target bytecode offset
+     */
+    public void setInsertBeforeOffset(int insertBeforeOffset)
+    {
         this.insertBeforeOffset = insertBeforeOffset;
     }
 
-    public boolean isStatic() {
+    /**
+     * @return whether static
+     */
+    public boolean isStatic()
+    {
         return isStatic;
     }
 
-    public Map<String, Integer> getLabels() {
+    /**
+     * @return the labels
+     */
+    public Map<String, Integer> getLabels()
+    {
         return labels;
     }
 
     /**
      * Sets whether instructions should be inserted before the current position.
-     *
      * @param insertBefore True to insert before the current position, false to append.
      */
     public void setInsertBefore(boolean insertBefore)
@@ -90,10 +118,10 @@ public class Bytecode {
 
     /**
      * Defines a label at the current end of the bytecode.
-     *
      * @param labelName The name of the label.
      */
-    public void defineLabel(String labelName) {
+    public void defineLabel(String labelName)
+    {
         int currentOffset = processOffset();
         labels.put(labelName, currentOffset);
         Logger.info("Defined label '" + labelName + "' at offset " + currentOffset);
@@ -101,10 +129,10 @@ public class Bytecode {
 
     /**
      * Appends an INVOKEVIRTUAL instruction to the end of the bytecode.
-     *
      * @param methodRefIndex The index into the constant pool for the method reference.
      */
-    public void addInvokeVirtual(int methodRefIndex) {
+    public void addInvokeVirtual(int methodRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertInvokeVirtual(offset, methodRefIndex);
         insertBeforeOffset += 3;
@@ -113,10 +141,10 @@ public class Bytecode {
 
     /**
      * Appends an INVOKESPECIAL instruction to the end of the bytecode.
-     *
      * @param methodRefIndex The index into the constant pool for the method reference.
      */
-    public void addInvokeSpecial(int methodRefIndex) {
+    public void addInvokeSpecial(int methodRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertInvokeSpecial(offset, methodRefIndex);
         insertBeforeOffset += 3;
@@ -125,10 +153,10 @@ public class Bytecode {
 
     /**
      * Appends an INVOKESTATIC instruction to the end of the bytecode.
-     *
      * @param methodRefIndex The index into the constant pool for the method reference.
      */
-    public void addInvokeStatic(int methodRefIndex) {
+    public void addInvokeStatic(int methodRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertInvokeStatic(offset, methodRefIndex);
         insertBeforeOffset += 3;
@@ -137,11 +165,11 @@ public class Bytecode {
 
     /**
      * Appends an INVOKEINTERFACE instruction to the end of the bytecode.
-     *
      * @param interfaceMethodRefIndex The index into the constant pool for the interface method reference.
      * @param count                   The count of arguments for the interface method.
      */
-    public void addInvokeInterface(int interfaceMethodRefIndex, int count) {
+    public void addInvokeInterface(int interfaceMethodRefIndex, int count)
+    {
         int offset = processOffset();
         codeWriter.insertInvokeInterface(offset, interfaceMethodRefIndex, count);
         insertBeforeOffset += 5;
@@ -150,10 +178,10 @@ public class Bytecode {
 
     /**
      * Appends an INVOKEDYNAMIC instruction to the end of the bytecode.
-     *
      * @param cpIndex The constant pool index to the CONSTANT_InvokeDynamic_info entry.
      */
-    public void addInvokeDynamic(int cpIndex) {
+    public void addInvokeDynamic(int cpIndex)
+    {
         int offset = processOffset();
         codeWriter.insertInvokeDynamic(offset, cpIndex);
         insertBeforeOffset += 5;
@@ -162,10 +190,10 @@ public class Bytecode {
 
     /**
      * Appends a PUTSTATIC instruction to the end of the bytecode.
-     *
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void addPutStatic(int fieldRefIndex) {
+    public void addPutStatic(int fieldRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertPutStatic(offset, fieldRefIndex);
         insertBeforeOffset += 3;
@@ -175,10 +203,10 @@ public class Bytecode {
 
     /**
      * Appends a GETSTATIC instruction to the end of the bytecode.
-     *
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void addGetStatic(int fieldRefIndex) {
+    public void addGetStatic(int fieldRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertGetStatic(offset, fieldRefIndex);
         insertBeforeOffset += 3;
@@ -187,10 +215,10 @@ public class Bytecode {
 
     /**
      * Appends a PUTFIELD instruction to the end of the bytecode.
-     *
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void addPutField(int fieldRefIndex) {
+    public void addPutField(int fieldRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertPutField(offset, fieldRefIndex);
         insertBeforeOffset += 3;
@@ -199,10 +227,10 @@ public class Bytecode {
 
     /**
      * Appends a GETFIELD instruction to the end of the bytecode.
-     *
      * @param fieldRefIndex The index into the constant pool for the field reference.
      */
-    public void addGetField(int fieldRefIndex) {
+    public void addGetField(int fieldRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertGetField(offset, fieldRefIndex);
         insertBeforeOffset += 3;
@@ -211,10 +239,10 @@ public class Bytecode {
 
     /**
      * Appends a NEW instruction to the end of the bytecode.
-     *
      * @param classRefIndex The index into the constant pool for the class reference.
      */
-    public void addNew(int classRefIndex) {
+    public void addNew(int classRefIndex)
+    {
         int offset = processOffset();
         codeWriter.insertNew(offset, classRefIndex);
         insertBeforeOffset += 3;
@@ -223,10 +251,10 @@ public class Bytecode {
 
     /**
      * Appends an ALOAD instruction to the end of the bytecode.
-     *
      * @param index The local variable index to load from.
      */
-    public void addALoad(int index) {
+    public void addALoad(int index)
+    {
         int offset = processOffset();
         Instruction instruction = codeWriter.insertALoad(offset, index);
         insertBeforeOffset += instruction.getLength();
@@ -235,10 +263,10 @@ public class Bytecode {
 
     /**
      * Appends an ASTORE instruction to the end of the bytecode.
-     *
      * @param index The local variable index to store into.
      */
-    public void addAStore(int index) {
+    public void addAStore(int index)
+    {
         int offset = processOffset();
         Instruction instruction = codeWriter.insertAStore(offset, index);
         insertBeforeOffset += instruction.getLength();
@@ -247,10 +275,10 @@ public class Bytecode {
 
     /**
      * Appends an ILOAD instruction to the end of the bytecode.
-     *
      * @param index The local variable index to load from.
      */
-    public void addILoad(int index) {
+    public void addILoad(int index)
+    {
         int offset = processOffset();
         Instruction instruction = codeWriter.insertILoad(offset, index);
         insertBeforeOffset += instruction.getLength();
@@ -259,10 +287,10 @@ public class Bytecode {
 
     /**
      * Appends an ISTORE instruction to the end of the bytecode.
-     *
      * @param index The local variable index to store into.
      */
-    public void addIStore(int index) {
+    public void addIStore(int index)
+    {
         int offset = processOffset();
         Instruction instruction = codeWriter.insertIStore(offset, index);
         insertBeforeOffset += instruction.getLength();
@@ -271,21 +299,28 @@ public class Bytecode {
 
     /**
      * Appends an ICONST instruction to push an integer constant onto the stack.
-     *
      * @param value The integer value to push.
      */
-    public void addIConst(int value) {
+    public void addIConst(int value)
+    {
         Instruction instr;
-        if (value >= -1 && value <= 5) {
+        if (value >= -1 && value <= 5)
+        {
             int opcode = ICONST_M1.getCode() + (value + 1);
             instr = new IConstInstruction(opcode, processOffset(), value);
-        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+        }
+        else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE)
+        {
             byte operand = (byte) value;
             instr = new BipushInstruction(BIPUSH.getCode(), processOffset(), operand);
-        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+        }
+        else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE)
+        {
             short operand = (short) value;
             instr = new SipushInstruction(SIPUSH.getCode(), processOffset(), operand);
-        } else {
+        }
+        else
+        {
             IntegerItem intItem = constPool.findOrAddInteger(value);
             int ldcIndex = constPool.getIndexOf(intItem);
             instr = new LdcInstruction(constPool, LDC.getCode(), processOffset(), ldcIndex);
@@ -296,15 +331,18 @@ public class Bytecode {
 
     /**
      * Appends a LCONST instruction to push a long constant onto the stack.
-     *
      * @param value The long value to push.
      */
-    public void addLConst(long value) {
+    public void addLConst(long value)
+    {
         Instruction instr;
-        if (value == 0L || value == 1L) {
+        if (value == 0L || value == 1L)
+        {
             int opcode = (value == 0L) ? LCONST_0.getCode() : LCONST_1.getCode();
             instr = new LConstInstruction(opcode, processOffset(), value);
-        } else {
+        }
+        else
+        {
             LongItem longItem = constPool.findOrAddLong(value);
             int ldc2WIndex = constPool.getIndexOf(longItem);
             instr = new Ldc2WInstruction(constPool, LDC2_W.getCode(), processOffset(), ldc2WIndex);
@@ -315,18 +353,25 @@ public class Bytecode {
 
     /**
      * Appends a FCONST instruction to push a float constant onto the stack.
-     *
      * @param value The float value to push.
      */
-    public void addFConst(float value) {
+    public void addFConst(float value)
+    {
         Instruction instr;
-        if (value == 0.0f) {
+        if (value == 0.0f)
+        {
             instr = new FConstInstruction(FCONST_0.getCode(), processOffset(), 0.0f);
-        } else if (value == 1.0f) {
+        }
+        else if (value == 1.0f)
+        {
             instr = new FConstInstruction(FCONST_1.getCode(), processOffset(), 1.0f);
-        } else if (value == 2.0f) {
+        }
+        else if (value == 2.0f)
+        {
             instr = new FConstInstruction(FCONST_2.getCode(), processOffset(), 2.0f);
-        } else {
+        }
+        else
+        {
             FloatItem floatItem = constPool.findOrAddFloat(value);
             int ldcIndex = constPool.getIndexOf(floatItem);
             instr = new LdcInstruction(constPool, LDC.getCode(), processOffset(), ldcIndex);
@@ -338,15 +383,18 @@ public class Bytecode {
 
     /**
      * Appends a DCONST instruction to push a double constant onto the stack.
-     *
      * @param value The double value to push.
      */
-    public void addDConst(double value) {
+    public void addDConst(double value)
+    {
         Instruction instr;
-        if (value == 0.0d || value == 1.0d) {
+        if (value == 0.0d || value == 1.0d)
+        {
             int opcode = (value == 0.0d) ? DCONST_0.getCode() : DCONST_1.getCode();
             instr = new DConstInstruction(opcode, processOffset(), value);
-        } else {
+        }
+        else
+        {
             DoubleItem doubleItem = constPool.findOrAddDouble(value);
             int ldc2WIndex = constPool.getIndexOf(doubleItem);
             instr = new Ldc2WInstruction(constPool, LDC2_W.getCode(), processOffset(), ldc2WIndex);
@@ -359,7 +407,8 @@ public class Bytecode {
     /**
      * Appends an ACONST_NULL instruction to push a null reference onto the stack.
      */
-    public void addAConstNull() {
+    public void addAConstNull()
+    {
         Instruction instr = new AConstNullInstruction(ACONST_NULL.getCode(), processOffset());
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -368,10 +417,10 @@ public class Bytecode {
 
     /**
      * Appends a LLOAD instruction to load a long from a local variable.
-     *
      * @param index The local variable index to load from.
      */
-    public void addLLoad(int index) {
+    public void addLLoad(int index)
+    {
         Instruction instr = new LLoadInstruction(LLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -380,10 +429,10 @@ public class Bytecode {
 
     /**
      * Appends a FLOAD instruction to load a float from a local variable.
-     *
      * @param index The local variable index to load from.
      */
-    public void addFLoad(int index) {
+    public void addFLoad(int index)
+    {
         Instruction instr = new FLoadInstruction(FLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -392,10 +441,10 @@ public class Bytecode {
 
     /**
      * Appends a DLOAD instruction to load a double from a local variable.
-     *
      * @param index The local variable index to load from.
      */
-    public void addDLoad(int index) {
+    public void addDLoad(int index)
+    {
         Instruction instr = new DLoadInstruction(DLOAD.getCode(), processOffset(), index);
         codeWriter.insertInstruction(processOffset(), instr);
         insertBeforeOffset += instr.getLength();
@@ -405,10 +454,10 @@ public class Bytecode {
 
     /**
      * Appends a GOTO instruction to the end of the bytecode.
-     *
      * @param labelName The name of the label to jump to.
      */
-    public void addGoto(String labelName) {
+    public void addGoto(String labelName)
+    {
         defineLabel(labelName);
         int targetOffset = labels.get(labelName);
 
@@ -422,10 +471,10 @@ public class Bytecode {
 
     /**
      * Appends a GOTO_W instruction to the end of the bytecode.
-     *
      * @param labelName The name of the label to jump to.
      */
-    public void addGotoW(String labelName) {
+    public void addGotoW(String labelName)
+    {
         defineLabel(labelName);
         int targetOffset = labels.get(labelName);
 
@@ -439,11 +488,11 @@ public class Bytecode {
 
     /**
      * Appends an IINC instruction to the end of the bytecode.
-     *
      * @param varIndex   The local variable index to increment.
      * @param increment  The constant by which to increment the variable.
      */
-    public void addIInc(int varIndex, int increment) {
+    public void addIInc(int varIndex, int increment)
+    {
         int offset = processOffset();
         Instruction instruction = codeWriter.insertIInc(offset, varIndex, increment);
         insertBeforeOffset += instruction.getLength();
@@ -452,21 +501,21 @@ public class Bytecode {
 
     /**
      * Appends a RETURN instruction to the end of the bytecode.
-     *
      * @param returnType The opcode of the RETURN instruction (e.g., 0xAC for IRETURN).
      */
-    public void addReturn(ReturnType returnType) {
+    public void addReturn(ReturnType returnType)
+    {
         addReturn(returnType.getOpcode());
     }
 
     /**
      * Appends a RETURN instruction to the end of the bytecode.
-     *
      * @param returnOpcode The opcode of the RETURN instruction (e.g., 0xAC for IRETURN).
      */
-    public void addReturn(int returnOpcode) {
+    public void addReturn(int returnOpcode)
+    {
         int offset = processOffset();
-        ReturnInstruction returnInstr = new ReturnInstruction(returnOpcode, offset);
+        MethodReturnInstruction returnInstr = new MethodReturnInstruction(returnOpcode, offset);
         codeWriter.insertInstruction(processOffset(), returnInstr);
         insertBeforeOffset += returnInstr.getLength();
         Logger.info("Appended RETURN (opcode 0x" + Integer.toHexString(returnOpcode) + ") at offset " + offset);
@@ -474,42 +523,41 @@ public class Bytecode {
 
     /**
      * Finalizes the bytecode modifications by writing them back to the MethodEntry.
-     *
      * @throws IOException If an I/O error occurs during writing.
      */
-    public void finalizeBytecode() throws IOException {
+    public void finalizeBytecode() throws IOException
+    {
         codeWriter.write();
         Logger.info("Finalized bytecode modifications.");
     }
 
     /**
-     * Computes and updates the StackMapTable frames for this method.
-     * This is an opt-in operation - call this after making bytecode modifications.
-     * If the bytecode hasn't been modified and a valid StackMapTable exists, this method preserves the existing frames.
+     * Computes and updates this method's StackMapTable frames.
      */
-    public void computeFrames() {
+    public void computeFrames()
+    {
         codeWriter.computeFrames();
     }
 
     /**
      * Forces recomputation of StackMapTable frames, even if bytecode wasn't modified.
      */
-    public void forceComputeFrames() {
+    public void forceComputeFrames()
+    {
         codeWriter.forceComputeFrames();
     }
 
     /**
      * Returns whether the bytecode has been modified since loading.
-     *
      * @return true if modified, false otherwise
      */
-    public boolean isModified() {
+    public boolean isModified()
+    {
         return codeWriter.isModified();
     }
 
     /**
      * Appends a load instruction based on the type descriptor.
-     *
      * @param i The local variable index.
      * @param desc The type descriptor (I, J, F, D, or reference type).
      */
@@ -540,12 +588,12 @@ public class Bytecode {
 
     /**
      * Inserts an INVOKESTATIC instruction into the bytecode.
-     *
      * @param className         The fully qualified class name (e.g., "java/lang/System").
      * @param methodName        The name of the static method to invoke (e.g., "currentTimeMillis").
      * @param methodDescriptor  The method descriptor (e.g., "()J").
      */
-    public void addInvokeStatic(String className, String methodName, String methodDescriptor) {
+    public void addInvokeStatic(String className, String methodName, String methodDescriptor)
+    {
         Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
         Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
         Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
@@ -580,18 +628,21 @@ public class Bytecode {
         if(isStatic)
             return offset;
 
-        for (Instruction instruction : codeWriter.getInstructions()) {
-            if (instruction instanceof ALoadInstruction && ((ALoadInstruction) instruction).getVarIndex() == 0) {
-                ALoadInstruction aLoadInstruction = (ALoadInstruction) instruction;
+        for (Instruction instruction : codeWriter.getInstructions())
+        {
+            if (instruction instanceof ALoadInstruction && ((ALoadInstruction) instruction).getVarIndex() == 0)
+            {
                 offset += instruction.getLength();
                 continue;
             }
 
-            if (instruction instanceof InvokeSpecialInstruction) {
+            if (instruction instanceof InvokeSpecialInstruction)
+            {
                 InvokeSpecialInstruction invokeSpecialInstruction = (InvokeSpecialInstruction) instruction;
                 String methodName = invokeSpecialInstruction.getMethodName();
 
-                if ("<init>".equals(methodName)) {
+                if ("<init>".equals(methodName))
+                {
                     offset += instruction.getLength();
                     continue;
                 }
@@ -604,7 +655,6 @@ public class Bytecode {
 
     /**
      * Checks if the bytecode ends with a return instruction.
-     *
      * @return true if the bytecode ends with a return instruction, false otherwise.
      */
     public boolean endsWithReturn()
@@ -614,10 +664,10 @@ public class Bytecode {
 
     /**
      * Inserts an LDC or LDC_W instruction to load a String constant onto the operand stack.
-     *
      * @param value The String constant to load.
      */
-    public void addLdc(String value) {
+    public void addLdc(String value)
+    {
         int offset = processOffset();
         Utf8Item stringUtf8 = constPool.findOrAddUtf8(value);
 
@@ -626,22 +676,25 @@ public class Bytecode {
         int stringRefIndex = constPool.getIndexOf(stringRef);
 
         Instruction instruction;
-        if (stringRefIndex <= 0xFF) {
-            instruction = codeWriter.insertLDC(processOffset(), stringRefIndex);
-        } else {
-            instruction = codeWriter.insertLDCW(processOffset(), stringRefIndex);
+        if (stringRefIndex <= 0xFF)
+        {
+            instruction = codeWriter.insertLDC(offset, stringRefIndex);
+        }
+        else
+        {
+            instruction = codeWriter.insertLDCW(offset, stringRefIndex);
         }
         insertBeforeOffset += instruction.getLength();
     }
 
     /**
      * Inserts an INVOKEVIRTUAL instruction into the bytecode.
-     *
      * @param className        The fully qualified class name (e.g., "java/io/PrintStream").
      * @param methodName       The name of the method to invoke (e.g., "println").
      * @param methodDescriptor The method descriptor (e.g., "(Ljava/lang/String;)V").
      */
-    public void addInvokeVirtual(String className, String methodName, String methodDescriptor) {
+    public void addInvokeVirtual(String className, String methodName, String methodDescriptor)
+    {
         Utf8Item classNameUtf8 = constPool.findOrAddUtf8(className);
         Utf8Item methodNameUtf8 = constPool.findOrAddUtf8(methodName);
         Utf8Item methodDescUtf8 = constPool.findOrAddUtf8(methodDescriptor);
@@ -662,12 +715,12 @@ public class Bytecode {
 
     /**
      * Inserts a GETSTATIC instruction into the bytecode.
-     *
      * @param className       The fully qualified class name (e.g., "java/lang/System").
      * @param fieldName       The name of the static field (e.g., "out").
      * @param fieldDescriptor The field descriptor (e.g., "Ljava/io/PrintStream;").
      */
-    public void addGetStatic(String className, String fieldName, String fieldDescriptor) {
+    public void addGetStatic(String className, String fieldName, String fieldDescriptor)
+    {
         Utf8Item fieldNameUtf8 = constPool.findOrAddUtf8(fieldName);
         Utf8Item fieldDescUtf8 = constPool.findOrAddUtf8(fieldDescriptor);
 
@@ -687,13 +740,13 @@ public class Bytecode {
 
     /**
      * Appends a TABLESWITCH instruction to the bytecode.
-     *
      * @param low           The lowest key value.
      * @param high          The highest key value.
      * @param defaultOffset The default branch offset (relative to this instruction).
      * @param jumpOffsets   Map of key values to branch offsets (relative to this instruction).
      */
-    public void addTableSwitch(int low, int high, int defaultOffset, Map<Integer, Integer> jumpOffsets) {
+    public void addTableSwitch(int low, int high, int defaultOffset, Map<Integer, Integer> jumpOffsets)
+    {
         int offset = processOffset();
         int padding = (4 - ((offset + 1) % 4)) % 4;
         TableSwitchInstruction instr = codeWriter.insertTableSwitch(
@@ -703,11 +756,11 @@ public class Bytecode {
 
     /**
      * Appends a LOOKUPSWITCH instruction to the bytecode.
-     *
      * @param defaultOffset The default branch offset (relative to this instruction).
      * @param matchOffsets  Map of case values to branch offsets (relative to this instruction).
      */
-    public void addLookupSwitch(int defaultOffset, Map<Integer, Integer> matchOffsets) {
+    public void addLookupSwitch(int defaultOffset, Map<Integer, Integer> matchOffsets)
+    {
         int offset = processOffset();
         int padding = (4 - ((offset + 1) % 4)) % 4;
         int npairs = matchOffsets.size();

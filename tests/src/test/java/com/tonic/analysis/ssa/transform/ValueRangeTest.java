@@ -7,41 +7,48 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ValueRange class.
  * Tests value range representation and operations.
  */
-class ValueRangeTest {
+class ValueRangeTest
+{
 
     @Test
-    void constructorCreatesRange() {
+    void constructorCreatesRange()
+    {
         ValueRange range = new ValueRange(5, 10);
         assertEquals(5, range.getMin());
         assertEquals(10, range.getMax());
     }
 
     @Test
-    void isEmptyReturnsTrueForInvalidRange() {
+    void isEmptyReturnsTrueForInvalidRange()
+    {
         ValueRange range = new ValueRange(10, 5);
         assertTrue(range.isEmpty());
     }
 
     @Test
-    void isEmptyReturnsFalseForValidRange() {
+    void isEmptyReturnsFalseForValidRange()
+    {
         ValueRange range = new ValueRange(5, 10);
         assertFalse(range.isEmpty());
     }
 
     @Test
-    void isConstantReturnsTrueForSingleValue() {
+    void isConstantReturnsTrueForSingleValue()
+    {
         ValueRange range = new ValueRange(42, 42);
         assertTrue(range.isConstant());
     }
 
     @Test
-    void isConstantReturnsFalseForRange() {
+    void isConstantReturnsFalseForRange()
+    {
         ValueRange range = new ValueRange(5, 10);
         assertFalse(range.isConstant());
     }
 
     @Test
-    void containsChecksValueInRange() {
+    void containsChecksValueInRange()
+    {
         ValueRange range = new ValueRange(5, 10);
         assertTrue(range.contains(7));
         assertTrue(range.contains(5));
@@ -51,7 +58,8 @@ class ValueRangeTest {
     }
 
     @Test
-    void intersectNarrowsRange() {
+    void intersectNarrowsRange()
+    {
         ValueRange range1 = new ValueRange(5, 15);
         ValueRange range2 = new ValueRange(10, 20);
         ValueRange result = range1.intersect(range2);
@@ -61,7 +69,8 @@ class ValueRangeTest {
     }
 
     @Test
-    void intersectReturnsEmptyForNoOverlap() {
+    void intersectReturnsEmptyForNoOverlap()
+    {
         ValueRange range1 = new ValueRange(5, 10);
         ValueRange range2 = new ValueRange(15, 20);
         ValueRange result = range1.intersect(range2);
@@ -70,35 +79,40 @@ class ValueRangeTest {
     }
 
     @Test
-    void lessThanCreatesCorrectRange() {
+    void lessThanCreatesCorrectRange()
+    {
         ValueRange range = ValueRange.lessThan(10);
         assertEquals(Integer.MIN_VALUE, range.getMin());
         assertEquals(9, range.getMax());
     }
 
     @Test
-    void lessOrEqualCreatesCorrectRange() {
+    void lessOrEqualCreatesCorrectRange()
+    {
         ValueRange range = ValueRange.lessOrEqual(10);
         assertEquals(Integer.MIN_VALUE, range.getMin());
         assertEquals(10, range.getMax());
     }
 
     @Test
-    void greaterThanCreatesCorrectRange() {
+    void greaterThanCreatesCorrectRange()
+    {
         ValueRange range = ValueRange.greaterThan(10);
         assertEquals(11, range.getMin());
         assertEquals(Integer.MAX_VALUE, range.getMax());
     }
 
     @Test
-    void greaterOrEqualCreatesCorrectRange() {
+    void greaterOrEqualCreatesCorrectRange()
+    {
         ValueRange range = ValueRange.greaterOrEqual(10);
         assertEquals(10, range.getMin());
         assertEquals(Integer.MAX_VALUE, range.getMax());
     }
 
     @Test
-    void equalToCreatesConstantRange() {
+    void equalToCreatesConstantRange()
+    {
         ValueRange range = ValueRange.equalTo(42);
         assertEquals(42, range.getMin());
         assertEquals(42, range.getMax());
@@ -106,7 +120,8 @@ class ValueRangeTest {
     }
 
     @Test
-    void fullIntRangeCoversAllIntegers() {
+    void fullIntRangeCoversAllIntegers()
+    {
         ValueRange range = ValueRange.FULL_INT;
         assertEquals(Integer.MIN_VALUE, range.getMin());
         assertEquals(Integer.MAX_VALUE, range.getMax());
@@ -116,14 +131,16 @@ class ValueRangeTest {
     }
 
     @Test
-    void emptyRangeIsEmpty() {
+    void emptyRangeIsEmpty()
+    {
         ValueRange range = ValueRange.EMPTY;
         assertTrue(range.isEmpty());
         assertFalse(range.contains(0));
     }
 
     @Test
-    void toStringFormatsRange() {
+    void toStringFormatsRange()
+    {
         ValueRange range = new ValueRange(5, 10);
         String str = range.toString();
         assertTrue(str.contains("5"));
@@ -131,20 +148,23 @@ class ValueRangeTest {
     }
 
     @Test
-    void toStringFormatsConstant() {
+    void toStringFormatsConstant()
+    {
         ValueRange range = new ValueRange(42, 42);
         String str = range.toString();
         assertTrue(str.contains("42"));
     }
 
     @Test
-    void toStringFormatsEmpty() {
+    void toStringFormatsEmpty()
+    {
         ValueRange range = ValueRange.EMPTY;
         assertEquals("[]", range.toString());
     }
 
     @Test
-    void equalsComparesRanges() {
+    void equalsComparesRanges()
+    {
         ValueRange range1 = new ValueRange(5, 10);
         ValueRange range2 = new ValueRange(5, 10);
         ValueRange range3 = new ValueRange(6, 10);
@@ -154,7 +174,8 @@ class ValueRangeTest {
     }
 
     @Test
-    void hashCodeConsistent() {
+    void hashCodeConsistent()
+    {
         ValueRange range1 = new ValueRange(5, 10);
         ValueRange range2 = new ValueRange(5, 10);
 
@@ -162,7 +183,8 @@ class ValueRangeTest {
     }
 
     @Test
-    void intersectWithEmptyReturnsEmpty() {
+    void intersectWithEmptyReturnsEmpty()
+    {
         ValueRange range = new ValueRange(5, 10);
         ValueRange result = range.intersect(ValueRange.EMPTY);
 
@@ -170,13 +192,15 @@ class ValueRangeTest {
     }
 
     @Test
-    void lessThanMinValueReturnsEmpty() {
+    void lessThanMinValueReturnsEmpty()
+    {
         ValueRange range = ValueRange.lessThan(Integer.MIN_VALUE);
         assertTrue(range.isEmpty());
     }
 
     @Test
-    void greaterThanMaxValueReturnsEmpty() {
+    void greaterThanMaxValueReturnsEmpty()
+    {
         ValueRange range = ValueRange.greaterThan(Integer.MAX_VALUE);
         assertTrue(range.isEmpty());
     }

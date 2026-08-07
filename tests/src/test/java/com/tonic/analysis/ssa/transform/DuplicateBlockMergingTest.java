@@ -14,24 +14,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for DuplicateBlockMerging transform.
  * Verifies that duplicate blocks with identical instructions are merged.
  */
-class DuplicateBlockMergingTest {
+class DuplicateBlockMergingTest
+{
 
     private DuplicateBlockMerging transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new DuplicateBlockMerging();
     }
 
     @Test
-    void getNameReturnsDuplicateBlockMerging() {
+    void getNameReturnsDuplicateBlockMerging()
+    {
         assertEquals("DuplicateBlockMerging", transform.getName());
     }
 
     @Test
-    void returnsFalseWhenNoDuplicates() {
+    void returnsFalseWhenNoDuplicates()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -42,7 +46,6 @@ class DuplicateBlockMergingTest {
         method.addBlock(b2);
         method.setEntryBlock(entry);
 
-        // Create different blocks with different instructions
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(1)));
@@ -58,7 +61,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void mergesBlocksWithIdenticalInstructions() {
+    void mergesBlocksWithIdenticalInstructions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -71,7 +75,6 @@ class DuplicateBlockMergingTest {
         method.addBlock(exit);
         method.setEntryBlock(entry);
 
-        // Create identical blocks
         SSAValue v1 = new SSAValue(PrimitiveType.INT);
         SSAValue v2 = new SSAValue(PrimitiveType.INT);
         b1.addInstruction(new ConstantInstruction(v1, new IntConstant(42)));
@@ -82,7 +85,6 @@ class DuplicateBlockMergingTest {
         b2.addInstruction(SimpleInstruction.createGoto(exit));
         exit.addInstruction(new ReturnInstruction(v1));
 
-        // Set up CFG edges
         entry.addSuccessor(b1);
         b1.addSuccessor(exit);
         b2.addSuccessor(exit);
@@ -95,7 +97,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void returnsFalseForEmptyMethod() {
+    void returnsFalseForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
 
         boolean changed = transform.run(method);
@@ -104,7 +107,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void returnsFalseForSingleBlock() {
+    void returnsFalseForSingleBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -118,7 +122,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void doesNotMergeEntryBlock() {
+    void doesNotMergeEntryBlock()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock duplicate = new IRBlock("duplicate");
@@ -127,7 +132,6 @@ class DuplicateBlockMergingTest {
         method.addBlock(duplicate);
         method.setEntryBlock(entry);
 
-        // Create identical instructions
         entry.addInstruction(new ReturnInstruction());
         duplicate.addInstruction(new ReturnInstruction());
 
@@ -138,7 +142,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void handlesBlocksWithDifferentTerminators() {
+    void handlesBlocksWithDifferentTerminators()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -177,7 +182,8 @@ class DuplicateBlockMergingTest {
     }
 
     @Test
-    void aggressiveModeConstructor() {
+    void aggressiveModeConstructor()
+    {
         DuplicateBlockMerging aggressiveTransform = new DuplicateBlockMerging(true);
         assertEquals("DuplicateBlockMerging", aggressiveTransform.getName());
     }
@@ -189,7 +195,8 @@ class DuplicateBlockMergingTest {
      * to a block still in the method.
      */
     @Test
-    void mergeRepairsSuccessorPredecessorInvariant() {
+    void mergeRepairsSuccessorPredecessorInvariant()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -219,12 +226,15 @@ class DuplicateBlockMergingTest {
         boolean changed = transform.run(method);
 
         assertTrue(changed);
-        for (IRBlock block : method.getBlocks()) {
-            for (IRBlock pred : block.getPredecessors()) {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRBlock pred : block.getPredecessors())
+            {
                 assertTrue(method.getBlocks().contains(pred),
                     "dangling predecessor " + pred.getName() + " on " + block.getName());
             }
-            for (IRBlock succ : block.getSuccessors()) {
+            for (IRBlock succ : block.getSuccessors())
+            {
                 assertTrue(method.getBlocks().contains(succ),
                     "dangling successor " + succ.getName() + " on " + block.getName());
             }

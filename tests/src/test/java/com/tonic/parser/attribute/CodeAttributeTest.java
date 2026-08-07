@@ -15,13 +15,16 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CodeAttributeTest {
+class CodeAttributeTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorWithMemberParent() throws IOException {
+        void constructorWithMemberParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Member")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -34,7 +37,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void constructorWithClassFileParent() throws IOException {
+        void constructorWithClassFileParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ClassFile").build();
             CodeAttribute code = new CodeAttribute("Code", cf, 1, 100);
 
@@ -43,10 +47,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class MaxStackAndLocalsTests {
+    class MaxStackAndLocalsTests
+    {
 
         @Test
-        void maxStackReflectsStackUsage() throws IOException {
+        void maxStackReflectsStackUsage() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Stack")
                 .publicStaticMethod("deep", "()I")
                     .iconst(1)
@@ -63,7 +69,8 @@ class CodeAttributeTest {
             assertTrue(code.getMaxStack() >= 2);
         }
 
-        private MethodEntry findMethod(ClassFile cf, String name) {
+        private MethodEntry findMethod(ClassFile cf, String name)
+        {
             return cf.getMethods().stream()
                 .filter(m -> m.getName().equals(name))
                 .findFirst()
@@ -71,7 +78,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void maxLocalsReflectsLocalVariables() throws IOException {
+        void maxLocalsReflectsLocalVariables() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Locals")
                 .publicStaticMethod("params", "(IIII)I")
                     .iload(0)
@@ -92,7 +100,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void setMaxStackWorks() throws IOException {
+        void setMaxStackWorks() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/SetStack")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -106,7 +115,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void setMaxLocalsWorks() throws IOException {
+        void setMaxLocalsWorks() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/SetLocals")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -120,7 +130,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void emptyMethodHasMinimalStackAndLocals() throws IOException {
+        void emptyMethodHasMinimalStackAndLocals() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Empty")
                 .publicStaticMethod("empty", "()V")
                     .vreturn()
@@ -135,10 +146,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class BytecodeTests {
+    class BytecodeTests
+    {
 
         @Test
-        void getCodeReturnsNonNullArray() throws IOException {
+        void getCodeReturnsNonNullArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Code")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -151,7 +164,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void getCodeReturnsNonEmptyForNonEmptyMethod() throws IOException {
+        void getCodeReturnsNonEmptyForNonEmptyMethod() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NonEmpty")
                 .publicStaticMethod("method", "()I")
                     .iconst(42)
@@ -165,7 +179,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void setCodeUpdatesCodeArray() throws IOException {
+        void setCodeUpdatesCodeArray() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/SetCode")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -181,7 +196,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void emptyCodeArrayHandledCorrectly() throws IOException {
+        void emptyCodeArrayHandledCorrectly() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Empty")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -197,7 +213,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void largeCodeArraySupported() throws IOException {
+        void largeCodeArraySupported() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Large")
                 .publicStaticMethod("large", "()V")
                     .iconst(1).pop()
@@ -217,10 +234,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class ExceptionTableTests {
+    class ExceptionTableTests
+    {
 
         @Test
-        void getExceptionTableReturnsNonNull() throws IOException {
+        void getExceptionTableReturnsNonNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExTable")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -233,7 +252,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void emptyMethodHasNoExceptionHandlers() throws IOException {
+        void emptyMethodHasNoExceptionHandlers() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoEx")
                 .publicStaticMethod("simple", "()V")
                     .vreturn()
@@ -246,7 +266,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void exceptionTableCanBePopulated() throws IOException {
+        void exceptionTableCanBePopulated() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Populate")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -263,7 +284,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void multipleExceptionHandlersSupported() throws IOException {
+        void multipleExceptionHandlersSupported() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Multi")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -280,7 +302,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void exceptionTablePreservedOnRoundTrip() throws IOException {
+        void exceptionTablePreservedOnRoundTrip() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/RoundTrip")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -306,10 +329,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class NestedAttributesTests {
+    class NestedAttributesTests
+    {
 
         @Test
-        void getAttributesReturnsNonNull() throws IOException {
+        void getAttributesReturnsNonNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Attrs")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -322,7 +347,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void setAttributesWorks() throws IOException {
+        void setAttributesWorks() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/SetAttrs")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -338,7 +364,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void nestedAttributesPreservedOnWrite() throws IOException {
+        void nestedAttributesPreservedOnWrite() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Nested")
                 .publicStaticMethod("method", "()V")
                     .vreturn()
@@ -359,10 +386,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class UpdateLengthTests {
+    class UpdateLengthTests
+    {
 
         @Test
-        void updateLengthCalculatesCorrectSize() throws IOException {
+        void updateLengthCalculatesCorrectSize() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Length")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -376,7 +405,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void updateLengthAccountsForCode() throws IOException {
+        void updateLengthAccountsForCode() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CodeLen")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -393,7 +423,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void updateLengthAccountsForExceptionTable() throws IOException {
+        void updateLengthAccountsForExceptionTable() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExLen")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -409,7 +440,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void updateLengthWithNullCodeHandled() throws IOException {
+        void updateLengthWithNullCodeHandled() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NullCode")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -426,10 +458,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class PrettyPrintTests {
+    class PrettyPrintTests
+    {
 
         @Test
-        void prettyPrintCodeReturnsNonNull() throws IOException {
+        void prettyPrintCodeReturnsNonNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Print")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -443,7 +477,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void prettyPrintCodeProducesOutput() throws IOException {
+        void prettyPrintCodeProducesOutput() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Output")
                 .publicStaticMethod("compute", "(II)I")
                     .iload(0)
@@ -461,10 +496,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsMaxStack() throws IOException {
+        void toStringContainsMaxStack() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ToString")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -478,7 +515,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void toStringContainsMaxLocals() throws IOException {
+        void toStringContainsMaxLocals() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Locals")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -492,7 +530,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void toStringContainsCodeLength() throws IOException {
+        void toStringContainsCodeLength() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/CodeLen")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -506,7 +545,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void toStringContainsExceptionTableSize() throws IOException {
+        void toStringContainsExceptionTableSize() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExSize")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -520,7 +560,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void toStringContainsAttributesCount() throws IOException {
+        void toStringContainsAttributesCount() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/AttrCount")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -535,10 +576,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class WriteAndReadTests {
+    class WriteAndReadTests
+    {
 
         @Test
-        void roundTripPreservesMaxStack() throws IOException {
+        void roundTripPreservesMaxStack() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/MaxStack")
                 .publicStaticMethod("test", "()I")
                     .iconst(1)
@@ -561,7 +604,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void roundTripPreservesMaxLocals() throws IOException {
+        void roundTripPreservesMaxLocals() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/MaxLocals")
                 .publicStaticMethod("test", "(III)V")
                     .iload(0)
@@ -584,7 +628,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void roundTripPreservesBytecode() throws IOException {
+        void roundTripPreservesBytecode() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Bytecode")
                 .publicStaticMethod("compute", "(II)I")
                     .iload(0)
@@ -608,10 +653,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class SetParentTests {
+    class SetParentTests
+    {
 
         @Test
-        void setParentUpdatesParentReference() throws IOException {
+        void setParentUpdatesParentReference() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Parent")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -630,10 +677,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class AcceptVisitorTests {
+    class AcceptVisitorTests
+    {
 
         @Test
-        void acceptInvokesVisitor() throws IOException {
+        void acceptInvokesVisitor() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Visitor")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -645,7 +694,8 @@ class CodeAttributeTest {
             boolean[] visited = {false};
             code.accept(new AbstractMethodVisitor() {
                 @Override
-                public void visit(CodeAttribute codeAttribute) {
+                public void visit(CodeAttribute codeAttribute)
+                {
                     visited[0] = true;
                 }
             });
@@ -655,10 +705,12 @@ class CodeAttributeTest {
     }
 
     @Nested
-    class EdgeCasesTests {
+    class EdgeCasesTests
+    {
 
         @Test
-        void veryLargeMaxStackHandled() throws IOException {
+        void veryLargeMaxStackHandled() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/LargeStack")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -672,7 +724,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void veryLargeMaxLocalsHandled() throws IOException {
+        void veryLargeMaxLocalsHandled() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/LargeLocals")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -686,7 +739,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void zeroMaxStackAllowed() throws IOException {
+        void zeroMaxStackAllowed() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ZeroStack")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -700,7 +754,8 @@ class CodeAttributeTest {
         }
 
         @Test
-        void zeroMaxLocalsAllowed() throws IOException {
+        void zeroMaxLocalsAllowed() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ZeroLocals")
                 .publicStaticMethod("test", "()V")
                     .vreturn()

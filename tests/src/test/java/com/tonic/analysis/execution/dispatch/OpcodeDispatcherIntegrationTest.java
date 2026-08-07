@@ -17,11 +17,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpcodeDispatcherIntegrationTest {
+class OpcodeDispatcherIntegrationTest
+{
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool(true)))
@@ -29,13 +31,17 @@ class OpcodeDispatcherIntegrationTest {
             .build();
     }
 
-    private BytecodeResult execute(MethodEntry method, ConcreteValue... args) {
+    private BytecodeResult execute(MethodEntry method, ConcreteValue... args)
+    {
         return new BytecodeEngine(context).execute(method, args);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
@@ -43,10 +49,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class ConstantTests {
+    class ConstantTests
+    {
 
         @Test
-        void testBipush() throws IOException {
+        void testBipush() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(42)
@@ -60,7 +68,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testSipush() throws IOException {
+        void testSipush() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(1000)
@@ -74,7 +83,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLdcInt() throws IOException {
+        void testLdcInt() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(100000)
@@ -88,7 +98,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLdcFloat() throws IOException {
+        void testLdcFloat() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()F")
                     .fconst(3.14f)
@@ -102,7 +113,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLdc2WLong() throws IOException {
+        void testLdc2WLong() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .lconst(1234567890123L)
@@ -116,7 +128,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLdc2WDouble() throws IOException {
+        void testLdc2WDouble() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()D")
                     .dconst(2.71828)
@@ -131,10 +144,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class IntLoadStoreTests {
+    class IntLoadStoreTests
+    {
 
         @Test
-        void testILoad() throws IOException {
+        void testILoad() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I")
                     .iload(0)
@@ -148,7 +163,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testILoad0() throws IOException {
+        void testILoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(I)I")
                     .iload(0)
@@ -162,7 +178,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testILoad1() throws IOException {
+        void testILoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(II)I")
                     .iload(1)
@@ -170,15 +187,14 @@ class OpcodeDispatcherIntegrationTest {
                 .build();
 
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(20));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(20));
 
             assertEquals(20, result.getReturnValue().asInt());
         }
 
         @Test
-        void testILoad2() throws IOException {
+        void testILoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(III)I")
                     .iload(2)
@@ -195,7 +211,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testILoad3() throws IOException {
+        void testILoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIII)I")
                     .iload(3)
@@ -213,7 +230,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testIStore() throws IOException {
+        void testIStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(55)
@@ -230,10 +248,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class LongLoadStoreTests {
+    class LongLoadStoreTests
+    {
 
         @Test
-        void testLLoad0() throws IOException {
+        void testLLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(J)J")
                     .lload(0)
@@ -247,7 +267,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLLoad1() throws IOException {
+        void testLLoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IJ)J")
                     .lload(1)
@@ -255,15 +276,14 @@ class OpcodeDispatcherIntegrationTest {
                 .build();
 
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.longValue(200L));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.longValue(200L));
 
             assertEquals(200L, result.getReturnValue().asLong());
         }
 
         @Test
-        void testLLoad2() throws IOException {
+        void testLLoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIJ)J")
                     .lload(2)
@@ -280,7 +300,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLLoad3() throws IOException {
+        void testLLoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIIJ)J")
                     .lload(3)
@@ -298,7 +319,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testLStore() throws IOException {
+        void testLStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .lconst(999L)
@@ -315,10 +337,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class FloatLoadStoreTests {
+    class FloatLoadStoreTests
+    {
 
         @Test
-        void testFLoad0() throws IOException {
+        void testFLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(F)F")
                     .fload(0)
@@ -332,7 +356,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testFLoad1() throws IOException {
+        void testFLoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IF)F")
                     .fload(1)
@@ -340,15 +365,14 @@ class OpcodeDispatcherIntegrationTest {
                 .build();
 
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.floatValue(2.5f));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.floatValue(2.5f));
 
             assertEquals(2.5f, result.getReturnValue().asFloat(), 0.001f);
         }
 
         @Test
-        void testFLoad2() throws IOException {
+        void testFLoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIF)F")
                     .fload(2)
@@ -365,7 +389,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testFLoad3() throws IOException {
+        void testFLoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIIF)F")
                     .fload(3)
@@ -383,7 +408,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testFStore() throws IOException {
+        void testFStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()F")
                     .fconst(7.25f)
@@ -400,10 +426,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class DoubleLoadStoreTests {
+    class DoubleLoadStoreTests
+    {
 
         @Test
-        void testDLoad0() throws IOException {
+        void testDLoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(D)D")
                     .dload(0)
@@ -417,7 +445,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testDLoad1() throws IOException {
+        void testDLoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(ID)D")
                     .dload(1)
@@ -425,15 +454,14 @@ class OpcodeDispatcherIntegrationTest {
                 .build();
 
             MethodEntry method = findMethod(cf, "test");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.doubleValue(2.34));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.doubleValue(2.34));
 
             assertEquals(2.34, result.getReturnValue().asDouble(), 0.00001);
         }
 
         @Test
-        void testDLoad2() throws IOException {
+        void testDLoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IID)D")
                     .dload(2)
@@ -450,7 +478,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testDLoad3() throws IOException {
+        void testDLoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIID)D")
                     .dload(3)
@@ -468,7 +497,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testDStore() throws IOException {
+        void testDStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()D")
                     .dconst(9.87)
@@ -485,10 +515,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class RefLoadStoreTests {
+    class RefLoadStoreTests
+    {
 
         @Test
-        void testALoad0() throws IOException {
+        void testALoad0() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/String;)Ljava/lang/String;")
                     .aload(0)
@@ -504,7 +536,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testALoad1() throws IOException {
+        void testALoad1() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(ILjava/lang/String;)Ljava/lang/String;")
                     .aload(1)
@@ -513,15 +546,14 @@ class OpcodeDispatcherIntegrationTest {
 
             MethodEntry method = findMethod(cf, "test");
             ObjectInstance obj = context.getHeapManager().newObject("java/lang/String");
-            BytecodeResult result = execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.reference(obj));
+            BytecodeResult result = execute(method, ConcreteValue.intValue(10), ConcreteValue.reference(obj));
 
             assertEquals(obj.getId(), result.getReturnValue().asReference().getId());
         }
 
         @Test
-        void testALoad2() throws IOException {
+        void testALoad2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IILjava/lang/String;)Ljava/lang/String;")
                     .aload(2)
@@ -539,7 +571,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testALoad3() throws IOException {
+        void testALoad3() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(IIILjava/lang/String;)Ljava/lang/String;")
                     .aload(3)
@@ -558,7 +591,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testAStore() throws IOException {
+        void testAStore() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "(Ljava/lang/String;)Ljava/lang/String;")
                     .aload(0)
@@ -576,10 +610,12 @@ class OpcodeDispatcherIntegrationTest {
     }
 
     @Nested
-    class StackOperationTests {
+    class StackOperationTests
+    {
 
         @Test
-        void testDup() throws IOException {
+        void testDup() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(42)
@@ -595,7 +631,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testDup2() throws IOException {
+        void testDup2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .lconst(100L)
@@ -611,7 +648,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testSwap() throws IOException {
+        void testSwap() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(10)
@@ -628,7 +666,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testPop() throws IOException {
+        void testPop() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()I")
                     .iconst(99)
@@ -644,7 +683,8 @@ class OpcodeDispatcherIntegrationTest {
         }
 
         @Test
-        void testPop2() throws IOException {
+        void testPop2() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("TestClass")
                 .publicStaticMethod("test", "()J")
                     .lconst(100L)

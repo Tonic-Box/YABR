@@ -1,9 +1,7 @@
 package com.tonic.analysis.execution.core;
 
-import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -16,12 +14,14 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class EngineDispatchContextTest {
+class EngineDispatchContextTest
+{
 
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         context = new BytecodeContext.Builder()
             .heapManager(new SimpleHeapManager())
             .classResolver(new ClassResolver(new ClassPool()))
@@ -30,7 +30,8 @@ class EngineDispatchContextTest {
             .build();
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
@@ -38,10 +39,12 @@ class EngineDispatchContextTest {
     }
 
     @Nested
-    class ConstantResolutionTests {
+    class ConstantResolutionTests
+    {
 
         @Test
-        void testResolveIntConstant_SmallValue() throws IOException {
+        void testResolveIntConstant_SmallValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getSmallInt", "()I")
                     .iconst(5)
@@ -59,7 +62,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveIntConstant_LargeValue() throws IOException {
+        void testResolveIntConstant_LargeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getLargeInt", "()I")
                     .iconst(100000)
@@ -77,7 +81,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveIntConstant_NegativeValue() throws IOException {
+        void testResolveIntConstant_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getNegativeInt", "()I")
                     .iconst(-42)
@@ -95,7 +100,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveIntConstant_MaxValue() throws IOException {
+        void testResolveIntConstant_MaxValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getMaxInt", "()I")
                     .iconst(Integer.MAX_VALUE)
@@ -113,7 +119,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveLongConstant_SmallValue() throws IOException {
+        void testResolveLongConstant_SmallValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getSmallLong", "()J")
                     .lconst(100L)
@@ -131,7 +138,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveLongConstant_LargeValue() throws IOException {
+        void testResolveLongConstant_LargeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getLargeLong", "()J")
                     .lconst(9999999999L)
@@ -149,7 +157,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveLongConstant_MaxValue() throws IOException {
+        void testResolveLongConstant_MaxValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getMaxLong", "()J")
                     .lconst(Long.MAX_VALUE)
@@ -167,7 +176,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveFloatConstant_SimpleValue() throws IOException {
+        void testResolveFloatConstant_SimpleValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getPi", "()F")
                     .fconst(3.14f)
@@ -185,7 +195,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveFloatConstant_NegativeValue() throws IOException {
+        void testResolveFloatConstant_NegativeValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getNegativeFloat", "()F")
                     .fconst(-2.5f)
@@ -203,7 +214,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveDoubleConstant_SimpleValue() throws IOException {
+        void testResolveDoubleConstant_SimpleValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getE", "()D")
                     .dconst(2.71828)
@@ -221,7 +233,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveDoubleConstant_PreciseValue() throws IOException {
+        void testResolveDoubleConstant_PreciseValue() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getPreciseValue", "()D")
                     .dconst(1.234567890123456)
@@ -239,7 +252,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveStringConstant_SimpleString() throws IOException {
+        void testResolveStringConstant_SimpleString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getString", "()Ljava/lang/String;")
                     .ldc("hello")
@@ -258,7 +272,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveStringConstant_EmptyString() throws IOException {
+        void testResolveStringConstant_EmptyString() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getEmptyString", "()Ljava/lang/String;")
                     .ldc("")
@@ -276,7 +291,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testResolveStringConstant_SpecialCharacters() throws IOException {
+        void testResolveStringConstant_SpecialCharacters() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("getSpecialString", "()Ljava/lang/String;")
                     .ldc("test\nstring\twith\rspecial")
@@ -295,10 +311,12 @@ class EngineDispatchContextTest {
     }
 
     @Nested
-    class ArrayAccessTests {
+    class ArrayAccessTests
+    {
 
         @Test
-        void testGetArray_ValidArrayInstance() throws IOException {
+        void testGetArray_ValidArrayInstance() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("createAndGetLength", "()I")
                     .iconst(10)
@@ -318,7 +336,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckArrayBounds_ValidIndex() throws IOException {
+        void testCheckArrayBounds_ValidIndex() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("storeAndLoad", "()I")
                     .iconst(5)
@@ -343,7 +362,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckArrayBounds_IndexAtUpperBound() throws IOException {
+        void testCheckArrayBounds_IndexAtUpperBound() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("storeAtEnd", "()V")
                     .iconst(5)
@@ -365,7 +385,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckArrayBounds_NegativeIndex() throws IOException {
+        void testCheckArrayBounds_NegativeIndex() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("accessNegativeIndex", "()I")
                     .iconst(5)
@@ -386,7 +407,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckArrayBounds_IndexTooLarge() throws IOException {
+        void testCheckArrayBounds_IndexTooLarge() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("accessOutOfBounds", "()I")
                     .iconst(5)
@@ -407,7 +429,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckArrayBounds_WayOutOfBounds() throws IOException {
+        void testCheckArrayBounds_WayOutOfBounds() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("accessWayOutOfBounds", "()I")
                     .iconst(3)
@@ -428,7 +451,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testArrayStoreAndLoad_MultipleOperations() throws IOException {
+        void testArrayStoreAndLoad_MultipleOperations() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("multipleArrayOps", "()I")
                     .iconst(10)
@@ -462,10 +486,12 @@ class EngineDispatchContextTest {
     }
 
     @Nested
-    class NullCheckTests {
+    class NullCheckTests
+    {
 
         @Test
-        void testCheckNullReference_ThrowNull() throws IOException {
+        void testCheckNullReference_ThrowNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("throwNull", "()V")
                     .aconst_null()
@@ -482,7 +508,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckNullReference_ArrayLengthOnNull() throws IOException {
+        void testCheckNullReference_ArrayLengthOnNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("nullArrayLength", "()I")
                     .aconst_null()
@@ -500,7 +527,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckNullReference_ArrayStoreOnNull() throws IOException {
+        void testCheckNullReference_ArrayStoreOnNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("nullArrayStore", "()V")
                     .aconst_null()
@@ -520,7 +548,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testCheckNullReference_ArrayLoadOnNull() throws IOException {
+        void testCheckNullReference_ArrayLoadOnNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("nullArrayLoad", "()I")
                     .aconst_null()
@@ -539,7 +568,8 @@ class EngineDispatchContextTest {
         }
 
         @Test
-        void testValidReference_NotNull() throws IOException {
+        void testValidReference_NotNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("Test")
                 .publicStaticMethod("validArrayLength", "()I")
                     .iconst(5)

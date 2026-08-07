@@ -16,22 +16,26 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ConditionalConstantPropagation optimization transform.
  * Tests propagation of constants based on branch conditions.
  */
-class ConditionalConstantPropagationTest {
+class ConditionalConstantPropagationTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Test
-    void getName_ReturnsConditionalConstantPropagation() {
+    void getName_ReturnsConditionalConstantPropagation()
+    {
         ConditionalConstantPropagation ccp = new ConditionalConstantPropagation();
         assertEquals("ConditionalConstantPropagation", ccp.getName());
     }
 
     @Test
-    void run_WithEmptyMethod_ReturnsFalse() {
+    void run_WithEmptyMethod_ReturnsFalse()
+    {
         IRMethod method = new IRMethod("Test", "foo", "()V", true);
         ConditionalConstantPropagation ccp = new ConditionalConstantPropagation();
 
@@ -39,9 +43,9 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_PropagatesConstantTrueCondition() {
+    void run_PropagatesConstantTrueCondition()
+    {
         // Create method with: if (5 < 10) goto trueBlock else falseBlock
-        // Should eliminate branch to falseBlock
         IRMethod method = new IRMethod("Test", "constantTrue", "()V", true);
 
         IRBlock entry = new IRBlock("entry");
@@ -56,7 +60,6 @@ class ConditionalConstantPropagationTest {
         entry.addSuccessor(trueBlock);
         entry.addSuccessor(falseBlock);
 
-        // Create constant comparison that's always true
         BranchInstruction branch = new BranchInstruction(
             CompareOp.LT, new IntConstant(5), new IntConstant(10), trueBlock, falseBlock
         );
@@ -78,9 +81,9 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_PropagatesConstantFalseCondition() {
+    void run_PropagatesConstantFalseCondition()
+    {
         // Create method with: if (10 < 5) goto trueBlock else falseBlock
-        // Should eliminate branch to trueBlock
         IRMethod method = new IRMethod("Test", "constantFalse", "()V", true);
 
         IRBlock entry = new IRBlock("entry");
@@ -95,7 +98,6 @@ class ConditionalConstantPropagationTest {
         entry.addSuccessor(trueBlock);
         entry.addSuccessor(falseBlock);
 
-        // Create constant comparison that's always false
         BranchInstruction branch = new BranchInstruction(
             CompareOp.LT, new IntConstant(10), new IntConstant(5), trueBlock, falseBlock
         );
@@ -116,7 +118,8 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_WithNonConstantCondition_ReturnsFalse() {
+    void run_WithNonConstantCondition_ReturnsFalse()
+    {
         // Create method with: if (x < y) where x and y are variables
         IRMethod method = new IRMethod("Test", "nonConstant", "(II)V", true);
 
@@ -137,9 +140,7 @@ class ConditionalConstantPropagationTest {
         entry.addSuccessor(trueBlock);
         entry.addSuccessor(falseBlock);
 
-        BranchInstruction branch = new BranchInstruction(
-            CompareOp.LT, param1, param2, trueBlock, falseBlock
-        );
+        BranchInstruction branch = new BranchInstruction(CompareOp.LT, param1, param2, trueBlock, falseBlock);
         branch.setBlock(entry);
         entry.addInstruction(branch);
 
@@ -154,7 +155,8 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_HandlesUnaryIfEq() {
+    void run_HandlesUnaryIfEq()
+    {
         // Create method with: if (x == 0) where x is constant 0
         IRMethod method = new IRMethod("Test", "unaryIfEq", "()V", true);
 
@@ -170,16 +172,13 @@ class ConditionalConstantPropagationTest {
         entry.addSuccessor(trueBlock);
         entry.addSuccessor(falseBlock);
 
-        // Create constant instruction
         SSAValue constValue = new SSAValue(PrimitiveType.INT, "v0");
         ConstantInstruction constInstr = new ConstantInstruction(constValue, new IntConstant(0));
         constInstr.setBlock(entry);
         entry.addInstruction(constInstr);
 
         // Branch on constant value
-        BranchInstruction branch = new BranchInstruction(
-            CompareOp.IFEQ, constValue, null, trueBlock, falseBlock
-        );
+        BranchInstruction branch = new BranchInstruction(CompareOp.IFEQ, constValue, null, trueBlock, falseBlock);
         branch.setBlock(entry);
         entry.addInstruction(branch);
 
@@ -193,7 +192,8 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_HandlesNullCheck() {
+    void run_HandlesNullCheck()
+    {
         // Create method with: if (obj == null) where obj is null constant
         IRMethod method = new IRMethod("Test", "nullCheck", "()V", true);
 
@@ -209,16 +209,13 @@ class ConditionalConstantPropagationTest {
         entry.addSuccessor(trueBlock);
         entry.addSuccessor(falseBlock);
 
-        // Create null constant
         SSAValue nullValue = new SSAValue(ReferenceType.OBJECT, "v0");
         ConstantInstruction constInstr = new ConstantInstruction(nullValue, NullConstant.INSTANCE);
         constInstr.setBlock(entry);
         entry.addInstruction(constInstr);
 
         // Branch on null check
-        BranchInstruction branch = new BranchInstruction(
-            CompareOp.IFNULL, nullValue, null, trueBlock, falseBlock
-        );
+        BranchInstruction branch = new BranchInstruction(CompareOp.IFNULL, nullValue, null, trueBlock, falseBlock);
         branch.setBlock(entry);
         entry.addInstruction(branch);
 
@@ -232,7 +229,8 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_HandlesEqualityCheck() {
+    void run_HandlesEqualityCheck()
+    {
         // Create method with: if (5 == 5)
         IRMethod method = new IRMethod("Test", "equality", "()V", true);
 
@@ -264,7 +262,8 @@ class ConditionalConstantPropagationTest {
     }
 
     @Test
-    void run_HandlesGreaterThan() {
+    void run_HandlesGreaterThan()
+    {
         // Create method with: if (10 > 5)
         IRMethod method = new IRMethod("Test", "greaterThan", "()V", true);
 

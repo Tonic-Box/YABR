@@ -1,6 +1,7 @@
 package com.tonic.analysis.frame;
 
 import com.tonic.analysis.instruction.*;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.constpool.*;
 
@@ -8,28 +9,28 @@ import static com.tonic.util.Opcode.*;
 
 /**
  * Type inference engine for bytecode analysis.
- * Maps each instruction to its effect on the TypeState (locals and stack).
  */
-public class TypeInference {
+public class TypeInference
+{
     private final ConstPool constPool;
 
     /**
      * Constructs a TypeInference engine for the given constant pool.
-     *
      * @param constPool the constant pool
      */
-    public TypeInference(ConstPool constPool) {
+    public TypeInference(ConstPool constPool)
+    {
         this.constPool = constPool;
     }
 
     /**
      * Applies the type transformation of an instruction to the given state.
-     *
      * @param state The current type state
      * @param instr The instruction to apply
      * @return The new type state after the instruction
      */
-    public TypeState apply(TypeState state, Instruction instr) {
+    public TypeState apply(TypeState state, Instruction instr)
+    {
         // A WIDE prefix carries the real load/store/iinc/ret opcode plus a 2-byte local index; dispatch on
         // the modified opcode so the wrapped instruction's stack/local effect is applied. Its own opcode is
         // the wide prefix 0xC4, which matches no case below, so without this it is a silent no-op that leaves
@@ -38,86 +39,107 @@ public class TypeInference {
                 ? ((WideInstruction) instr).getModifiedOpcode().getCode()
                 : instr.getOpcode();
 
-        if (opcode == NOP.getCode()) {
+        if (opcode == NOP.getCode())
+        {
             return state;
         }
 
-        if (opcode == ACONST_NULL.getCode()) {
+        if (opcode == ACONST_NULL.getCode())
+        {
             return state.push(VerificationType.NULL);
         }
 
-        if (opcode >= ICONST_M1.getCode() && opcode <= ICONST_5.getCode()) {
+        if (opcode >= ICONST_M1.getCode() && opcode <= ICONST_5.getCode())
+        {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == LCONST_0.getCode() || opcode == LCONST_1.getCode()) {
+        if (opcode == LCONST_0.getCode() || opcode == LCONST_1.getCode())
+        {
             return state.push(VerificationType.LONG);
         }
 
-        if (opcode >= FCONST_0.getCode() && opcode <= FCONST_2.getCode()) {
+        if (opcode >= FCONST_0.getCode() && opcode <= FCONST_2.getCode())
+        {
             return state.push(VerificationType.FLOAT);
         }
 
-        if (opcode == DCONST_0.getCode() || opcode == DCONST_1.getCode()) {
+        if (opcode == DCONST_0.getCode() || opcode == DCONST_1.getCode())
+        {
             return state.push(VerificationType.DOUBLE);
         }
 
-        if (opcode == BIPUSH.getCode() || opcode == SIPUSH.getCode()) {
+        if (opcode == BIPUSH.getCode() || opcode == SIPUSH.getCode())
+        {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == LDC.getCode() || opcode == LDC_W.getCode() || opcode == LDC2_W.getCode()) {
+        if (opcode == LDC.getCode() || opcode == LDC_W.getCode() || opcode == LDC2_W.getCode())
+        {
             return applyLdc(state, instr);
         }
 
-        if (opcode == ILOAD.getCode() || (opcode >= ILOAD_0.getCode() && opcode <= ILOAD_3.getCode())) {
+        if (opcode == ILOAD.getCode() || (opcode >= ILOAD_0.getCode() && opcode <= ILOAD_3.getCode()))
+        {
             return state.push(VerificationType.INTEGER);
         }
 
-        if (opcode == LLOAD.getCode() || (opcode >= LLOAD_0.getCode() && opcode <= LLOAD_3.getCode())) {
+        if (opcode == LLOAD.getCode() || (opcode >= LLOAD_0.getCode() && opcode <= LLOAD_3.getCode()))
+        {
             return state.push(VerificationType.LONG);
         }
 
-        if (opcode == FLOAD.getCode() || (opcode >= FLOAD_0.getCode() && opcode <= FLOAD_3.getCode())) {
+        if (opcode == FLOAD.getCode() || (opcode >= FLOAD_0.getCode() && opcode <= FLOAD_3.getCode()))
+        {
             return state.push(VerificationType.FLOAT);
         }
 
-        if (opcode == DLOAD.getCode() || (opcode >= DLOAD_0.getCode() && opcode <= DLOAD_3.getCode())) {
+        if (opcode == DLOAD.getCode() || (opcode >= DLOAD_0.getCode() && opcode <= DLOAD_3.getCode()))
+        {
             return state.push(VerificationType.DOUBLE);
         }
 
-        if (opcode == ALOAD.getCode() || (opcode >= ALOAD_0.getCode() && opcode <= ALOAD_3.getCode())) {
+        if (opcode == ALOAD.getCode() || (opcode >= ALOAD_0.getCode() && opcode <= ALOAD_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             VerificationType localType = state.getLocal(index);
             return state.push(localType);
         }
 
-        if (opcode == IALOAD.getCode() || opcode == BALOAD.getCode() || opcode == CALOAD.getCode() || opcode == SALOAD.getCode()) {
+        if (opcode == IALOAD.getCode() || opcode == BALOAD.getCode() || opcode == CALOAD.getCode() || opcode == SALOAD.getCode())
+        {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == LALOAD.getCode()) {
+        if (opcode == LALOAD.getCode())
+        {
             return state.pop(2).push(VerificationType.LONG);
         }
 
-        if (opcode == FALOAD.getCode()) {
+        if (opcode == FALOAD.getCode())
+        {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == DALOAD.getCode()) {
+        if (opcode == DALOAD.getCode())
+        {
             return state.pop(2).push(VerificationType.DOUBLE);
         }
 
-        if (opcode == AALOAD.getCode()) {
+        if (opcode == AALOAD.getCode())
+        {
             VerificationType arrayType = state.peek(1);
             state = state.pop(2);
-            if (arrayType.getTag() == VerificationType.TAG_OBJECT) {
+            if (arrayType.getTag() == VerificationType.TAG_OBJECT)
+            {
                 VerificationType.ObjectType objType = (VerificationType.ObjectType) arrayType;
                 int arrayClassIndex = objType.getClassIndex();
                 Item<?> item = constPool.getItem(arrayClassIndex);
-                if (item instanceof ClassRefItem) {
+                if (item instanceof ClassRefItem)
+                {
                     String className = ((ClassRefItem) item).getClassName();
-                    if (className != null && className.startsWith("[")) {
+                    if (className != null && className.startsWith("["))
+                    {
                         String elementDesc = className.substring(1);
                         VerificationType elemType = descriptorToType(elementDesc);
                         return state.push(elemType);
@@ -127,94 +149,112 @@ public class TypeInference {
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == ISTORE.getCode() || (opcode >= ISTORE_0.getCode() && opcode <= ISTORE_3.getCode())) {
+        if (opcode == ISTORE.getCode() || (opcode >= ISTORE_0.getCode() && opcode <= ISTORE_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             return state.pop().setLocal(index, VerificationType.INTEGER);
         }
 
-        if (opcode == LSTORE.getCode() || (opcode >= LSTORE_0.getCode() && opcode <= LSTORE_3.getCode())) {
+        if (opcode == LSTORE.getCode() || (opcode >= LSTORE_0.getCode() && opcode <= LSTORE_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             return state.pop(2).setLocal(index, VerificationType.LONG);
         }
 
-        if (opcode == FSTORE.getCode() || (opcode >= FSTORE_0.getCode() && opcode <= FSTORE_3.getCode())) {
+        if (opcode == FSTORE.getCode() || (opcode >= FSTORE_0.getCode() && opcode <= FSTORE_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             return state.pop().setLocal(index, VerificationType.FLOAT);
         }
 
-        if (opcode == DSTORE.getCode() || (opcode >= DSTORE_0.getCode() && opcode <= DSTORE_3.getCode())) {
+        if (opcode == DSTORE.getCode() || (opcode >= DSTORE_0.getCode() && opcode <= DSTORE_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             return state.pop(2).setLocal(index, VerificationType.DOUBLE);
         }
 
-        if (opcode == ASTORE.getCode() || (opcode >= ASTORE_0.getCode() && opcode <= ASTORE_3.getCode())) {
+        if (opcode == ASTORE.getCode() || (opcode >= ASTORE_0.getCode() && opcode <= ASTORE_3.getCode()))
+        {
             int index = getLocalIndex(instr);
             VerificationType type = state.peek();
             return state.pop().setLocal(index, type);
         }
 
-        if (opcode == IASTORE.getCode() || opcode == BASTORE.getCode() || opcode == CASTORE.getCode() || opcode == SASTORE.getCode()) {
+        if (opcode == IASTORE.getCode() || opcode == BASTORE.getCode() || opcode == CASTORE.getCode() || opcode == SASTORE.getCode())
+        {
             return state.pop(3);
         }
 
-        if (opcode == LASTORE.getCode()) {
+        if (opcode == LASTORE.getCode())
+        {
             return state.pop(4);
         }
 
-        if (opcode == FASTORE.getCode()) {
+        if (opcode == FASTORE.getCode())
+        {
             return state.pop(3);
         }
 
-        if (opcode == DASTORE.getCode()) {
+        if (opcode == DASTORE.getCode())
+        {
             return state.pop(4);
         }
 
-        if (opcode == AASTORE.getCode()) {
+        if (opcode == AASTORE.getCode())
+        {
             return state.pop(3);
         }
 
-        if (opcode == POP.getCode()) {
+        if (opcode == POP.getCode())
+        {
             return state.pop();
         }
 
-        if (opcode == POP2.getCode()) {
+        if (opcode == POP2.getCode())
+        {
             return state.pop(2);
         }
 
         // The dup/swap family operate on raw stack SLOTS (a long/double occupies two: {VALUE, TOP}).
         // They reconstruct the stack from peek() results with pushRaw (not push) so a duplicated long's
         // value slot is not re-expanded into a second {VALUE, TOP} pair, which would inflate the depth.
-        if (opcode == DUP.getCode()) {
+        if (opcode == DUP.getCode())
+        {
             return state.pushRaw(state.peek(0));
         }
 
-        if (opcode == DUP_X1.getCode()) {
+        if (opcode == DUP_X1.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.pop(2).pushRaw(v1).pushRaw(v2).pushRaw(v1);
         }
 
-        if (opcode == DUP_X2.getCode()) {
+        if (opcode == DUP_X2.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
             return state.pop(3).pushRaw(v1).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
-        if (opcode == DUP2.getCode()) {
+        if (opcode == DUP2.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.pushRaw(v2).pushRaw(v1);
         }
 
-        if (opcode == DUP2_X1.getCode()) {
+        if (opcode == DUP2_X1.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
             return state.pop(3).pushRaw(v2).pushRaw(v1).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
-        if (opcode == DUP2_X2.getCode()) {
+        if (opcode == DUP2_X2.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             VerificationType v3 = state.peek(2);
@@ -222,206 +262,256 @@ public class TypeInference {
             return state.pop(4).pushRaw(v2).pushRaw(v1).pushRaw(v4).pushRaw(v3).pushRaw(v2).pushRaw(v1);
         }
 
-        if (opcode == SWAP.getCode()) {
+        if (opcode == SWAP.getCode())
+        {
             VerificationType v1 = state.peek(0);
             VerificationType v2 = state.peek(1);
             return state.pop(2).pushRaw(v1).pushRaw(v2);
         }
 
         if (opcode == IADD.getCode() || opcode == ISUB.getCode() || opcode == IMUL.getCode() || opcode == IDIV.getCode() ||
-            opcode == IREM.getCode() || opcode == IAND.getCode() || opcode == IOR.getCode() || opcode == IXOR.getCode()) {
+            opcode == IREM.getCode() || opcode == IAND.getCode() || opcode == IOR.getCode() || opcode == IXOR.getCode())
+            {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
         if (opcode == LADD.getCode() || opcode == LSUB.getCode() || opcode == LMUL.getCode() || opcode == LDIV.getCode() ||
-            opcode == LREM.getCode() || opcode == LAND.getCode() || opcode == LOR.getCode() || opcode == LXOR.getCode()) {
+            opcode == LREM.getCode() || opcode == LAND.getCode() || opcode == LOR.getCode() || opcode == LXOR.getCode())
+            {
             return state.pop(4).push(VerificationType.LONG);
         }
 
-        if (opcode == FADD.getCode() || opcode == FSUB.getCode() || opcode == FMUL.getCode() || opcode == FDIV.getCode() || opcode == FREM.getCode()) {
+        if (opcode == FADD.getCode() || opcode == FSUB.getCode() || opcode == FMUL.getCode() || opcode == FDIV.getCode() || opcode == FREM.getCode())
+        {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == DADD.getCode() || opcode == DSUB.getCode() || opcode == DMUL.getCode() || opcode == DDIV.getCode() || opcode == DREM.getCode()) {
+        if (opcode == DADD.getCode() || opcode == DSUB.getCode() || opcode == DMUL.getCode() || opcode == DDIV.getCode() || opcode == DREM.getCode())
+        {
             return state.pop(4).push(VerificationType.DOUBLE);
         }
 
-        if (opcode >= INEG.getCode() && opcode <= DNEG.getCode()) {
+        if (opcode >= INEG.getCode() && opcode <= DNEG.getCode())
+        {
             return state;
         }
 
-        if (opcode == ISHL.getCode() || opcode == ISHR.getCode() || opcode == IUSHR.getCode()) {
+        if (opcode == ISHL.getCode() || opcode == ISHR.getCode() || opcode == IUSHR.getCode())
+        {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == LSHL.getCode() || opcode == LSHR.getCode() || opcode == LUSHR.getCode()) {
+        if (opcode == LSHL.getCode() || opcode == LSHR.getCode() || opcode == LUSHR.getCode())
+        {
             return state.pop(3).push(VerificationType.LONG);
         }
 
-        if (opcode == IINC.getCode()) {
+        if (opcode == IINC.getCode())
+        {
             return state;
         }
 
-        if (opcode == I2L.getCode()) {
+        if (opcode == I2L.getCode())
+        {
             return state.pop().push(VerificationType.LONG);
         }
 
-        if (opcode == I2F.getCode()) {
+        if (opcode == I2F.getCode())
+        {
             return state.pop().push(VerificationType.FLOAT);
         }
 
-        if (opcode == I2D.getCode()) {
+        if (opcode == I2D.getCode())
+        {
             return state.pop().push(VerificationType.DOUBLE);
         }
 
-        if (opcode == L2I.getCode()) {
+        if (opcode == L2I.getCode())
+        {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == L2F.getCode()) {
+        if (opcode == L2F.getCode())
+        {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == L2D.getCode()) {
+        if (opcode == L2D.getCode())
+        {
             return state.pop(2).push(VerificationType.DOUBLE);
         }
 
-        if (opcode == F2I.getCode()) {
+        if (opcode == F2I.getCode())
+        {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == F2L.getCode()) {
+        if (opcode == F2L.getCode())
+        {
             return state.pop().push(VerificationType.LONG);
         }
 
-        if (opcode == F2D.getCode()) {
+        if (opcode == F2D.getCode())
+        {
             return state.pop().push(VerificationType.DOUBLE);
         }
 
-        if (opcode == D2I.getCode()) {
+        if (opcode == D2I.getCode())
+        {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == D2L.getCode()) {
+        if (opcode == D2L.getCode())
+        {
             return state.pop(2).push(VerificationType.LONG);
         }
 
-        if (opcode == D2F.getCode()) {
+        if (opcode == D2F.getCode())
+        {
             return state.pop(2).push(VerificationType.FLOAT);
         }
 
-        if (opcode == I2B.getCode() || opcode == I2C.getCode() || opcode == I2S.getCode()) {
+        if (opcode == I2B.getCode() || opcode == I2C.getCode() || opcode == I2S.getCode())
+        {
             return state;
         }
 
-        if (opcode == LCMP.getCode()) {
+        if (opcode == LCMP.getCode())
+        {
             return state.pop(4).push(VerificationType.INTEGER);
         }
 
-        if (opcode == FCMPL.getCode() || opcode == FCMPG.getCode()) {
+        if (opcode == FCMPL.getCode() || opcode == FCMPG.getCode())
+        {
             return state.pop(2).push(VerificationType.INTEGER);
         }
 
-        if (opcode == DCMPL.getCode() || opcode == DCMPG.getCode()) {
+        if (opcode == DCMPL.getCode() || opcode == DCMPG.getCode())
+        {
             return state.pop(4).push(VerificationType.INTEGER);
         }
 
-        if (opcode >= IFEQ.getCode() && opcode <= IFLE.getCode()) {
+        if (opcode >= IFEQ.getCode() && opcode <= IFLE.getCode())
+        {
             return state.pop();
         }
 
-        if (opcode >= IF_ICMPEQ.getCode() && opcode <= IF_ICMPLE.getCode()) {
+        if (opcode >= IF_ICMPEQ.getCode() && opcode <= IF_ICMPLE.getCode())
+        {
             return state.pop(2);
         }
 
-        if (opcode == IF_ACMPEQ.getCode() || opcode == IF_ACMPNE.getCode()) {
+        if (opcode == IF_ACMPEQ.getCode() || opcode == IF_ACMPNE.getCode())
+        {
             return state.pop(2);
         }
 
-        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode()) {
+        if (opcode == GOTO.getCode() || opcode == GOTO_W.getCode())
+        {
             return state;
         }
 
-        if (opcode == JSR.getCode() || opcode == JSR_W.getCode()) {
+        if (opcode == JSR.getCode() || opcode == JSR_W.getCode())
+        {
             return state.push(VerificationType.TOP);
         }
 
-        if (opcode == RET.getCode()) {
+        if (opcode == RET.getCode())
+        {
             return state;
         }
 
-        if (opcode == TABLESWITCH.getCode() || opcode == LOOKUPSWITCH.getCode()) {
+        if (opcode == TABLESWITCH.getCode() || opcode == LOOKUPSWITCH.getCode())
+        {
             return state.pop();
         }
 
-        if (opcode == IRETURN.getCode()) {
+        if (opcode == IRETURN.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == LRETURN.getCode()) {
+        if (opcode == LRETURN.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == FRETURN.getCode()) {
+        if (opcode == FRETURN.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == DRETURN.getCode()) {
+        if (opcode == DRETURN.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == ARETURN.getCode()) {
+        if (opcode == ARETURN.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == RETURN_.getCode()) {
+        if (opcode == RETURN_.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == GETSTATIC.getCode()) {
+        if (opcode == GETSTATIC.getCode())
+        {
             return applyGetField(state, instr, true);
         }
 
-        if (opcode == PUTSTATIC.getCode()) {
+        if (opcode == PUTSTATIC.getCode())
+        {
             return applyPutField(state, instr, true);
         }
 
-        if (opcode == GETFIELD.getCode()) {
+        if (opcode == GETFIELD.getCode())
+        {
             return applyGetField(state, instr, false);
         }
 
-        if (opcode == PUTFIELD.getCode()) {
+        if (opcode == PUTFIELD.getCode())
+        {
             return applyPutField(state, instr, false);
         }
 
-        if (opcode == INVOKEVIRTUAL.getCode()) {
+        if (opcode == INVOKEVIRTUAL.getCode())
+        {
             return applyInvoke(state, instr, false, false);
         }
 
-        if (opcode == INVOKESPECIAL.getCode()) {
+        if (opcode == INVOKESPECIAL.getCode())
+        {
             return applyInvoke(state, instr, false, true);
         }
 
-        if (opcode == INVOKESTATIC.getCode()) {
+        if (opcode == INVOKESTATIC.getCode())
+        {
             return applyInvoke(state, instr, true, false);
         }
 
-        if (opcode == INVOKEINTERFACE.getCode()) {
+        if (opcode == INVOKEINTERFACE.getCode())
+        {
             return applyInvoke(state, instr, false, false);
         }
 
-        if (opcode == INVOKEDYNAMIC.getCode()) {
+        if (opcode == INVOKEDYNAMIC.getCode())
+        {
             return applyInvokeDynamic(state, instr);
         }
 
-        if (opcode == NEW.getCode()) {
+        if (opcode == NEW.getCode())
+        {
             return state.push(VerificationType.uninitialized(instr.getOffset()));
         }
 
-        if (opcode == NEWARRAY.getCode()) {
+        if (opcode == NEWARRAY.getCode())
+        {
             state = state.pop();
-            if (instr instanceof NewArrayInstruction) {
-                NewArrayInstruction newArray = (NewArrayInstruction) instr;
+            if (instr instanceof NewPrimitiveArrayInstruction)
+            {
+                NewPrimitiveArrayInstruction newArray = (NewPrimitiveArrayInstruction) instr;
                 String arrayDesc = newArrayTypeDescriptor(newArray.getArrayType());
                 int classIndex = constPool.findOrAddClass(arrayDesc).getIndex(constPool);
                 return state.push(VerificationType.object(classIndex));
@@ -429,15 +519,20 @@ public class TypeInference {
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == ANEWARRAY.getCode()) {
+        if (opcode == ANEWARRAY.getCode())
+        {
             state = state.pop();
-            if (instr instanceof ANewArrayInstruction) {
+            if (instr instanceof ANewArrayInstruction)
+            {
                 ANewArrayInstruction anewArray = (ANewArrayInstruction) instr;
                 String elementClass = anewArray.resolveClass();
                 String arrayDesc;
-                if (elementClass.startsWith("[")) {
+                if (elementClass.startsWith("["))
+                {
                     arrayDesc = "[" + elementClass;
-                } else {
+                }
+                else
+                {
                     arrayDesc = "[L" + elementClass + ";";
                 }
                 int classIndex = constPool.findOrAddClass(arrayDesc).getIndex(constPool);
@@ -446,17 +541,21 @@ public class TypeInference {
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == ARRAYLENGTH.getCode()) {
+        if (opcode == ARRAYLENGTH.getCode())
+        {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == ATHROW.getCode()) {
+        if (opcode == ATHROW.getCode())
+        {
             return state.clearStack();
         }
 
-        if (opcode == CHECKCAST.getCode()) {
+        if (opcode == CHECKCAST.getCode())
+        {
             state = state.pop();
-            if (instr instanceof CheckCastInstruction) {
+            if (instr instanceof CheckCastInstruction)
+            {
                 CheckCastInstruction checkCast = (CheckCastInstruction) instr;
                 int classIndex = checkCast.getClassIndex();
                 return state.push(VerificationType.object(classIndex));
@@ -464,20 +563,25 @@ public class TypeInference {
             return state.push(VerificationType.object(getObjectClassIndex()));
         }
 
-        if (opcode == INSTANCEOF.getCode()) {
+        if (opcode == INSTANCEOF.getCode())
+        {
             return state.pop().push(VerificationType.INTEGER);
         }
 
-        if (opcode == MONITORENTER.getCode() || opcode == MONITOREXIT.getCode()) {
+        if (opcode == MONITORENTER.getCode() || opcode == MONITOREXIT.getCode())
+        {
             return state.pop();
         }
 
-        if (opcode == WIDE.getCode()) {
+        if (opcode == WIDE.getCode())
+        {
             return state;
         }
 
-        if (opcode == MULTIANEWARRAY.getCode()) {
-            if (instr instanceof MultiANewArrayInstruction) {
+        if (opcode == MULTIANEWARRAY.getCode())
+        {
+            if (instr instanceof MultiANewArrayInstruction)
+            {
                 MultiANewArrayInstruction multiArray = (MultiANewArrayInstruction) instr;
                 int dimensions = multiArray.getDimensions();
                 state = state.pop(dimensions);
@@ -486,7 +590,8 @@ public class TypeInference {
             return state;
         }
 
-        if (opcode == IFNULL.getCode() || opcode == IFNONNULL.getCode()) {
+        if (opcode == IFNULL.getCode() || opcode == IFNONNULL.getCode())
+        {
             return state.pop();
         }
 
@@ -495,39 +600,57 @@ public class TypeInference {
 
     /**
      * Handles LDC, LDC_W, LDC2_W instructions.
-     *
      * @param state the current type state
      * @param instr the LDC instruction
      * @return updated state with constant pushed
      */
-    private TypeState applyLdc(TypeState state, Instruction instr) {
+    private TypeState applyLdc(TypeState state, Instruction instr)
+    {
         int cpIndex;
-        if (instr instanceof LdcInstruction) {
+        if (instr instanceof LdcInstruction)
+        {
             LdcInstruction ldc = (LdcInstruction) instr;
             cpIndex = ldc.getCpIndex();
-        } else if (instr instanceof LdcWInstruction) {
+        }
+        else if (instr instanceof LdcWInstruction)
+        {
             LdcWInstruction ldcW = (LdcWInstruction) instr;
             cpIndex = ldcW.getCpIndex();
-        } else if (instr instanceof Ldc2WInstruction) {
+        }
+        else if (instr instanceof Ldc2WInstruction)
+        {
             Ldc2WInstruction ldc2W = (Ldc2WInstruction) instr;
             cpIndex = ldc2W.getCpIndex();
-        } else {
+        }
+        else
+        {
             return state.push(VerificationType.INTEGER);
         }
 
         Item<?> item = constPool.getItem(cpIndex);
-        if (item instanceof IntegerItem) {
+        if (item instanceof IntegerItem)
+        {
             return state.push(VerificationType.INTEGER);
-        } else if (item instanceof FloatItem) {
+        }
+        else if (item instanceof FloatItem)
+        {
             return state.push(VerificationType.FLOAT);
-        } else if (item instanceof LongItem) {
+        }
+        else if (item instanceof LongItem)
+        {
             return state.push(VerificationType.LONG);
-        } else if (item instanceof DoubleItem) {
+        }
+        else if (item instanceof DoubleItem)
+        {
             return state.push(VerificationType.DOUBLE);
-        } else if (item instanceof StringRefItem) {
+        }
+        else if (item instanceof StringRefItem)
+        {
             int stringClassIndex = constPool.findOrAddClass("java/lang/String").getIndex(constPool);
             return state.push(VerificationType.object(stringClassIndex));
-        } else if (item instanceof ClassRefItem) {
+        }
+        else if (item instanceof ClassRefItem)
+        {
             int classClassIndex = constPool.findOrAddClass("java/lang/Class").getIndex(constPool);
             return state.push(VerificationType.object(classClassIndex));
         }
@@ -537,25 +660,29 @@ public class TypeInference {
 
     /**
      * Handles GETSTATIC and GETFIELD instructions.
-     *
      * @param state the current type state
      * @param instr the field instruction
      * @param isStatic true if GETSTATIC, false if GETFIELD
      * @return updated state with field value pushed
      */
-    private TypeState applyGetField(TypeState state, Instruction instr, boolean isStatic) {
-        if (!isStatic) {
+    private TypeState applyGetField(TypeState state, Instruction instr, boolean isStatic)
+    {
+        if (!isStatic)
+        {
             state = state.pop();
         }
 
-        if (instr instanceof com.tonic.analysis.instruction.GetFieldInstruction) {
+        if (instr instanceof GetFieldInstruction)
+        {
             GetFieldInstruction getField = (GetFieldInstruction) instr;
             int fieldIndex = getField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
-            if (item instanceof FieldRefItem) {
+            if (item instanceof FieldRefItem)
+            {
                 FieldRefItem fieldRefItem = (FieldRefItem) item;
                 String desc = fieldRefItem.getDescriptor();
-                if (desc != null) {
+                if (desc != null)
+                {
                     VerificationType type = descriptorToType(desc);
                     return state.push(type);
                 }
@@ -565,28 +692,39 @@ public class TypeInference {
         return state.push(VerificationType.INTEGER);
     }
 
-    private TypeState applyPutField(TypeState state, Instruction instr, boolean isStatic) {
-        if (instr instanceof PutFieldInstruction) {
+    private TypeState applyPutField(TypeState state, Instruction instr, boolean isStatic)
+    {
+        if (instr instanceof PutFieldInstruction)
+        {
             PutFieldInstruction putField = (PutFieldInstruction) instr;
             int fieldIndex = putField.getFieldIndex();
             Item<?> item = constPool.getItem(fieldIndex);
-            if (item instanceof FieldRefItem) {
+            if (item instanceof FieldRefItem)
+            {
                 FieldRefItem fieldRefItem = (FieldRefItem) item;
                 String desc = fieldRefItem.getDescriptor();
-                if (desc != null) {
+                if (desc != null)
+                {
                     int slots = getDescriptorSlots(desc);
                     state = state.pop(slots);
-                } else {
+                }
+                else
+                {
                     state = state.pop();
                 }
-            } else {
+            }
+            else
+            {
                 state = state.pop();
             }
-        } else {
+        }
+        else
+        {
             state = state.pop();
         }
 
-        if (!isStatic) {
+        if (!isStatic)
+        {
             state = state.pop();
         }
 
@@ -595,58 +733,71 @@ public class TypeInference {
 
     /**
      * Handles INVOKEVIRTUAL, INVOKESPECIAL, INVOKESTATIC, INVOKEINTERFACE.
-     *
      * @param state the current type state
      * @param instr the invoke instruction
      * @param isStatic true if INVOKESTATIC
      * @param isSpecial true if INVOKESPECIAL
      * @return updated state with arguments popped and return value pushed
      */
-    private TypeState applyInvoke(TypeState state, Instruction instr, boolean isStatic, boolean isSpecial) {
+    private TypeState applyInvoke(TypeState state, Instruction instr, boolean isStatic, boolean isSpecial)
+    {
         String descriptor = null;
         String methodName = null;
 
-        if (instr instanceof InvokeVirtualInstruction) {
+        if (instr instanceof InvokeVirtualInstruction)
+        {
             InvokeVirtualInstruction invoke = (InvokeVirtualInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem) {
+            if (item instanceof MethodRefItem)
+            {
                 MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeSpecialInstruction) {
+        }
+        else if (instr instanceof InvokeSpecialInstruction)
+        {
             InvokeSpecialInstruction invoke = (InvokeSpecialInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem) {
+            if (item instanceof MethodRefItem)
+            {
                 MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeStaticInstruction) {
+        }
+        else if (instr instanceof InvokeStaticInstruction)
+        {
             InvokeStaticInstruction invoke = (InvokeStaticInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem) {
+            if (item instanceof MethodRefItem)
+            {
                 MethodRefItem methodRefItem = (MethodRefItem) item;
                 descriptor = methodRefItem.getDescriptor();
                 methodName = methodRefItem.getName();
             }
-        } else if (instr instanceof InvokeInterfaceInstruction) {
+        }
+        else if (instr instanceof InvokeInterfaceInstruction)
+        {
             InvokeInterfaceInstruction invoke = (InvokeInterfaceInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof InterfaceRefItem) {
+            if (item instanceof InterfaceRefItem)
+            {
                 InterfaceRefItem interfaceRefItem = (InterfaceRefItem) item;
                 int nameAndTypeIndex = interfaceRefItem.getValue().getNameAndTypeIndex();
                 Item<?> natItem = constPool.getItem(nameAndTypeIndex);
-                if (natItem instanceof NameAndTypeRefItem) {
+                if (natItem instanceof NameAndTypeRefItem)
+                {
                     NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) natItem;
                     descriptor = nameAndType.getDescriptor();
                     int nameIndex = nameAndType.getValue().getNameIndex();
                     Item<?> nameItem = constPool.getItem(nameIndex);
-                    if (nameItem instanceof Utf8Item) {
+                    if (nameItem instanceof Utf8Item)
+                    {
                         Utf8Item utf8 = (Utf8Item) nameItem;
                         methodName = utf8.getValue();
                     }
@@ -654,42 +805,52 @@ public class TypeInference {
             }
         }
 
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
             return state;
         }
 
         int argSlots = countArgumentSlots(descriptor);
         state = state.pop(argSlots);
 
-        if (!isStatic) {
-            if (isSpecial && "<init>".equals(methodName)) {
+        if (!isStatic)
+        {
+            if (isSpecial && "<init>".equals(methodName))
+            {
                 VerificationType objectRef = state.peek();
                 state = state.pop();
                 if (objectRef instanceof VerificationType.UninitializedType
-                        || objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
+                        || objectRef.equals(VerificationType.UNINITIALIZED_THIS))
+                {
                     // JVMS 4.10.1.9: invokespecial <init> on uninitializedThis initializes `this` to the
-                    // class being verified, not the methodref owner — a super() call names the superclass
+                    // class being verified, not the methodref owner - a super() call names the superclass
                     // as owner, yet `this` is an instance of the current class. Only an uninitialized(Offset)
                     // from `new` initializes to the created class, which is the methodref owner.
                     int classIndex;
-                    if (objectRef.equals(VerificationType.UNINITIALIZED_THIS)) {
-                        com.tonic.parser.ClassFile owner = constPool.getClassFile();
+                    if (objectRef.equals(VerificationType.UNINITIALIZED_THIS))
+                    {
+                        ClassFile owner = constPool.getClassFile();
                         classIndex = owner != null && owner.getThisClass() > 0
                                 ? owner.getThisClass()
                                 : getInitClassIndex(instr);
-                    } else {
+                    }
+                    else
+                    {
                         classIndex = getInitClassIndex(instr);
                     }
                     VerificationType initializedType = VerificationType.object(classIndex);
                     state = state.replaceType(objectRef, initializedType);
                 }
-            } else {
+            }
+            else
+            {
                 state = state.pop();
             }
         }
 
         VerificationType returnType = TypeState.getReturnType(descriptor, constPool);
-        if (returnType != null) {
+        if (returnType != null)
+        {
             state = state.push(returnType);
         }
 
@@ -698,20 +859,23 @@ public class TypeInference {
 
     /**
      * Handles INVOKEDYNAMIC instruction.
-     *
      * @param state the current type state
      * @param instr the invokedynamic instruction
      * @return updated state with arguments popped and return value pushed
      */
-    private TypeState applyInvokeDynamic(TypeState state, Instruction instr) {
-        if (instr instanceof InvokeDynamicInstruction) {
+    private TypeState applyInvokeDynamic(TypeState state, Instruction instr)
+    {
+        if (instr instanceof InvokeDynamicInstruction)
+        {
             InvokeDynamicInstruction invoke = (InvokeDynamicInstruction) instr;
             int natIndex = invoke.getNameAndTypeIndex();
-            if (natIndex <= 0) {
+            if (natIndex <= 0)
+            {
                 return state;
             }
             Item<?> natItem = constPool.getItem(natIndex);
-            if (natItem instanceof NameAndTypeRefItem) {
+            if (natItem instanceof NameAndTypeRefItem)
+            {
                 NameAndTypeRefItem nat = (NameAndTypeRefItem) natItem;
                 String descriptor = nat.getDescriptor();
 
@@ -719,7 +883,8 @@ public class TypeInference {
                 state = state.pop(argSlots);
 
                 VerificationType returnType = TypeState.getReturnType(descriptor, constPool);
-                if (returnType != null) {
+                if (returnType != null)
+                {
                     state = state.push(returnType);
                 }
             }
@@ -729,16 +894,18 @@ public class TypeInference {
 
     /**
      * Counts the number of stack slots used by method arguments.
-     *
      * @param descriptor the method descriptor
      * @return total stack slots for all arguments
      */
-    private int countArgumentSlots(String descriptor) {
+    private int countArgumentSlots(String descriptor)
+    {
         int slots = 0;
         int i = 1;
-        while (i < descriptor.length() && descriptor.charAt(i) != ')') {
+        while (i < descriptor.length() && descriptor.charAt(i) != ')')
+        {
             char c = descriptor.charAt(i);
-            switch (c) {
+            switch (c)
+            {
                 case 'B':
                 case 'C':
                 case 'F':
@@ -760,9 +927,12 @@ public class TypeInference {
                 case '[':
                     slots++;
                     while (i < descriptor.length() && descriptor.charAt(i) == '[') i++;
-                    if (i < descriptor.length() && descriptor.charAt(i) == 'L') {
+                    if (i < descriptor.length() && descriptor.charAt(i) == 'L')
+                    {
                         i = descriptor.indexOf(';', i) + 1;
-                    } else {
+                    }
+                    else
+                    {
                         i++;
                     }
                     break;
@@ -776,14 +946,15 @@ public class TypeInference {
 
     /**
      * Converts a field descriptor to a VerificationType.
-     *
      * @param desc the field descriptor
      * @return corresponding VerificationType
      */
-    private VerificationType descriptorToType(String desc) {
+    private VerificationType descriptorToType(String desc)
+    {
         if (desc.isEmpty()) return VerificationType.TOP;
         char c = desc.charAt(0);
-        switch (c) {
+        switch (c)
+        {
             case 'B':
             case 'C':
             case 'I':
@@ -810,11 +981,11 @@ public class TypeInference {
 
     /**
      * Gets the number of slots for a descriptor.
-     *
      * @param desc the field descriptor
      * @return 2 for long/double, 1 otherwise
      */
-    private int getDescriptorSlots(String desc) {
+    private int getDescriptorSlots(String desc)
+    {
         if (desc.isEmpty()) return 0;
         char c = desc.charAt(0);
         return (c == 'D' || c == 'J') ? 2 : 1;
@@ -822,40 +993,46 @@ public class TypeInference {
 
     /**
      * Gets the local variable index from an instruction.
-     *
      * @param instr the instruction
      * @return local variable index
      */
-    private int getLocalIndex(Instruction instr) {
+    private int getLocalIndex(Instruction instr)
+    {
         return instr instanceof LocalVarInstruction ? ((LocalVarInstruction) instr).getVarIndex() : 0;
     }
 
     /**
      * Gets or creates a class index for java/lang/Object.
-     *
      * @return constant pool index for Object class
      */
-    private int getInitClassIndex(Instruction instr) {
-        if (instr instanceof InvokeSpecialInstruction) {
+    private int getInitClassIndex(Instruction instr)
+    {
+        if (instr instanceof InvokeSpecialInstruction)
+        {
             InvokeSpecialInstruction invoke = (InvokeSpecialInstruction) instr;
             int methodIndex = invoke.getMethodIndex();
             Item<?> item = constPool.getItem(methodIndex);
-            if (item instanceof MethodRefItem) {
+            if (item instanceof MethodRefItem)
+            {
                 return ((MethodRefItem) item).getValue().getClassIndex();
             }
         }
         return getObjectClassIndex();
     }
 
-    private int getObjectClassIndex() {
+    private int getObjectClassIndex()
+    {
         return constPool.findOrAddClass("java/lang/Object").getIndex(constPool);
     }
 
-    private String newArrayTypeDescriptor(NewArrayInstruction.ArrayType arrayType) {
-        if (arrayType == null) {
+    private String newArrayTypeDescriptor(NewPrimitiveArrayInstruction.ArrayType arrayType)
+    {
+        if (arrayType == null)
+        {
             return "[Ljava/lang/Object;";
         }
-        switch (arrayType) {
+        switch (arrayType)
+        {
             case T_BOOLEAN: return "[Z";
             case T_CHAR:    return "[C";
             case T_FLOAT:   return "[F";

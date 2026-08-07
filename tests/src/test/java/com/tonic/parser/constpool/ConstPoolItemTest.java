@@ -14,15 +14,17 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for constant pool item types and ConstPool operations.
+ * * Tests for constant pool item types and ConstPool operations.
  */
-class ConstPoolItemTest {
+class ConstPoolItemTest
+{
 
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         // Create a simple class to get a valid ClassFile and ConstPool
         classFile = BytecodeBuilder.forClass("com/test/ConstPoolTest")
             .publicStaticMethod("test", "()V")
@@ -31,13 +33,15 @@ class ConstPoolItemTest {
         constPool = classFile.getConstPool();
     }
 
-    // ========== Item Type Constants Tests ==========
+    // Item Type Constants Tests
 
     @Nested
-    class ItemTypeConstantsTests {
+    class ItemTypeConstantsTests
+    {
 
         @Test
-        void itemTypeConstantsHaveCorrectValues() {
+        void itemTypeConstantsHaveCorrectValues()
+        {
             assertEquals(0x1, Item.ITEM_UTF_8);
             assertEquals(0x3, Item.ITEM_INTEGER);
             assertEquals(0x4, Item.ITEM_FLOAT);
@@ -58,26 +62,30 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== IntegerItem Tests ==========
+    // IntegerItem Tests
 
     @Nested
-    class IntegerItemTests {
+    class IntegerItemTests
+    {
 
         @Test
-        void integerItemGetType() {
+        void integerItemGetType()
+        {
             IntegerItem item = new IntegerItem();
             assertEquals(Item.ITEM_INTEGER, item.getType());
         }
 
         @Test
-        void integerItemSetAndGetValue() {
+        void integerItemSetAndGetValue()
+        {
             IntegerItem item = new IntegerItem();
             item.setValue(42);
             assertEquals(42, item.getValue());
         }
 
         @Test
-        void integerItemWriteAndVerify() throws IOException {
+        void integerItemWriteAndVerify() throws IOException
+        {
             IntegerItem item = new IntegerItem();
             item.setValue(0x12345678);
 
@@ -95,47 +103,54 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void integerItemNegativeValue() {
+        void integerItemNegativeValue()
+        {
             IntegerItem item = new IntegerItem();
             item.setValue(-1);
             assertEquals(-1, item.getValue());
         }
 
         @Test
-        void integerItemMaxValue() {
+        void integerItemMaxValue()
+        {
             IntegerItem item = new IntegerItem();
             item.setValue(Integer.MAX_VALUE);
             assertEquals(Integer.MAX_VALUE, item.getValue());
         }
 
         @Test
-        void integerItemMinValue() {
+        void integerItemMinValue()
+        {
             IntegerItem item = new IntegerItem();
             item.setValue(Integer.MIN_VALUE);
             assertEquals(Integer.MIN_VALUE, item.getValue());
         }
     }
 
-    // ========== LongItem Tests ==========
+    // LongItem Tests
 
     @Nested
-    class LongItemTests {
+    class LongItemTests
+    {
 
         @Test
-        void longItemGetType() {
+        void longItemGetType()
+        {
             LongItem item = new LongItem();
             assertEquals(Item.ITEM_LONG, item.getType());
         }
 
         @Test
-        void longItemSetAndGetValue() {
+        void longItemSetAndGetValue()
+        {
             LongItem item = new LongItem();
             item.setValue(123456789012345L);
             assertEquals(123456789012345L, item.getValue());
         }
 
         @Test
-        void longItemWriteAndVerify() throws IOException {
+        void longItemWriteAndVerify() throws IOException
+        {
             LongItem item = new LongItem();
             item.setValue(0x123456789ABCDEF0L);
 
@@ -148,26 +163,30 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== FloatItem Tests ==========
+    // FloatItem Tests
 
     @Nested
-    class FloatItemTests {
+    class FloatItemTests
+    {
 
         @Test
-        void floatItemGetType() {
+        void floatItemGetType()
+        {
             FloatItem item = new FloatItem();
             assertEquals(Item.ITEM_FLOAT, item.getType());
         }
 
         @Test
-        void floatItemSetAndGetValue() {
+        void floatItemSetAndGetValue()
+        {
             FloatItem item = new FloatItem();
             item.setValue(3.14f);
             assertEquals(3.14f, item.getValue(), 0.001f);
         }
 
         @Test
-        void floatItemSpecialValues() {
+        void floatItemSpecialValues()
+        {
             FloatItem item = new FloatItem();
 
             item.setValue(Float.POSITIVE_INFINITY);
@@ -181,78 +200,90 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== DoubleItem Tests ==========
+    // DoubleItem Tests
 
     @Nested
-    class DoubleItemTests {
+    class DoubleItemTests
+    {
 
         @Test
-        void doubleItemGetType() {
+        void doubleItemGetType()
+        {
             DoubleItem item = new DoubleItem();
             assertEquals(Item.ITEM_DOUBLE, item.getType());
         }
 
         @Test
-        void doubleItemSetAndGetValue() {
+        void doubleItemSetAndGetValue()
+        {
             DoubleItem item = new DoubleItem();
             item.setValue(3.14159265358979);
             assertEquals(3.14159265358979, item.getValue(), 0.0000001);
         }
     }
 
-    // ========== Utf8Item Tests ==========
+    // Utf8Item Tests
 
     @Nested
-    class Utf8ItemTests {
+    class Utf8ItemTests
+    {
 
         @Test
-        void utf8ItemGetType() {
+        void utf8ItemGetType()
+        {
             Utf8Item item = new Utf8Item();
             assertEquals(Item.ITEM_UTF_8, item.getType());
         }
 
         @Test
-        void utf8ItemSetAndGetValue() {
+        void utf8ItemSetAndGetValue()
+        {
             Utf8Item item = new Utf8Item();
             item.setValue("Hello, World!");
             assertEquals("Hello, World!", item.getValue());
         }
 
         @Test
-        void utf8ItemEmptyString() {
+        void utf8ItemEmptyString()
+        {
             Utf8Item item = new Utf8Item();
             item.setValue("");
             assertEquals("", item.getValue());
         }
 
         @Test
-        void utf8ItemUnicodeCharacters() {
+        void utf8ItemUnicodeCharacters()
+        {
             Utf8Item item = new Utf8Item();
             item.setValue("日本語テスト");
             assertEquals("日本語テスト", item.getValue());
         }
     }
 
-    // ========== ClassRefItem Tests ==========
+    // ClassRefItem Tests
 
     @Nested
-    class ClassRefItemTests {
+    class ClassRefItemTests
+    {
 
         @Test
-        void classRefItemGetType() {
+        void classRefItemGetType()
+        {
             ClassRefItem item = new ClassRefItem();
             assertEquals(Item.ITEM_CLASS_REF, item.getType());
         }
 
         @Test
-        void classRefItemSetAndGetValue() {
+        void classRefItemSetAndGetValue()
+        {
             ClassRefItem item = new ClassRefItem();
             item.setValue(5);
             assertEquals(5, item.getValue());
         }
 
         @Test
-        void classRefItemNameIndex() {
+        void classRefItemNameIndex()
+        {
             ClassRefItem item = new ClassRefItem();
             item.setNameIndex(10);
             assertEquals(10, item.getNameIndex());
@@ -260,12 +291,15 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void classRefItemGetClassNameWithClassFile() {
+        void classRefItemGetClassNameWithClassFile()
+        {
             // Find a ClassRefItem in our test class's constant pool
             ClassRefItem classRef = null;
-            for (int i = 1; i < constPool.getItems().size(); i++) {
+            for (int i = 1; i < constPool.getItems().size(); i++)
+            {
                 Item<?> item = constPool.getItems().get(i);
-                if (item instanceof ClassRefItem) {
+                if (item instanceof ClassRefItem)
+                {
                     classRef = (ClassRefItem) item;
                     break;
                 }
@@ -277,26 +311,30 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== StringRefItem Tests ==========
+    // StringRefItem Tests
 
     @Nested
-    class StringRefItemTests {
+    class StringRefItemTests
+    {
 
         @Test
-        void stringRefItemGetType() {
+        void stringRefItemGetType()
+        {
             StringRefItem item = new StringRefItem();
             assertEquals(Item.ITEM_STRING_REF, item.getType());
         }
 
         @Test
-        void stringRefItemSetAndGetValue() {
+        void stringRefItemSetAndGetValue()
+        {
             StringRefItem item = new StringRefItem();
             item.setValue(7);
             assertEquals(7, item.getValue());
         }
 
         @Test
-        void stringRefItemWriteAndVerify() throws IOException {
+        void stringRefItemWriteAndVerify() throws IOException
+        {
             StringRefItem item = new StringRefItem();
             item.setValue(0x0102);
 
@@ -311,43 +349,49 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== ConstPool Operations Tests ==========
+    // ConstPool Operations Tests
 
     @Nested
-    class ConstPoolOperationsTests {
+    class ConstPoolOperationsTests
+    {
 
         @Test
-        void getItemValidIndex() {
+        void getItemValidIndex()
+        {
             Item<?> item = constPool.getItem(1);
             assertNotNull(item);
         }
 
         @Test
-        void getItemInvalidIndexZero() {
+        void getItemInvalidIndexZero()
+        {
             assertThrows(IllegalArgumentException.class, () -> constPool.getItem(0));
         }
 
         @Test
-        void getItemInvalidIndexNegative() {
+        void getItemInvalidIndexNegative()
+        {
             assertThrows(IllegalArgumentException.class, () -> constPool.getItem(-1));
         }
 
         @Test
-        void getItemInvalidIndexTooLarge() {
+        void getItemInvalidIndexTooLarge()
+        {
             int size = constPool.getItems().size();
             assertThrows(IllegalArgumentException.class, () -> constPool.getItem(size + 10));
         }
 
         @Test
-        void constPoolToStringNotEmpty() {
+        void constPoolToStringNotEmpty()
+        {
             String str = constPool.toString();
             assertNotNull(str);
             assertTrue(str.contains("Constant Pool"));
         }
 
         @Test
-        void findOrAddUtf8ExistingValue() {
-            // First add a UTF-8 item
+        void findOrAddUtf8ExistingValue()
+        {
             Utf8Item added = constPool.findOrAddUtf8("TestString123");
             assertNotNull(added);
             assertEquals("TestString123", added.getValue());
@@ -358,7 +402,8 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void findOrAddUtf8NewValue() {
+        void findOrAddUtf8NewValue()
+        {
             int sizeBefore = constPool.getItems().size();
             Utf8Item item = constPool.findOrAddUtf8("BrandNewString" + System.currentTimeMillis());
             assertNotNull(item);
@@ -366,7 +411,8 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void findOrAddClassRefNewValue() {
+        void findOrAddClassRefNewValue()
+        {
             // First add a Utf8 for the class name
             Utf8Item nameItem = constPool.findOrAddUtf8("com/example/NewTestClass");
             int nameIndex = nameItem.getIndex(constPool);
@@ -378,7 +424,8 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void addItemLongTakesDoubleSlot() {
+        void addItemLongTakesDoubleSlot()
+        {
             int sizeBefore = constPool.getItems().size();
             LongItem longItem = new LongItem();
             longItem.setValue(100L);
@@ -388,7 +435,8 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void addItemDoubleTakesDoubleSlot() {
+        void addItemDoubleTakesDoubleSlot()
+        {
             int sizeBefore = constPool.getItems().size();
             DoubleItem doubleItem = new DoubleItem();
             doubleItem.setValue(3.14);
@@ -398,13 +446,15 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== Item.getIndex Tests ==========
+    // Item.getIndex Tests
 
     @Nested
-    class ItemGetIndexTests {
+    class ItemGetIndexTests
+    {
 
         @Test
-        void getIndexReturnsCorrectIndex() {
+        void getIndexReturnsCorrectIndex()
+        {
             // The first non-null item should be at index 1
             Item<?> firstItem = constPool.getItem(1);
             assertNotNull(firstItem);
@@ -413,7 +463,8 @@ class ConstPoolItemTest {
         }
 
         @Test
-        void getIndexForNewlyAddedItem() {
+        void getIndexForNewlyAddedItem()
+        {
             Utf8Item newItem = new Utf8Item();
             newItem.setValue("GetIndexTest");
             int addedIndex = constPool.addItem(newItem);
@@ -423,70 +474,84 @@ class ConstPoolItemTest {
         }
     }
 
-    // ========== MethodRefItem Tests ==========
+    // MethodRefItem Tests
 
     @Nested
-    class MethodRefItemTests {
+    class MethodRefItemTests
+    {
 
         @Test
-        void methodRefItemGetType() {
+        void methodRefItemGetType()
+        {
             MethodRefItem item = new MethodRefItem();
             assertEquals(Item.ITEM_METHOD_REF, item.getType());
         }
 
         @Test
-        void findMethodRefInConstPool() {
+        void findMethodRefInConstPool()
+        {
             // Our test class should have method refs (at least for Object.<init>)
             MethodRefItem methodRef = null;
-            for (int i = 1; i < constPool.getItems().size(); i++) {
+            for (int i = 1; i < constPool.getItems().size(); i++)
+            {
                 Item<?> item = constPool.getItems().get(i);
-                if (item instanceof MethodRefItem) {
+                if (item instanceof MethodRefItem)
+                {
                     methodRef = (MethodRefItem) item;
                     break;
                 }
             }
             // Might not have any method refs in simple class
-            if (methodRef != null) {
+            if (methodRef != null)
+            {
                 assertNotNull(methodRef.getValue());
             }
         }
     }
 
-    // ========== FieldRefItem Tests ==========
+    // FieldRefItem Tests
 
     @Nested
-    class FieldRefItemTests {
+    class FieldRefItemTests
+    {
 
         @Test
-        void fieldRefItemGetType() {
+        void fieldRefItemGetType()
+        {
             FieldRefItem item = new FieldRefItem();
             assertEquals(Item.ITEM_FIELD_REF, item.getType());
         }
     }
 
-    // ========== NameAndTypeRefItem Tests ==========
+    // NameAndTypeRefItem Tests
 
     @Nested
-    class NameAndTypeRefItemTests {
+    class NameAndTypeRefItemTests
+    {
 
         @Test
-        void nameAndTypeRefItemGetType() {
+        void nameAndTypeRefItemGetType()
+        {
             NameAndTypeRefItem item = new NameAndTypeRefItem();
             assertEquals(Item.ITEM_NAME_TYPE_REF, item.getType());
         }
 
         @Test
-        void findNameAndTypeInConstPool() {
+        void findNameAndTypeInConstPool()
+        {
             // Our test class should have NameAndType refs
             NameAndTypeRefItem natRef = null;
-            for (int i = 1; i < constPool.getItems().size(); i++) {
+            for (int i = 1; i < constPool.getItems().size(); i++)
+            {
                 Item<?> item = constPool.getItems().get(i);
-                if (item instanceof NameAndTypeRefItem) {
+                if (item instanceof NameAndTypeRefItem)
+                {
                     natRef = (NameAndTypeRefItem) item;
                     break;
                 }
             }
-            if (natRef != null) {
+            if (natRef != null)
+            {
                 assertNotNull(natRef.getValue());
             }
         }

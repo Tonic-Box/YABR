@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.CatchClause;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
@@ -18,32 +17,35 @@ import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TryRegionTest {
+class TryRegionTest
+{
 
     private static final AtomicInteger classCounter = new AtomicInteger(0);
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
-    private String uniqueClassName() {
+    private String uniqueClassName()
+    {
         return "com/test/TryRegionTest" + classCounter.incrementAndGet();
     }
 
     @Nested
-    class TryRegionEqualityTests {
+    class TryRegionEqualityTests
+    {
 
         @Test
-        void handlersWithSameStartAndEndAreGroupedTogether() throws IOException {
+        void handlersWithSameStartAndEndAreGroupedTogether() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -82,12 +84,12 @@ class TryRegionTest {
             assertNotNull(body);
             TryCatchStmt tryCatch = findTryCatch(body);
             assertNotNull(tryCatch, "Expected a try-catch statement");
-            assertTrue(tryCatch.getCatches().size() >= 1,
-                "Expected at least one catch clause for same-region handlers");
+            assertFalse(tryCatch.getCatches().isEmpty(), "Expected at least one catch clause for same-region handlers");
         }
 
         @Test
-        void handlersWithSameStartDifferentEndAreSeparate() throws IOException {
+        void handlersWithSameStartDifferentEndAreSeparate() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -126,7 +128,8 @@ class TryRegionTest {
         }
 
         @Test
-        void differentStartBlocksAreDifferentRegions() throws IOException {
+        void differentStartBlocksAreDifferentRegions() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -168,10 +171,12 @@ class TryRegionTest {
     }
 
     @Nested
-    class TryRegionGroupingTests {
+    class TryRegionGroupingTests
+    {
 
         @Test
-        void multipleCatchTypesForSameRegionProducesMultipleClauses() throws IOException {
+        void multipleCatchTypesForSameRegionProducesMultipleClauses() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -214,7 +219,8 @@ class TryRegionTest {
         }
 
         @Test
-        void nestedTryRegionsAreHandledSeparately() throws IOException {
+        void nestedTryRegionsAreHandledSeparately() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -258,7 +264,8 @@ class TryRegionTest {
         }
 
         @Test
-        void overlappingRegionsWithDifferentEndsAreSeparate() throws IOException {
+        void overlappingRegionsWithDifferentEndsAreSeparate() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -297,10 +304,12 @@ class TryRegionTest {
     }
 
     @Nested
-    class TryRegionEdgeCases {
+    class TryRegionEdgeCases
+    {
 
         @Test
-        void singleHandlerCreatesSimpleTryCatch() throws IOException {
+        void singleHandlerCreatesSimpleTryCatch() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -331,7 +340,8 @@ class TryRegionTest {
         }
 
         @Test
-        void catchAllHandlerIsRecovered() throws IOException {
+        void catchAllHandlerIsRecovered() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -362,7 +372,8 @@ class TryRegionTest {
         }
 
         @Test
-        void multipleHandlersPointingToSameCatchBlock() throws IOException {
+        void multipleHandlersPointingToSameCatchBlock() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -394,7 +405,8 @@ class TryRegionTest {
         }
 
         @Test
-        void tryBlockWithMultipleStatements() throws IOException {
+        void tryBlockWithMultipleStatements() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -427,7 +439,8 @@ class TryRegionTest {
         }
 
         @Test
-        void consecutiveTryRegions() throws IOException {
+        void consecutiveTryRegions() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -474,10 +487,12 @@ class TryRegionTest {
     }
 
     @Nested
-    class TryRegionHashCodeTests {
+    class TryRegionHashCodeTests
+    {
 
         @Test
-        void sameRegionHandlersGroupedByHashCode() throws IOException {
+        void sameRegionHandlersGroupedByHashCode() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -527,10 +542,12 @@ class TryRegionTest {
     }
 
     @Nested
-    class TryRegionToStringTests {
+    class TryRegionToStringTests
+    {
 
         @Test
-        void recoveryProducesValidOutput() throws IOException {
+        void recoveryProducesValidOutput() throws IOException
+        {
             BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass(uniqueClassName())
                 .publicStaticMethod("test", "()I");
 
@@ -562,12 +579,16 @@ class TryRegionTest {
         }
     }
 
-    private TryCatchStmt findTryCatch(BlockStmt body) {
-        for (Statement stmt : body.getStatements()) {
-            if (stmt instanceof TryCatchStmt) {
+    private TryCatchStmt findTryCatch(BlockStmt body)
+    {
+        for (Statement stmt : body.getStatements())
+        {
+            if (stmt instanceof TryCatchStmt)
+            {
                 return (TryCatchStmt) stmt;
             }
-            if (stmt instanceof BlockStmt) {
+            if (stmt instanceof BlockStmt)
+            {
                 TryCatchStmt nested = findTryCatch((BlockStmt) stmt);
                 if (nested != null) return nested;
             }
@@ -575,7 +596,8 @@ class TryRegionTest {
         return null;
     }
 
-    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method) {
+    private StatementRecoverer createRecoverer(IRMethod ir, MethodEntry method)
+    {
         DominatorTree domTree = new DominatorTree(ir);
         domTree.compute();
 
@@ -595,7 +617,8 @@ class TryRegionTest {
         return new StatementRecoverer(cfContext, analyzer, exprRecoverer);
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
         return cf.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()

@@ -1,107 +1,126 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.ClassFactory;
+import com.tonic.parser.constpool.DoubleItem;
+import com.tonic.parser.constpool.Item;
+import com.tonic.parser.constpool.LongItem;
+import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.testutil.TestClassLoader;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Nested;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassFileTest {
+class ClassFileTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = ClassFactory.createClass(pool, "com/test/TestClass", access);
     }
 
     @Test
-    void classHasCorrectName() {
+    void classHasCorrectName()
+    {
         assertEquals("com/test/TestClass", classFile.getClassName());
     }
 
     @Test
-    void classHasObjectSuperclass() {
+    void classHasObjectSuperclass()
+    {
         assertEquals("java/lang/Object", classFile.getSuperClassName());
     }
 
     @Test
-    void classHasCorrectVersion() {
+    void classHasCorrectVersion()
+    {
         assertEquals(55, classFile.getMajorVersion());
         assertEquals(0, classFile.getMinorVersion());
     }
 
     @Test
-    void classHasConstPool() {
+    void classHasConstPool()
+    {
         assertNotNull(classFile.getConstPool());
     }
 
     @Test
-    void setClassName() {
+    void setClassName()
+    {
         classFile.setClassName("com/test/RenamedClass");
         assertEquals("com/test/RenamedClass", classFile.getClassName());
     }
 
     @Test
-    void setClassNameWithDotsSeparatorsConverts() {
+    void setClassNameWithDotsSeparatorsConverts()
+    {
         classFile.setClassName("com.test.DottedClass");
         assertEquals("com/test/DottedClass", classFile.getClassName());
     }
 
     @Test
-    void setSuperClassName() {
+    void setSuperClassName()
+    {
         classFile.setSuperClassName("java/util/ArrayList");
         assertEquals("java/util/ArrayList", classFile.getSuperClassName());
     }
 
     @Test
-    void newClassHasNoInterfaces() {
+    void newClassHasNoInterfaces()
+    {
         assertTrue(classFile.getInterfaces().isEmpty());
     }
 
     @Test
-    void addInterfaceIncrementsInterfaceCount() {
+    void addInterfaceIncrementsInterfaceCount()
+    {
         classFile.addInterface("java/io/Serializable");
         assertEquals(1, classFile.getInterfaces().size());
     }
 
     @Test
-    void addMultipleInterfaces() {
+    void addMultipleInterfaces()
+    {
         classFile.addInterface("java/io/Serializable");
         classFile.addInterface("java/lang/Cloneable");
         assertEquals(2, classFile.getInterfaces().size());
     }
 
     @Test
-    void addInterfaceWithDotSeparatorsConverts() {
+    void addInterfaceWithDotSeparatorsConverts()
+    {
         classFile.addInterface("java.io.Serializable");
         assertEquals(1, classFile.getInterfaces().size());
     }
 
     @Test
-    void addDuplicateInterfaceDoesNotDuplicate() {
+    void addDuplicateInterfaceDoesNotDuplicate()
+    {
         classFile.addInterface("java/io/Serializable");
         classFile.addInterface("java/io/Serializable");
         assertEquals(1, classFile.getInterfaces().size());
     }
 
     @Test
-    void newClassHasNoUserFields() {
+    void newClassHasNoUserFields()
+    {
         assertTrue(classFile.getFields().isEmpty());
     }
 
     @Test
-    void createNewFieldAddsField() {
+    void createNewFieldAddsField()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "value", "I", new ArrayList<>());
 
@@ -110,7 +129,8 @@ class ClassFileTest {
     }
 
     @Test
-    void createNewFieldWithCorrectProperties() {
+    void createNewFieldWithCorrectProperties()
+    {
         int access = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(access, "name", "Ljava/lang/String;", new ArrayList<>());
 
@@ -120,7 +140,8 @@ class ClassFileTest {
     }
 
     @Test
-    void createStaticField() {
+    void createStaticField()
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         FieldEntry field = classFile.createNewField(access, "counter", "I", new ArrayList<>());
 
@@ -128,7 +149,8 @@ class ClassFileTest {
     }
 
     @Test
-    void removeFieldRemovesIt() {
+    void removeFieldRemovesIt()
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "toRemove", "I", new ArrayList<>());
         assertEquals(1, classFile.getFields().size());
@@ -139,13 +161,15 @@ class ClassFileTest {
     }
 
     @Test
-    void removeNonexistentFieldReturnsFalse() {
+    void removeNonexistentFieldReturnsFalse()
+    {
         boolean removed = classFile.removeField("nonexistent", "I");
         assertFalse(removed);
     }
 
     @Test
-    void removeMethodRemovesIt() {
+    void removeMethodRemovesIt()
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         classFile.createNewMethodWithDescriptor(access, "toRemove", "(I)I");
         int before = classFile.getMethods().size();
@@ -157,7 +181,8 @@ class ClassFileTest {
     }
 
     @Test
-    void removeMethodMatchesOnDescriptor() {
+    void removeMethodMatchesOnDescriptor()
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         classFile.createNewMethodWithDescriptor(access, "overloaded", "(I)V");
         classFile.createNewMethodWithDescriptor(access, "overloaded", "(J)V");
@@ -170,18 +195,21 @@ class ClassFileTest {
     }
 
     @Test
-    void removeNonexistentMethodReturnsFalse() {
+    void removeNonexistentMethodReturnsFalse()
+    {
         boolean removed = classFile.removeMethod("nonexistent", "()V");
         assertFalse(removed);
     }
 
     @Test
-    void newClassHasDefaultMethods() {
+    void newClassHasDefaultMethods()
+    {
         assertEquals(2, classFile.getMethods().size());
     }
 
     @Test
-    void createNewMethodAddsMethod() throws IOException {
+    void createNewMethodAddsMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "testMethod", "V");
 
@@ -190,7 +218,8 @@ class ClassFileTest {
     }
 
     @Test
-    void createNewMethodWithCorrectSignature() throws IOException {
+    void createNewMethodWithCorrectSignature() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "add", "I", "I", "I");
 
@@ -199,7 +228,8 @@ class ClassFileTest {
     }
 
     @Test
-    void createNewMethodWithDescriptor() {
+    void createNewMethodWithDescriptor()
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "process", "(Ljava/lang/String;I)V");
 
@@ -208,7 +238,8 @@ class ClassFileTest {
     }
 
     @Test
-    void generateGetterForField() throws IOException {
+    void generateGetterForField() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(fieldAccess, "value", "I", new ArrayList<>());
 
@@ -219,7 +250,8 @@ class ClassFileTest {
     }
 
     @Test
-    void generateSetterForField() throws IOException {
+    void generateSetterForField() throws IOException
+    {
         int fieldAccess = new AccessBuilder().setPrivate().build();
         FieldEntry field = classFile.createNewField(fieldAccess, "value", "I", new ArrayList<>());
 
@@ -230,7 +262,8 @@ class ClassFileTest {
     }
 
     @Test
-    void writeProducesValidBytes() throws IOException {
+    void writeProducesValidBytes() throws IOException
+    {
         byte[] bytes = classFile.write();
 
         assertNotNull(bytes);
@@ -243,32 +276,37 @@ class ClassFileTest {
     }
 
     @Test
-    void roundTripPreservesClassName() throws IOException {
+    void roundTripPreservesClassName() throws IOException
+    {
         ClassFile reloaded = TestUtils.roundTrip(classFile);
         assertEquals(classFile.getClassName(), reloaded.getClassName());
     }
 
     @Test
-    void roundTripPreservesSuperClassName() throws IOException {
+    void roundTripPreservesSuperClassName() throws IOException
+    {
         ClassFile reloaded = TestUtils.roundTrip(classFile);
         assertEquals(classFile.getSuperClassName(), reloaded.getSuperClassName());
     }
 
     @Test
-    void roundTripPreservesVersion() throws IOException {
+    void roundTripPreservesVersion() throws IOException
+    {
         ClassFile reloaded = TestUtils.roundTrip(classFile);
         assertEquals(classFile.getMajorVersion(), reloaded.getMajorVersion());
         assertEquals(classFile.getMinorVersion(), reloaded.getMinorVersion());
     }
 
     @Test
-    void roundTripPreservesAccess() throws IOException {
+    void roundTripPreservesAccess() throws IOException
+    {
         ClassFile reloaded = TestUtils.roundTrip(classFile);
         assertEquals(classFile.getAccess(), reloaded.getAccess());
     }
 
     @Test
-    void roundTripPreservesMethodCount() throws IOException {
+    void roundTripPreservesMethodCount() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         classFile.createNewMethod(access, "customMethod", "V");
 
@@ -277,7 +315,8 @@ class ClassFileTest {
     }
 
     @Test
-    void roundTripPreservesFieldCount() throws IOException {
+    void roundTripPreservesFieldCount() throws IOException
+    {
         int access = new AccessBuilder().setPrivate().build();
         classFile.createNewField(access, "field1", "I", new ArrayList<>());
         classFile.createNewField(access, "field2", "J", new ArrayList<>());
@@ -287,7 +326,8 @@ class ClassFileTest {
     }
 
     @Test
-    void generatedClassLoadsInJVM() throws Exception {
+    void generatedClassLoadsInJVM() throws Exception
+    {
         byte[] bytes = classFile.write();
         TestClassLoader loader = new TestClassLoader();
         Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
@@ -297,7 +337,8 @@ class ClassFileTest {
     }
 
     @Test
-    void generatedClassCanBeInstantiated() throws Exception {
+    void generatedClassCanBeInstantiated() throws Exception
+    {
         byte[] bytes = classFile.write();
         TestClassLoader loader = new TestClassLoader();
         Class<?> clazz = loader.defineClass("com.test.TestClass", bytes);
@@ -307,7 +348,8 @@ class ClassFileTest {
     }
 
     @Test
-    void computeFramesReturnsMethodCount() throws IOException {
+    void computeFramesReturnsMethodCount() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         classFile.createNewMethod(access, "method1", "V");
         classFile.createNewMethod(access, "method2", "V");
@@ -317,7 +359,8 @@ class ClassFileTest {
     }
 
     @Test
-    void computeFramesForSpecificMethod() throws IOException {
+    void computeFramesForSpecificMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethod(access, "targetMethod", "V");
 
@@ -326,26 +369,30 @@ class ClassFileTest {
     }
 
     @Test
-    void computeFramesForNonexistentMethodReturnsFalse() {
+    void computeFramesForNonexistentMethodReturnsFalse()
+    {
         boolean computed = ClassFactory.computeFrames(classFile, "nonexistent", "()V");
         assertFalse(computed);
     }
 
     @Test
-    void toStringIncludesClassName() {
+    void toStringIncludesClassName()
+    {
         String str = classFile.toString();
         assertTrue(str.contains("com/test/TestClass"));
     }
 
     @Test
-    void toStringIncludesSuperClass() {
+    void toStringIncludesSuperClass()
+    {
         String str = classFile.toString();
         assertTrue(str.contains("java/lang/Object"));
     }
 
     @Test
-    void roundTripWithLongConstantPreservesConstPoolCount() throws IOException {
-        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+    void roundTripWithLongConstantPreservesConstPoolCount() throws IOException
+    {
+        LongItem longItem = new LongItem();
         longItem.setValue(123456789L);
         int longIndex = classFile.getConstPool().addItem(longItem);
 
@@ -358,8 +405,9 @@ class ClassFileTest {
     }
 
     @Test
-    void roundTripWithDoubleConstantPreservesConstPoolCount() throws IOException {
-        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+    void roundTripWithDoubleConstantPreservesConstPoolCount() throws IOException
+    {
+        DoubleItem doubleItem = new DoubleItem();
         doubleItem.setValue(3.14159);
         int doubleIndex = classFile.getConstPool().addItem(doubleItem);
 
@@ -372,9 +420,11 @@ class ClassFileTest {
     }
 
     @Test
-    void roundTripWithMultipleLongsPreservesConstPoolCount() throws IOException {
-        for (int i = 0; i < 16; i++) {
-            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+    void roundTripWithMultipleLongsPreservesConstPoolCount() throws IOException
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            LongItem longItem = new LongItem();
             longItem.setValue(i * 1000000L);
             classFile.getConstPool().addItem(longItem);
         }
@@ -388,13 +438,15 @@ class ClassFileTest {
     }
 
     @Test
-    void roundTripWithMixedLongDoublePreservesConstPoolCount() throws IOException {
-        for (int i = 0; i < 8; i++) {
-            com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+    void roundTripWithMixedLongDoublePreservesConstPoolCount() throws IOException
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            LongItem longItem = new LongItem();
             longItem.setValue(i * 1000000L);
             classFile.getConstPool().addItem(longItem);
 
-            com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+            DoubleItem doubleItem = new DoubleItem();
             doubleItem.setValue(i * 1.5);
             classFile.getConstPool().addItem(doubleItem);
         }
@@ -408,8 +460,9 @@ class ClassFileTest {
     }
 
     @Test
-    void classWithLongConstantLoadsInJVM() throws Exception {
-        com.tonic.parser.constpool.LongItem longItem = new com.tonic.parser.constpool.LongItem();
+    void classWithLongConstantLoadsInJVM() throws Exception
+    {
+        LongItem longItem = new LongItem();
         longItem.setValue(9876543210L);
         classFile.getConstPool().addItem(longItem);
 
@@ -421,8 +474,9 @@ class ClassFileTest {
     }
 
     @Test
-    void classWithDoubleConstantLoadsInJVM() throws Exception {
-        com.tonic.parser.constpool.DoubleItem doubleItem = new com.tonic.parser.constpool.DoubleItem();
+    void classWithDoubleConstantLoadsInJVM() throws Exception
+    {
+        DoubleItem doubleItem = new DoubleItem();
         doubleItem.setValue(2.71828);
         classFile.getConstPool().addItem(doubleItem);
 
@@ -434,9 +488,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class AccessFlagsTests {
+    class AccessFlagsTests
+    {
         @Test
-        void createInterfaceClass() throws IOException {
+        void createInterfaceClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setInterface().setAbstract().build();
             ClassFile interfaceClass = pool.createNewClass("com/test/MyInterface", access);
 
@@ -446,7 +502,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createAbstractClass() throws IOException {
+        void createAbstractClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             ClassFile abstractClass = pool.createNewClass("com/test/AbstractClass", access);
 
@@ -456,7 +513,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createFinalClass() throws IOException {
+        void createFinalClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setFinal().build();
             ClassFile finalClass = pool.createNewClass("com/test/FinalClass", access);
 
@@ -466,7 +524,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createEnumClass() throws IOException {
+        void createEnumClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setEnum().setFinal().build();
             ClassFile enumClass = pool.createNewClass("com/test/MyEnum", access);
 
@@ -476,7 +535,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createAnnotationClass() throws IOException {
+        void createAnnotationClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAnnotation().setInterface().setAbstract().build();
             ClassFile annotationClass = pool.createNewClass("com/test/MyAnnotation", access);
 
@@ -486,7 +546,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createSyntheticClass() throws IOException {
+        void createSyntheticClass() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setSynthetic().build();
             ClassFile syntheticClass = pool.createNewClass("com/test/SyntheticClass", access);
 
@@ -497,9 +558,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class MethodCreationEdgeCases {
+    class MethodCreationEdgeCases
+    {
         @Test
-        void createAbstractMethod() {
+        void createAbstractMethod()
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 
@@ -508,7 +571,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createNativeMethod() {
+        void createNativeMethod()
+        {
             int access = new AccessBuilder().setPublic().setNative().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "nativeMethod", "()I");
 
@@ -517,7 +581,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createStaticGetter() throws IOException {
+        void createStaticGetter() throws IOException
+        {
             int fieldAccess = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(fieldAccess, "staticValue", "J", null);
 
@@ -529,7 +594,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createStaticSetter() throws IOException {
+        void createStaticSetter() throws IOException
+        {
             int fieldAccess = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(fieldAccess, "staticCounter", "I", null);
 
@@ -541,7 +607,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createMethodWithArrayDescriptor() {
+        void createMethodWithArrayDescriptor()
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "arrayMethod", "([I)[Ljava/lang/String;");
 
@@ -550,7 +617,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createMethodWithMultiDimensionalArray() {
+        void createMethodWithMultiDimensionalArray()
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "matrixMethod", "([[D)[[D");
 
@@ -560,9 +628,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class FieldInitializationTests {
+    class FieldInitializationTests
+    {
         @Test
-        void setStaticIntFieldInitialValue() throws IOException {
+        void setStaticIntFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(access, "staticInt", "I", null);
 
@@ -572,7 +642,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setStaticLongFieldInitialValue() throws IOException {
+        void setStaticLongFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(access, "staticLong", "J", null);
 
@@ -582,7 +653,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setStaticFloatFieldInitialValue() throws IOException {
+        void setStaticFloatFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(access, "staticFloat", "F", null);
 
@@ -592,7 +664,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setStaticDoubleFieldInitialValue() throws IOException {
+        void setStaticDoubleFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(access, "staticDouble", "D", null);
 
@@ -602,7 +675,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setStaticStringFieldInitialValue() throws IOException {
+        void setStaticStringFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().setStatic().build();
             FieldEntry field = classFile.createNewField(access, "staticString", "Ljava/lang/String;", null);
 
@@ -612,7 +686,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setInstanceIntFieldInitialValue() throws IOException {
+        void setInstanceIntFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().build();
             FieldEntry field = classFile.createNewField(access, "instanceInt", "I", null);
 
@@ -622,7 +697,8 @@ class ClassFileTest {
         }
 
         @Test
-        void setInstanceStringFieldInitialValue() throws IOException {
+        void setInstanceStringFieldInitialValue() throws IOException
+        {
             int access = new AccessBuilder().setPrivate().build();
             FieldEntry field = classFile.createNewField(access, "instanceString", "Ljava/lang/String;", null);
 
@@ -633,33 +709,39 @@ class ClassFileTest {
     }
 
     @Nested
-    class ClassNameUpdateTests {
+    class ClassNameUpdateTests
+    {
         @Test
-        void setClassNameUpdatesMethodOwners() throws IOException {
+        void setClassNameUpdatesMethodOwners() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             classFile.createNewMethod(access, "testMethod", "V");
 
             classFile.setClassName("com/test/RenamedClass");
 
-            for (MethodEntry method : classFile.getMethods()) {
+            for (MethodEntry method : classFile.getMethods())
+            {
                 assertEquals("com/test/RenamedClass", method.getOwnerName());
             }
         }
 
         @Test
-        void setClassNameUpdatesFieldOwners() {
+        void setClassNameUpdatesFieldOwners()
+        {
             int access = new AccessBuilder().setPrivate().build();
             classFile.createNewField(access, "testField", "I", null);
 
             classFile.setClassName("com/test/RenamedClass");
 
-            for (FieldEntry field : classFile.getFields()) {
+            for (FieldEntry field : classFile.getFields())
+            {
                 assertEquals("com/test/RenamedClass", field.getOwnerName());
             }
         }
 
         @Test
-        void setClassNameUpdatesDescriptors() throws IOException {
+        void setClassNameUpdatesDescriptors() throws IOException
+        {
             int access = new AccessBuilder().setPublic().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "selfReference",
                 "(Lcom/test/TestClass;)Lcom/test/TestClass;");
@@ -667,10 +749,13 @@ class ClassFileTest {
             classFile.setClassName("com/test/NewClass");
 
             boolean foundUpdatedDescriptor = false;
-            for (com.tonic.parser.constpool.Item<?> item : classFile.getConstPool().getItems()) {
-                if (item instanceof com.tonic.parser.constpool.Utf8Item) {
-                    String value = ((com.tonic.parser.constpool.Utf8Item) item).getValue();
-                    if (value.contains("Lcom/test/NewClass;")) {
+            for (Item<?> item : classFile.getConstPool().getItems())
+            {
+                if (item instanceof Utf8Item)
+                {
+                    String value = ((Utf8Item) item).getValue();
+                    if (value.contains("Lcom/test/NewClass;"))
+                    {
                         foundUpdatedDescriptor = true;
                         break;
                     }
@@ -681,9 +766,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class InterfaceEdgeCases {
+    class InterfaceEdgeCases
+    {
         @Test
-        void addInterfaceCreatesNewConstPoolEntries() {
+        void addInterfaceCreatesNewConstPoolEntries()
+        {
             int initialSize = classFile.getConstPool().getItems().size();
 
             classFile.addInterface("java/util/List");
@@ -692,7 +779,8 @@ class ClassFileTest {
         }
 
         @Test
-        void addExistingInterfaceReusesConstPoolEntry() {
+        void addExistingInterfaceReusesConstPoolEntry()
+        {
             classFile.addInterface("java/io/Serializable");
             int sizeAfterFirst = classFile.getConstPool().getItems().size();
 
@@ -703,7 +791,8 @@ class ClassFileTest {
         }
 
         @Test
-        void roundTripPreservesInterfaces() throws IOException {
+        void roundTripPreservesInterfaces() throws IOException
+        {
             classFile.addInterface("java/io/Serializable");
             classFile.addInterface("java/lang/Cloneable");
             classFile.addInterface("java/util/RandomAccess");
@@ -715,28 +804,33 @@ class ClassFileTest {
     }
 
     @Nested
-    class ToStringEdgeCases {
+    class ToStringEdgeCases
+    {
         @Test
-        void toStringWithNoInterfaces() {
+        void toStringWithNoInterfaces()
+        {
             String str = classFile.toString();
             assertTrue(str.contains("Interfaces: None"));
         }
 
         @Test
-        void toStringWithInterfaces() {
+        void toStringWithInterfaces()
+        {
             classFile.addInterface("java/io/Serializable");
             String str = classFile.toString();
             assertTrue(str.contains("java/io/Serializable"));
         }
 
         @Test
-        void toStringWithNoFields() {
+        void toStringWithNoFields()
+        {
             String str = classFile.toString();
             assertTrue(str.contains("Fields: None"));
         }
 
         @Test
-        void toStringWithFields() {
+        void toStringWithFields()
+        {
             int access = new AccessBuilder().setPrivate().build();
             classFile.createNewField(access, "testField", "I", null);
 
@@ -745,28 +839,33 @@ class ClassFileTest {
         }
 
         @Test
-        void toStringIncludesAccessFlags() {
+        void toStringIncludesAccessFlags()
+        {
             String str = classFile.toString();
             assertTrue(str.contains("Access Flags"));
         }
     }
 
     @Nested
-    class VersionTests {
+    class VersionTests
+    {
         @Test
-        void setMinorVersion() {
+        void setMinorVersion()
+        {
             classFile.setMinorVersion(3);
             assertEquals(3, classFile.getMinorVersion());
         }
 
         @Test
-        void setMajorVersion() {
+        void setMajorVersion()
+        {
             classFile.setMajorVersion(52);
             assertEquals(52, classFile.getMajorVersion());
         }
 
         @Test
-        void roundTripPreservesModifiedVersion() throws IOException {
+        void roundTripPreservesModifiedVersion() throws IOException
+        {
             classFile.setMajorVersion(61);
             classFile.setMinorVersion(0);
 
@@ -778,9 +877,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class FieldCreationEdgeCases {
+    class FieldCreationEdgeCases
+    {
         @Test
-        void createFieldWithNullAttributesCreatesEmptyList() {
+        void createFieldWithNullAttributesCreatesEmptyList()
+        {
             int access = new AccessBuilder().setPrivate().build();
             FieldEntry field = classFile.createNewField(access, "testField", "I", null);
 
@@ -789,7 +890,8 @@ class ClassFileTest {
         }
 
         @Test
-        void createFieldNormalizesDescriptor() {
+        void createFieldNormalizesDescriptor()
+        {
             int access = new AccessBuilder().setPrivate().build();
             FieldEntry field = classFile.createNewField(access, "stringField", "java.lang.String", null);
 
@@ -798,9 +900,11 @@ class ClassFileTest {
     }
 
     @Nested
-    class ComputeFramesEdgeCases {
+    class ComputeFramesEdgeCases
+    {
         @Test
-        void computeFramesForMethodWithoutCode() {
+        void computeFramesForMethodWithoutCode()
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             MethodEntry method = classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 
@@ -810,7 +914,8 @@ class ClassFileTest {
         }
 
         @Test
-        void computeFramesSkipsAbstractMethods() throws IOException {
+        void computeFramesSkipsAbstractMethods() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setAbstract().build();
             classFile.createNewMethodWithDescriptor(access, "abstractMethod", "()V");
 

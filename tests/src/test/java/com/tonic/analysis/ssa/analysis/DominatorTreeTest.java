@@ -14,17 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for DominatorTree analysis.
  * Covers dominator computation, dominance frontiers, and dominance queries.
  */
-class DominatorTreeTest {
+class DominatorTreeTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
     }
 
-    // ========== Basic Dominator Tests ==========
+    // Basic Dominator Tests
 
     @Test
-    void computeOnEmptyMethod() {
+    void computeOnEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DominatorTree tree = new DominatorTree(method);
 
@@ -35,7 +38,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void entryBlockDominatesItself() {
+    void entryBlockDominatesItself()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -49,7 +53,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void entryBlockDominatesAllBlocks() {
+    void entryBlockDominatesAllBlocks()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -72,7 +77,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void strictDominationExcludesSelf() {
+    void strictDominationExcludesSelf()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -85,10 +91,11 @@ class DominatorTreeTest {
         assertFalse(tree.strictlyDominates(entry, entry));
     }
 
-    // ========== Immediate Dominator Tests ==========
+    // Immediate Dominator Tests
 
     @Test
-    void immediateDirectorOfEntry() {
+    void immediateDirectorOfEntry()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -102,7 +109,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void immediateDirectorOfSuccessor() {
+    void immediateDirectorOfSuccessor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -120,10 +128,11 @@ class DominatorTreeTest {
         assertEquals(entry, tree.getImmediateDominator(b1));
     }
 
-    // ========== Dominator Tree Children Tests ==========
+    // Dominator Tree Children Tests
 
     @Test
-    void dominatorTreeChildrenEmpty() {
+    void dominatorTreeChildrenEmpty()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -138,7 +147,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void dominatorTreeChildrenContainsSuccessor() {
+    void dominatorTreeChildrenContainsSuccessor()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -157,10 +167,11 @@ class DominatorTreeTest {
         assertTrue(children.contains(b1));
     }
 
-    // ========== Dominance Frontier Tests ==========
+    // Dominance Frontier Tests
 
     @Test
-    void emptyDominanceFrontier() {
+    void emptyDominanceFrontier()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -175,7 +186,8 @@ class DominatorTreeTest {
     }
 
     @Test
-    void getDominanceFrontiersAll() {
+    void getDominanceFrontiersAll()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -189,10 +201,11 @@ class DominatorTreeTest {
         assertNotNull(allDFs);
     }
 
-    // ========== Diamond CFG Tests ==========
+    // Diamond CFG Tests
 
     @Test
-    void diamondCFGDominance() {
+    void diamondCFGDominance()
+    {
         // Diamond: entry -> (A | B) -> merge
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -229,10 +242,11 @@ class DominatorTreeTest {
         assertFalse(tree.strictlyDominates(branchB, merge));
     }
 
-    // ========== Loop CFG Tests ==========
+    // Loop CFG Tests
 
     @Test
-    void loopHeaderDominatesBody() {
+    void loopHeaderDominatesBody()
+    {
         // Loop: entry -> header <-> body -> exit
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -261,10 +275,11 @@ class DominatorTreeTest {
         assertFalse(tree.strictlyDominates(body, header));
     }
 
-    // ========== Method Reference Tests ==========
+    // Method Reference Tests
 
     @Test
-    void getMethodReturnsMethod() {
+    void getMethodReturnsMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()V", true);
         DominatorTree tree = new DominatorTree(method);
 

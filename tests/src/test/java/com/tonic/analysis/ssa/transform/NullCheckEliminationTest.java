@@ -16,28 +16,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests elimination of redundant null checks for values known to be non-null,
  * such as after 'new' instructions or method 'this' references.
  */
-class NullCheckEliminationTest {
+class NullCheckEliminationTest
+{
 
     private NullCheckElimination transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new NullCheckElimination();
     }
 
-    // ========== getName Tests ==========
+    // getName Tests
 
     @Test
-    void getNameReturnsNullCheckElimination() {
+    void getNameReturnsNullCheckElimination()
+    {
         assertEquals("NullCheckElimination", transform.getName());
     }
 
-    // ========== New Instruction Tests ==========
+    // New Instruction Tests
 
     @Test
-    void eliminatesNullCheckAfterNew() {
+    void eliminatesNullCheckAfterNew()
+    {
         // new creates non-null object, so IFNULL should become unconditional goto
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -72,7 +76,8 @@ class NullCheckEliminationTest {
     }
 
     @Test
-    void eliminatesNonNullCheckAfterNew() {
+    void eliminatesNonNullCheckAfterNew()
+    {
         // new creates non-null object, so IFNONNULL should become unconditional goto
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -106,10 +111,11 @@ class NullCheckEliminationTest {
         assertEquals(nonNullBranch, gotoInstr.getTarget());
     }
 
-    // ========== This Reference Tests ==========
+    // This Reference Tests
 
     @Test
-    void eliminatesNullCheckForThisParameter() {
+    void eliminatesNullCheckForThisParameter()
+    {
         // In non-static method, 'this' (parameter 0) is always non-null
         IRMethod method = new IRMethod("Test", "test", "()V", false); // non-static
         IRBlock entry = new IRBlock("entry");
@@ -138,10 +144,11 @@ class NullCheckEliminationTest {
         assertTrue(terminator instanceof SimpleInstruction);
     }
 
-    // ========== No Change Tests ==========
+    // No Change Tests
 
     @Test
-    void returnsFalseWhenNoRedundantChecks() {
+    void returnsFalseWhenNoRedundantChecks()
+    {
         // Null check on unknown value cannot be eliminated
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -170,7 +177,8 @@ class NullCheckEliminationTest {
     }
 
     @Test
-    void returnsFalseForNullEntryBlock() {
+    void returnsFalseForNullEntryBlock()
+    {
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         // No entry block set
 
@@ -180,7 +188,8 @@ class NullCheckEliminationTest {
     }
 
     @Test
-    void returnsFalseForMethodWithNoNullChecks() {
+    void returnsFalseForMethodWithNoNullChecks()
+    {
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
         method.addBlock(entry);
@@ -200,7 +209,8 @@ class NullCheckEliminationTest {
     }
 
     @Test
-    void handlesStaticMethodWithNoThisParameter() {
+    void handlesStaticMethodWithNoThisParameter()
+    {
         // Static method has no 'this', so no automatic non-null values
         IRMethod method = new IRMethod("Test", "test", "()V", true); // static
         IRBlock entry = new IRBlock("entry");

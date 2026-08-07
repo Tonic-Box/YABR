@@ -5,16 +5,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodMappingTest {
+class MethodMappingTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void validMappingWithPropagateCreatedSuccessfully() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle", true
-            );
+        void validMappingWithPropagateCreatedSuccessfully()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle", true);
 
             assertEquals("com/example/Service", mapping.getOwner());
             assertEquals("process", mapping.getOldName());
@@ -24,95 +25,100 @@ class MethodMappingTest {
         }
 
         @Test
-        void validMappingWithoutPropagateCreatedSuccessfully() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle", false
-            );
+        void validMappingWithoutPropagateCreatedSuccessfully()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle", false);
 
             assertFalse(mapping.isPropagate());
         }
 
         @Test
-        void defaultConstructorSetsPropagateFalse() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle"
-            );
+        void defaultConstructorSetsPropagateFalse()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle");
 
             assertFalse(mapping.isPropagate());
         }
 
         @Test
-        void rejectsNullOwner() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new MethodMapping(null, "method", "()V", "renamed")
-            );
+        void rejectsNullOwner()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new MethodMapping(null, "method", "()V", "renamed"));
         }
 
         @Test
-        void rejectsNullOldName() {
+        void rejectsNullOldName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", null, "()V", "renamed")
             );
         }
 
         @Test
-        void rejectsNullDescriptor() {
+        void rejectsNullDescriptor()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "method", null, "renamed")
             );
         }
 
         @Test
-        void rejectsNullNewName() {
+        void rejectsNullNewName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "method", "()V", null)
             );
         }
 
         @Test
-        void rejectsEmptyOwner() {
-            assertThrows(IllegalArgumentException.class, () ->
-                new MethodMapping("", "method", "()V", "renamed")
-            );
+        void rejectsEmptyOwner()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new MethodMapping("", "method", "()V", "renamed"));
         }
 
         @Test
-        void rejectsEmptyOldName() {
+        void rejectsEmptyOldName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "", "()V", "renamed")
             );
         }
 
         @Test
-        void rejectsEmptyDescriptor() {
+        void rejectsEmptyDescriptor()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "method", "", "renamed")
             );
         }
 
         @Test
-        void rejectsEmptyNewName() {
+        void rejectsEmptyNewName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "method", "()V", "")
             );
         }
 
         @Test
-        void rejectsSameOldAndNewName() {
+        void rejectsSameOldAndNewName()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "method", "()V", "method")
             );
         }
 
         @Test
-        void rejectsConstructorRename() {
+        void rejectsConstructorRename()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "<init>", "()V", "renamed")
             );
         }
 
         @Test
-        void rejectsStaticInitializerRename() {
+        void rejectsStaticInitializerRename()
+        {
             assertThrows(IllegalArgumentException.class, () ->
                 new MethodMapping("com/example/Class", "<clinit>", "()V", "renamed")
             );
@@ -120,19 +126,20 @@ class MethodMappingTest {
     }
 
     @Nested
-    class FullyQualifiedNameTests {
+    class FullyQualifiedNameTests
+    {
 
         @Test
-        void fullyQualifiedNameHasCorrectFormat() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle"
-            );
+        void fullyQualifiedNameHasCorrectFormat()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle");
 
             assertEquals("com/example/Service.process:(I)V", mapping.getFullyQualifiedName());
         }
 
         @Test
-        void fullyQualifiedNameWithComplexDescriptor() {
+        void fullyQualifiedNameWithComplexDescriptor()
+        {
             MethodMapping mapping = new MethodMapping(
                 "com/example/Service", "transform",
                 "(Ljava/lang/String;ILjava/util/List;)Ljava/lang/Object;", "convert"
@@ -146,74 +153,62 @@ class MethodMappingTest {
     }
 
     @Nested
-    class EqualityTests {
+    class EqualityTests
+    {
 
         @Test
-        void equalMappingsAreEqual() {
-            MethodMapping mapping1 = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed", true
-            );
-            MethodMapping mapping2 = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed", true
-            );
+        void equalMappingsAreEqual()
+        {
+            MethodMapping mapping1 = new MethodMapping("com/example/Class", "method", "()V", "renamed", true);
+            MethodMapping mapping2 = new MethodMapping("com/example/Class", "method", "()V", "renamed", true);
 
             assertEquals(mapping1, mapping2);
             assertEquals(mapping1.hashCode(), mapping2.hashCode());
         }
 
         @Test
-        void differentPropagateFlagMakesNotEqual() {
-            MethodMapping mapping1 = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed", true
-            );
-            MethodMapping mapping2 = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed", false
-            );
+        void differentPropagateFlagMakesNotEqual()
+        {
+            MethodMapping mapping1 = new MethodMapping("com/example/Class", "method", "()V", "renamed", true);
+            MethodMapping mapping2 = new MethodMapping("com/example/Class", "method", "()V", "renamed", false);
 
             assertNotEquals(mapping1, mapping2);
         }
 
         @Test
-        void differentOwnerMakesNotEqual() {
-            MethodMapping mapping1 = new MethodMapping(
-                "com/example/ClassA", "method", "()V", "renamed"
-            );
-            MethodMapping mapping2 = new MethodMapping(
-                "com/example/ClassB", "method", "()V", "renamed"
-            );
+        void differentOwnerMakesNotEqual()
+        {
+            MethodMapping mapping1 = new MethodMapping("com/example/ClassA", "method", "()V", "renamed");
+            MethodMapping mapping2 = new MethodMapping("com/example/ClassB", "method", "()V", "renamed");
 
             assertNotEquals(mapping1, mapping2);
         }
 
         @Test
-        void differentDescriptorMakesNotEqual() {
-            MethodMapping mapping1 = new MethodMapping(
-                "com/example/Class", "method", "(I)V", "renamed"
-            );
-            MethodMapping mapping2 = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed"
-            );
+        void differentDescriptorMakesNotEqual()
+        {
+            MethodMapping mapping1 = new MethodMapping("com/example/Class", "method", "(I)V", "renamed");
+            MethodMapping mapping2 = new MethodMapping("com/example/Class", "method", "()V", "renamed");
 
             assertNotEquals(mapping1, mapping2);
         }
 
         @Test
-        void equalToSelf() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Class", "method", "()V", "renamed"
-            );
+        void equalToSelf()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Class", "method", "()V", "renamed");
             assertEquals(mapping, mapping);
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsAllComponents() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle", false
-            );
+        void toStringContainsAllComponents()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle", false);
             String str = mapping.toString();
 
             assertTrue(str.contains("com/example/Service"));
@@ -224,20 +219,18 @@ class MethodMappingTest {
         }
 
         @Test
-        void toStringIndicatesPropagateWhenTrue() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle", true
-            );
+        void toStringIndicatesPropagateWhenTrue()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle", true);
             String str = mapping.toString();
 
             assertTrue(str.contains("propagate"));
         }
 
         @Test
-        void toStringOmitsPropagateWhenFalse() {
-            MethodMapping mapping = new MethodMapping(
-                "com/example/Service", "process", "(I)V", "handle", false
-            );
+        void toStringOmitsPropagateWhenFalse()
+        {
+            MethodMapping mapping = new MethodMapping("com/example/Service", "process", "(I)V", "handle", false);
             String str = mapping.toString();
 
             assertFalse(str.contains("propagate"));

@@ -19,22 +19,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * globals, opaque {@code ptr}s, and EH landingpads. Validates IR shape (the deliverable is lowering
  * against the ABI, not execution).
  */
-class SsaToLlvmObjectModelTest {
+class SsaToLlvmObjectModelTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
-    private String lower(ClassFile cf, String name) {
+    private String lower(ClassFile cf, String name)
+    {
         MethodEntry method = find(cf, name);
         IRMethod ir = TestUtils.liftMethod(method);
         return new LlvmLowering(LlvmLoweringConfig.fullObjectModel()).lower(ir);
     }
 
-    private MethodEntry find(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry find(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
@@ -42,7 +48,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void staticPrimitiveFieldBecomesDefinedGlobal() throws IOException {
+    void staticPrimitiveFieldBecomesDefinedGlobal() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("g", "()I")
             .getstatic("T", "F", "I").ireturn().build();
         String ll = lower(cf, "g");
@@ -51,7 +58,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void externalStaticFieldIsExternalGlobal() throws IOException {
+    void externalStaticFieldIsExternalGlobal() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("g", "()I")
             .getstatic("java/lang/System", "x", "I").ireturn().build();
         String ll = lower(cf, "g");
@@ -59,7 +67,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void putStaticStoresToGlobal() throws IOException {
+    void putStaticStoresToGlobal() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("s", "(I)V")
             .iload(0).putstatic("T", "F", "I").vreturn().build();
         String ll = lower(cf, "s");
@@ -67,7 +76,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void instanceMethodAndInstanceFieldUseAbi() throws IOException {
+    void instanceMethodAndInstanceFieldUseAbi() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicMethod("getX", "()I")
             .aload(0).getfield("T", "x", "I").ireturn().build();
         String ll = lower(cf, "getX");
@@ -76,7 +86,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void arrayLoadUsesKindedAbi() throws IOException {
+    void arrayLoadUsesKindedAbi() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("a", "([II)I")
             .aload(0).iload(1).iaload().ireturn().build();
         String ll = lower(cf, "a");
@@ -84,14 +95,16 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void arrayLengthUsesAbi() throws IOException {
+    void arrayLengthUsesAbi() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("len", "([I)I")
             .aload(0).arraylength().ireturn().build();
         assertTrue(lower(cf, "len").contains("call i32 @jvm_arraylength(ptr %v0)"));
     }
 
     @Test
-    void newAndConstructorCall() throws IOException {
+    void newAndConstructorCall() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("n", "()Ljava/lang/Object;")
             .new_("java/lang/Object").dup()
             .invokespecial("java/lang/Object", "<init>", "()V")
@@ -102,7 +115,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void virtualDispatchLooksUpThenCallsIndirectly() throws IOException {
+    void virtualDispatchLooksUpThenCallsIndirectly() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("h", "(Ljava/lang/Object;)I")
             .aload(0).invokevirtual("java/lang/Object", "hashCode", "()I").ireturn().build();
         String ll = lower(cf, "h");
@@ -111,7 +125,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void checkcastAndInstanceofUseAbi() throws IOException {
+    void checkcastAndInstanceofUseAbi() throws IOException
+    {
         ClassFile cast = BytecodeBuilder.forClass("T").publicStaticMethod("c", "(Ljava/lang/Object;)Ljava/lang/String;")
             .aload(0).checkcast("java/lang/String").areturn().build();
         assertTrue(lower(cast, "c").contains("call ptr @jvm_checkcast(ptr %v0, ptr "));
@@ -122,7 +137,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void stringConstantIsInterned() throws IOException {
+    void stringConstantIsInterned() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("s", "()Ljava/lang/String;")
             .ldc("hi").areturn().build();
         String ll = lower(cf, "s");
@@ -131,7 +147,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void nullCheckComparesPointer() throws IOException {
+    void nullCheckComparesPointer() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("nz", "(Ljava/lang/Object;)I");
         Label nullLabel = mb.newLabel();
         ClassFile cf = mb
@@ -144,7 +161,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void athrowCallsRuntimeThenUnreachable() throws IOException {
+    void athrowCallsRuntimeThenUnreachable() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("t", "(Ljava/lang/Throwable;)V")
             .aload(0).athrow().build();
         String ll = lower(cf, "t");
@@ -153,7 +171,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void tryCatchEmitsInvokeAndLandingpad() throws IOException {
+    void tryCatchEmitsInvokeAndLandingpad() throws IOException
+    {
         BytecodeBuilder.MethodBuilder mb = BytecodeBuilder.forClass("T").publicStaticMethod("tc", "(I)I");
         Label tryStart = mb.newLabel();
         Label tryEnd = mb.newLabel();
@@ -176,7 +195,8 @@ class SsaToLlvmObjectModelTest {
     }
 
     @Test
-    void outputIsDeterministic() throws IOException {
+    void outputIsDeterministic() throws IOException
+    {
         ClassFile cf = BytecodeBuilder.forClass("T").publicStaticMethod("h", "(Ljava/lang/Object;)I")
             .aload(0).invokevirtual("java/lang/Object", "hashCode", "()I").ireturn().build();
         assertEquals(lower(cf, "h"), lower(cf, "h"));

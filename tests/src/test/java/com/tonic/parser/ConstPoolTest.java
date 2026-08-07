@@ -14,199 +14,227 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ConstPool functionality.
  * Covers constant pool item management, find-or-add operations, and retrieval.
  */
-class ConstPoolTest {
+class ConstPoolTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/TestClass", access);
         constPool = classFile.getConstPool();
     }
 
-    // ========== Basic Operations Tests ==========
+    // Basic Operations Tests
 
     @Test
-    void constPoolIsNotNull() {
+    void constPoolIsNotNull()
+    {
         assertNotNull(constPool);
     }
 
     @Test
-    void constPoolHasInitialItems() {
+    void constPoolHasInitialItems()
+    {
         // New class has constant pool entries for class name, superclass, etc.
         assertTrue(constPool.getItems().size() > 1);
     }
 
     @Test
-    void getItemAtIndexZeroThrows() {
+    void getItemAtIndexZeroThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> constPool.getItem(0));
     }
 
     @Test
-    void getItemAtNegativeIndexThrows() {
+    void getItemAtNegativeIndexThrows()
+    {
         assertThrows(IllegalArgumentException.class, () -> constPool.getItem(-1));
     }
 
     @Test
-    void getItemAtTooLargeIndexThrows() {
+    void getItemAtTooLargeIndexThrows()
+    {
         int size = constPool.getItems().size();
         assertThrows(IllegalArgumentException.class, () -> constPool.getItem(size + 100));
     }
 
-    // ========== Utf8Item Tests ==========
+    // Utf8Item Tests
 
     @Test
-    void findOrAddUtf8CreatesNewItem() {
+    void findOrAddUtf8CreatesNewItem()
+    {
         Utf8Item item = constPool.findOrAddUtf8("newString");
         assertNotNull(item);
         assertEquals("newString", item.getValue());
     }
 
     @Test
-    void findOrAddUtf8ReturnsExistingItem() {
+    void findOrAddUtf8ReturnsExistingItem()
+    {
         Utf8Item first = constPool.findOrAddUtf8("duplicateString");
         Utf8Item second = constPool.findOrAddUtf8("duplicateString");
         assertSame(first, second);
     }
 
     @Test
-    void findOrAddUtf8HandlesEmptyString() {
+    void findOrAddUtf8HandlesEmptyString()
+    {
         Utf8Item item = constPool.findOrAddUtf8("");
         assertNotNull(item);
         assertEquals("", item.getValue());
     }
 
     @Test
-    void findOrAddUtf8HandlesUnicodeString() {
+    void findOrAddUtf8HandlesUnicodeString()
+    {
         Utf8Item item = constPool.findOrAddUtf8("日本語テスト");
         assertNotNull(item);
         assertEquals("日本語テスト", item.getValue());
     }
 
-    // ========== IntegerItem Tests ==========
+    // IntegerItem Tests
 
     @Test
-    void findOrAddIntegerCreatesNewItem() {
+    void findOrAddIntegerCreatesNewItem()
+    {
         IntegerItem item = constPool.findOrAddInteger(42);
         assertNotNull(item);
         assertEquals(42, item.getValue());
     }
 
     @Test
-    void findOrAddIntegerReturnsExistingItem() {
+    void findOrAddIntegerReturnsExistingItem()
+    {
         IntegerItem first = constPool.findOrAddInteger(100);
         IntegerItem second = constPool.findOrAddInteger(100);
         assertSame(first, second);
     }
 
     @Test
-    void findOrAddIntegerHandlesNegative() {
+    void findOrAddIntegerHandlesNegative()
+    {
         IntegerItem item = constPool.findOrAddInteger(-999);
         assertEquals(-999, item.getValue());
     }
 
     @Test
-    void findOrAddIntegerHandlesMaxValue() {
+    void findOrAddIntegerHandlesMaxValue()
+    {
         IntegerItem item = constPool.findOrAddInteger(Integer.MAX_VALUE);
         assertEquals(Integer.MAX_VALUE, item.getValue());
     }
 
     @Test
-    void findOrAddIntegerHandlesMinValue() {
+    void findOrAddIntegerHandlesMinValue()
+    {
         IntegerItem item = constPool.findOrAddInteger(Integer.MIN_VALUE);
         assertEquals(Integer.MIN_VALUE, item.getValue());
     }
 
-    // ========== LongItem Tests ==========
+    // LongItem Tests
 
     @Test
-    void findOrAddLongCreatesNewItem() {
+    void findOrAddLongCreatesNewItem()
+    {
         LongItem item = constPool.findOrAddLong(123456789L);
         assertNotNull(item);
         assertEquals(123456789L, item.getValue());
     }
 
     @Test
-    void findOrAddLongReturnsExistingItem() {
+    void findOrAddLongReturnsExistingItem()
+    {
         LongItem first = constPool.findOrAddLong(987654321L);
         LongItem second = constPool.findOrAddLong(987654321L);
         assertSame(first, second);
     }
 
     @Test
-    void findOrAddLongHandlesMaxValue() {
+    void findOrAddLongHandlesMaxValue()
+    {
         LongItem item = constPool.findOrAddLong(Long.MAX_VALUE);
         assertEquals(Long.MAX_VALUE, item.getValue());
     }
 
-    // ========== FloatItem Tests ==========
+    // FloatItem Tests
 
     @Test
-    void findOrAddFloatCreatesNewItem() {
+    void findOrAddFloatCreatesNewItem()
+    {
         FloatItem item = constPool.findOrAddFloat(3.14f);
         assertNotNull(item);
         assertEquals(3.14f, item.getValue(), 0.001f);
     }
 
     @Test
-    void findOrAddFloatReturnsExistingItem() {
+    void findOrAddFloatReturnsExistingItem()
+    {
         FloatItem first = constPool.findOrAddFloat(2.718f);
         FloatItem second = constPool.findOrAddFloat(2.718f);
         assertSame(first, second);
     }
 
-    // ========== DoubleItem Tests ==========
+    // DoubleItem Tests
 
     @Test
-    void findOrAddDoubleCreatesNewItem() {
+    void findOrAddDoubleCreatesNewItem()
+    {
         DoubleItem item = constPool.findOrAddDouble(3.14159265359);
         assertNotNull(item);
         assertEquals(3.14159265359, item.getValue(), 0.0000000001);
     }
 
     @Test
-    void findOrAddDoubleReturnsExistingItem() {
+    void findOrAddDoubleReturnsExistingItem()
+    {
         DoubleItem first = constPool.findOrAddDouble(2.718281828);
         DoubleItem second = constPool.findOrAddDouble(2.718281828);
         assertSame(first, second);
     }
 
-    // ========== StringRefItem Tests ==========
+    // StringRefItem Tests
 
     @Test
-    void findOrAddStringCreatesNewItem() {
+    void findOrAddStringCreatesNewItem()
+    {
         StringRefItem item = constPool.findOrAddString("Hello, World!");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddStringReturnsExistingItem() {
+    void findOrAddStringReturnsExistingItem()
+    {
         StringRefItem first = constPool.findOrAddString("duplicate");
         StringRefItem second = constPool.findOrAddString("duplicate");
         assertSame(first, second);
     }
 
-    // ========== ClassRefItem Tests ==========
+    // ClassRefItem Tests
 
     @Test
-    void findOrAddClassCreatesNewItem() {
+    void findOrAddClassCreatesNewItem()
+    {
         ClassRefItem item = constPool.findOrAddClass("java/util/ArrayList");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddClassReturnsExistingItem() {
+    void findOrAddClassReturnsExistingItem()
+    {
         ClassRefItem first = constPool.findOrAddClass("java/util/HashMap");
         ClassRefItem second = constPool.findOrAddClass("java/util/HashMap");
         assertSame(first, second);
     }
 
     @Test
-    void getClassNameReturnsClassName() {
+    void getClassNameReturnsClassName()
+    {
         ClassRefItem classRef = constPool.findOrAddClass("java/lang/String");
         int index = constPool.getIndexOf(classRef);
         String className = constPool.getClassName(index);
@@ -214,67 +242,76 @@ class ConstPoolTest {
     }
 
     @Test
-    void getClassNameReturnsNullForIndexZero() {
+    void getClassNameReturnsNullForIndexZero()
+    {
         String className = constPool.getClassName(0);
         assertNull(className);
     }
 
-    // ========== MethodRefItem Tests ==========
+    // MethodRefItem Tests
 
     @Test
-    void findOrAddMethodRefCreatesNewItem() {
+    void findOrAddMethodRefCreatesNewItem()
+    {
         MethodRefItem item = constPool.findOrAddMethodRef("java/lang/Object", "<init>", "()V");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddMethodRefReturnsExistingItem() {
+    void findOrAddMethodRefReturnsExistingItem()
+    {
         MethodRefItem first = constPool.findOrAddMethodRef("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
         MethodRefItem second = constPool.findOrAddMethodRef("java/io/PrintStream", "println", "(Ljava/lang/String;)V");
         assertSame(first, second);
     }
 
-    // ========== FieldRefItem Tests ==========
+    // FieldRefItem Tests
 
     @Test
-    void findOrAddFieldRefCreatesNewItem() {
+    void findOrAddFieldRefCreatesNewItem()
+    {
         FieldRefItem item = constPool.findOrAddFieldRef("java/lang/System", "out", "Ljava/io/PrintStream;");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddFieldRefReturnsExistingItem() {
+    void findOrAddFieldRefReturnsExistingItem()
+    {
         FieldRefItem first = constPool.findOrAddFieldRef("java/lang/System", "err", "Ljava/io/PrintStream;");
         FieldRefItem second = constPool.findOrAddFieldRef("java/lang/System", "err", "Ljava/io/PrintStream;");
         assertSame(first, second);
     }
 
     @Test
-    void findOrAddFieldAlias() {
+    void findOrAddFieldAlias()
+    {
         // findOrAddField is an alias for findOrAddFieldRef
         FieldRefItem item = constPool.findOrAddField("com/test/MyClass", "value", "I");
         assertNotNull(item);
     }
 
-    // ========== InterfaceRefItem Tests ==========
+    // InterfaceRefItem Tests
 
     @Test
-    void findOrAddInterfaceRefCreatesNewItem() {
+    void findOrAddInterfaceRefCreatesNewItem()
+    {
         InterfaceRefItem item = constPool.findOrAddInterfaceRef("java/util/List", "size", "()I");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddInterfaceRefReturnsExistingItem() {
+    void findOrAddInterfaceRefReturnsExistingItem()
+    {
         InterfaceRefItem first = constPool.findOrAddInterfaceRef("java/util/Collection", "isEmpty", "()Z");
         InterfaceRefItem second = constPool.findOrAddInterfaceRef("java/util/Collection", "isEmpty", "()Z");
         assertSame(first, second);
     }
 
-    // ========== NameAndTypeRefItem Tests ==========
+    // NameAndTypeRefItem Tests
 
     @Test
-    void findOrAddNameAndTypeByIndices() {
+    void findOrAddNameAndTypeByIndices()
+    {
         Utf8Item nameUtf8 = constPool.findOrAddUtf8("testMethod");
         Utf8Item descUtf8 = constPool.findOrAddUtf8("()V");
         int nameIndex = constPool.getIndexOf(nameUtf8);
@@ -285,60 +322,68 @@ class ConstPoolTest {
     }
 
     @Test
-    void findOrAddNameAndTypeByStrings() {
+    void findOrAddNameAndTypeByStrings()
+    {
         NameAndTypeRefItem item = constPool.findOrAddNameAndType("getValue", "()I");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddNameAndTypeReturnsExistingItem() {
+    void findOrAddNameAndTypeReturnsExistingItem()
+    {
         NameAndTypeRefItem first = constPool.findOrAddNameAndType("setValue", "(I)V");
         NameAndTypeRefItem second = constPool.findOrAddNameAndType("setValue", "(I)V");
         assertSame(first, second);
     }
 
-    // ========== MethodHandleItem Tests ==========
+    // MethodHandleItem Tests
 
     @Test
-    void findOrAddMethodHandleForMethod() {
+    void findOrAddMethodHandleForMethod()
+    {
         // REF_invokeVirtual = 5
         MethodHandleItem item = constPool.findOrAddMethodHandle(5, "java/lang/String", "length", "()I");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddMethodHandleForField() {
+    void findOrAddMethodHandleForField()
+    {
         // REF_getField = 1
         MethodHandleItem item = constPool.findOrAddMethodHandle(1, "com/test/MyClass", "value", "I");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddMethodHandleForInterface() {
+    void findOrAddMethodHandleForInterface()
+    {
         // REF_invokeInterface = 9
         MethodHandleItem item = constPool.findOrAddMethodHandle(9, "java/util/List", "size", "()I");
         assertNotNull(item);
     }
 
-    // ========== MethodTypeItem Tests ==========
+    // MethodTypeItem Tests
 
     @Test
-    void findOrAddMethodTypeCreatesNewItem() {
+    void findOrAddMethodTypeCreatesNewItem()
+    {
         MethodTypeItem item = constPool.findOrAddMethodType("(II)I");
         assertNotNull(item);
     }
 
     @Test
-    void findOrAddMethodTypeReturnsExistingItem() {
+    void findOrAddMethodTypeReturnsExistingItem()
+    {
         MethodTypeItem first = constPool.findOrAddMethodType("(Ljava/lang/String;)V");
         MethodTypeItem second = constPool.findOrAddMethodType("(Ljava/lang/String;)V");
         assertSame(first, second);
     }
 
-    // ========== Index Operations Tests ==========
+    // Index Operations Tests
 
     @Test
-    void getIndexOfReturnsCorrectIndex() {
+    void getIndexOfReturnsCorrectIndex()
+    {
         Utf8Item utf8 = constPool.findOrAddUtf8("testIndex");
         int index = constPool.getIndexOf(utf8);
         assertTrue(index > 0);
@@ -346,16 +391,18 @@ class ConstPoolTest {
     }
 
     @Test
-    void getIndexOfThrowsForMissingItem() {
+    void getIndexOfThrowsForMissingItem()
+    {
         Utf8Item orphan = new Utf8Item();
         orphan.setValue("orphan");
         assertThrows(IllegalArgumentException.class, () -> constPool.getIndexOf(orphan));
     }
 
-    // ========== Long/Double Slot Tests ==========
+    // Long/Double Slot Tests
 
     @Test
-    void longItemTakesTwoSlots() {
+    void longItemTakesTwoSlots()
+    {
         int sizeBefore = constPool.getItems().size();
         constPool.findOrAddLong(12345L);
         int sizeAfter = constPool.getItems().size();
@@ -364,7 +411,8 @@ class ConstPoolTest {
     }
 
     @Test
-    void doubleItemTakesTwoSlots() {
+    void doubleItemTakesTwoSlots()
+    {
         int sizeBefore = constPool.getItems().size();
         constPool.findOrAddDouble(3.14);
         int sizeAfter = constPool.getItems().size();
@@ -372,24 +420,28 @@ class ConstPoolTest {
         assertEquals(2, sizeAfter - sizeBefore);
     }
 
-    // ========== toString Tests ==========
+    // toString Tests
 
     @Test
-    void toStringIncludesConstantPool() {
+    void toStringIncludesConstantPool()
+    {
         String str = constPool.toString();
         assertTrue(str.contains("Constant Pool"));
     }
 
-    // ========== Round-Trip Tests ==========
+    // Round-Trip Tests
 
     @Test
-    void roundTripPreservesUtf8Items() throws IOException {
+    void roundTripPreservesUtf8Items() throws IOException
+    {
         constPool.findOrAddUtf8("preservedString");
         ClassFile reloaded = TestUtils.roundTrip(classFile);
 
         boolean found = false;
-        for (Item<?> item : reloaded.getConstPool().getItems()) {
-            if (item instanceof Utf8Item && "preservedString".equals(((Utf8Item) item).getValue())) {
+        for (Item<?> item : reloaded.getConstPool().getItems())
+        {
+            if (item instanceof Utf8Item && "preservedString".equals(((Utf8Item) item).getValue()))
+            {
                 found = true;
                 break;
             }
@@ -398,13 +450,16 @@ class ConstPoolTest {
     }
 
     @Test
-    void roundTripPreservesIntegerItems() throws IOException {
+    void roundTripPreservesIntegerItems() throws IOException
+    {
         constPool.findOrAddInteger(12345);
         ClassFile reloaded = TestUtils.roundTrip(classFile);
 
         boolean found = false;
-        for (Item<?> item : reloaded.getConstPool().getItems()) {
-            if (item instanceof IntegerItem && ((IntegerItem) item).getValue() == 12345) {
+        for (Item<?> item : reloaded.getConstPool().getItems())
+        {
+            if (item instanceof IntegerItem && ((IntegerItem) item).getValue() == 12345)
+            {
                 found = true;
                 break;
             }
@@ -413,13 +468,16 @@ class ConstPoolTest {
     }
 
     @Test
-    void roundTripPreservesLongItems() throws IOException {
+    void roundTripPreservesLongItems() throws IOException
+    {
         constPool.findOrAddLong(9876543210L);
         ClassFile reloaded = TestUtils.roundTrip(classFile);
 
         boolean found = false;
-        for (Item<?> item : reloaded.getConstPool().getItems()) {
-            if (item instanceof LongItem && ((LongItem) item).getValue() == 9876543210L) {
+        for (Item<?> item : reloaded.getConstPool().getItems())
+        {
+            if (item instanceof LongItem && ((LongItem) item).getValue() == 9876543210L)
+            {
                 found = true;
                 break;
             }

@@ -3,12 +3,7 @@ package com.tonic.analysis.ssa.lower;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.analysis.LivenessAnalysis;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
-import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.BytecodeBuilder;
@@ -32,32 +27,39 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Stack scheduling
  * - Bytecode emission
  */
-class BytecodeEmitterTest {
+class BytecodeEmitterTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     /**
-     * Helper to find method by name in ClassFile.
+     * * Helper to find method by name in ClassFile.
      */
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry m : cf.getMethods()) {
-            if (m.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry m : cf.getMethods())
+        {
+            if (m.getName().equals(name))
+            {
                 return m;
             }
         }
         throw new IllegalArgumentException("Method not found: " + name);
     }
 
-    // ========== BytecodeLowerer Tests ==========
+    // BytecodeLowerer Tests
 
     @Nested
-    class BytecodeLowererTests {
+    class BytecodeLowererTests
+    {
 
         @Test
-        void lowererCreation() throws IOException {
+        void lowererCreation() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Lower")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -69,7 +71,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void lowerSimpleMethod() throws Exception {
+        void lowerSimpleMethod() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/SimpleL")
                 .publicStaticMethod("get42", "()I")
                     .iconst(42)
@@ -90,7 +93,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void lowerArithmeticMethod() throws Exception {
+        void lowerArithmeticMethod() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ArithL")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -112,7 +116,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void lowerMultiplication() throws Exception {
+        void lowerMultiplication() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/MulL")
                 .publicStaticMethod("mul", "(II)I")
                     .iload(0)
@@ -134,13 +139,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== RegisterAllocator Tests ==========
+    // RegisterAllocator Tests
 
     @Nested
-    class RegisterAllocatorTests {
+    class RegisterAllocatorTests
+    {
 
         @Test
-        void allocatorCreation() {
+        void allocatorCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Reg", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -155,7 +162,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void allocatorAllocatesRegisters() {
+        void allocatorAllocatesRegisters()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Alloc", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -174,7 +182,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void allocatorHandlesParameters() throws IOException {
+        void allocatorHandlesParameters() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ParamAlloc")
                 .publicStaticMethod("identity", "(I)I")
                     .iload(0)
@@ -195,7 +204,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void allocatorReusesRegisters() {
+        void allocatorReusesRegisters()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Reuse", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -216,13 +226,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== StackScheduler Tests ==========
+    // StackScheduler Tests
 
     @Nested
-    class StackSchedulerTests {
+    class StackSchedulerTests
+    {
 
         @Test
-        void schedulerCreation() {
+        void schedulerCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Sched", "test", "()V")
                 .entry()
                     .vreturn()
@@ -239,7 +251,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void schedulerSchedulesInstructions() {
+        void schedulerSchedulesInstructions()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/SchedRun", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -262,7 +275,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void schedulerTracksMaxStack() {
+        void schedulerTracksMaxStack()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/MaxStack", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -287,19 +301,22 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== PhiEliminator Tests ==========
+    // PhiEliminator Tests
 
     @Nested
-    class PhiEliminatorTests {
+    class PhiEliminatorTests
+    {
 
         @Test
-        void eliminatorCreation() {
+        void eliminatorCreation()
+        {
             PhiEliminator eliminator = new PhiEliminator();
             assertNotNull(eliminator);
         }
 
         @Test
-        void eliminatorHandlesNoPhi() {
+        void eliminatorHandlesNoPhi()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/NoPhi", "test", "()I")
                 .entry()
                     .iconst(42, "val")
@@ -312,13 +329,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== BytecodeEmitter Tests ==========
+    // BytecodeEmitter Tests
 
     @Nested
-    class BytecodeEmitterDirectTests {
+    class BytecodeEmitterDirectTests
+    {
 
         @Test
-        void emitterEmitsBytecode() throws IOException {
+        void emitterEmitsBytecode() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Emit")
                 .publicStaticMethod("test", "()I")
                     .iconst(100)
@@ -349,13 +368,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== Round-Trip Execution Tests ==========
+    // Round-Trip Execution Tests
 
     @Nested
-    class RoundTripExecutionTests {
+    class RoundTripExecutionTests
+    {
 
         @Test
-        void executeAddition() throws Exception {
+        void executeAddition() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecAdd")
                 .publicStaticMethod("add", "(II)I")
                     .iload(0)
@@ -379,7 +400,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeSubtraction() throws Exception {
+        void executeSubtraction() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecSub")
                 .publicStaticMethod("sub", "(II)I")
                     .iload(0)
@@ -402,7 +424,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeDivision() throws Exception {
+        void executeDivision() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecDiv")
                 .publicStaticMethod("div", "(II)I")
                     .iload(0)
@@ -425,7 +448,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeBitwiseOperations() throws Exception {
+        void executeBitwiseOperations() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecBit")
                 .publicStaticMethod("andOp", "(II)I")
                     .iload(0)
@@ -447,7 +471,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeWithLongParams() throws Exception {
+        void executeWithLongParams() throws Exception
+        {
             // Tests that SSA lift/lower correctly handles long parameters (2 slots each)
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecLong")
                 .publicStaticMethod("addLong", "(JJ)J")
@@ -470,7 +495,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeConstantReturn() throws Exception {
+        void executeConstantReturn() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecConst")
                 .publicStaticMethod("const42", "()I")
                     .iconst(42)
@@ -490,7 +516,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void executeVoidMethod() throws Exception {
+        void executeVoidMethod() throws Exception
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ExecVoid")
                 .publicStaticMethod("doNothing", "()V")
                     .vreturn()
@@ -510,13 +537,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== LivenessAnalysis Tests ==========
+    // LivenessAnalysis Tests
 
     @Nested
-    class LivenessAnalysisTests {
+    class LivenessAnalysisTests
+    {
 
         @Test
-        void livenessCreation() {
+        void livenessCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Live", "test", "()V")
                 .entry()
                     .vreturn()
@@ -527,7 +556,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void livenessCompute() {
+        void livenessCompute()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/LiveComp", "test", "()I")
                 .entry()
                     .iconst(1, "a")
@@ -543,7 +573,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void livenessTracksLiveValues() {
+        void livenessTracksLiveValues()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/LiveTrack", "test", "()I")
                 .entry()
                     .iconst(5, "x")
@@ -559,13 +590,15 @@ class BytecodeEmitterTest {
         }
     }
 
-    // ========== DominatorTree Tests ==========
+    // DominatorTree Tests
 
     @Nested
-    class DominatorTreeTests {
+    class DominatorTreeTests
+    {
 
         @Test
-        void dominatorTreeCreation() {
+        void dominatorTreeCreation()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/Dom", "test", "()V")
                 .entry()
                     .vreturn()
@@ -576,7 +609,8 @@ class BytecodeEmitterTest {
         }
 
         @Test
-        void dominatorTreeCompute() {
+        void dominatorTreeCompute()
+        {
             IRMethod method = IRBuilder.staticMethod("com/test/DomComp", "test", "()I")
                 .entry()
                     .iconst(42, "val")

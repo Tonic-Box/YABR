@@ -15,66 +15,78 @@ import java.io.IOException;
 /**
  * Represents the INVOKESPECIAL instruction (0xB7).
  */
-public class InvokeSpecialInstruction extends Instruction implements InvokeInsn {
+public class InvokeSpecialInstruction extends Instruction implements InvokeInsn
+{
     private final int methodIndex;
     private final ConstPool constPool;
 
     /**
      * Constructs an InvokeSpecialInstruction.
-     *
      * @param constPool  The constant pool associated with the class.
      * @param opcode     The opcode of the instruction.
      * @param offset     The bytecode offset of the instruction.
      * @param methodIndex The constant pool index for the method reference.
      */
-    public InvokeSpecialInstruction(ConstPool constPool, int opcode, int offset, int methodIndex) {
+    public InvokeSpecialInstruction(ConstPool constPool, int opcode, int offset, int methodIndex)
+    {
         super(opcode, offset, 3); // opcode + two bytes method index
-        if (opcode != 0xB7) {
+        if (opcode != 0xB7)
+        {
             throw new IllegalArgumentException("Invalid opcode for InvokeSpecialInstruction: " + opcode);
         }
         this.methodIndex = methodIndex;
         this.constPool = constPool;
     }
 
-    public int getMethodIndex() {
+    /**
+     * @return the method index
+     */
+    public int getMethodIndex()
+    {
         return methodIndex;
     }
 
     @Override
-    public void accept(AbstractBytecodeVisitor visitor) {
+    public void accept(AbstractBytecodeVisitor visitor)
+    {
         visitor.visit(this);
     }
 
     /**
      * Writes the INVOKESPECIAL opcode and its operand to the DataOutputStream.
-     *
      * @param dos The DataOutputStream to write to.
      * @throws IOException If an I/O error occurs.
      */
     @Override
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(opcode);
         dos.writeShort(methodIndex);
     }
 
     /**
      * Returns the change in stack size caused by this instruction.
-     *
      * @return The stack size change (depends on method signature).
      */
     @Override
-    public int getStackChange() {
+    public int getStackChange()
+    {
         Item<?> item = constPool.getItem(methodIndex);
         int params, returnSlots;
-        if (item instanceof MethodRefItem) {
+        if (item instanceof MethodRefItem)
+        {
             MethodRefItem method = (MethodRefItem) item;
             params = method.getParameterCount();
             returnSlots = method.getReturnTypeSlots();
-        } else if (item instanceof InterfaceRefItem) {
+        }
+        else if (item instanceof InterfaceRefItem)
+        {
             InterfaceRefItem iface = (InterfaceRefItem) item;
             params = iface.getParameterCount();
             returnSlots = iface.getReturnTypeSlots();
-        } else {
+        }
+        else
+        {
             throw new IllegalStateException("Unexpected ref type: " + item.getClass());
         }
         return -(params + 1) + returnSlots;
@@ -82,37 +94,42 @@ public class InvokeSpecialInstruction extends Instruction implements InvokeInsn 
 
     /**
      * Returns the change in local variables caused by this instruction.
-     *
      * @return The local variables size change (none).
      */
     @Override
-    public int getLocalChange() {
+    public int getLocalChange()
+    {
         return 0;
     }
 
     /**
      * Resolves and returns a string representation of the method.
-     *
      * @return The method as a string.
      */
-    public String resolveMethod() {
+    public String resolveMethod()
+    {
         Item<?> item = constPool.getItem(methodIndex);
         return item.toString();
     }
 
     /**
      * Returns the method name.
-     *
      * @return The method name.
      */
-    public String getMethodName() {
+    public String getMethodName()
+    {
         Item<?> item = constPool.getItem(methodIndex);
         int nameAndTypeIndex;
-        if (item instanceof MethodRefItem) {
+        if (item instanceof MethodRefItem)
+        {
             nameAndTypeIndex = ((MethodRefItem) item).getValue().getNameAndTypeIndex();
-        } else if (item instanceof InterfaceRefItem) {
+        }
+        else if (item instanceof InterfaceRefItem)
+        {
             nameAndTypeIndex = ((InterfaceRefItem) item).getValue().getNameAndTypeIndex();
-        } else {
+        }
+        else
+        {
             throw new IllegalStateException("Unexpected ref type: " + item.getClass());
         }
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
@@ -122,26 +139,31 @@ public class InvokeSpecialInstruction extends Instruction implements InvokeInsn 
 
     /**
      * Returns the class name that owns the method (with dots).
-     *
      * @return The owner class name.
      */
-    public String getOwnerName() {
+    public String getOwnerName()
+    {
         return getOwnerClass().replace('/', '.');
     }
 
     /**
      * Returns the method descriptor.
-     *
      * @return The method descriptor.
      */
-    public String getMethodDescriptor() {
+    public String getMethodDescriptor()
+    {
         Item<?> item = constPool.getItem(methodIndex);
         int nameAndTypeIndex;
-        if (item instanceof MethodRefItem) {
+        if (item instanceof MethodRefItem)
+        {
             nameAndTypeIndex = ((MethodRefItem) item).getValue().getNameAndTypeIndex();
-        } else if (item instanceof InterfaceRefItem) {
+        }
+        else if (item instanceof InterfaceRefItem)
+        {
             nameAndTypeIndex = ((InterfaceRefItem) item).getValue().getNameAndTypeIndex();
-        } else {
+        }
+        else
+        {
             throw new IllegalStateException("Unexpected ref type: " + item.getClass());
         }
         NameAndTypeRefItem nameAndType = (NameAndTypeRefItem) constPool.getItem(nameAndTypeIndex);
@@ -151,17 +173,22 @@ public class InvokeSpecialInstruction extends Instruction implements InvokeInsn 
 
     /**
      * Returns the owner class internal name.
-     *
      * @return The owner class internal name.
      */
-    public String getOwnerClass() {
+    public String getOwnerClass()
+    {
         Item<?> item = constPool.getItem(methodIndex);
         int classIndex;
-        if (item instanceof MethodRefItem) {
+        if (item instanceof MethodRefItem)
+        {
             classIndex = ((MethodRefItem) item).getValue().getClassIndex();
-        } else if (item instanceof InterfaceRefItem) {
+        }
+        else if (item instanceof InterfaceRefItem)
+        {
             classIndex = ((InterfaceRefItem) item).getValue().getClassIndex();
-        } else {
+        }
+        else
+        {
             throw new IllegalStateException("Unexpected ref type: " + item.getClass());
         }
         ClassRefItem classRef = (ClassRefItem) constPool.getItem(classIndex);
@@ -171,11 +198,11 @@ public class InvokeSpecialInstruction extends Instruction implements InvokeInsn 
 
     /**
      * Returns a string representation of the instruction.
-     *
      * @return The mnemonic, method index, and resolved method.
      */
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("INVOKESPECIAL #%d // %s", methodIndex, resolveMethod());
     }
 }

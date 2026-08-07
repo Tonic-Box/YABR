@@ -7,7 +7,8 @@ import java.util.Objects;
 /**
  * Represents a reference type (class or interface).
  */
-public final class ReferenceType implements IRType {
+public final class ReferenceType implements IRType
+{
 
     public static final ReferenceType OBJECT = new ReferenceType("java/lang/Object");
     public static final ReferenceType STRING = new ReferenceType("java/lang/String");
@@ -20,46 +21,58 @@ public final class ReferenceType implements IRType {
      * Creates a reference type with the given internal name.
      * @param internalName the internal class name
      */
-    public ReferenceType(String internalName) {
+    public ReferenceType(String internalName)
+    {
         this.internalName = internalName.replace('.', '/');
     }
 
-    public String getInternalName() {
+    /**
+     * @return the internal name
+     */
+    public String getInternalName()
+    {
         return internalName;
     }
 
     @Override
-    public String getDescriptor() {
+    public String getDescriptor()
+    {
         return "L" + internalName + ";";
     }
 
     @Override
-    public int getSize() {
+    public int getSize()
+    {
         return 1;
     }
 
     @Override
-    public boolean isReference() {
+    public boolean isReference()
+    {
         return true;
     }
 
     @Override
-    public boolean isPrimitive() {
+    public boolean isPrimitive()
+    {
         return false;
     }
 
     @Override
-    public boolean isVoid() {
+    public boolean isVoid()
+    {
         return false;
     }
 
     @Override
-    public boolean isArray() {
+    public boolean isArray()
+    {
         return false;
     }
 
     @Override
-    public boolean isTwoSlot() {
+    public boolean isTwoSlot()
+    {
         return false;
     }
 
@@ -67,17 +80,20 @@ public final class ReferenceType implements IRType {
      * Gets the simple class name without package.
      * @return the simple name
      */
-    public String getSimpleName() {
+    public String getSimpleName()
+    {
         return ClassNameUtil.getSimpleNameWithInnerClasses(internalName);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return internalName;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof ReferenceType)) return false;
         ReferenceType that = (ReferenceType) o;
@@ -85,7 +101,8 @@ public final class ReferenceType implements IRType {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(internalName);
     }
 }

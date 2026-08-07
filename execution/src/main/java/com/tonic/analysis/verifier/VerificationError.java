@@ -2,7 +2,11 @@ package com.tonic.analysis.verifier;
 
 import java.util.Objects;
 
-public final class VerificationError {
+/**
+ * One immutable verification finding: a typed error or warning with an optional bytecode offset and location.
+ */
+public final class VerificationError
+{
     private final VerificationErrorType type;
     private final int bytecodeOffset;
     private final String message;
@@ -10,21 +14,58 @@ public final class VerificationError {
     private final String methodName;
     private final String className;
 
-    public enum Severity {
+    /**
+     * Severity of a finding: ERROR fails verification, WARNING does not.
+     */
+    public enum Severity
+    {
+        /**
+         * A finding that fails verification; also the severity applied when a
+         * caller passes none.
+         */
         ERROR,
+        /**
+         * A suspicious but tolerable finding; verification still succeeds and
+         * the class is usable.
+         */
         WARNING
     }
 
-    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message) {
+    /**
+     * Creates an ERROR-severity finding with no location.
+     * @param type the error category
+     * @param bytecodeOffset the offending bytecode offset, or -1 if not tied to an offset
+     * @param message the detail message, or null for the type's description
+     */
+    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message)
+    {
         this(type, bytecodeOffset, message, Severity.ERROR, null, null);
     }
 
-    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message, Severity severity) {
+    /**
+     * Creates a finding with an explicit severity and no location.
+     * @param type the error category
+     * @param bytecodeOffset the offending bytecode offset, or -1 if not tied to an offset
+     * @param message the detail message, or null for the type's description
+     * @param severity the severity, or null for ERROR
+     */
+    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message, Severity severity)
+    {
         this(type, bytecodeOffset, message, severity, null, null);
     }
 
-    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message,
-                             Severity severity, String className, String methodName) {
+    /**
+     * Creates a finding with an explicit severity and location; null message and severity fall back to
+     * the type's description and ERROR.
+     * @param type the error category
+     * @param bytecodeOffset the offending bytecode offset, or -1 if not tied to an offset
+     * @param message the detail message, or null for the type's description
+     * @param severity the severity, or null for ERROR
+     * @param className the enclosing class name, or null
+     * @param methodName the enclosing method name, or null
+     */
+    public VerificationError(VerificationErrorType type, int bytecodeOffset, String message, Severity severity, String className, String methodName)
+    {
         this.type = Objects.requireNonNull(type, "type");
         this.bytecodeOffset = bytecodeOffset;
         this.message = message != null ? message : type.getDescription();
@@ -33,55 +74,102 @@ public final class VerificationError {
         this.methodName = methodName;
     }
 
-    public VerificationError withLocation(String className, String methodName) {
+    /**
+     * Copies this error with a class and method location attached.
+     * @param className the enclosing class name
+     * @param methodName the enclosing method name
+     * @return a new error with the location set
+     */
+    public VerificationError withLocation(String className, String methodName)
+    {
         return new VerificationError(type, bytecodeOffset, message, severity, className, methodName);
     }
 
-    public VerificationErrorType getType() {
+    /**
+     * @return the type
+     */
+    public VerificationErrorType getType()
+    {
         return type;
     }
 
-    public int getBytecodeOffset() {
+    /**
+     * @return the bytecode offset
+     */
+    public int getBytecodeOffset()
+    {
         return bytecodeOffset;
     }
 
-    public String getMessage() {
+    /**
+     * @return the message
+     */
+    public String getMessage()
+    {
         return message;
     }
 
-    public Severity getSeverity() {
+    /**
+     * @return the severity
+     */
+    public Severity getSeverity()
+    {
         return severity;
     }
 
-    public String getMethodName() {
+    /**
+     * @return the method name
+     */
+    public String getMethodName()
+    {
         return methodName;
     }
 
-    public String getClassName() {
+    /**
+     * @return the class name
+     */
+    public String getClassName()
+    {
         return className;
     }
 
-    public boolean isError() {
+    /**
+     * @return true if severity is ERROR
+     */
+    public boolean isError()
+    {
         return severity == Severity.ERROR;
     }
 
-    public boolean isWarning() {
+    /**
+     * @return true if severity is WARNING
+     */
+    public boolean isWarning()
+    {
         return severity == Severity.WARNING;
     }
 
-    public String format() {
+    /**
+     * Formats this finding as one line with severity, type, location, offset, and message.
+     * @return the formatted line
+     */
+    public String format()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append(severity == Severity.ERROR ? "ERROR" : "WARNING");
         sb.append(" [").append(type.name()).append("]");
 
-        if (className != null) {
+        if (className != null)
+        {
             sb.append(" in ").append(className);
-            if (methodName != null) {
+            if (methodName != null)
+            {
                 sb.append(".").append(methodName);
             }
         }
 
-        if (bytecodeOffset >= 0) {
+        if (bytecodeOffset >= 0)
+        {
             sb.append(" at offset ").append(bytecodeOffset);
         }
 
@@ -90,12 +178,14 @@ public final class VerificationError {
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return format();
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof VerificationError)) return false;
         VerificationError that = (VerificationError) o;
@@ -108,7 +198,8 @@ public final class VerificationError {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(type, bytecodeOffset, message, severity, className, methodName);
     }
 }

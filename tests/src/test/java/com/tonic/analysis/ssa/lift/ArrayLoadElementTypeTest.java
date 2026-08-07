@@ -18,25 +18,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Regression test: aaload results must carry the array operand's element type when it is
  * statically known, not bare java/lang/Object.
  */
-class ArrayLoadElementTypeTest {
+class ArrayLoadElementTypeTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         TestUtils.resetSSACounters();
     }
 
     @Test
-    void jaggedIntArrayLoadIsTypedAsIntArray() throws Exception {
+    void jaggedIntArrayLoadIsTypedAsIntArray() throws Exception
+    {
         assertAaloadResultType("sum", "[[I", "[I");
     }
 
     @Test
-    void objectArrayLoadIsTypedAsElementClass() throws Exception {
+    void objectArrayLoadIsTypedAsElementClass() throws Exception
+    {
         assertAaloadResultType("first", "[Ljava/lang/String;", "Ljava/lang/String;");
     }
 
-    private void assertAaloadResultType(String methodName, String arrayDescriptor,
-                                        String expectedElementDescriptor) throws Exception {
+    private void assertAaloadResultType(String methodName, String arrayDescriptor, String expectedElementDescriptor) throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("JaggedArrays");
         MethodEntry method = cf.getMethods().stream()
                 .filter(m -> m.getName().equals(methodName))
@@ -46,21 +50,25 @@ class ArrayLoadElementTypeTest {
 
         boolean sawLoad = false;
         StringBuilder seen = new StringBuilder();
-        for (IRBlock block : ir.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof ArrayAccessInstruction) {
+        for (IRBlock block : ir.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof ArrayAccessInstruction)
+                {
                     ArrayAccessInstruction access = (ArrayAccessInstruction) instr;
-                    if (!access.isLoad()) {
+                    if (!access.isLoad())
+                    {
                         continue;
                     }
                     String arrayDesc = access.getArray().getType() == null
                             ? "null" : access.getArray().getType().getDescriptor();
                     seen.append(arrayDesc).append("->")
                             .append(access.getResult().getType().getDescriptor()).append(' ');
-                    if (arrayDesc.equals(arrayDescriptor)) {
+                    if (arrayDesc.equals(arrayDescriptor))
+                    {
                         sawLoad = true;
-                        assertEquals(expectedElementDescriptor,
-                                access.getResult().getType().getDescriptor());
+                        assertEquals(expectedElementDescriptor, access.getResult().getType().getDescriptor());
                     }
                 }
             }

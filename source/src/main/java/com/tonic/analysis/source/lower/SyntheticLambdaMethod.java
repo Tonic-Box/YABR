@@ -7,7 +7,12 @@ import com.tonic.analysis.source.ast.type.SourceType;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SyntheticLambdaMethod {
+/**
+ * A lambda body pending materialization as a synthetic class method, with its captured
+ * variables and declared parameters.
+ */
+public class SyntheticLambdaMethod
+{
 
     private final String name;
     private final String descriptor;
@@ -17,9 +22,18 @@ public class SyntheticLambdaMethod {
     private final List<LambdaParameter> parameters;
     private final SourceType returnType;
 
-    public SyntheticLambdaMethod(String name, String descriptor, boolean isStatic,
-                                  List<CapturedVariable> captures, ASTNode body,
-                                  List<LambdaParameter> parameters, SourceType returnType) {
+    /**
+     * Creates the synthetic lambda method description.
+     * @param name the synthetic method name
+     * @param descriptor the method descriptor
+     * @param isStatic whether the synthetic method is static
+     * @param captures the captured variables; null means none
+     * @param body the lambda body node
+     * @param parameters the declared lambda parameters; null means none
+     * @param returnType the lambda return type
+     */
+    public SyntheticLambdaMethod(String name, String descriptor, boolean isStatic, List<CapturedVariable> captures, ASTNode body, List<LambdaParameter> parameters, SourceType returnType)
+    {
         this.name = name;
         this.descriptor = descriptor;
         this.isStatic = isStatic;
@@ -29,52 +43,97 @@ public class SyntheticLambdaMethod {
         this.returnType = returnType;
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public String getDescriptor() {
+    /**
+     * @return the descriptor
+     */
+    public String getDescriptor()
+    {
         return descriptor;
     }
 
-    public boolean isStatic() {
+    /**
+     * @return whether static
+     */
+    public boolean isStatic()
+    {
         return isStatic;
     }
 
-    public List<CapturedVariable> getCaptures() {
+    /**
+     * @return the captures
+     */
+    public List<CapturedVariable> getCaptures()
+    {
         return captures;
     }
 
-    public ASTNode getBody() {
+    /**
+     * @return the body
+     */
+    public ASTNode getBody()
+    {
         return body;
     }
 
-    public List<LambdaParameter> getParameters() {
+    /**
+     * @return the parameters
+     */
+    public List<LambdaParameter> getParameters()
+    {
         return parameters;
     }
 
-    public SourceType getReturnType() {
+    /**
+     * @return the return type
+     */
+    public SourceType getReturnType()
+    {
         return returnType;
     }
 
-    public int getTotalParameterCount() {
+    /**
+     * @return the number of captures plus declared parameters
+     */
+    public int getTotalParameterCount()
+    {
         return captures.size() + parameters.size();
     }
 
-    public static class CapturedVariable {
+    /**
+     * A variable captured from the enclosing scope, by name and type.
+     */
+    public static class CapturedVariable
+    {
         private final String name;
         private final SourceType type;
 
-        public CapturedVariable(String name, SourceType type) {
+        public CapturedVariable(String name, SourceType type)
+        {
             this.name = name;
             this.type = type;
         }
 
-        public String getName() {
+        /**
+         * @return the name
+         */
+        public String getName()
+        {
             return name;
         }
 
-        public SourceType getType() {
+        /**
+         * @return the type
+         */
+        public SourceType getType()
+        {
             return type;
         }
     }

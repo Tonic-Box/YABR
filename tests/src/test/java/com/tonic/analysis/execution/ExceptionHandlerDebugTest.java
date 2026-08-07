@@ -14,14 +14,16 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-class ExceptionHandlerDebugTest {
+class ExceptionHandlerDebugTest
+{
 
     private ClassFile classFile;
     private ClassPool classPool;
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = TestUtils.loadTestFixture("ExecutionTestFixture");
         classPool = new ClassPool();
         classPool.put(classFile);
@@ -35,7 +37,8 @@ class ExceptionHandlerDebugTest {
             .build();
     }
 
-    private MethodEntry findMethod(String name) {
+    private MethodEntry findMethod(String name)
+    {
         return classFile.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
@@ -43,7 +46,8 @@ class ExceptionHandlerDebugTest {
     }
 
     @Test
-    void testDivideOrThrow() {
+    void testDivideOrThrow()
+    {
         MethodEntry method = findMethod("divideOrThrow");
         BytecodeEngine engine = new BytecodeEngine(context);
 
@@ -53,13 +57,12 @@ class ExceptionHandlerDebugTest {
         System.out.println("=== divideOrThrow(10, 0) ===");
         System.out.println("Method: " + method.getName() + method.getDesc());
 
-        BytecodeResult result = engine.execute(method,
-            ConcreteValue.intValue(10),
-            ConcreteValue.intValue(0));
+        BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(0));
 
         System.out.println("Result status: " + result.getStatus());
         System.out.println("Exception: " + result.getException());
-        if (result.getException() != null) {
+        if (result.getException() != null)
+        {
             System.out.println("Exception class: " + result.getException().getClassName());
         }
         System.out.println("Return value: " + result.getReturnValue());

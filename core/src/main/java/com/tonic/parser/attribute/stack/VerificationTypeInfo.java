@@ -8,67 +8,80 @@ import java.io.IOException;
 
 /**
  * Represents verification type information used in stack map frames.
- * Encodes the type of a local variable or operand stack entry.
  */
-public class VerificationTypeInfo {
+public class VerificationTypeInfo
+{
     private final int tag;
     private final Object info;
 
     /**
      * Constructs a VerificationTypeInfo.
-     *
      * @param tag the verification type tag
      * @param info additional information (index or offset), or null
      */
-    public VerificationTypeInfo(int tag, Object info) {
+    public VerificationTypeInfo(int tag, Object info)
+    {
         this.tag = tag;
         this.info = info;
     }
 
-    public int getTag() {
+    /**
+     * @return the tag
+     */
+    public int getTag()
+    {
         return tag;
     }
 
-    public Object getInfo() {
+    /**
+     * @return the info
+     */
+    public Object getInfo()
+    {
         return info;
     }
 
     /**
      * Writes this verification type info to the output stream.
-     *
      * @param dos the output stream to write to
      * @throws IOException if an I/O error occurs
      */
-    public void write(DataOutputStream dos) throws IOException {
+    public void write(DataOutputStream dos) throws IOException
+    {
         dos.writeByte(tag);
-        if (tag == 7 || tag == 8) {
+        if (tag == 7 || tag == 8)
+        {
             dos.writeShort((Integer) info);
         }
     }
 
     /**
      * Returns the length of this verification type info in bytes.
-     *
      * @return the length in bytes
      */
-    public int getLength() {
-        if (tag == 7 || tag == 8) {
+    public int getLength()
+    {
+        if (tag == 7 || tag == 8)
+        {
             return 1 + 2;
-        } else {
+        }
+        else
+        {
             return 1;
         }
     }
 
     /**
      * Reads a verification type info from the class file.
-     *
      * @param classFile the class file to read from
      * @param constPool the constant pool for resolving references
      * @return the parsed VerificationTypeInfo
      */
-    public static VerificationTypeInfo readVerificationTypeInfo(ClassFile classFile, ConstPool constPool) {
+    public static VerificationTypeInfo readVerificationTypeInfo(ClassFile classFile, ConstPool constPool)
+    {
         int tag = classFile.readUnsignedByte();
-        switch (tag) {
+        switch (tag)
+        {
             case 0:
             case 1:
             case 2:
@@ -78,18 +91,17 @@ public class VerificationTypeInfo {
             case 6:
                 return new VerificationTypeInfo(tag, null);
             case 7:
+            case 8:
                 int cpoolIndex = classFile.readUnsignedShort();
                 return new VerificationTypeInfo(tag, cpoolIndex);
-            case 8:
-                int offset = classFile.readUnsignedShort();
-                return new VerificationTypeInfo(tag, offset);
             default:
                 throw new IllegalArgumentException("Unknown verification type info tag: " + tag);
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "VerificationTypeInfo{tag=" + tag + ", info=" + info + "}";
     }
 }

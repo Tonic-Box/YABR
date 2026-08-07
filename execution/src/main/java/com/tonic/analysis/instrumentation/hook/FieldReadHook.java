@@ -9,9 +9,9 @@ import java.util.List;
 
 /**
  * Configuration for field read instrumentation.
- * Hooks are called after GETFIELD/GETSTATIC instructions.
  */
-public class FieldReadHook implements Hook {
+public class FieldReadHook implements Hook
+{
 
     private final HookDescriptor hookDescriptor;
     private final List<InstrumentationFilter> filters;
@@ -23,7 +23,8 @@ public class FieldReadHook implements Hook {
     private final boolean instrumentStatic;
     private final boolean instrumentInstance;
 
-    private FieldReadHook(Builder builder) {
+    private FieldReadHook(Builder builder)
+    {
         this.hookDescriptor = builder.hookDescriptor;
         this.filters = builder.filters;
         this.enabled = builder.enabled;
@@ -35,66 +36,112 @@ public class FieldReadHook implements Hook {
         this.instrumentInstance = builder.instrumentInstance;
     }
 
-    public HookDescriptor getHookDescriptor() {
+    /**
+     * @return the hook descriptor
+     */
+    public HookDescriptor getHookDescriptor()
+    {
         return hookDescriptor;
     }
 
-    public List<InstrumentationFilter> getFilters() {
+    /**
+     * @return the filters
+     */
+    public List<InstrumentationFilter> getFilters()
+    {
         return filters;
     }
 
-    public boolean isEnabled() {
+    /**
+     * @return whether enabled
+     */
+    public boolean isEnabled()
+    {
         return enabled;
     }
 
-    public int getPriority() {
+    /**
+     * @return the priority
+     */
+    public int getPriority()
+    {
         return priority;
     }
 
-    /** Returns whether the field's owning object (null for static fields) is passed to the hook. */
-    public boolean isPassOwner() {
+    /**
+     * @return whether the field's owning object (null for static fields) is passed to the hook
+     */
+    public boolean isPassOwner()
+    {
         return passOwner;
     }
 
-    /** Returns whether the field name is passed to the hook. */
-    public boolean isPassFieldName() {
+    /**
+     * @return whether the field name is passed to the hook
+     */
+    public boolean isPassFieldName()
+    {
         return passFieldName;
     }
 
-    /** Returns whether the value that was read (boxed if primitive) is passed to the hook. */
-    public boolean isPassReadValue() {
+    /**
+     * @return whether the value that was read (boxed if primitive) is passed to the hook
+     */
+    public boolean isPassReadValue()
+    {
         return passReadValue;
     }
 
-    /** Returns whether static field reads are instrumented. */
-    public boolean isInstrumentStatic() {
+    /**
+     * @return whether static field reads are instrumented
+     */
+    public boolean isInstrumentStatic()
+    {
         return instrumentStatic;
     }
 
-    /** Returns whether instance field reads are instrumented. */
-    public boolean isInstrumentInstance() {
+    /**
+     * @return whether instance field reads are instrumented
+     */
+    public boolean isInstrumentInstance()
+    {
         return instrumentInstance;
     }
 
     @Override
-    public InstrumentationTarget getTarget() {
+    public InstrumentationTarget getTarget()
+    {
         return InstrumentationTarget.FIELD_READ;
     }
 
     /**
-     * Creates a simple field read hook.
+     * Creates a field read hook that invokes the given static hook method.
+     * @param hookOwner the hook method's owning class (internal name)
+     * @param hookName the hook method name
+     * @param hookDescriptor the hook method descriptor
+     * @return the new hook
      */
-    public static FieldReadHook simple(String hookOwner, String hookName, String hookDescriptor) {
+    public static FieldReadHook simple(String hookOwner, String hookName, String hookDescriptor)
+    {
         return FieldReadHook.builder()
                 .hookDescriptor(HookDescriptor.staticHook(hookOwner, hookName, hookDescriptor))
                 .build();
     }
 
-    public static Builder builder() {
+    /**
+     * Creates a builder for a field read hook.
+     * @return a new builder
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Fluent builder for {@link FieldReadHook} instances.
+     */
+    public static class Builder
+    {
         private HookDescriptor hookDescriptor;
         private List<InstrumentationFilter> filters = new ArrayList<>();
         private boolean enabled = true;
@@ -105,52 +152,111 @@ public class FieldReadHook implements Hook {
         private boolean instrumentStatic = true;
         private boolean instrumentInstance = true;
 
-        public Builder hookDescriptor(HookDescriptor hookDescriptor) {
+        /**
+         * Sets the hook method invoked at each instrumented field read.
+         * @param hookDescriptor the hook method descriptor
+         * @return this builder
+         */
+        public Builder hookDescriptor(HookDescriptor hookDescriptor)
+        {
             this.hookDescriptor = hookDescriptor;
             return this;
         }
 
-        public Builder filters(List<InstrumentationFilter> filters) {
+        /**
+         * Sets the filters that restrict which code is instrumented.
+         * @param filters the instrumentation filters
+         * @return this builder
+         */
+        public Builder filters(List<InstrumentationFilter> filters)
+        {
             this.filters = filters;
             return this;
         }
 
-        public Builder enabled(boolean enabled) {
+        /**
+         * Sets whether the hook is active.
+         * @param enabled true to enable the hook
+         * @return this builder
+         */
+        public Builder enabled(boolean enabled)
+        {
             this.enabled = enabled;
             return this;
         }
 
-        public Builder priority(int priority) {
+        /**
+         * Sets the ordering priority relative to other hooks.
+         * @param priority the priority value
+         * @return this builder
+         */
+        public Builder priority(int priority)
+        {
             this.priority = priority;
             return this;
         }
 
-        public Builder passOwner(boolean passOwner) {
+        /**
+         * Sets whether the field's owning object is passed to the hook.
+         * @param passOwner true to pass the owning object
+         * @return this builder
+         */
+        public Builder passOwner(boolean passOwner)
+        {
             this.passOwner = passOwner;
             return this;
         }
 
-        public Builder passFieldName(boolean passFieldName) {
+        /**
+         * Sets whether the field name is passed to the hook.
+         * @param passFieldName true to pass the field name
+         * @return this builder
+         */
+        public Builder passFieldName(boolean passFieldName)
+        {
             this.passFieldName = passFieldName;
             return this;
         }
 
-        public Builder passReadValue(boolean passReadValue) {
+        /**
+         * Sets whether the value that was read is passed to the hook.
+         * @param passReadValue true to pass the read value
+         * @return this builder
+         */
+        public Builder passReadValue(boolean passReadValue)
+        {
             this.passReadValue = passReadValue;
             return this;
         }
 
-        public Builder instrumentStatic(boolean instrumentStatic) {
+        /**
+         * Sets whether static field reads are instrumented.
+         * @param instrumentStatic true to instrument static reads
+         * @return this builder
+         */
+        public Builder instrumentStatic(boolean instrumentStatic)
+        {
             this.instrumentStatic = instrumentStatic;
             return this;
         }
 
-        public Builder instrumentInstance(boolean instrumentInstance) {
+        /**
+         * Sets whether instance field reads are instrumented.
+         * @param instrumentInstance true to instrument instance reads
+         * @return this builder
+         */
+        public Builder instrumentInstance(boolean instrumentInstance)
+        {
             this.instrumentInstance = instrumentInstance;
             return this;
         }
 
-        public FieldReadHook build() {
+        /**
+         * Builds the configured field read hook.
+         * @return the new hook
+         */
+        public FieldReadHook build()
+        {
             return new FieldReadHook(this);
         }
     }

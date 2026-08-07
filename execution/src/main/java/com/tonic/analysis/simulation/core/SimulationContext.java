@@ -6,20 +6,11 @@ import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 
 /**
- * Configuration and shared resources for simulation.
- *
- * <p>SimulationContext is immutable. Use the builder-style methods to create
- * modified configurations.
- *
- * <p>Example usage:
- * <pre>
- * SimulationContext ctx = SimulationContext.forMethod(method)
- *     .withMode(SimulationMode.INSTRUCTION)
- *     .withMaxCallDepth(3)
- *     .withValueTracking(true);
- * </pre>
+ * Immutable configuration and shared resources for simulation; the with* methods return
+ * modified copies.
  */
-public final class SimulationContext {
+public final class SimulationContext
+{
 
     private final ClassPool classPool;
     private final CallGraph callGraph;
@@ -29,7 +20,8 @@ public final class SimulationContext {
     private final boolean trackValues;
     private final boolean trackStackOperations;
 
-    private SimulationContext(Builder builder) {
+    private SimulationContext(Builder builder)
+    {
         this.classPool = builder.classPool;
         this.callGraph = builder.callGraph;
         this.mode = builder.mode;
@@ -39,143 +31,210 @@ public final class SimulationContext {
         this.trackStackOperations = builder.trackStackOperations;
     }
 
-    // ========== Factory Methods ==========
+    // Factory Methods
 
     /**
-     * Create a context for simulating a single method.
+     * Creates a context for simulating a single method, backed by the pool its class was loaded from.
+     * @param method the method to simulate, may be null
+     * @return a new context resolving through that method's pool
      */
-    public static SimulationContext forMethod(MethodEntry method) {
-        ClassPool pool = ClassPool.getDefault();
+    public static SimulationContext forMethod(MethodEntry method)
+    {
+        return forPool(poolOf(method == null ? null : method.getClassFile()));
+    }
+
+    /**
+     * Creates a context for simulating methods in a class, backed by the pool it was loaded from.
+     * @param classFile the class whose methods will be simulated, may be null
+     * @return a new context resolving through that class's pool
+     */
+    public static SimulationContext forClass(ClassFile classFile)
+    {
+        return forPool(poolOf(classFile));
+    }
+
+    /**
+     * The pool a class was loaded from, falling back to the default pool for a class built in memory.
+     * @param classFile the class to take the pool from, may be null
+     * @return the class's own pool, or the default pool
+     */
+    private static ClassPool poolOf(ClassFile classFile)
+    {
+        ClassPool pool = classFile == null ? null : classFile.getClassPool();
+        return pool != null ? pool : ClassPool.getDefault();
+    }
+
+    /**
+     * Creates a context for simulating across a class pool.
+     * @param pool the class pool used to resolve classes and callees
+     * @return a new context with default settings
+     */
+    public static SimulationContext forPool(ClassPool pool)
+    {
         return new Builder()
             .classPool(pool)
             .build();
     }
 
     /**
-     * Create a context for simulating methods in a class.
+     * Creates a context with default settings and no class pool.
+     * @return a new default context
      */
-    public static SimulationContext forClass(ClassFile classFile) {
-        ClassPool pool = ClassPool.getDefault();
-        return new Builder()
-            .classPool(pool)
-            .build();
-    }
-
-    /**
-     * Create a context for simulating across a class pool.
-     */
-    public static SimulationContext forPool(ClassPool pool) {
-        return new Builder()
-            .classPool(pool)
-            .build();
-    }
-
-    /**
-     * Create a default context.
-     */
-    public static SimulationContext defaults() {
+    public static SimulationContext defaults()
+    {
         return new Builder().build();
     }
 
-    // ========== Builder-style Configuration ==========
+    // Builder-style Configuration
 
     /**
-     * Set the simulation mode.
+     * Sets the simulation mode.
+     * @param mode the mode to use
+     * @return a new context with the mode applied
      */
-    public SimulationContext withMode(SimulationMode mode) {
+    public SimulationContext withMode(SimulationMode mode)
+    {
         return toBuilder().mode(mode).build();
     }
 
     /**
-     * Set the maximum call depth for inter-procedural simulation.
-     * 0 means intra-procedural only (default).
+     * Sets the maximum call depth for inter-procedural simulation.
+     * @param depth the depth limit; 0 means intra-procedural only (the default)
+     * @return a new context with the depth applied
      */
-    public SimulationContext withMaxCallDepth(int depth) {
+    public SimulationContext withMaxCallDepth(int depth)
+    {
         return toBuilder().maxCallDepth(depth).build();
     }
 
     /**
-     * Enable or disable heap allocation tracking.
+     * Enables or disables heap allocation tracking.
+     * @param enabled whether to track heap allocations
+     * @return a new context with the setting applied
      */
-    public SimulationContext withHeapTracking(boolean enabled) {
+    public SimulationContext withHeapTracking(boolean enabled)
+    {
         return toBuilder().trackHeap(enabled).build();
     }
 
     /**
-     * Enable or disable value flow tracking.
+     * Enables or disables value flow tracking.
+     * @param enabled whether to track value flow
+     * @return a new context with the setting applied
      */
-    public SimulationContext withValueTracking(boolean enabled) {
+    public SimulationContext withValueTracking(boolean enabled)
+    {
         return toBuilder().trackValues(enabled).build();
     }
 
     /**
-     * Enable or disable stack operation tracking.
+     * Enables or disables stack operation tracking.
+     * @param enabled whether to track stack operations
+     * @return a new context with the setting applied
      */
-    public SimulationContext withStackOperationTracking(boolean enabled) {
+    public SimulationContext withStackOperationTracking(boolean enabled)
+    {
         return toBuilder().trackStackOperations(enabled).build();
     }
 
     /**
-     * Set the call graph for inter-procedural resolution.
+     * Sets the call graph for inter-procedural resolution.
+     * @param callGraph the call graph to use
+     * @return a new context with the call graph applied
      */
-    public SimulationContext withCallGraph(CallGraph callGraph) {
+    public SimulationContext withCallGraph(CallGraph callGraph)
+    {
         return toBuilder().callGraph(callGraph).build();
     }
 
     /**
-     * Set the class pool.
+     * Sets the class pool used to resolve classes and callees.
+     * @param classPool the class pool to use
+     * @return a new context with the class pool applied
      */
-    public SimulationContext withClassPool(ClassPool classPool) {
+    public SimulationContext withClassPool(ClassPool classPool)
+    {
         return toBuilder().classPool(classPool).build();
     }
 
-    // ========== Getters ==========
+    // Getters
 
-    public ClassPool getClassPool() {
+    /**
+     * @return the class pool
+     */
+    public ClassPool getClassPool()
+    {
         return classPool;
     }
 
-    public CallGraph getCallGraph() {
+    /**
+     * @return the call graph
+     */
+    public CallGraph getCallGraph()
+    {
         return callGraph;
     }
 
-    public SimulationMode getMode() {
+    /**
+     * @return the simulation mode
+     */
+    public SimulationMode getMode()
+    {
         return mode;
     }
 
-    public int getMaxCallDepth() {
+    /**
+     * @return the maximum inter-procedural call depth
+     */
+    public int getMaxCallDepth()
+    {
         return maxCallDepth;
     }
 
-    public boolean isTrackHeap() {
+    /**
+     * @return whether heap allocation tracking is enabled
+     */
+    public boolean isTrackHeap()
+    {
         return trackHeap;
     }
 
-    public boolean isTrackValues() {
+    /**
+     * @return whether value flow tracking is enabled
+     */
+    public boolean isTrackValues()
+    {
         return trackValues;
     }
 
-    public boolean isTrackStackOperations() {
+    /**
+     * @return whether stack operation tracking is enabled
+     */
+    public boolean isTrackStackOperations()
+    {
         return trackStackOperations;
     }
 
     /**
-     * Returns true if inter-procedural simulation is enabled.
+     * @return true when inter-procedural simulation is enabled (max call depth above zero)
      */
-    public boolean isInterProcedural() {
+    public boolean isInterProcedural()
+    {
         return maxCallDepth > 0;
     }
 
     /**
-     * Returns true if instruction-level tracking is enabled.
+     * @return true when instruction-level state tracking is enabled
      */
-    public boolean isInstructionLevel() {
+    public boolean isInstructionLevel()
+    {
         return mode == SimulationMode.INSTRUCTION;
     }
 
-    // ========== Builder ==========
+    // Builder
 
-    private Builder toBuilder() {
+    private Builder toBuilder()
+    {
         return new Builder()
             .classPool(classPool)
             .callGraph(callGraph)
@@ -186,7 +245,11 @@ public final class SimulationContext {
             .trackStackOperations(trackStackOperations);
     }
 
-    public static class Builder {
+    /**
+     * Mutable builder for SimulationContext instances.
+     */
+    public static class Builder
+    {
         private ClassPool classPool;
         private CallGraph callGraph;
         private SimulationMode mode = SimulationMode.INSTRUCTION;
@@ -195,48 +258,96 @@ public final class SimulationContext {
         private boolean trackValues = false;
         private boolean trackStackOperations = true;
 
-        public Builder classPool(ClassPool classPool) {
+        /**
+         * Sets the class pool used to resolve classes and callees.
+         * @param classPool the class pool to use
+         * @return this builder
+         */
+        public Builder classPool(ClassPool classPool)
+        {
             this.classPool = classPool;
             return this;
         }
 
-        public Builder callGraph(CallGraph callGraph) {
+        /**
+         * Sets the call graph for inter-procedural resolution.
+         * @param callGraph the call graph to use
+         * @return this builder
+         */
+        public Builder callGraph(CallGraph callGraph)
+        {
             this.callGraph = callGraph;
             return this;
         }
 
-        public Builder mode(SimulationMode mode) {
+        /**
+         * Sets the simulation mode.
+         * @param mode the mode to use
+         * @return this builder
+         */
+        public Builder mode(SimulationMode mode)
+        {
             this.mode = mode;
             return this;
         }
 
-        public Builder maxCallDepth(int maxCallDepth) {
+        /**
+         * Sets the maximum inter-procedural call depth.
+         * @param maxCallDepth the depth limit; 0 means intra-procedural only
+         * @return this builder
+         */
+        public Builder maxCallDepth(int maxCallDepth)
+        {
             this.maxCallDepth = maxCallDepth;
             return this;
         }
 
-        public Builder trackHeap(boolean trackHeap) {
+        /**
+         * Sets whether heap allocations are tracked.
+         * @param trackHeap whether to track heap allocations
+         * @return this builder
+         */
+        public Builder trackHeap(boolean trackHeap)
+        {
             this.trackHeap = trackHeap;
             return this;
         }
 
-        public Builder trackValues(boolean trackValues) {
+        /**
+         * Sets whether value flow is tracked.
+         * @param trackValues whether to track value flow
+         * @return this builder
+         */
+        public Builder trackValues(boolean trackValues)
+        {
             this.trackValues = trackValues;
             return this;
         }
 
-        public Builder trackStackOperations(boolean trackStackOperations) {
+        /**
+         * Sets whether stack operations are tracked.
+         * @param trackStackOperations whether to track stack operations
+         * @return this builder
+         */
+        public Builder trackStackOperations(boolean trackStackOperations)
+        {
             this.trackStackOperations = trackStackOperations;
             return this;
         }
 
-        public SimulationContext build() {
+        /**
+         * Builds the immutable context from the current settings.
+         * @return a new SimulationContext
+         */
+        public SimulationContext build()
+        {
             return new SimulationContext(this);
         }
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "SimulationContext[" +
             "mode=" + mode +
             ", maxCallDepth=" + maxCallDepth +

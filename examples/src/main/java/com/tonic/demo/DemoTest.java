@@ -2,9 +2,6 @@ package com.tonic.demo;
 
 import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.ExprStmt;
-import com.tonic.analysis.source.ast.stmt.IfStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -15,12 +12,22 @@ import com.tonic.parser.MethodEntry;
 
 import java.io.InputStream;
 
-public class DemoTest {
+/**
+ * Demo showing AST recovery of DemoClass.test and a walk over its recovered statements.
+ */
+public class DemoTest
+{
+    /**
+     * Recovers the AST of DemoClass.test and prints every statement with its node type.
+     * @param args unused
+     * @throws Exception if the class resource cannot be read or recovery fails
+     */
     public static void main(String[] args) throws Exception
     {
         ClassPool classPool = ClassPool.getDefault();
 
-        try (InputStream is = DemoTest.class.getResourceAsStream("DemoClass.class")) {
+        try (InputStream is = DemoTest.class.getResourceAsStream("DemoClass.class"))
+        {
             if(is == null)
             {
                 return;
@@ -34,9 +41,7 @@ public class DemoTest {
             IRMethod irMethod = ssa.lift(main);
             BlockStmt body = MethodRecoverer.recoverMethod(irMethod, main);
 
-            ASTUtils.forEachStatement(body, stmt -> {
-                System.out.println("[" + stmt.getClass().getName() + "] " + stmt.toString());
-            });
+            ASTUtils.forEachStatement(body, stmt -> System.out.println("[" + stmt.getClass().getName() + "] " + stmt));
         }
     }
 }

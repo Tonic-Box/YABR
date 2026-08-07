@@ -8,26 +8,31 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DescriptorParserTest {
+class DescriptorParserTest
+{
 
     @Nested
-    class GetArgumentTypesTests {
+    class GetArgumentTypesTests
+    {
 
         @Test
-        void noArguments() {
+        void noArguments()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("()V");
             assertTrue(args.isEmpty());
         }
 
         @Test
-        void singlePrimitiveArgument() {
+        void singlePrimitiveArgument()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(I)V");
             assertEquals(1, args.size());
             assertEquals(TypeInfo.INT, args.get(0));
         }
 
         @Test
-        void multiplePrimitiveArguments() {
+        void multiplePrimitiveArguments()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(IJF)V");
             assertEquals(3, args.size());
             assertEquals(TypeInfo.INT, args.get(0));
@@ -36,7 +41,8 @@ class DescriptorParserTest {
         }
 
         @Test
-        void allPrimitiveTypes() {
+        void allPrimitiveTypes()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(ZBCSIJFD)V");
             assertEquals(8, args.size());
             assertEquals(TypeInfo.BOOLEAN, args.get(0));
@@ -50,14 +56,16 @@ class DescriptorParserTest {
         }
 
         @Test
-        void singleObjectArgument() {
+        void singleObjectArgument()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(Ljava/lang/String;)V");
             assertEquals(1, args.size());
             assertEquals("Ljava/lang/String;", args.get(0).getDescriptor());
         }
 
         @Test
-        void multipleObjectArguments() {
+        void multipleObjectArguments()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(Ljava/lang/String;Ljava/lang/Object;)V");
             assertEquals(2, args.size());
             assertEquals("Ljava/lang/String;", args.get(0).getDescriptor());
@@ -65,7 +73,8 @@ class DescriptorParserTest {
         }
 
         @Test
-        void mixedPrimitiveAndObjectArguments() {
+        void mixedPrimitiveAndObjectArguments()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(ILjava/lang/String;J)V");
             assertEquals(3, args.size());
             assertEquals(TypeInfo.INT, args.get(0));
@@ -74,7 +83,8 @@ class DescriptorParserTest {
         }
 
         @Test
-        void singleDimensionArrayArgument() {
+        void singleDimensionArrayArgument()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("([I)V");
             assertEquals(1, args.size());
             assertEquals("[I", args.get(0).getDescriptor());
@@ -82,28 +92,32 @@ class DescriptorParserTest {
         }
 
         @Test
-        void multiDimensionArrayArgument() {
+        void multiDimensionArrayArgument()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("([[I)V");
             assertEquals(1, args.size());
             assertEquals("[[I", args.get(0).getDescriptor());
         }
 
         @Test
-        void objectArrayArgument() {
+        void objectArrayArgument()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("([Ljava/lang/String;)V");
             assertEquals(1, args.size());
             assertEquals("[Ljava/lang/String;", args.get(0).getDescriptor());
         }
 
         @Test
-        void multiDimensionObjectArray() {
+        void multiDimensionObjectArray()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("([[Ljava/lang/Object;)V");
             assertEquals(1, args.size());
             assertEquals("[[Ljava/lang/Object;", args.get(0).getDescriptor());
         }
 
         @Test
-        void complexMixedArguments() {
+        void complexMixedArguments()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(I[ILjava/lang/String;[[Ljava/lang/Object;JD)V");
             assertEquals(6, args.size());
             assertEquals(TypeInfo.INT, args.get(0));
@@ -115,165 +129,195 @@ class DescriptorParserTest {
         }
 
         @Test
-        void nullDescriptorThrows() {
+        void nullDescriptorThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getArgumentTypes(null));
         }
 
         @Test
-        void missingOpenParenThrows() {
+        void missingOpenParenThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getArgumentTypes("I)V"));
         }
 
         @Test
-        void missingCloseParenThrows() {
+        void missingCloseParenThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getArgumentTypes("(IV"));
         }
 
         @Test
-        void invalidArgumentTypeThrows() {
+        void invalidArgumentTypeThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getArgumentTypes("(X)V"));
         }
     }
 
     @Nested
-    class GetReturnTypeTests {
+    class GetReturnTypeTests
+    {
 
         @Test
-        void voidReturnType() {
+        void voidReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()V");
             assertEquals(TypeInfo.VOID, returnType);
         }
 
         @Test
-        void primitiveReturnType() {
+        void primitiveReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()I");
             assertEquals(TypeInfo.INT, returnType);
         }
 
         @Test
-        void longReturnType() {
+        void longReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()J");
             assertEquals(TypeInfo.LONG, returnType);
         }
 
         @Test
-        void objectReturnType() {
+        void objectReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()Ljava/lang/String;");
             assertEquals("Ljava/lang/String;", returnType.getDescriptor());
         }
 
         @Test
-        void arrayReturnType() {
+        void arrayReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()[I");
             assertEquals("[I", returnType.getDescriptor());
         }
 
         @Test
-        void objectArrayReturnType() {
+        void objectArrayReturnType()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("()[Ljava/lang/Object;");
             assertEquals("[Ljava/lang/Object;", returnType.getDescriptor());
         }
 
         @Test
-        void returnTypeWithArguments() {
+        void returnTypeWithArguments()
+        {
             TypeInfo returnType = DescriptorParser.getReturnType("(ILjava/lang/String;)Z");
             assertEquals(TypeInfo.BOOLEAN, returnType);
         }
 
         @Test
-        void nullDescriptorThrows() {
+        void nullDescriptorThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getReturnType(null));
         }
 
         @Test
-        void missingCloseParenThrows() {
+        void missingCloseParenThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getReturnType("(I"));
         }
 
         @Test
-        void missingReturnTypeThrows() {
+        void missingReturnTypeThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.getReturnType("()"));
         }
     }
 
     @Nested
-    class GetArgumentsSizeTests {
+    class GetArgumentsSizeTests
+    {
 
         @Test
-        void noArgumentsSize() {
+        void noArgumentsSize()
+        {
             assertEquals(0, DescriptorParser.getArgumentsSize("()V"));
         }
 
         @Test
-        void singleSlotArguments() {
+        void singleSlotArguments()
+        {
             assertEquals(1, DescriptorParser.getArgumentsSize("(I)V"));
             assertEquals(2, DescriptorParser.getArgumentsSize("(II)V"));
             assertEquals(3, DescriptorParser.getArgumentsSize("(III)V"));
         }
 
         @Test
-        void doubleSlotArguments() {
+        void doubleSlotArguments()
+        {
             assertEquals(2, DescriptorParser.getArgumentsSize("(J)V"));
             assertEquals(2, DescriptorParser.getArgumentsSize("(D)V"));
             assertEquals(4, DescriptorParser.getArgumentsSize("(JD)V"));
         }
 
         @Test
-        void mixedSizeArguments() {
+        void mixedSizeArguments()
+        {
             assertEquals(3, DescriptorParser.getArgumentsSize("(IJ)V"));
             assertEquals(4, DescriptorParser.getArgumentsSize("(IJI)V"));
             assertEquals(6, DescriptorParser.getArgumentsSize("(IDJZ)V"));
         }
 
         @Test
-        void objectArgumentsSize() {
+        void objectArgumentsSize()
+        {
             assertEquals(1, DescriptorParser.getArgumentsSize("(Ljava/lang/String;)V"));
             assertEquals(2, DescriptorParser.getArgumentsSize("(Ljava/lang/String;Ljava/lang/Object;)V"));
         }
 
         @Test
-        void arrayArgumentsSize() {
+        void arrayArgumentsSize()
+        {
             assertEquals(1, DescriptorParser.getArgumentsSize("([I)V"));
             assertEquals(1, DescriptorParser.getArgumentsSize("([[Ljava/lang/Object;)V"));
         }
     }
 
     @Nested
-    class GetArgumentsAndReturnSizeTests {
+    class GetArgumentsAndReturnSizeTests
+    {
 
         @Test
-        void noArgsVoidReturn() {
+        void noArgsVoidReturn()
+        {
             assertEquals(0, DescriptorParser.getArgumentsAndReturnSize("()V"));
         }
 
         @Test
-        void noArgsPrimitiveReturn() {
+        void noArgsPrimitiveReturn()
+        {
             assertEquals(1, DescriptorParser.getArgumentsAndReturnSize("()I"));
             assertEquals(2, DescriptorParser.getArgumentsAndReturnSize("()J"));
         }
 
         @Test
-        void argsAndVoidReturn() {
+        void argsAndVoidReturn()
+        {
             assertEquals(2, DescriptorParser.getArgumentsAndReturnSize("(II)V"));
         }
 
         @Test
-        void argsAndPrimitiveReturn() {
+        void argsAndPrimitiveReturn()
+        {
             assertEquals(3, DescriptorParser.getArgumentsAndReturnSize("(II)I"));
             assertEquals(4, DescriptorParser.getArgumentsAndReturnSize("(II)J"));
         }
 
         @Test
-        void complexDescriptor() {
+        void complexDescriptor()
+        {
             assertEquals(6, DescriptorParser.getArgumentsAndReturnSize("(IJLjava/lang/String;)D"));
         }
     }
 
     @Nested
-    class GetSizeTests {
+    class GetSizeTests
+    {
 
         @Test
-        void getSizePrimitives() {
+        void getSizePrimitives()
+        {
             assertEquals(1, DescriptorParser.getSize("I"));
             assertEquals(1, DescriptorParser.getSize("Z"));
             assertEquals(2, DescriptorParser.getSize("J"));
@@ -282,154 +326,179 @@ class DescriptorParserTest {
         }
 
         @Test
-        void getSizeObject() {
+        void getSizeObject()
+        {
             assertEquals(1, DescriptorParser.getSize("Ljava/lang/String;"));
         }
 
         @Test
-        void getSizeArray() {
+        void getSizeArray()
+        {
             assertEquals(1, DescriptorParser.getSize("[I"));
             assertEquals(1, DescriptorParser.getSize("[[Ljava/lang/Object;"));
         }
     }
 
     @Nested
-    class ParseTypeAtTests {
+    class ParseTypeAtTests
+    {
 
         @Test
-        void parseTypeAtPrimitives() {
+        void parseTypeAtPrimitives()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("I", 0);
             assertEquals(TypeInfo.INT, result.type);
             assertEquals(1, result.length);
         }
 
         @Test
-        void parseTypeAtVoid() {
+        void parseTypeAtVoid()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("V", 0);
             assertEquals(TypeInfo.VOID, result.type);
             assertEquals(1, result.length);
         }
 
         @Test
-        void parseTypeAtLong() {
+        void parseTypeAtLong()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("J", 0);
             assertEquals(TypeInfo.LONG, result.type);
             assertEquals(1, result.length);
         }
 
         @Test
-        void parseTypeAtObject() {
+        void parseTypeAtObject()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("Ljava/lang/String;", 0);
             assertEquals("Ljava/lang/String;", result.type.getDescriptor());
             assertEquals(18, result.length);
         }
 
         @Test
-        void parseTypeAtObjectWithOffset() {
+        void parseTypeAtObjectWithOffset()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("ILjava/lang/String;", 1);
             assertEquals("Ljava/lang/String;", result.type.getDescriptor());
             assertEquals(18, result.length);
         }
 
         @Test
-        void parseTypeAtSingleDimensionArray() {
+        void parseTypeAtSingleDimensionArray()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("[I", 0);
             assertEquals("[I", result.type.getDescriptor());
             assertEquals(2, result.length);
         }
 
         @Test
-        void parseTypeAtMultiDimensionArray() {
+        void parseTypeAtMultiDimensionArray()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("[[I", 0);
             assertEquals("[[I", result.type.getDescriptor());
             assertEquals(3, result.length);
         }
 
         @Test
-        void parseTypeAtObjectArray() {
+        void parseTypeAtObjectArray()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("[Ljava/lang/Object;", 0);
             assertEquals("[Ljava/lang/Object;", result.type.getDescriptor());
             assertEquals(19, result.length);
         }
 
         @Test
-        void parseTypeAtMultiDimensionObjectArray() {
+        void parseTypeAtMultiDimensionObjectArray()
+        {
             DescriptorParser.ParseResult result = DescriptorParser.parseTypeAt("[[Ljava/lang/Object;", 0);
             assertEquals("[[Ljava/lang/Object;", result.type.getDescriptor());
             assertEquals(20, result.length);
         }
 
         @Test
-        void parseTypeAtOffsetOutOfBoundsThrows() {
+        void parseTypeAtOffsetOutOfBoundsThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.parseTypeAt("I", 5));
         }
 
         @Test
-        void parseTypeAtInvalidCharacterThrows() {
+        void parseTypeAtInvalidCharacterThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.parseTypeAt("X", 0));
         }
 
         @Test
-        void parseTypeAtMissingSemicolonThrows() {
+        void parseTypeAtMissingSemicolonThrows()
+        {
             assertThrows(IllegalArgumentException.class, () -> DescriptorParser.parseTypeAt("Ljava/lang/String", 0));
         }
     }
 
     @Nested
-    class GetMethodDescriptorTests {
+    class GetMethodDescriptorTests
+    {
 
         @Test
-        void getMethodDescriptorNoArgs() {
+        void getMethodDescriptorNoArgs()
+        {
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID);
             assertEquals("()V", descriptor);
         }
 
         @Test
-        void getMethodDescriptorSingleArg() {
+        void getMethodDescriptorSingleArg()
+        {
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID, TypeInfo.INT);
             assertEquals("(I)V", descriptor);
         }
 
         @Test
-        void getMethodDescriptorMultipleArgs() {
+        void getMethodDescriptorMultipleArgs()
+        {
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.INT, TypeInfo.INT, TypeInfo.LONG);
             assertEquals("(IJ)I", descriptor);
         }
 
         @Test
-        void getMethodDescriptorWithObjectArgs() {
+        void getMethodDescriptorWithObjectArgs()
+        {
             TypeInfo stringType = TypeInfo.forClassName("java/lang/String");
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID, TypeInfo.INT, stringType);
             assertEquals("(ILjava/lang/String;)V", descriptor);
         }
 
         @Test
-        void getMethodDescriptorWithArrayArgs() {
+        void getMethodDescriptorWithArrayArgs()
+        {
             TypeInfo arrayType = TypeInfo.of("[I");
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID, arrayType);
             assertEquals("([I)V", descriptor);
         }
 
         @Test
-        void getMethodDescriptorFromList() {
+        void getMethodDescriptorFromList()
+        {
             List<TypeInfo> params = Arrays.asList(TypeInfo.INT, TypeInfo.LONG, TypeInfo.FLOAT);
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.DOUBLE, params);
             assertEquals("(IJF)D", descriptor);
         }
 
         @Test
-        void getMethodDescriptorFromEmptyList() {
-            List<TypeInfo> params = Arrays.asList();
+        void getMethodDescriptorFromEmptyList()
+        {
+            List<TypeInfo> params = List.of();
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID, params);
             assertEquals("()V", descriptor);
         }
     }
 
     @Nested
-    class IsMethodDescriptorTests {
+    class IsMethodDescriptorTests
+    {
 
         @Test
-        void isMethodDescriptorValid() {
+        void isMethodDescriptorValid()
+        {
             assertTrue(DescriptorParser.isMethodDescriptor("()V"));
             assertTrue(DescriptorParser.isMethodDescriptor("(I)V"));
             assertTrue(DescriptorParser.isMethodDescriptor("(IJ)Ljava/lang/String;"));
@@ -437,7 +506,8 @@ class DescriptorParserTest {
         }
 
         @Test
-        void isMethodDescriptorInvalid() {
+        void isMethodDescriptorInvalid()
+        {
             assertFalse(DescriptorParser.isMethodDescriptor("I"));
             assertFalse(DescriptorParser.isMethodDescriptor("Ljava/lang/String;"));
             assertFalse(DescriptorParser.isMethodDescriptor("[I"));
@@ -446,17 +516,20 @@ class DescriptorParserTest {
         }
 
         @Test
-        void isMethodDescriptorMalformed() {
+        void isMethodDescriptorMalformed()
+        {
             assertFalse(DescriptorParser.isMethodDescriptor("IV"));
             assertFalse(DescriptorParser.isMethodDescriptor("(I"));
         }
     }
 
     @Nested
-    class IsFieldDescriptorTests {
+    class IsFieldDescriptorTests
+    {
 
         @Test
-        void isFieldDescriptorPrimitives() {
+        void isFieldDescriptorPrimitives()
+        {
             assertTrue(DescriptorParser.isFieldDescriptor("I"));
             assertTrue(DescriptorParser.isFieldDescriptor("Z"));
             assertTrue(DescriptorParser.isFieldDescriptor("B"));
@@ -468,19 +541,22 @@ class DescriptorParserTest {
         }
 
         @Test
-        void isFieldDescriptorObject() {
+        void isFieldDescriptorObject()
+        {
             assertTrue(DescriptorParser.isFieldDescriptor("Ljava/lang/String;"));
             assertTrue(DescriptorParser.isFieldDescriptor("Lcom/example/MyClass;"));
         }
 
         @Test
-        void isFieldDescriptorArray() {
+        void isFieldDescriptorArray()
+        {
             assertTrue(DescriptorParser.isFieldDescriptor("[I"));
             assertTrue(DescriptorParser.isFieldDescriptor("[[Ljava/lang/Object;"));
         }
 
         @Test
-        void isFieldDescriptorInvalid() {
+        void isFieldDescriptorInvalid()
+        {
             assertFalse(DescriptorParser.isFieldDescriptor("()V"));
             assertFalse(DescriptorParser.isFieldDescriptor("(I)V"));
             assertFalse(DescriptorParser.isFieldDescriptor(""));
@@ -489,23 +565,27 @@ class DescriptorParserTest {
         }
 
         @Test
-        void isFieldDescriptorVoid() {
+        void isFieldDescriptorVoid()
+        {
             assertFalse(DescriptorParser.isFieldDescriptor("V"));
         }
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void nestedClassDescriptor() {
+        void nestedClassDescriptor()
+        {
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(Lcom/example/Outer$Inner;)V");
             assertEquals(1, args.size());
             assertEquals("Lcom/example/Outer$Inner;", args.get(0).getDescriptor());
         }
 
         @Test
-        void veryLongClassName() {
+        void veryLongClassName()
+        {
             String longClassName = "L" + "a/".repeat(100) + "ClassName;";
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(" + longClassName + ")V");
             assertEquals(1, args.size());
@@ -513,7 +593,8 @@ class DescriptorParserTest {
         }
 
         @Test
-        void manyDimensionsArray() {
+        void manyDimensionsArray()
+        {
             String arrayDesc = "[".repeat(10) + "I";
             List<TypeInfo> args = DescriptorParser.getArgumentTypes("(" + arrayDesc + ")V");
             assertEquals(1, args.size());
@@ -522,13 +603,10 @@ class DescriptorParserTest {
         }
 
         @Test
-        void manyParameters() {
-            StringBuilder desc = new StringBuilder("(");
-            for (int i = 0; i < 50; i++) {
-                desc.append("I");
-            }
-            desc.append(")V");
-            List<TypeInfo> args = DescriptorParser.getArgumentTypes(desc.toString());
+        void manyParameters()
+        {
+            String desc = "(" + "I".repeat(50) + ")V";
+            List<TypeInfo> args = DescriptorParser.getArgumentTypes(desc);
             assertEquals(50, args.size());
         }
     }

@@ -15,12 +15,14 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CPGQueryTest {
+class CPGQueryTest
+{
 
     private CodePropertyGraph cpg;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         ClassPool pool = TestUtils.emptyPool();
 
         int classAccess = new AccessBuilder().setPublic().build();
@@ -35,42 +37,48 @@ class CPGQueryTest {
     }
 
     @Test
-    void queryMethodsReturnsNewQuery() {
+    void queryMethodsReturnsNewQuery()
+    {
         CPGQuery query = cpg.query().methods();
 
         assertNotNull(query);
     }
 
     @Test
-    void queryMethodsWithPatternFilters() {
+    void queryMethodsWithPatternFilters()
+    {
         CPGQuery query = cpg.query().methods("method.*");
 
         assertNotNull(query);
     }
 
     @Test
-    void queryInstructionsReturnsNewQuery() {
+    void queryInstructionsReturnsNewQuery()
+    {
         CPGQuery query = cpg.query().instructions();
 
         assertNotNull(query);
     }
 
     @Test
-    void queryCallSitesReturnsNewQuery() {
+    void queryCallSitesReturnsNewQuery()
+    {
         CPGQuery query = cpg.query().callSites();
 
         assertNotNull(query);
     }
 
     @Test
-    void queryBlocksReturnsNewQuery() {
+    void queryBlocksReturnsNewQuery()
+    {
         CPGQuery query = cpg.query().blocks();
 
         assertNotNull(query);
     }
 
     @Test
-    void queryAllReturnsAllNodes() {
+    void queryAllReturnsAllNodes()
+    {
         CPGQuery query = cpg.query().all();
         List<CPGNode> nodes = query.toList();
 
@@ -78,7 +86,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void filterReturnsFilteredQuery() {
+    void filterReturnsFilteredQuery()
+    {
         CPGQuery query = cpg.query().all()
             .filter(n -> n.getNodeType() == CPGNodeType.METHOD);
 
@@ -86,7 +95,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void filterTypeReturnsFilteredQuery() {
+    void filterTypeReturnsFilteredQuery()
+    {
         CPGQuery query = cpg.query().all()
             .filterType(CPGNodeType.METHOD);
 
@@ -94,7 +104,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void outTraversesOutgoingEdges() {
+    void outTraversesOutgoingEdges()
+    {
         CPGQuery query = cpg.query().methods()
             .out(CPGEdgeType.CONTAINS);
 
@@ -102,7 +113,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void inTraversesIncomingEdges() {
+    void inTraversesIncomingEdges()
+    {
         CPGQuery query = cpg.query().blocks()
             .in(CPGEdgeType.CONTAINS);
 
@@ -110,7 +122,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void cfgNextTraversesCFGEdges() {
+    void cfgNextTraversesCFGEdges()
+    {
         CPGQuery query = cpg.query().instructions()
             .cfgNext();
 
@@ -118,7 +131,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void cfgPrevTraversesCFGEdgesBackward() {
+    void cfgPrevTraversesCFGEdgesBackward()
+    {
         CPGQuery query = cpg.query().instructions()
             .cfgPrev();
 
@@ -126,7 +140,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void cfgReachableFindsAllReachable() {
+    void cfgReachableFindsAllReachable()
+    {
         CPGQuery query = cpg.query().blocks()
             .cfgReachable();
 
@@ -134,7 +149,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void astParentTraversesParent() {
+    void astParentTraversesParent()
+    {
         CPGQuery query = cpg.query().instructions()
             .astParent();
 
@@ -142,7 +158,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void astChildrenTraversesChildren() {
+    void astChildrenTraversesChildren()
+    {
         CPGQuery query = cpg.query().blocks()
             .astChildren();
 
@@ -150,7 +167,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void dataFlowInTraversesDataEdges() {
+    void dataFlowInTraversesDataEdges()
+    {
         CPGQuery query = cpg.query().instructions()
             .dataFlowIn();
 
@@ -158,7 +176,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void dataFlowOutTraversesDataEdges() {
+    void dataFlowOutTraversesDataEdges()
+    {
         CPGQuery query = cpg.query().instructions()
             .dataFlowOut();
 
@@ -166,7 +185,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void callersTraversesCallEdges() {
+    void callersTraversesCallEdges()
+    {
         CPGQuery query = cpg.query().methods()
             .callers();
 
@@ -174,7 +194,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void calleesTraversesCallEdges() {
+    void calleesTraversesCallEdges()
+    {
         CPGQuery query = cpg.query().methods()
             .callees();
 
@@ -182,7 +203,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void limitReturnsLimitedResults() {
+    void limitReturnsLimitedResults()
+    {
         CPGQuery query = cpg.query().all().limit(5);
         List<CPGNode> nodes = query.toList();
 
@@ -190,14 +212,16 @@ class CPGQueryTest {
     }
 
     @Test
-    void skipSkipsResults() {
+    void skipSkipsResults()
+    {
         CPGQuery query = cpg.query().all().skip(2);
 
         assertNotNull(query);
     }
 
     @Test
-    void dedupRemovesDuplicates() {
+    void dedupRemovesDuplicates()
+    {
         CPGQuery query = cpg.query().all()
             .both(CPGEdgeType.CONTAINS)
             .dedup();
@@ -206,49 +230,56 @@ class CPGQueryTest {
     }
 
     @Test
-    void toListReturnsResults() {
+    void toListReturnsResults()
+    {
         List<CPGNode> nodes = cpg.query().all().toList();
 
         assertNotNull(nodes);
     }
 
     @Test
-    void toSetReturnsUniqueResults() {
+    void toSetReturnsUniqueResults()
+    {
         var nodes = cpg.query().all().toSet();
 
         assertNotNull(nodes);
     }
 
     @Test
-    void firstReturnsOptional() {
+    void firstReturnsOptional()
+    {
         var first = cpg.query().all().first();
 
         assertNotNull(first);
     }
 
     @Test
-    void countReturnsNodeCount() {
+    void countReturnsNodeCount()
+    {
         long count = cpg.query().all().count();
 
         assertEquals(cpg.getNodeCount(), count);
     }
 
     @Test
-    void existsReturnsTrueWhenNodesExist() {
+    void existsReturnsTrueWhenNodesExist()
+    {
         boolean exists = cpg.query().all().exists();
 
         assertEquals(cpg.getNodeCount() > 0, exists);
     }
 
     @Test
-    void existsReturnsFalseWhenEmpty() {
+    void existsReturnsFalseWhenEmpty()
+    {
         boolean exists = cpg.query().callsTo("nonexistent/Class", "method").exists();
 
         assertFalse(exists);
     }
 
     @Test
-    void hasPropertyFiltersOnProperty() {
+    void hasPropertyFiltersOnProperty()
+    {
         CPGQuery query = cpg.query().all()
             .hasProperty("name");
 
@@ -256,7 +287,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void hasPropertyWithValueFiltersOnValue() {
+    void hasPropertyWithValueFiltersOnValue()
+    {
         CPGQuery query = cpg.query().all()
             .hasProperty("name", "method1");
 
@@ -264,7 +296,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void nameMatchesFiltersOnRegex() {
+    void nameMatchesFiltersOnRegex()
+    {
         CPGQuery query = cpg.query().methods()
             .nameMatches("method.*");
 
@@ -272,7 +305,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void ownerMatchesFiltersOnRegex() {
+    void ownerMatchesFiltersOnRegex()
+    {
         CPGQuery query = cpg.query().callSites()
             .ownerMatches("com/test/.*");
 
@@ -280,7 +314,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void isMethodCallFiltersCallSites() {
+    void isMethodCallFiltersCallSites()
+    {
         CPGQuery query = cpg.query().all()
             .isMethodCall();
 
@@ -288,7 +323,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void isReturnFiltersReturns() {
+    void isReturnFiltersReturns()
+    {
         CPGQuery query = cpg.query().all()
             .isReturn();
 
@@ -296,7 +332,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void isBranchFiltersBranches() {
+    void isBranchFiltersBranches()
+    {
         CPGQuery query = cpg.query().all()
             .isBranch();
 
@@ -304,7 +341,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void chainedQueriesWork() {
+    void chainedQueriesWork()
+    {
         CPGQuery query = cpg.query()
             .methods()
             .out(CPGEdgeType.CONTAINS)
@@ -318,7 +356,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void callersTransitiveFindsAllCallers() {
+    void callersTransitiveFindsAllCallers()
+    {
         CPGQuery query = cpg.query().methods()
             .callersTransitive();
 
@@ -326,7 +365,8 @@ class CPGQueryTest {
     }
 
     @Test
-    void calleesTransitiveFindsAllCallees() {
+    void calleesTransitiveFindsAllCallees()
+    {
         CPGQuery query = cpg.query().methods()
             .calleesTransitive();
 

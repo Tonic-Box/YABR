@@ -1,47 +1,49 @@
 package com.tonic.analysis.execution.state;
 
 import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.parser.MethodEntry;
-import com.tonic.parser.attribute.CodeAttribute;
 import org.junit.jupiter.api.Test;
-
 import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConcreteLocalsTest {
+class ConcreteLocalsTest
+{
 
 
     @Test
-    void testSetGetInt() {
+    void testSetGetInt()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         assertEquals(42, locals.getInt(0));
     }
 
     @Test
-    void testSetGetLong() {
+    void testSetGetLong()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setLong(0, 123456789L);
         assertEquals(123456789L, locals.getLong(0));
     }
 
     @Test
-    void testSetGetFloat() {
+    void testSetGetFloat()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setFloat(0, 3.14f);
         assertEquals(3.14f, locals.getFloat(0), 0.0001f);
     }
 
     @Test
-    void testSetGetDouble() {
+    void testSetGetDouble()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setDouble(0, 2.718);
         assertEquals(2.718, locals.getDouble(0), 0.0001);
     }
 
     @Test
-    void testSetGetReference() {
+    void testSetGetReference()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         ObjectInstance obj = new ObjectInstance(1, "java/lang/String");
         locals.setReference(0, obj);
@@ -49,14 +51,16 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testSetGetNull() {
+    void testSetGetNull()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setNull(0);
         assertNull(locals.getReference(0));
     }
 
     @Test
-    void testSetGetValue() {
+    void testSetGetValue()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         ConcreteValue val = ConcreteValue.intValue(99);
         locals.set(0, val);
@@ -64,7 +68,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testLongOccupiesTwoSlots() {
+    void testLongOccupiesTwoSlots()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setLong(0, 100L);
         assertTrue(locals.isDefined(0));
@@ -74,7 +79,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testDoubleOccupiesTwoSlots() {
+    void testDoubleOccupiesTwoSlots()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setDouble(5, 3.14);
         assertTrue(locals.isDefined(5));
@@ -84,39 +90,45 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testGetUndefinedThrows() {
+    void testGetUndefinedThrows()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertThrows(IllegalStateException.class, () -> locals.get(0));
     }
 
     @Test
-    void testGetOutOfBoundsThrows() {
+    void testGetOutOfBoundsThrows()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertThrows(IndexOutOfBoundsException.class, () -> locals.get(10));
         assertThrows(IndexOutOfBoundsException.class, () -> locals.get(-1));
     }
 
     @Test
-    void testSetOutOfBoundsThrows() {
+    void testSetOutOfBoundsThrows()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertThrows(IndexOutOfBoundsException.class, () -> locals.setInt(10, 42));
         assertThrows(IndexOutOfBoundsException.class, () -> locals.setInt(-1, 42));
     }
 
     @Test
-    void testWideValueAtEndThrows() {
+    void testWideValueAtEndThrows()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertThrows(IllegalArgumentException.class, () -> locals.setLong(9, 100L));
     }
 
     @Test
-    void testSize() {
+    void testSize()
+    {
         ConcreteLocals locals = new ConcreteLocals(15);
         assertEquals(15, locals.size());
     }
 
     @Test
-    void testIsDefined() {
+    void testIsDefined()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertFalse(locals.isDefined(0));
         locals.setInt(0, 42);
@@ -125,14 +137,16 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testIsDefinedOutOfBounds() {
+    void testIsDefinedOutOfBounds()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         assertFalse(locals.isDefined(10));
         assertFalse(locals.isDefined(-1));
     }
 
     @Test
-    void testSnapshot() {
+    void testSnapshot()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 10);
         locals.setInt(2, 20);
@@ -146,29 +160,31 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testSnapshotUnmodifiable() {
+    void testSnapshotUnmodifiable()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         Map<Integer, ConcreteValue> snapshot = locals.snapshot();
-        assertThrows(UnsupportedOperationException.class,
-            () -> snapshot.put(1, ConcreteValue.intValue(99)));
+        assertThrows(UnsupportedOperationException.class, () -> snapshot.put(1, ConcreteValue.intValue(99)));
     }
 
     @Test
-    void testSnapshotEmpty() {
+    void testSnapshotEmpty()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         Map<Integer, ConcreteValue> snapshot = locals.snapshot();
         assertTrue(snapshot.isEmpty());
     }
 
     @Test
-    void testForMethodNullMethodThrows() {
-        assertThrows(IllegalArgumentException.class,
-            () -> ConcreteLocals.forMethod(null, new ConcreteValue[0]));
+    void testForMethodNullMethodThrows()
+    {
+        assertThrows(IllegalArgumentException.class, () -> ConcreteLocals.forMethod(null, new ConcreteValue[0]));
     }
 
     @Test
-    void testToString() {
+    void testToString()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         String str = locals.toString();
@@ -176,7 +192,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testOverwriteValue() {
+    void testOverwriteValue()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         assertEquals(42, locals.getInt(0));
@@ -185,7 +202,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testMultipleSlots() {
+    void testMultipleSlots()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 10);
         locals.setInt(1, 20);
@@ -198,7 +216,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testMixedTypes() {
+    void testMixedTypes()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         locals.setLong(1, 100L);
@@ -217,7 +236,8 @@ class ConcreteLocalsTest {
     }
 
     @Test
-    void testSnapshotWithWideValues() {
+    void testSnapshotWithWideValues()
+    {
         ConcreteLocals locals = new ConcreteLocals(10);
         locals.setInt(0, 42);
         locals.setLong(1, 100L);

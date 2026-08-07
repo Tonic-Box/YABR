@@ -8,13 +8,16 @@ import org.junit.jupiter.api.Nested;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MethodBuilderTest {
+class MethodBuilderTest
+{
 
     @Nested
-    class BasicMethodCreation {
+    class BasicMethodCreation
+    {
 
         @Test
-        void addMethodCreatesMethodEntry() {
+        void addMethodCreatesMethodEntry()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "doSomething", "()V")
                 .code()
@@ -29,7 +32,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void addMethodWithParameters() {
+        void addMethodWithParameters()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "add", "(II)I")
                 .code()
@@ -48,10 +52,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class MethodAccessFlags {
+    class MethodAccessFlags
+    {
 
         @Test
-        void publicMethod() {
+        void publicMethod()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "publicMethod", "()V")
                 .code()
@@ -65,7 +71,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void staticMethod() {
+        void staticMethod()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "staticMethod", "()V")
                 .code()
@@ -80,10 +87,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class CodeBuilderAccess {
+    class CodeBuilderAccess
+    {
 
         @Test
-        void codeReturnsCodeBuilder() {
+        void codeReturnsCodeBuilder()
+        {
             ClassBuilder cb = ClassBuilder.create("com/test/MethodTest");
             MethodBuilder mb = cb.addMethod(AccessFlags.ACC_PUBLIC, "test", "()V");
             CodeBuilder code = mb.code();
@@ -92,7 +101,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void codeReturnsSameInstanceOnMultipleCalls() {
+        void codeReturnsSameInstanceOnMultipleCalls()
+        {
             ClassBuilder cb = ClassBuilder.create("com/test/MethodTest");
             MethodBuilder mb = cb.addMethod(AccessFlags.ACC_PUBLIC, "test", "()V");
 
@@ -104,10 +114,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class MaxStackAndLocals {
+    class MaxStackAndLocals
+    {
 
         @Test
-        void maxStackSetsValue() {
+        void maxStackSetsValue()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .maxStack(10)
@@ -122,7 +134,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void maxLocalsSetsValue() {
+        void maxLocalsSetsValue()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .maxLocals(5)
@@ -138,10 +151,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class EndMethod {
+    class EndMethod
+    {
 
         @Test
-        void endReturnsClassBuilder() {
+        void endReturnsClassBuilder()
+        {
             ClassBuilder cb = ClassBuilder.create("com/test/MethodTest");
             MethodBuilder mb = cb.addMethod(AccessFlags.ACC_PUBLIC, "test", "()V");
             ClassBuilder returned = mb.end();
@@ -151,10 +166,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class ExceptionsTests {
+    class ExceptionsTests
+    {
 
         @Test
-        void exceptionsAddsException() {
+        void exceptionsAddsException()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "throwsMethod", "()V")
                 .exceptions("java/io/IOException")
@@ -169,7 +186,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void exceptionsAddMultipleExceptions() {
+        void exceptionsAddMultipleExceptions()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC, "throwsMultiple", "()V")
                 .exceptions("java/io/IOException", "java/lang/IllegalStateException")
@@ -185,10 +203,12 @@ class MethodBuilderTest {
     }
 
     @Nested
-    class BuildMethodTests {
+    class BuildMethodTests
+    {
 
         @Test
-        void buildMethodWithNullCode() {
+        void buildMethodWithNullCode()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .access(AccessFlags.ACC_PUBLIC, AccessFlags.ACC_ABSTRACT)
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_ABSTRACT, "abstractMethod", "()V")
@@ -201,7 +221,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void buildMethodWithMaxStackOverride() {
+        void buildMethodWithMaxStackOverride()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .maxStack(20)
@@ -217,7 +238,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void buildMethodWithMaxLocalsOverride() {
+        void buildMethodWithMaxLocalsOverride()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .maxLocals(15)
@@ -233,7 +255,8 @@ class MethodBuilderTest {
         }
 
         @Test
-        void buildMethodWithBothMaxStackAndMaxLocals() {
+        void buildMethodWithBothMaxStackAndMaxLocals()
+        {
             ClassFile cf = ClassBuilder.create("com/test/MethodTest")
                 .addMethod(AccessFlags.ACC_PUBLIC | AccessFlags.ACC_STATIC, "test", "()V")
                 .maxStack(25)
@@ -251,9 +274,12 @@ class MethodBuilderTest {
         }
     }
 
-    private MethodEntry findMethod(ClassFile cf, String name) {
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getName().equals(name)) {
+    private MethodEntry findMethod(ClassFile cf, String name)
+    {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }

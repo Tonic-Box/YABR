@@ -8,16 +8,25 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.Objects;
 
 /**
- * Represents a synchronized statement: synchronized (lock) { body }
+ * A synchronized block guarding its body with a lock expression.
  */
-public final class SynchronizedStmt implements Statement {
+public final class SynchronizedStmt implements Statement
+{
 
     private Expression lock;
     private Statement body;
     private SourceLocation location;
     private ASTNode parent;
 
-    public SynchronizedStmt(Expression lock, Statement body, SourceLocation location) {
+    /**
+     * Creates a synchronized block and parents the lock and body to it.
+     * @param lock the monitor expression
+     * @param body the guarded body
+     * @param location source location, or null for unknown
+     * @throws NullPointerException if lock or body is null
+     */
+    public SynchronizedStmt(Expression lock, Statement body, SourceLocation location)
+    {
         this.lock = Objects.requireNonNull(lock, "lock cannot be null");
         this.body = Objects.requireNonNull(body, "body cannot be null");
         this.location = location != null ? location : SourceLocation.UNKNOWN;
@@ -26,40 +35,86 @@ public final class SynchronizedStmt implements Statement {
         body.setParent(this);
     }
 
-    public SynchronizedStmt(Expression lock, Statement body) {
+    /**
+     * Creates a synchronized block with an unknown location.
+     * @param lock the monitor expression
+     * @param body the guarded body
+     * @throws NullPointerException if lock or body is null
+     */
+    public SynchronizedStmt(Expression lock, Statement body)
+    {
         this(lock, body, SourceLocation.UNKNOWN);
     }
 
-    public Expression getLock() {
+    /**
+     * @return the lock
+     */
+    public Expression getLock()
+    {
         return lock;
     }
 
-    public void setLock(Expression lock) {
-        this.lock = lock;
+    /**
+     * Replaces the monitor expression, reparenting old and new nodes.
+     * @param lock the new monitor expression
+     */
+    public void setLock(Expression lock)
+    {
+        withLock(lock);
     }
 
-    public Statement getBody() {
+    /**
+     * @return the body
+     */
+    public Statement getBody()
+    {
         return body;
     }
 
-    public void setBody(Statement body) {
-        this.body = body;
+      /**
+       * Replaces the guarded body, reparenting old and new nodes.
+       * @param body the new body
+       */
+      public void setBody(Statement body)
+      {
+        withBody(body);
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the source location, or null if unknown
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the enclosing AST node.
+     * @param parent the new parent node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public SynchronizedStmt withLock(Expression lock) {
-        if (this.lock != null) {
+    /**
+     * Replaces the monitor expression, reparenting old and new nodes.
+     * @param lock the new monitor expression
+     * @return this statement
+     * @throws NullPointerException if lock is null
+     */
+    public SynchronizedStmt withLock(Expression lock)
+    {
+        if (this.lock != null)
+        {
             this.lock.setParent(null);
         }
         this.lock = Objects.requireNonNull(lock, "lock cannot be null");
@@ -67,8 +122,16 @@ public final class SynchronizedStmt implements Statement {
         return this;
     }
 
-    public SynchronizedStmt withBody(Statement body) {
-        if (this.body != null) {
+    /**
+     * Replaces the guarded body, reparenting old and new nodes.
+     * @param body the new body
+     * @return this statement
+     * @throws NullPointerException if body is null
+     */
+    public SynchronizedStmt withBody(Statement body)
+    {
+        if (this.body != null)
+        {
             this.body.setParent(null);
         }
         this.body = Objects.requireNonNull(body, "body cannot be null");
@@ -77,7 +140,8 @@ public final class SynchronizedStmt implements Statement {
     }
 
     @Override
-    public java.util.List<ASTNode> getChildren() {
+    public java.util.List<ASTNode> getChildren()
+    {
         java.util.List<ASTNode> children = new java.util.ArrayList<>();
         if (lock != null) children.add(lock);
         if (body != null) children.add(body);
@@ -85,17 +149,20 @@ public final class SynchronizedStmt implements Statement {
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return visitor.visitSynchronized(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "synchronized (" + lock + ") { ... }";
     }
 
     @Override
-    public void setLocation(SourceLocation location) {
+    public void setLocation(SourceLocation location)
+    {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 }

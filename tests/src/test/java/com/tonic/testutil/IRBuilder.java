@@ -15,7 +15,7 @@ import java.util.Map;
  * Fluent builder for creating SSA IR methods for testing.
  * Provides a simple DSL for constructing IR methods programmatically.
  *
- * <p>Example usage:
+ *Example usage:
  * <pre>{@code
  * IRMethod method = IRBuilder.staticMethod("com/test/Math", "add", "(II)I")
  *     .entry()
@@ -26,13 +26,15 @@ import java.util.Map;
  *     .build();
  * }</pre>
  */
-public class IRBuilder {
+public class IRBuilder
+{
 
     private final IRMethod method;
     private final Map<String, Value> values = new HashMap<>();
     private IRBlock currentBlock;
 
-    private IRBuilder(String owner, String name, String descriptor, boolean isStatic) {
+    private IRBuilder(String owner, String name, String descriptor, boolean isStatic)
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         this.method = new IRMethod(owner, name, descriptor, isStatic);
@@ -46,7 +48,8 @@ public class IRBuilder {
      * @param descriptor method descriptor
      * @return a new IRBuilder
      */
-    public static IRBuilder staticMethod(String owner, String name, String descriptor) {
+    public static IRBuilder staticMethod(String owner, String name, String descriptor)
+    {
         return new IRBuilder(owner, name, descriptor, true);
     }
 
@@ -58,7 +61,8 @@ public class IRBuilder {
      * @param descriptor method descriptor
      * @return a new IRBuilder
      */
-    public static IRBuilder instanceMethod(String owner, String name, String descriptor) {
+    public static IRBuilder instanceMethod(String owner, String name, String descriptor)
+    {
         return new IRBuilder(owner, name, descriptor, false);
     }
 
@@ -68,7 +72,8 @@ public class IRBuilder {
      * @param name method name
      * @return a new IRBuilder
      */
-    public static IRBuilder voidMethod(String name) {
+    public static IRBuilder voidMethod(String name)
+    {
         return staticMethod("com/test/Test", name, "()V");
     }
 
@@ -78,18 +83,20 @@ public class IRBuilder {
      * @param name method name
      * @return a new IRBuilder
      */
-    public static IRBuilder intMethod(String name) {
+    public static IRBuilder intMethod(String name)
+    {
         return staticMethod("com/test/Test", name, "()I");
     }
 
-    // ========== Block Management ==========
+    // Block Management
 
     /**
      * Creates the entry block and sets it as current.
      *
      * @return this builder
      */
-    public IRBuilder entry() {
+    public IRBuilder entry()
+    {
         currentBlock = new IRBlock("entry");
         method.addBlock(currentBlock);
         method.setEntryBlock(currentBlock);
@@ -102,7 +109,8 @@ public class IRBuilder {
      * @param name block name
      * @return this builder
      */
-    public IRBuilder block(String name) {
+    public IRBuilder block(String name)
+    {
         currentBlock = new IRBlock(name);
         method.addBlock(currentBlock);
         return this;
@@ -114,9 +122,12 @@ public class IRBuilder {
      * @param name block name
      * @return the block
      */
-    public IRBlock getBlock(String name) {
-        for (IRBlock b : method.getBlocks()) {
-            if (b.getName().equals(name)) {
+    public IRBlock getBlock(String name)
+    {
+        for (IRBlock b : method.getBlocks())
+        {
+            if (b.getName().equals(name))
+            {
                 return b;
             }
         }
@@ -125,7 +136,7 @@ public class IRBuilder {
         return newBlock;
     }
 
-    // ========== Value Management ==========
+    // Value Management
 
     /**
      * Registers a value with a name for later reference.
@@ -134,7 +145,8 @@ public class IRBuilder {
      * @param value the value
      * @return this builder
      */
-    public IRBuilder define(String name, Value value) {
+    public IRBuilder define(String name, Value value)
+    {
         values.put(name, value);
         return this;
     }
@@ -145,7 +157,8 @@ public class IRBuilder {
      * @param name the value name
      * @return the value
      */
-    public Value get(String name) {
+    public Value get(String name)
+    {
         return values.computeIfAbsent(name, n -> new SSAValue(PrimitiveType.INT, n));
     }
 
@@ -155,15 +168,17 @@ public class IRBuilder {
      * @param name the value name
      * @return the SSAValue
      */
-    public SSAValue getSSA(String name) {
+    public SSAValue getSSA(String name)
+    {
         Value v = get(name);
-        if (v instanceof SSAValue) {
+        if (v instanceof SSAValue)
+        {
             return (SSAValue) v;
         }
         throw new IllegalArgumentException(name + " is not an SSAValue");
     }
 
-    // ========== Constant Instructions ==========
+    // Constant Instructions
 
     /**
      * Adds an integer constant instruction.
@@ -172,7 +187,8 @@ public class IRBuilder {
      * @param result name for the result
      * @return this builder
      */
-    public IRBuilder iconst(int value, String result) {
+    public IRBuilder iconst(int value, String result)
+    {
         SSAValue res = new SSAValue(PrimitiveType.INT, result);
         values.put(result, res);
 
@@ -189,7 +205,8 @@ public class IRBuilder {
      * @param result name for the result
      * @return this builder
      */
-    public IRBuilder lconst(long value, String result) {
+    public IRBuilder lconst(long value, String result)
+    {
         SSAValue res = new SSAValue(PrimitiveType.LONG, result);
         values.put(result, res);
 
@@ -205,7 +222,8 @@ public class IRBuilder {
      * @param result name for the result
      * @return this builder
      */
-    public IRBuilder nullConst(String result) {
+    public IRBuilder nullConst(String result)
+    {
         SSAValue res = new SSAValue(new ReferenceType("java/lang/Object"), result);
         values.put(result, res);
 
@@ -215,7 +233,7 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Binary Operations ==========
+    // Binary Operations
 
     /**
      * Adds an integer addition instruction.
@@ -225,7 +243,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder add(String left, String right, String result) {
+    public IRBuilder add(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.ADD, PrimitiveType.INT, left, right, result);
     }
 
@@ -237,7 +256,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder sub(String left, String right, String result) {
+    public IRBuilder sub(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.SUB, PrimitiveType.INT, left, right, result);
     }
 
@@ -249,7 +269,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder mul(String left, String right, String result) {
+    public IRBuilder mul(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.MUL, PrimitiveType.INT, left, right, result);
     }
 
@@ -261,7 +282,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder div(String left, String right, String result) {
+    public IRBuilder div(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.DIV, PrimitiveType.INT, left, right, result);
     }
 
@@ -273,7 +295,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder rem(String left, String right, String result) {
+    public IRBuilder rem(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.REM, PrimitiveType.INT, left, right, result);
     }
 
@@ -285,7 +308,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder and(String left, String right, String result) {
+    public IRBuilder and(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.AND, PrimitiveType.INT, left, right, result);
     }
 
@@ -297,7 +321,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder or(String left, String right, String result) {
+    public IRBuilder or(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.OR, PrimitiveType.INT, left, right, result);
     }
 
@@ -309,7 +334,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder xor(String left, String right, String result) {
+    public IRBuilder xor(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.XOR, PrimitiveType.INT, left, right, result);
     }
 
@@ -321,7 +347,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder shl(String left, String right, String result) {
+    public IRBuilder shl(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.SHL, PrimitiveType.INT, left, right, result);
     }
 
@@ -333,7 +360,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder shr(String left, String right, String result) {
+    public IRBuilder shr(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.SHR, PrimitiveType.INT, left, right, result);
     }
 
@@ -345,11 +373,13 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder ushr(String left, String right, String result) {
+    public IRBuilder ushr(String left, String right, String result)
+    {
         return binaryOp(BinaryOp.USHR, PrimitiveType.INT, left, right, result);
     }
 
-    private IRBuilder binaryOp(BinaryOp op, IRType type, String left, String right, String result) {
+    private IRBuilder binaryOp(BinaryOp op, IRType type, String left, String right, String result)
+    {
         SSAValue res = new SSAValue(type, result);
         values.put(result, res);
 
@@ -359,7 +389,7 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Unary Operations ==========
+    // Unary Operations
 
     /**
      * Adds a negation instruction.
@@ -368,7 +398,8 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder neg(String operand, String result) {
+    public IRBuilder neg(String operand, String result)
+    {
         SSAValue res = new SSAValue(PrimitiveType.INT, result);
         values.put(result, res);
 
@@ -378,7 +409,7 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Copy Instructions ==========
+    // Copy Instructions
 
     /**
      * Adds a copy instruction.
@@ -387,11 +418,10 @@ public class IRBuilder {
      * @param result result name
      * @return this builder
      */
-    public IRBuilder copy(String source, String result) {
+    public IRBuilder copy(String source, String result)
+    {
         Value src = get(source);
-        SSAValue res = new SSAValue(
-                src instanceof SSAValue ? ((SSAValue) src).getType() : PrimitiveType.INT,
-                result);
+        SSAValue res = new SSAValue(src instanceof SSAValue ? src.getType() : PrimitiveType.INT, result);
         values.put(result, res);
 
         CopyInstruction inst = new CopyInstruction(res, src);
@@ -400,7 +430,7 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Phi Instructions ==========
+    // Phi Instructions
 
     /**
      * Adds a phi instruction.
@@ -409,7 +439,8 @@ public class IRBuilder {
      * @param type the value type
      * @return this builder
      */
-    public IRBuilder phi(String result, IRType type) {
+    public IRBuilder phi(String result, IRType type)
+    {
         SSAValue res = new SSAValue(type, result);
         values.put(result, res);
 
@@ -426,8 +457,10 @@ public class IRBuilder {
      * @param valueName incoming value name
      * @return this builder
      */
-    public IRBuilder phiIncoming(String blockName, String valueName) {
-        if (currentBlock.getPhiInstructions().isEmpty()) {
+    public IRBuilder phiIncoming(String blockName, String valueName)
+    {
+        if (currentBlock.getPhiInstructions().isEmpty())
+        {
             throw new IllegalStateException("No phi instruction to add incoming to");
         }
         PhiInstruction phi = currentBlock.getPhiInstructions()
@@ -437,7 +470,7 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Control Flow ==========
+    // Control Flow
 
     /**
      * Adds an unconditional goto instruction.
@@ -445,7 +478,8 @@ public class IRBuilder {
      * @param targetName target block name
      * @return this builder
      */
-    public IRBuilder goTo(String targetName) {
+    public IRBuilder goTo(String targetName)
+    {
         IRBlock target = getBlock(targetName);
         SimpleInstruction inst = SimpleInstruction.createGoto(target);
         currentBlock.addInstruction(inst);
@@ -463,7 +497,8 @@ public class IRBuilder {
      * @param falseName false branch block name
      * @return this builder
      */
-    public IRBuilder branch(CompareOp op, String left, String right, String trueName, String falseName) {
+    public IRBuilder branch(CompareOp op, String left, String right, String trueName, String falseName)
+    {
         IRBlock trueBlock = getBlock(trueName);
         IRBlock falseBlock = getBlock(falseName);
 
@@ -483,7 +518,8 @@ public class IRBuilder {
      * @param falseName false branch block name
      * @return this builder
      */
-    public IRBuilder branchZero(CompareOp op, String operand, String trueName, String falseName) {
+    public IRBuilder branchZero(CompareOp op, String operand, String trueName, String falseName)
+    {
         IRBlock trueBlock = getBlock(trueName);
         IRBlock falseBlock = getBlock(falseName);
 
@@ -494,14 +530,15 @@ public class IRBuilder {
         return this;
     }
 
-    // ========== Return Instructions ==========
+    // Return Instructions
 
     /**
      * Adds a void return instruction.
      *
      * @return this builder
      */
-    public IRBuilder vreturn() {
+    public IRBuilder vreturn()
+    {
         ReturnInstruction inst = new ReturnInstruction(null);
         currentBlock.addInstruction(inst);
         return this;
@@ -513,7 +550,8 @@ public class IRBuilder {
      * @param valueName value to return
      * @return this builder
      */
-    public IRBuilder ireturn(String valueName) {
+    public IRBuilder ireturn(String valueName)
+    {
         ReturnInstruction inst = new ReturnInstruction(get(valueName));
         currentBlock.addInstruction(inst);
         return this;
@@ -525,21 +563,23 @@ public class IRBuilder {
      * @param valueName value to return (or null for void)
      * @return this builder
      */
-    public IRBuilder ret(String valueName) {
+    public IRBuilder ret(String valueName)
+    {
         Value val = valueName != null ? get(valueName) : null;
         ReturnInstruction inst = new ReturnInstruction(val);
         currentBlock.addInstruction(inst);
         return this;
     }
 
-    // ========== Build ==========
+    // Build
 
     /**
      * Returns the current block being built.
      *
      * @return the current IRBlock
      */
-    public IRBlock getCurrentBlock() {
+    public IRBlock getCurrentBlock()
+    {
         return currentBlock;
     }
 
@@ -548,7 +588,8 @@ public class IRBuilder {
      *
      * @return the constructed IRMethod
      */
-    public IRMethod build() {
+    public IRMethod build()
+    {
         return method;
     }
 
@@ -557,7 +598,8 @@ public class IRBuilder {
      *
      * @return the values map
      */
-    public Map<String, Value> getValues() {
+    public Map<String, Value> getValues()
+    {
         return values;
     }
 }

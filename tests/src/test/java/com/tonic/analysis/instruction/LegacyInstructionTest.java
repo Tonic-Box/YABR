@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.parser.ConstPool;
 import com.tonic.util.Opcode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -13,20 +12,24 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LegacyInstructionTest {
+class LegacyInstructionTest
+{
 
     private TestVisitor visitor;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         visitor = new TestVisitor();
     }
 
     @Nested
-    class WideIIncInstructionTests {
+    class WideIIncInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectFields() {
+        void constructorSetsCorrectFields()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 10, 300, 500);
 
             assertEquals(0xC4, instr.getOpcode());
@@ -36,28 +39,32 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 0, 0);
 
             assertEquals(6, instr.getLength());
         }
 
         @Test
-        void stackChangeIsZero() {
+        void stackChangeIsZero()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 100, 50);
 
             assertEquals(0, instr.getStackChange());
         }
 
         @Test
-        void localChangeIsZero() {
+        void localChangeIsZero()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 100, 50);
 
             assertEquals(0, instr.getLocalChange());
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 258, 515);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -76,7 +83,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringContainsAllFields() {
+        void toStringContainsAllFields()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 42, 256, 128);
 
             String str = instr.toString();
@@ -87,7 +95,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 0, 0);
 
             instr.accept(visitor);
@@ -96,14 +105,16 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void handlesNegativeConstValue() {
+        void handlesNegativeConstValue()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 10, -500);
 
             assertEquals(-500, instr.getConstValue());
         }
 
         @Test
-        void handlesMaxVarIndex() {
+        void handlesMaxVarIndex()
+        {
             WideIIncInstruction instr = new WideIIncInstruction(0xC4, 0, 65535, 100);
 
             assertEquals(65535, instr.getVarIndex());
@@ -111,10 +122,12 @@ class LegacyInstructionTest {
     }
 
     @Nested
-    class WideInstructionTests {
+    class WideInstructionTests
+    {
 
         @Test
-        void constructorForVariableInstructions() {
+        void constructorForVariableInstructions()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 20, Opcode.ILOAD, 300);
 
             assertEquals(0xC4, instr.getOpcode());
@@ -125,7 +138,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void constructorForIIncInstruction() {
+        void constructorForIIncInstruction()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 30, Opcode.IINC, 400, 200);
 
             assertEquals(0xC4, instr.getOpcode());
@@ -136,84 +150,96 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void variableInstructionHasLength4() {
+        void variableInstructionHasLength4()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ALOAD, 100);
 
             assertEquals(4, instr.getLength());
         }
 
         @Test
-        void iincInstructionHasLength6() {
+        void iincInstructionHasLength6()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.IINC, 100, 50);
 
             assertEquals(6, instr.getLength());
         }
 
         @Test
-        void iloadStackChangeIsOne() {
+        void iloadStackChangeIsOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ILOAD, 100);
 
             assertEquals(1, instr.getStackChange());
         }
 
         @Test
-        void floadStackChangeIsOne() {
+        void floadStackChangeIsOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.FLOAD, 100);
 
             assertEquals(1, instr.getStackChange());
         }
 
         @Test
-        void aloadStackChangeIsOne() {
+        void aloadStackChangeIsOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ALOAD, 100);
 
             assertEquals(1, instr.getStackChange());
         }
 
         @Test
-        void istoreStackChangeIsMinusOne() {
+        void istoreStackChangeIsMinusOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ISTORE, 100);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void fstoreStackChangeIsMinusOne() {
+        void fstoreStackChangeIsMinusOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.FSTORE, 100);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void astoreStackChangeIsMinusOne() {
+        void astoreStackChangeIsMinusOne()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ASTORE, 100);
 
             assertEquals(-1, instr.getStackChange());
         }
 
         @Test
-        void iincStackChangeIsZero() {
+        void iincStackChangeIsZero()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.IINC, 100, 50);
 
             assertEquals(0, instr.getStackChange());
         }
 
         @Test
-        void defaultStackChangeIsZero() {
+        void defaultStackChangeIsZero()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.NOP, 100);
 
             assertEquals(0, instr.getStackChange());
         }
 
         @Test
-        void localChangeIsZero() {
+        void localChangeIsZero()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ILOAD, 100);
 
             assertEquals(0, instr.getLocalChange());
         }
 
         @Test
-        void writesCorrectBytecodeForLoad() throws IOException {
+        void writesCorrectBytecodeForLoad() throws IOException
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ILOAD, 258);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -230,7 +256,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void writesCorrectBytecodeForIInc() throws IOException {
+        void writesCorrectBytecodeForIInc() throws IOException
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.IINC, 258, 515);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -249,7 +276,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringFormatForLoad() {
+        void toStringFormatForLoad()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ALOAD, 300);
 
             String str = instr.toString();
@@ -257,7 +285,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringFormatForIInc() {
+        void toStringFormatForIInc()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.IINC, 300, 150);
 
             String str = instr.toString();
@@ -265,7 +294,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             WideInstruction instr = new WideInstruction(0xC4, 0, Opcode.ILOAD, 100);
 
             instr.accept(visitor);
@@ -275,10 +305,12 @@ class LegacyInstructionTest {
     }
 
     @Nested
-    class JsrInstructionTests {
+    class JsrInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectFields() {
+        void constructorSetsCorrectFields()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 50, 100);
 
             assertEquals(0xA8, instr.getOpcode());
@@ -287,28 +319,32 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 0);
 
             assertEquals(3, instr.getLength());
         }
 
         @Test
-        void stackChangeIsOne() {
+        void stackChangeIsOne()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 100);
 
             assertEquals(1, instr.getStackChange());
         }
 
         @Test
-        void localChangeIsZero() {
+        void localChangeIsZero()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 100);
 
             assertEquals(0, instr.getLocalChange());
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 515);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -324,7 +360,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringContainsBranchOffset() {
+        void toStringContainsBranchOffset()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 200);
 
             String str = instr.toString();
@@ -332,7 +369,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 100);
 
             instr.accept(visitor);
@@ -341,23 +379,24 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void throwsExceptionForInvalidOpcode() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new JsrInstruction(0xA7, 0, 100);
-            });
+        void throwsExceptionForInvalidOpcode()
+        {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new JsrInstruction(0xA7, 0, 100));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for JsrInstruction"));
         }
 
         @Test
-        void handlesNegativeBranchOffset() {
+        void handlesNegativeBranchOffset()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, -100);
 
             assertEquals(-100, instr.getBranchOffset());
         }
 
         @Test
-        void handlesZeroBranchOffset() {
+        void handlesZeroBranchOffset()
+        {
             JsrInstruction instr = new JsrInstruction(0xA8, 0, 0);
 
             assertEquals(0, instr.getBranchOffset());
@@ -365,10 +404,12 @@ class LegacyInstructionTest {
     }
 
     @Nested
-    class RetInstructionTests {
+    class RetInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectFields() {
+        void constructorSetsCorrectFields()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 25, 10);
 
             assertEquals(0xA9, instr.getOpcode());
@@ -377,28 +418,32 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void hasCorrectLength() {
+        void hasCorrectLength()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 0);
 
             assertEquals(2, instr.getLength());
         }
 
         @Test
-        void stackChangeIsZero() {
+        void stackChangeIsZero()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 5);
 
             assertEquals(0, instr.getStackChange());
         }
 
         @Test
-        void localChangeIsZero() {
+        void localChangeIsZero()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 5);
 
             assertEquals(0, instr.getLocalChange());
         }
 
         @Test
-        void writesCorrectBytecode() throws IOException {
+        void writesCorrectBytecode() throws IOException
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 42);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -413,7 +458,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringContainsVarIndex() {
+        void toStringContainsVarIndex()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 15);
 
             String str = instr.toString();
@@ -421,7 +467,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 5);
 
             instr.accept(visitor);
@@ -430,23 +477,24 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void throwsExceptionForInvalidOpcode() {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new RetInstruction(0xA8, 0, 5);
-            });
+        void throwsExceptionForInvalidOpcode()
+        {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new RetInstruction(0xA8, 0, 5));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for RetInstruction"));
         }
 
         @Test
-        void handlesZeroVarIndex() {
+        void handlesZeroVarIndex()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 0);
 
             assertEquals(0, instr.getVarIndex());
         }
 
         @Test
-        void handlesMaxByteVarIndex() {
+        void handlesMaxByteVarIndex()
+        {
             RetInstruction instr = new RetInstruction(0xA9, 0, 255);
 
             assertEquals(255, instr.getVarIndex());
@@ -454,10 +502,12 @@ class LegacyInstructionTest {
     }
 
     @Nested
-    class UnknownInstructionTests {
+    class UnknownInstructionTests
+    {
 
         @Test
-        void constructorSetsCorrectFields() {
+        void constructorSetsCorrectFields()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFF, 100, 3);
 
             assertEquals(0xFF, instr.getOpcode());
@@ -466,35 +516,40 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void lengthOneCreatesZeroSizeOperandArray() {
+        void lengthOneCreatesZeroSizeOperandArray()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFE, 0, 1);
 
             assertEquals(1, instr.getLength());
         }
 
         @Test
-        void lengthThreeCreatesTwoByteOperandArray() {
+        void lengthThreeCreatesTwoByteOperandArray()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFD, 0, 3);
 
             assertEquals(3, instr.getLength());
         }
 
         @Test
-        void stackChangeIsZero() {
+        void stackChangeIsZero()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFF, 0, 5);
 
             assertEquals(0, instr.getStackChange());
         }
 
         @Test
-        void localChangeIsZero() {
+        void localChangeIsZero()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFF, 0, 5);
 
             assertEquals(0, instr.getLocalChange());
         }
 
         @Test
-        void writesCorrectBytecodeForLengthOne() throws IOException {
+        void writesCorrectBytecodeForLengthOne() throws IOException
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFE, 0, 1);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -508,7 +563,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void writesCorrectBytecodeForLongerInstruction() throws IOException {
+        void writesCorrectBytecodeForLongerInstruction() throws IOException
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFD, 0, 4);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -525,7 +581,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringContainsOpcodeInHex() {
+        void toStringContainsOpcodeInHex()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xAB, 0, 3);
 
             String str = instr.toString();
@@ -533,7 +590,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void toStringFormatsOpcodeWithTwoDigits() {
+        void toStringFormatsOpcodeWithTwoDigits()
+        {
             UnknownInstruction instr = new UnknownInstruction(0x05, 0, 1);
 
             String str = instr.toString();
@@ -541,7 +599,8 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void acceptsVisitor() {
+        void acceptsVisitor()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFF, 0, 1);
 
             instr.accept(visitor);
@@ -550,14 +609,16 @@ class LegacyInstructionTest {
         }
 
         @Test
-        void handlesLargeLength() {
+        void handlesLargeLength()
+        {
             UnknownInstruction instr = new UnknownInstruction(0xFC, 0, 10);
 
             assertEquals(10, instr.getLength());
         }
     }
 
-    private static class TestVisitor extends AbstractBytecodeVisitor {
+    private static class TestVisitor extends AbstractBytecodeVisitor
+    {
         boolean visitedWideIInc = false;
         boolean visitedWide = false;
         boolean visitedJsr = false;
@@ -565,27 +626,32 @@ class LegacyInstructionTest {
         boolean visitedUnknown = false;
 
         @Override
-        public void visit(WideIIncInstruction instr) {
+        public void visit(WideIIncInstruction instr)
+        {
             visitedWideIInc = true;
         }
 
         @Override
-        public void visit(WideInstruction instr) {
+        public void visit(WideInstruction instr)
+        {
             visitedWide = true;
         }
 
         @Override
-        public void visit(JsrInstruction instr) {
+        public void visit(JsrInstruction instr)
+        {
             visitedJsr = true;
         }
 
         @Override
-        public void visit(RetInstruction instr) {
+        public void visit(RetInstruction instr)
+        {
             visitedRet = true;
         }
 
         @Override
-        public void visit(UnknownInstruction instr) {
+        public void visit(UnknownInstruction instr)
+        {
             visitedUnknown = true;
         }
     }

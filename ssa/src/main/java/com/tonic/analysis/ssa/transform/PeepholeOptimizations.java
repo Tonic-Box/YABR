@@ -9,29 +9,26 @@ import java.util.*;
 
 /**
  * Peephole optimization transform.
- *
- * Applies small pattern-based optimizations:
- * - Double negation: NEG(NEG(x)) -> x
- * - Shift by type width: x << 32 -> x (for int), x << 64 -> x (for long)
- * - Redundant operations: x + (-y) -> x - y
- * - Consecutive shifts: (x << a) << b -> x << (a + b) when safe
  */
-public class PeepholeOptimizations implements IRTransform {
+public class PeepholeOptimizations implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "PeepholeOptimizations";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (int i = 0; i < instructions.size(); i++) {
-                IRInstruction instr = instructions.get(i);
+            for (IRInstruction instr : instructions) {
                 IRInstruction replacement = tryOptimize(instr);
 
                 if (replacement != null) {
@@ -47,28 +44,36 @@ public class PeepholeOptimizations implements IRTransform {
         return changed;
     }
 
-    private IRInstruction tryOptimize(IRInstruction instr) {
-        if (instr instanceof UnaryOpInstruction) {
+    private IRInstruction tryOptimize(IRInstruction instr)
+    {
+        if (instr instanceof UnaryOpInstruction)
+        {
             UnaryOpInstruction unaryOp = (UnaryOpInstruction) instr;
             return tryOptimizeUnary(unaryOp);
-        } else if (instr instanceof BinaryOpInstruction) {
+        }
+        else if (instr instanceof BinaryOpInstruction)
+        {
             BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
             return tryOptimizeBinary(binOp);
         }
         return null;
     }
 
-    private IRInstruction tryOptimizeUnary(UnaryOpInstruction instr) {
+    private IRInstruction tryOptimizeUnary(UnaryOpInstruction instr)
+    {
         UnaryOp op = instr.getOp();
         Value operand = instr.getOperand();
         SSAValue result = instr.getResult();
 
-        if (op == UnaryOp.NEG && operand instanceof SSAValue) {
+        if (op == UnaryOp.NEG && operand instanceof SSAValue)
+        {
             SSAValue ssaOperand = (SSAValue) operand;
             IRInstruction def = ssaOperand.getDefinition();
-            if (def instanceof UnaryOpInstruction) {
+            if (def instanceof UnaryOpInstruction)
+            {
                 UnaryOpInstruction innerUnary = (UnaryOpInstruction) def;
-                if (innerUnary.getOp() == UnaryOp.NEG) {
+                if (innerUnary.getOp() == UnaryOp.NEG)
+                {
                     return new CopyInstruction(result, innerUnary.getOperand());
                 }
             }
@@ -77,70 +82,89 @@ public class PeepholeOptimizations implements IRTransform {
         return null;
     }
 
-    private IRInstruction tryOptimizeBinary(BinaryOpInstruction instr) {
+    private IRInstruction tryOptimizeBinary(BinaryOpInstruction instr)
+    {
         BinaryOp op = instr.getOp();
         Value left = instr.getLeft();
         Value right = instr.getRight();
         SSAValue result = instr.getResult();
 
-        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR)) {
+        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR))
+        {
             Integer shiftAmount = getIntConstant(right);
-            if (shiftAmount != null) {
+            if (shiftAmount != null)
+            {
                 int effective = shiftAmount & 31;
-                if (effective == 0) {
+                if (effective == 0)
+                {
                     return new CopyInstruction(result, left);
                 }
-                if (effective != shiftAmount) {
+                if (effective != shiftAmount)
+                {
                     return new BinaryOpInstruction(result, op, left, IntConstant.of(effective));
                 }
             }
         }
 
-        if (op == BinaryOp.ADD && right instanceof SSAValue) {
+        if (op == BinaryOp.ADD && right instanceof SSAValue)
+        {
             SSAValue ssaRight = (SSAValue) right;
             IRInstruction rightDef = ssaRight.getDefinition();
-            if (rightDef instanceof UnaryOpInstruction) {
+            if (rightDef instanceof UnaryOpInstruction)
+            {
                 UnaryOpInstruction rightUnary = (UnaryOpInstruction) rightDef;
-                if (rightUnary.getOp() == UnaryOp.NEG) {
+                if (rightUnary.getOp() == UnaryOp.NEG)
+                {
                     return new BinaryOpInstruction(result, BinaryOp.SUB, left, rightUnary.getOperand());
                 }
             }
         }
 
-        if (op == BinaryOp.ADD && left instanceof SSAValue) {
+        if (op == BinaryOp.ADD && left instanceof SSAValue)
+        {
             SSAValue ssaLeft = (SSAValue) left;
             IRInstruction leftDef = ssaLeft.getDefinition();
-            if (leftDef instanceof UnaryOpInstruction) {
+            if (leftDef instanceof UnaryOpInstruction)
+            {
                 UnaryOpInstruction leftUnary = (UnaryOpInstruction) leftDef;
-                if (leftUnary.getOp() == UnaryOp.NEG) {
+                if (leftUnary.getOp() == UnaryOp.NEG)
+                {
                     return new BinaryOpInstruction(result, BinaryOp.SUB, right, leftUnary.getOperand());
                 }
             }
         }
 
-        if (op == BinaryOp.SUB && right instanceof SSAValue) {
+        if (op == BinaryOp.SUB && right instanceof SSAValue)
+        {
             SSAValue ssaRight = (SSAValue) right;
             IRInstruction rightDef = ssaRight.getDefinition();
-            if (rightDef instanceof UnaryOpInstruction) {
+            if (rightDef instanceof UnaryOpInstruction)
+            {
                 UnaryOpInstruction rightUnary = (UnaryOpInstruction) rightDef;
-                if (rightUnary.getOp() == UnaryOp.NEG) {
+                if (rightUnary.getOp() == UnaryOp.NEG)
+                {
                     return new BinaryOpInstruction(result, BinaryOp.ADD, left, rightUnary.getOperand());
                 }
             }
         }
 
-        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR) && left instanceof SSAValue) {
+        if ((op == BinaryOp.SHL || op == BinaryOp.SHR || op == BinaryOp.USHR) && left instanceof SSAValue)
+        {
             SSAValue ssaLeft = (SSAValue) left;
             Integer outerShift = getIntConstant(right);
             IRInstruction leftDef = ssaLeft.getDefinition();
 
-            if (outerShift != null && leftDef instanceof BinaryOpInstruction) {
+            if (outerShift != null && leftDef instanceof BinaryOpInstruction)
+            {
                 BinaryOpInstruction innerBin = (BinaryOpInstruction) leftDef;
-                if (innerBin.getOp() == op) {
+                if (innerBin.getOp() == op)
+                {
                     Integer innerShift = getIntConstant(innerBin.getRight());
-                    if (innerShift != null) {
+                    if (innerShift != null)
+                    {
                         int totalShift = innerShift + outerShift;
-                        if (totalShift < 32) {
+                        if (totalShift < 32)
+                        {
                             return new BinaryOpInstruction(result, op, innerBin.getLeft(), IntConstant.of(totalShift));
                         }
                     }
@@ -151,18 +175,23 @@ public class PeepholeOptimizations implements IRTransform {
         return null;
     }
 
-    private Integer getIntConstant(Value value) {
-        if (value instanceof IntConstant) {
+    private Integer getIntConstant(Value value)
+    {
+        if (value instanceof IntConstant)
+        {
             IntConstant ic = (IntConstant) value;
             return ic.getValue();
         }
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction) {
+            if (def instanceof ConstantInstruction)
+            {
                 ConstantInstruction ci = (ConstantInstruction) def;
                 Constant c = ci.getConstant();
-                if (c instanceof IntConstant) {
+                if (c instanceof IntConstant)
+                {
                     IntConstant ic = (IntConstant) c;
                     return ic.getValue();
                 }

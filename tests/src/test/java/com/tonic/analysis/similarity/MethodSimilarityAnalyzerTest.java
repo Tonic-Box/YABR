@@ -22,14 +22,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for MethodSimilarityAnalyzer - detecting similar and duplicate methods.
  * Covers signature building, similarity comparison, and clone detection.
  */
-class MethodSimilarityAnalyzerTest {
+class MethodSimilarityAnalyzerTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private MethodSimilarityAnalyzer analyzer;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -39,24 +41,27 @@ class MethodSimilarityAnalyzerTest {
         analyzer = new MethodSimilarityAnalyzer(pool);
     }
 
-    // ========== Constructor Tests ==========
+    // Constructor Tests
 
     @Test
-    void constructorCreatesInstance() {
+    void constructorCreatesInstance()
+    {
         MethodSimilarityAnalyzer msa = new MethodSimilarityAnalyzer(pool);
         assertNotNull(msa);
     }
 
     @Test
-    void constructorSetsClassPool() {
+    void constructorSetsClassPool()
+    {
         MethodSimilarityAnalyzer msa = new MethodSimilarityAnalyzer(pool);
         assertEquals(0, msa.getMethodCount());
     }
 
-    // ========== Progress Callback Tests ==========
+    // Progress Callback Tests
 
     @Test
-    void setProgressCallbackAcceptsCallback() {
+    void setProgressCallbackAcceptsCallback()
+    {
         AtomicInteger callCount = new AtomicInteger(0);
         analyzer.setProgressCallback(msg -> callCount.incrementAndGet());
 
@@ -64,7 +69,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void progressCallbackIsInvoked() throws IOException {
+    void progressCallbackIsInvoked() throws IOException
+    {
         createSimpleMethod("method1");
 
         AtomicInteger callCount = new AtomicInteger(0);
@@ -75,10 +81,11 @@ class MethodSimilarityAnalyzerTest {
         assertTrue(callCount.get() >= 0);
     }
 
-    // ========== Build Index Tests ==========
+    // Build Index Tests
 
     @Test
-    void buildIndexOnEmptyPool() {
+    void buildIndexOnEmptyPool()
+    {
         // Create a truly empty pool (no classes)
         ClassPool emptyPool = TestUtils.emptyPool();
         MethodSimilarityAnalyzer emptyAnalyzer = new MethodSimilarityAnalyzer(emptyPool);
@@ -88,7 +95,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void buildIndexIndexesMethods() throws IOException {
+    void buildIndexIndexesMethods() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
@@ -98,7 +106,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void buildIndexSkipsAbstractMethods() throws IOException {
+    void buildIndexSkipsAbstractMethods() throws IOException
+    {
         // Create a fresh class without default methods to test abstract method handling
         ClassPool freshPool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().setAbstract().build();
@@ -116,7 +125,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void buildIndexSkipsMethodsWithoutCode() throws IOException {
+    void buildIndexSkipsMethodsWithoutCode() throws IOException
+    {
         // Create a fresh class without default methods
         ClassPool freshPool = TestUtils.emptyPool();
         int classAccess = new AccessBuilder().setPublic().build();
@@ -133,45 +143,46 @@ class MethodSimilarityAnalyzerTest {
         assertEquals(0, freshAnalyzer.getMethodCount());
     }
 
-    // ========== Find Similar Tests ==========
+    // Find Similar Tests
 
     @Test
-    void findAllSimilarReturnsEmptyForEmptyIndex() {
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.OPCODE_SEQUENCE, 0.5);
+    void findAllSimilarReturnsEmptyForEmptyIndex()
+    {
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.OPCODE_SEQUENCE, 0.5);
 
         assertNotNull(results);
         assertTrue(results.isEmpty());
     }
 
     @Test
-    void findAllSimilarReturnsSortedResults() throws IOException {
+    void findAllSimilarReturnsSortedResults() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.OPCODE_SEQUENCE, 0.0);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.OPCODE_SEQUENCE, 0.0);
 
         assertNotNull(results);
         // Results should be sorted by score descending
     }
 
     @Test
-    void findAllSimilarRespectsMinScore() throws IOException {
+    void findAllSimilarRespectsMinScore() throws IOException
+    {
         createSimpleMethod("method1");
         createDifferentMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.EXACT_BYTECODE, 1.0);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.EXACT_BYTECODE, 1.0);
 
         assertNotNull(results);
         // Only exact matches should be returned
     }
 
     @Test
-    void findSimilarToByReferenceReturnsResults() throws IOException {
+    void findSimilarToByReferenceReturnsResults() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
@@ -184,7 +195,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void findSimilarToReturnsEmptyForNonExistentMethod() {
+    void findSimilarToReturnsEmptyForNonExistentMethod()
+    {
         analyzer.buildIndex();
         List<SimilarityResult> results = analyzer.findSimilarTo(
             "com/test/NonExistent", "method", "()V",
@@ -195,35 +207,35 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void findSimilarToBySignatureReturnsResults() throws IOException {
+    void findSimilarToBySignatureReturnsResults() throws IOException
+    {
         createSimpleMethod("method1");
         MethodEntry method2 = createSimpleMethod("method2");
 
         analyzer.buildIndex();
 
-        MethodSignature sig = analyzer.getSignature(
-            "com/test/SimilarityTestClass", "method1", "()V");
+        MethodSignature sig = analyzer.getSignature("com/test/SimilarityTestClass", "method1", "()V");
 
-        if (sig != null) {
-            List<SimilarityResult> results = analyzer.findSimilarTo(
-                sig, SimilarityMetric.OPCODE_SEQUENCE, 0.5);
+        if (sig != null)
+        {
+            List<SimilarityResult> results = analyzer.findSimilarTo(sig, SimilarityMetric.OPCODE_SEQUENCE, 0.5);
 
             assertNotNull(results);
         }
     }
 
-    // ========== Compare Tests ==========
+    // Compare Tests
 
     @Test
-    void compareComputesAllMetrics() throws IOException {
+    void compareComputesAllMetrics() throws IOException
+    {
         MethodEntry method1 = createSimpleMethod("method1");
         MethodEntry method2 = createSimpleMethod("method2");
 
         MethodSignature sig1 = MethodSignature.fromMethod(method1, classFile.getClassName());
         MethodSignature sig2 = MethodSignature.fromMethod(method2, classFile.getClassName());
 
-        SimilarityResult result = analyzer.compare(
-            sig1, sig2, SimilarityMetric.COMBINED);
+        SimilarityResult result = analyzer.compare(sig1, sig2, SimilarityMetric.COMBINED);
 
         assertNotNull(result);
         assertNotNull(result.getMethod1());
@@ -231,25 +243,26 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void compareHandlesDifferentMethods() throws IOException {
+    void compareHandlesDifferentMethods() throws IOException
+    {
         MethodEntry method1 = createSimpleMethod("method1");
         MethodEntry method2 = createDifferentMethod("method2");
 
         MethodSignature sig1 = MethodSignature.fromMethod(method1, classFile.getClassName());
         MethodSignature sig2 = MethodSignature.fromMethod(method2, classFile.getClassName());
 
-        SimilarityResult result = analyzer.compare(
-            sig1, sig2, SimilarityMetric.OPCODE_SEQUENCE);
+        SimilarityResult result = analyzer.compare(sig1, sig2, SimilarityMetric.OPCODE_SEQUENCE);
 
         assertNotNull(result);
         assertTrue(result.getOverallScore() >= 0.0);
         assertTrue(result.getOverallScore() <= 1.0);
     }
 
-    // ========== Find Duplicates Tests ==========
+    // Find Duplicates Tests
 
     @Test
-    void findDuplicatesReturnsEmptyForEmptyIndex() {
+    void findDuplicatesReturnsEmptyForEmptyIndex()
+    {
         List<SimilarityResult> results = analyzer.findDuplicates();
 
         assertNotNull(results);
@@ -257,7 +270,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void findDuplicatesDetectsExactCopies() throws IOException {
+    void findDuplicatesDetectsExactCopies() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2"); // Exact copy
 
@@ -268,10 +282,11 @@ class MethodSimilarityAnalyzerTest {
         // May or may not find duplicates depending on implementation
     }
 
-    // ========== Find Renamed Copies Tests ==========
+    // Find Renamed Copies Tests
 
     @Test
-    void findRenamedCopiesReturnsResults() throws IOException {
+    void findRenamedCopiesReturnsResults() throws IOException
+    {
         createSimpleMethod("originalName");
         createSimpleMethod("renamedCopy");
 
@@ -282,7 +297,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void findRenamedCopiesExcludesSameNames() throws IOException {
+    void findRenamedCopiesExcludesSameNames() throws IOException
+    {
         createSimpleMethod("sameName");
         createSimpleMethod("sameName"); // Would need different class
 
@@ -292,52 +308,54 @@ class MethodSimilarityAnalyzerTest {
         assertNotNull(results);
     }
 
-    // ========== Find Similarity Groups Tests ==========
+    // Find Similarity Groups Tests
 
     @Test
-    void findSimilarityGroupsReturnsEmptyForNoSimilarity() {
+    void findSimilarityGroupsReturnsEmptyForNoSimilarity()
+    {
         analyzer.buildIndex();
-        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(
-            SimilarityMetric.EXACT_BYTECODE, 1.0);
+        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(SimilarityMetric.EXACT_BYTECODE, 1.0);
 
         assertNotNull(groups);
         assertTrue(groups.isEmpty());
     }
 
     @Test
-    void findSimilarityGroupsReturnsGroupsForSimilarMethods() throws IOException {
+    void findSimilarityGroupsReturnsGroupsForSimilarMethods() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
         createSimpleMethod("method3");
 
         analyzer.buildIndex();
-        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(
-            SimilarityMetric.OPCODE_SEQUENCE, 0.5);
+        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(SimilarityMetric.OPCODE_SEQUENCE, 0.5);
 
         assertNotNull(groups);
     }
 
     @Test
-    void findSimilarityGroupsSortsBySize() throws IOException {
+    void findSimilarityGroupsSortsBySize() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
         createDifferentMethod("different");
 
         analyzer.buildIndex();
-        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(
-            SimilarityMetric.STRUCTURAL, 0.5);
+        List<List<MethodSignature>> groups = analyzer.findSimilarityGroups(SimilarityMetric.STRUCTURAL, 0.5);
 
         assertNotNull(groups);
         // Groups should be sorted by size descending
-        for (int i = 1; i < groups.size(); i++) {
+        for (int i = 1; i < groups.size(); i++)
+        {
             assertTrue(groups.get(i - 1).size() >= groups.get(i).size());
         }
     }
 
-    // ========== Getter Tests ==========
+    // Getter Tests
 
     @Test
-    void getSignaturesReturnsUnmodifiableList() throws IOException {
+    void getSignaturesReturnsUnmodifiableList() throws IOException
+    {
         createSimpleMethod("method1");
         analyzer.buildIndex();
 
@@ -347,7 +365,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void getMethodCountReturnsCorrectCount() throws IOException {
+    void getMethodCountReturnsCorrectCount() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
         analyzer.buildIndex();
@@ -358,82 +377,84 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void getSignatureReturnsSignature() throws IOException {
+    void getSignatureReturnsSignature() throws IOException
+    {
         createSimpleMethod("method1");
         analyzer.buildIndex();
 
-        MethodSignature sig = analyzer.getSignature(
-            "com/test/SimilarityTestClass", "method1", "()V");
+        MethodSignature sig = analyzer.getSignature("com/test/SimilarityTestClass", "method1", "()V");
 
         // May be null if method not indexed
-        if (sig != null) {
+        if (sig != null)
+        {
             assertEquals("method1", sig.getMethodName());
         }
     }
 
     @Test
-    void getSignatureReturnsNullForNonExistent() {
+    void getSignatureReturnsNullForNonExistent()
+    {
         analyzer.buildIndex();
 
-        MethodSignature sig = analyzer.getSignature(
-            "com/test/NonExistent", "method", "()V");
+        MethodSignature sig = analyzer.getSignature("com/test/NonExistent", "method", "()V");
 
         assertNull(sig);
     }
 
-    // ========== Different Metrics Tests ==========
+    // Different Metrics Tests
 
     @Test
-    void findSimilarWithExactBytecodeMetric() throws IOException {
+    void findSimilarWithExactBytecodeMetric() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.EXACT_BYTECODE, 0.5);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.EXACT_BYTECODE, 0.5);
 
         assertNotNull(results);
     }
 
     @Test
-    void findSimilarWithOpcodeSequenceMetric() throws IOException {
+    void findSimilarWithOpcodeSequenceMetric() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.OPCODE_SEQUENCE, 0.5);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.OPCODE_SEQUENCE, 0.5);
 
         assertNotNull(results);
     }
 
     @Test
-    void findSimilarWithStructuralMetric() throws IOException {
+    void findSimilarWithStructuralMetric() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.STRUCTURAL, 0.5);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.STRUCTURAL, 0.5);
 
         assertNotNull(results);
     }
 
     @Test
-    void findSimilarWithCombinedMetric() throws IOException {
+    void findSimilarWithCombinedMetric() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.COMBINED, 0.5);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.COMBINED, 0.5);
 
         assertNotNull(results);
     }
 
-    // ========== Helper Methods ==========
+    // Helper Methods
 
-    private MethodEntry createSimpleMethod(String name) throws IOException {
+    private MethodEntry createSimpleMethod(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "V");
 
@@ -444,7 +465,8 @@ class MethodSimilarityAnalyzerTest {
         return method;
     }
 
-    private MethodEntry createDifferentMethod(String name) throws IOException {
+    private MethodEntry createDifferentMethod(String name) throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethod(access, name, "I");
 
@@ -456,10 +478,11 @@ class MethodSimilarityAnalyzerTest {
         return method;
     }
 
-    // ========== Edge Case Tests ==========
+    // Edge Case Tests
 
     @Test
-    void buildIndexHandlesNullClassPool() {
+    void buildIndexHandlesNullClassPool()
+    {
         MethodSimilarityAnalyzer nullAnalyzer = new MethodSimilarityAnalyzer(null);
         nullAnalyzer.buildIndex();
 
@@ -467,7 +490,8 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void buildIndexMultipleTimes() throws IOException {
+    void buildIndexMultipleTimes() throws IOException
+    {
         createSimpleMethod("method1");
 
         analyzer.buildIndex();
@@ -481,26 +505,25 @@ class MethodSimilarityAnalyzerTest {
     }
 
     @Test
-    void compareWithZeroMinScore() throws IOException {
+    void compareWithZeroMinScore() throws IOException
+    {
         createSimpleMethod("method1");
         createSimpleMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.OPCODE_SEQUENCE, 0.0);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.OPCODE_SEQUENCE, 0.0);
 
         assertNotNull(results);
-        // Should return all comparisons
     }
 
     @Test
-    void compareWithMaxMinScore() throws IOException {
+    void compareWithMaxMinScore() throws IOException
+    {
         createSimpleMethod("method1");
         createDifferentMethod("method2");
 
         analyzer.buildIndex();
-        List<SimilarityResult> results = analyzer.findAllSimilar(
-            SimilarityMetric.EXACT_BYTECODE, 1.0);
+        List<SimilarityResult> results = analyzer.findAllSimilar(SimilarityMetric.EXACT_BYTECODE, 1.0);
 
         assertNotNull(results);
         // Should only return exact matches

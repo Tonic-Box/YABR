@@ -7,19 +7,17 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.analysis.ssa.visitor.AbstractIRVisitor;
-import com.tonic.analysis.ssa.visitor.IRVisitor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class IRInstructionTest {
+class IRInstructionTest
+{
 
     private IRMethod method;
     private IRBlock block1;
@@ -27,7 +25,8 @@ class IRInstructionTest {
     private IRBlock block3;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -41,10 +40,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class BootstrapMethodInfoTests {
+    class BootstrapMethodInfoTests
+    {
 
         @Test
-        void constructionWithValidArgs() {
+        void constructionWithValidArgs()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "java/lang/invoke/LambdaMetafactory",
@@ -61,7 +62,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithEmptyArgs() {
+        void constructionWithEmptyArgs()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "com/test/Bootstrap",
@@ -75,14 +77,14 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionThrowsOnNullHandle() {
-            assertThrows(NullPointerException.class, () ->
-                new BootstrapMethodInfo(null, Collections.emptyList())
-            );
+        void constructionThrowsOnNullHandle()
+        {
+            assertThrows(NullPointerException.class, () -> new BootstrapMethodInfo(null, Collections.emptyList()));
         }
 
         @Test
-        void isLambdaMetafactoryDetection() {
+        void isLambdaMetafactoryDetection()
+        {
             MethodHandleConstant lambdaHandle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "java/lang/invoke/LambdaMetafactory",
@@ -95,7 +97,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isLambdaMetafactoryFalseForOther() {
+        void isLambdaMetafactoryFalseForOther()
+        {
             MethodHandleConstant otherHandle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "com/test/Bootstrap",
@@ -108,7 +111,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isStringConcatFactoryDetection() {
+        void isStringConcatFactoryDetection()
+        {
             MethodHandleConstant concatHandle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "java/lang/invoke/StringConcatFactory",
@@ -121,7 +125,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isStringConcatFactoryFalseForOther() {
+        void isStringConcatFactoryFalseForOther()
+        {
             MethodHandleConstant otherHandle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "com/test/StringFactory",
@@ -134,7 +139,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringWithArgs() {
+        void toStringWithArgs()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "com/test/Bootstrap",
@@ -152,7 +158,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringWithoutArgs() {
+        void toStringWithoutArgs()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "com/test/Bootstrap",
@@ -166,7 +173,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void equalsAndHashCode() {
+        void equalsAndHashCode()
+        {
             MethodHandleConstant handle1 = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic, "com/test/A", "bsm", "()V"
             );
@@ -183,7 +191,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void notEqualsDifferentHandle() {
+        void notEqualsDifferentHandle()
+        {
             MethodHandleConstant handle1 = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic, "com/test/A", "bsm", "()V"
             );
@@ -198,7 +207,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void argumentsAreImmutable() {
+        void argumentsAreImmutable()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic, "com/test/A", "bsm", "()V"
             );
@@ -213,10 +223,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SwitchInstructionTests {
+    class SwitchInstructionTests
+    {
 
         @Test
-        void constructionWithKeyAndDefault() {
+        void constructionWithKeyAndDefault()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block2);
 
@@ -227,7 +239,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void addCase() {
+        void addCase()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block3);
 
@@ -240,7 +253,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getCaseReturnsDefaultForUnknown() {
+        void getCaseReturnsDefaultForUnknown()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block3);
             sw.addCase(1, block1);
@@ -249,7 +263,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsReturnsKey() {
+        void getOperandsReturnsKey()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block2);
 
@@ -259,7 +274,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperand() {
+        void replaceOperand()
+        {
             SSAValue oldKey = new SSAValue(PrimitiveType.INT, "oldKey");
             SSAValue newKey = new SSAValue(PrimitiveType.INT, "newKey");
             SwitchInstruction sw = new SwitchInstruction(oldKey, block2);
@@ -270,7 +286,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isTerminator() {
+        void isTerminator()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block2);
 
@@ -278,7 +295,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceTarget() {
+        void replaceTarget()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block1);
             sw.addCase(1, block2);
@@ -290,7 +308,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceTargetInCases() {
+        void replaceTargetInCases()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block3);
             sw.addCase(1, block1);
@@ -304,7 +323,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void setDefaultTarget() {
+        void setDefaultTarget()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block1);
 
@@ -314,11 +334,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block2);
 
-            String result = sw.accept(new AbstractIRVisitor<String>() {
+            String result = sw.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSwitch(SwitchInstruction instr) {
                     return "visited_switch";
@@ -329,7 +350,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block3);
             sw.addCase(1, block1);
@@ -344,16 +366,16 @@ class IRInstructionTest {
     }
 
     @Nested
-    class BranchInstructionTests {
+    class BranchInstructionTests
+    {
 
         @Test
-        void constructionWithTwoOperands() {
+        void constructionWithTwoOperands()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
 
-            BranchInstruction branch = new BranchInstruction(
-                    CompareOp.EQ, left, right, block1, block2
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, left, right, block1, block2);
 
             assertEquals(CompareOp.EQ, branch.getCondition());
             assertEquals(left, branch.getLeft());
@@ -363,30 +385,32 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithSingleOperand() {
+        void constructionWithSingleOperand()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
 
-            BranchInstruction branch = new BranchInstruction(
-                    CompareOp.EQ, operand, block1, block2
-            );
+            BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
             assertEquals(operand, branch.getLeft());
             assertNull(branch.getRight());
         }
 
         @Test
-        void allCompareOps() {
+        void allCompareOps()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
 
-            for (CompareOp op : CompareOp.values()) {
+            for (CompareOp op : CompareOp.values())
+            {
                 BranchInstruction branch = new BranchInstruction(op, left, right, block1, block2);
                 assertEquals(op, branch.getCondition());
             }
         }
 
         @Test
-        void getOperandsWithTwoArgs() {
+        void getOperandsWithTwoArgs()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             BranchInstruction branch = new BranchInstruction(CompareOp.NE, left, right, block1, block2);
@@ -398,7 +422,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsWithOneArg() {
+        void getOperandsWithOneArg()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -407,7 +432,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceLeftOperand() {
+        void replaceLeftOperand()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             SSAValue newLeft = new SSAValue(PrimitiveType.INT, "newLeft");
@@ -420,7 +446,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceRightOperand() {
+        void replaceRightOperand()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             SSAValue newRight = new SSAValue(PrimitiveType.INT, "newRight");
@@ -433,7 +460,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isTerminator() {
+        void isTerminator()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -441,7 +469,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceTargetTrue() {
+        void replaceTargetTrue()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
             IRBlock newTarget = new IRBlock("new");
@@ -453,7 +482,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceTargetFalse() {
+        void replaceTargetFalse()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
             IRBlock newTarget = new IRBlock("new");
@@ -465,7 +495,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void setTrueTarget() {
+        void setTrueTarget()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -475,7 +506,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void setFalseTarget() {
+        void setFalseTarget()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -485,11 +517,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
-            String result = branch.accept(new AbstractIRVisitor<String>() {
+            String result = branch.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitBranch(BranchInstruction instr) {
                     return "visited_branch";
@@ -500,7 +533,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringWithTwoOperands() {
+        void toStringWithTwoOperands()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, left, right, block1, block2);
@@ -512,7 +546,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringWithSingleOperand() {
+        void toStringWithSingleOperand()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -521,7 +556,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsTwoArgs() {
+        void copyWithNewOperandsTwoArgs()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             SSAValue newLeft = new SSAValue(PrimitiveType.INT, "newLeft");
@@ -538,7 +574,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsSingleArg() {
+        void copyWithNewOperandsSingleArg()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             SSAValue newOperand = new SSAValue(PrimitiveType.INT, "newOperand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
@@ -550,7 +587,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsEmptyReturnsNull() {
+        void copyWithNewOperandsEmptyReturnsNull()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
@@ -561,10 +599,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class InvokeInstructionTests {
+    class InvokeInstructionTests
+    {
 
         @Test
-        void staticInvoke() {
+        void staticInvoke()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "result");
             InvokeInstruction invoke = new InvokeInstruction(
                     result,
@@ -583,7 +623,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void virtualInvoke() {
+        void virtualInvoke()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("java/lang/String"), "str");
             SSAValue result = new SSAValue(PrimitiveType.INT, "len");
             InvokeInstruction invoke = new InvokeInstruction(
@@ -600,7 +641,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void interfaceInvoke() {
+        void interfaceInvoke()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("java/util/List"), "list");
             SSAValue result = new SSAValue(PrimitiveType.INT, "size");
             InvokeInstruction invoke = new InvokeInstruction(
@@ -616,7 +658,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void specialInvoke() {
+        void specialInvoke()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("com/test/MyClass"), "this");
             InvokeInstruction invoke = new InvokeInstruction(
                     null,
@@ -632,7 +675,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void dynamicInvokeWithBootstrapInfo() {
+        void dynamicInvokeWithBootstrapInfo()
+        {
             MethodHandleConstant handle = new MethodHandleConstant(
                     MethodHandleConstant.REF_invokeStatic,
                     "java/lang/invoke/LambdaMetafactory",
@@ -660,7 +704,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void dynamicInvokeWithoutBootstrapInfo() {
+        void dynamicInvokeWithoutBootstrapInfo()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             InvokeInstruction invoke = new InvokeInstruction(
                     result,
@@ -677,7 +722,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getReceiverForStaticReturnsNull() {
+        void getReceiverForStaticReturnsNull()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.STATIC,
                     "java/lang/Math",
@@ -690,7 +736,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getReceiverForVirtualReturnsFirstArg() {
+        void getReceiverForVirtualReturnsFirstArg()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("java/lang/String"), "str");
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.VIRTUAL,
@@ -704,7 +751,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getReceiverForEmptyArgsReturnsNull() {
+        void getReceiverForEmptyArgsReturnsNull()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.VIRTUAL,
                     "java/lang/String",
@@ -717,7 +765,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getMethodArgumentsForStaticReturnsAll() {
+        void getMethodArgumentsForStaticReturnsAll()
+        {
             SSAValue arg1 = new SSAValue(PrimitiveType.INT, "arg1");
             SSAValue arg2 = new SSAValue(PrimitiveType.INT, "arg2");
             InvokeInstruction invoke = new InvokeInstruction(
@@ -735,7 +784,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getMethodArgumentsForVirtualExcludesReceiver() {
+        void getMethodArgumentsForVirtualExcludesReceiver()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue arg1 = new SSAValue(PrimitiveType.INT, "arg1");
             InvokeInstruction invoke = new InvokeInstruction(
@@ -752,7 +802,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getMethodArgumentsForVirtualOnlyReceiverReturnsEmpty() {
+        void getMethodArgumentsForVirtualOnlyReceiverReturnsEmpty()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("com/test/A"), "obj");
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.VIRTUAL,
@@ -767,7 +818,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructorWithCpIndex() {
+        void constructorWithCpIndex()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             InvokeInstruction invoke = new InvokeInstruction(
                     result,
@@ -783,7 +835,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructorWithoutResultWithCpIndex() {
+        void constructorWithoutResultWithCpIndex()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.STATIC,
                     "A",
@@ -797,7 +850,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandUpdatesArgument() {
+        void replaceOperandUpdatesArgument()
+        {
             SSAValue oldArg = new SSAValue(PrimitiveType.INT, "old");
             SSAValue newArg = new SSAValue(PrimitiveType.INT, "new");
             InvokeInstruction invoke = new InvokeInstruction(
@@ -819,7 +873,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue oldArg = new SSAValue(PrimitiveType.INT, "old");
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.STATIC,
@@ -839,8 +894,10 @@ class IRInstructionTest {
         }
 
         @Test
-        void allInvokeTypes() {
-            for (InvokeType type : InvokeType.values()) {
+        void allInvokeTypes()
+        {
+            for (InvokeType type : InvokeType.values())
+            {
                 InvokeInstruction invoke = new InvokeInstruction(
                         type, "com/test/A", "method", "()V", Collections.emptyList()
                 );
@@ -849,19 +906,19 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue arg1 = new SSAValue(PrimitiveType.INT, "arg1");
             SSAValue arg2 = new SSAValue(PrimitiveType.INT, "arg2");
-            InvokeInstruction invoke = new InvokeInstruction(
-                    InvokeType.STATIC, "A", "m", "(II)V", List.of(arg1, arg2)
-            );
+            InvokeInstruction invoke = new InvokeInstruction(InvokeType.STATIC, "A", "m", "(II)V", List.of(arg1, arg2));
 
             List<Value> operands = invoke.getOperands();
             assertEquals(2, operands.size());
         }
 
         @Test
-        void isTerminatorFalse() {
+        void isTerminatorFalse()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.STATIC, "A", "m", "()V", Collections.emptyList()
             );
@@ -870,12 +927,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.STATIC, "A", "m", "()V", Collections.emptyList()
             );
 
-            String result = invoke.accept(new AbstractIRVisitor<String>() {
+            String result = invoke.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitInvoke(InvokeInstruction instr) {
                     return "visited_invoke";
@@ -886,7 +944,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringStatic() {
+        void toStringStatic()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             InvokeInstruction invoke = new InvokeInstruction(
                     result, InvokeType.STATIC, "java/lang/Math", "abs", "(I)I",
@@ -898,7 +957,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringWithoutResult() {
+        void toStringWithoutResult()
+        {
             InvokeInstruction invoke = new InvokeInstruction(
                     InvokeType.VIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V",
                     List.of(new SSAValue(new ReferenceType("java/io/PrintStream"), "out"),
@@ -911,7 +971,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperands() {
+        void copyWithNewOperands()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue newResult = new SSAValue(PrimitiveType.INT, "newR");
             SSAValue arg1 = new SSAValue(PrimitiveType.INT, "arg1");
@@ -934,10 +995,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class FieldAccessInstructionStoreTests {
+    class FieldAccessInstructionStoreTests
+    {
 
         @Test
-        void instanceField() {
+        void instanceField()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, value);
@@ -948,7 +1011,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void staticField() {
+        void staticField()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
 
@@ -957,7 +1021,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void instanceFieldRegistersUses() {
+        void instanceFieldRegistersUses()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
 
@@ -973,7 +1038,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void staticFieldRegistersUse() {
+        void staticFieldRegistersUse()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
 
             int valUsesBefore = value.getUseCount();
@@ -985,7 +1051,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void instanceFieldWithConstantValue() {
+        void instanceFieldWithConstantValue()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             IntConstant value = IntConstant.of(42);
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, value);
@@ -994,7 +1061,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void staticFieldWithConstantValue() {
+        void staticFieldWithConstantValue()
+        {
             IntConstant value = IntConstant.of(100);
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
 
@@ -1002,7 +1070,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsForInstanceField() {
+        void getOperandsForInstanceField()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, value);
@@ -1014,7 +1083,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsForStaticField() {
+        void getOperandsForStaticField()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
 
@@ -1024,7 +1094,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceObjectRefOperand() {
+        void replaceObjectRefOperand()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("com/test/A"), "old");
             SSAValue newObject = new SSAValue(new ReferenceType("com/test/A"), "new");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1041,7 +1112,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceValueOperand() {
+        void replaceValueOperand()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue oldValue = new SSAValue(PrimitiveType.INT, "old");
             SSAValue newValue = new SSAValue(PrimitiveType.INT, "new");
@@ -1058,7 +1130,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstantObjectRef() {
+        void replaceOperandWithConstantObjectRef()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("com/test/A"), "old");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", oldObject, value);
@@ -1073,7 +1146,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstantValue() {
+        void replaceOperandWithConstantValue()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue oldValue = new SSAValue(PrimitiveType.INT, "old");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, oldValue);
@@ -1088,7 +1162,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatchForStaticField() {
+        void replaceOperandNoMatchForStaticField()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             SSAValue other = new SSAValue(PrimitiveType.INT, "other");
             SSAValue replacement = new SSAValue(PrimitiveType.INT, "repl");
@@ -1100,11 +1175,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("A", "f", "I", value);
 
-            String result = put.accept(new AbstractIRVisitor<String>() {
+            String result = put.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitFieldAccess(FieldAccessInstruction i) {
                     return "visited_putfield";
@@ -1115,7 +1191,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringInstanceField() {
+        void toStringInstanceField()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, value);
@@ -1127,7 +1204,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringStaticField() {
+        void toStringStaticField()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
 
@@ -1137,7 +1215,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsStaticField() {
+        void copyWithNewOperandsStaticField()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             SSAValue newValue = new SSAValue(PrimitiveType.INT, "newVal");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
@@ -1152,7 +1231,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsInstanceField() {
+        void copyWithNewOperandsInstanceField()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             SSAValue newObject = new SSAValue(new ReferenceType("com/test/A"), "newObj");
@@ -1170,7 +1250,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsStaticFieldEmptyReturnsNull() {
+        void copyWithNewOperandsStaticFieldEmptyReturnsNull()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", value);
 
@@ -1180,7 +1261,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsInstanceFieldInsufficientReturnsNull() {
+        void copyWithNewOperandsInstanceFieldInsufficientReturnsNull()
+        {
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStore("com/test/A", "field", "I", object, value);
@@ -1192,10 +1274,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class FieldAccessInstructionLoadTests {
+    class FieldAccessInstructionLoadTests
+    {
 
         @Test
-        void instanceField() {
+        void instanceField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", object);
@@ -1207,7 +1291,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void staticField() {
+        void staticField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "CONST", "I");
 
@@ -1216,7 +1301,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void instanceFieldRegistersUse() {
+        void instanceFieldRegistersUse()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
 
@@ -1229,7 +1315,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void instanceFieldWithConstant() {
+        void instanceFieldWithConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             NullConstant nullObj = NullConstant.INSTANCE;
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", nullObj);
@@ -1238,7 +1325,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsForInstanceField() {
+        void getOperandsForInstanceField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", object);
@@ -1249,7 +1337,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperandsForStaticField() {
+        void getOperandsForStaticField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "CONST", "I");
 
@@ -1258,7 +1347,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue oldObject = new SSAValue(new ReferenceType("com/test/A"), "old");
             SSAValue newObject = new SSAValue(new ReferenceType("com/test/A"), "new");
@@ -1275,7 +1365,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue oldObject = new SSAValue(new ReferenceType("com/test/A"), "old");
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", oldObject);
@@ -1290,7 +1381,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             NullConstant oldObject = NullConstant.INSTANCE;
             SSAValue newObject = new SSAValue(new ReferenceType("com/test/A"), "obj");
@@ -1305,7 +1397,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue other = new SSAValue(new ReferenceType("com/test/A"), "other");
@@ -1318,7 +1411,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatchForStaticField() {
+        void replaceOperandNoMatchForStaticField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue other = new SSAValue(new ReferenceType("com/test/A"), "other");
             SSAValue replacement = new SSAValue(new ReferenceType("com/test/A"), "repl");
@@ -1330,11 +1424,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "A", "f", "I");
 
-            String visitResult = get.accept(new AbstractIRVisitor<String>() {
+            String visitResult = get.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitFieldAccess(FieldAccessInstruction i) {
                     return "visited_getfield";
@@ -1345,7 +1440,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringInstanceField() {
+        void toStringInstanceField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", object);
@@ -1358,7 +1454,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringStaticField() {
+        void toStringStaticField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "CONST", "I");
 
@@ -1368,7 +1465,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsStaticField() {
+        void copyWithNewOperandsStaticField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue newResult = new SSAValue(PrimitiveType.INT, "newVal");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "CONST", "I");
@@ -1383,7 +1481,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsInstanceField() {
+        void copyWithNewOperandsInstanceField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue newResult = new SSAValue(PrimitiveType.INT, "newVal");
@@ -1401,7 +1500,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void copyWithNewOperandsInstanceFieldEmptyReturnsNull() {
+        void copyWithNewOperandsInstanceFieldEmptyReturnsNull()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             SSAValue object = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction get = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", object);
@@ -1413,10 +1513,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class NewArrayInstructionTests {
+    class NewArrayInstructionTests
+    {
 
         @Test
-        void primitiveArray() {
+        void primitiveArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue size = new SSAValue(PrimitiveType.INT, "size");
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, List.of(size));
@@ -1426,7 +1528,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void primitiveArraySingleDimensionConstructor() {
+        void primitiveArraySingleDimensionConstructor()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue size = new SSAValue(PrimitiveType.INT, "size");
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, size);
@@ -1438,7 +1541,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void referenceArray() {
+        void referenceArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(new ReferenceType("java/lang/String"), 1), "arr");
             SSAValue size = new SSAValue(PrimitiveType.INT, "size");
             NewArrayInstruction newArr = new NewArrayInstruction(result, new ReferenceType("java/lang/String"), size);
@@ -1447,7 +1551,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void multidimensionalArray() {
+        void multidimensionalArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1458,7 +1563,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void threeDimensionalArray() {
+        void threeDimensionalArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.DOUBLE, 3), "arr");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1470,7 +1576,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void singleDimensionRegistersUse() {
+        void singleDimensionRegistersUse()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue size = new SSAValue(PrimitiveType.INT, "size");
 
@@ -1483,7 +1590,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void multiDimensionRegistersUses() {
+        void multiDimensionRegistersUses()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1500,7 +1608,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void singleDimensionWithConstant() {
+        void singleDimensionWithConstant()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             IntConstant size = IntConstant.of(10);
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, size);
@@ -1510,7 +1619,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void multiDimensionWithConstants() {
+        void multiDimensionWithConstants()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             IntConstant dim1 = IntConstant.of(5);
             IntConstant dim2 = IntConstant.of(10);
@@ -1522,7 +1632,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1535,7 +1646,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandFirstDimension() {
+        void replaceOperandFirstDimension()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             SSAValue oldDim1 = new SSAValue(PrimitiveType.INT, "old1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1553,7 +1665,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue oldSize = new SSAValue(PrimitiveType.INT, "old");
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, oldSize);
@@ -1568,11 +1681,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, IntConstant.of(10));
 
-            String visitResult = newArr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = newArr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitNewArray(NewArrayInstruction i) {
                     return "visited_newarray";
@@ -1583,7 +1697,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "arr");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -1599,10 +1714,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class ArrayAccessInstructionStoreTests {
+    class ArrayAccessInstructionStoreTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1614,7 +1731,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUses() {
+        void constructionRegistersUses()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1634,7 +1752,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstantIndex() {
+        void constructionWithConstantIndex()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             IntConstant index = IntConstant.of(5);
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1644,7 +1763,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstantValue() {
+        void constructionWithConstantValue()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             IntConstant value = IntConstant.of(42);
@@ -1654,7 +1774,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithAllConstants() {
+        void constructionWithAllConstants()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             IntConstant index = IntConstant.of(0);
             IntConstant value = IntConstant.of(100);
@@ -1665,7 +1786,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1679,7 +1801,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceArrayOperand() {
+        void replaceArrayOperand()
+        {
             SSAValue oldArray = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "old");
             SSAValue newArray = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "new");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
@@ -1697,7 +1820,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceIndexOperand() {
+        void replaceIndexOperand()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue oldIndex = new SSAValue(PrimitiveType.INT, "old");
             SSAValue newIndex = new SSAValue(PrimitiveType.INT, "new");
@@ -1715,7 +1839,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceValueOperand() {
+        void replaceValueOperand()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue oldValue = new SSAValue(PrimitiveType.INT, "old");
@@ -1733,7 +1858,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue oldIndex = new SSAValue(PrimitiveType.INT, "old");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1749,11 +1875,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             ArrayAccessInstruction store = ArrayAccessInstruction.createStore(array, IntConstant.of(0), IntConstant.of(42));
 
-            String result = store.accept(new AbstractIRVisitor<String>() {
+            String result = store.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitArrayAccess(ArrayAccessInstruction i) {
                     return "visited_arrstore";
@@ -1764,7 +1891,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -1780,14 +1908,17 @@ class IRInstructionTest {
     }
 
     @Nested
-    class BinaryOpInstructionTests {
+    class BinaryOpInstructionTests
+    {
 
         @Test
-        void allBinaryOps() {
+        void allBinaryOps()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "l");
             SSAValue right = new SSAValue(PrimitiveType.INT, "r2");
 
-            for (BinaryOp op : BinaryOp.values()) {
+            for (BinaryOp op : BinaryOp.values())
+            {
                 SSAValue result = new SSAValue(PrimitiveType.INT, "r");
                 BinaryOpInstruction instr = new BinaryOpInstruction(result, op, left, right);
                 assertEquals(op, instr.getOp());
@@ -1798,7 +1929,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue left = new SSAValue(PrimitiveType.INT, "l");
             SSAValue right = new SSAValue(PrimitiveType.INT, "r2");
@@ -1809,13 +1941,14 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             BinaryOpInstruction instr = new BinaryOpInstruction(
                     result, BinaryOp.ADD, IntConstant.of(1), IntConstant.of(2)
             );
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitBinaryOp(BinaryOpInstruction i) {
                     return "visited_binop";
@@ -1827,13 +1960,16 @@ class IRInstructionTest {
     }
 
     @Nested
-    class UnaryOpInstructionTests {
+    class UnaryOpInstructionTests
+    {
 
         @Test
-        void allUnaryOps() {
+        void allUnaryOps()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
 
-            for (UnaryOp op : UnaryOp.values()) {
+            for (UnaryOp op : UnaryOp.values())
+            {
                 SSAValue result = new SSAValue(PrimitiveType.INT, "r");
                 UnaryOpInstruction instr = new UnaryOpInstruction(result, op, operand);
                 assertEquals(op, instr.getOp());
@@ -1841,12 +1977,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitUnaryOp(UnaryOpInstruction i) {
                     return "visited_unop";
@@ -1858,10 +1995,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class ConstantInstructionTests {
+    class ConstantInstructionTests
+    {
 
         @Test
-        void intConstant() {
+        void intConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(42));
 
@@ -1871,7 +2010,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void longConstant() {
+        void longConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             ConstantInstruction instr = new ConstantInstruction(result, LongConstant.of(100L));
 
@@ -1879,7 +2019,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void nullConstant() {
+        void nullConstant()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "r");
             ConstantInstruction instr = new ConstantInstruction(result, NullConstant.INSTANCE);
 
@@ -1887,11 +2028,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(1));
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitConstant(ConstantInstruction i) {
                     return "visited_const";
@@ -1903,10 +2045,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class PhiInstructionTests {
+    class PhiInstructionTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             PhiInstruction phi = new PhiInstruction(result);
 
@@ -1915,7 +2059,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void addIncoming() {
+        void addIncoming()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             SSAValue val1 = new SSAValue(PrimitiveType.INT, "v1");
             SSAValue val2 = new SSAValue(PrimitiveType.INT, "v2");
@@ -1928,7 +2073,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getIncomingValueForBlock() {
+        void getIncomingValueForBlock()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             SSAValue val1 = new SSAValue(PrimitiveType.INT, "v1");
             PhiInstruction phi = new PhiInstruction(result);
@@ -1938,11 +2084,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             PhiInstruction phi = new PhiInstruction(result);
 
-            String visitResult = phi.accept(new AbstractIRVisitor<String>() {
+            String visitResult = phi.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitPhi(PhiInstruction i) {
                     return "visited_phi";
@@ -1954,10 +2101,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class ReturnInstructionTests {
+    class ReturnInstructionTests
+    {
 
         @Test
-        void voidReturn() {
+        void voidReturn()
+        {
             ReturnInstruction ret = new ReturnInstruction(null);
 
             assertNull(ret.getReturnValue());
@@ -1965,7 +2114,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void valueReturn() {
+        void valueReturn()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "retVal");
             ReturnInstruction ret = new ReturnInstruction(value);
 
@@ -1973,10 +2123,11 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             ReturnInstruction ret = new ReturnInstruction(null);
 
-            String result = ret.accept(new AbstractIRVisitor<String>() {
+            String result = ret.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitReturn(ReturnInstruction i) {
                     return "visited_return";
@@ -1988,10 +2139,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SimpleInstructionGotoTests {
+    class SimpleInstructionGotoTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SimpleInstruction gotoInstr = SimpleInstruction.createGoto(block2);
 
             assertEquals(block2, gotoInstr.getTarget());
@@ -1999,7 +2152,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceTarget() {
+        void replaceTarget()
+        {
             SimpleInstruction gotoInstr = SimpleInstruction.createGoto(block1);
             gotoInstr.replaceTarget(block1, block2);
 
@@ -2007,10 +2161,11 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SimpleInstruction gotoInstr = SimpleInstruction.createGoto(block1);
 
-            String result = gotoInstr.accept(new AbstractIRVisitor<String>() {
+            String result = gotoInstr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSimple(SimpleInstruction i) {
                     return "visited_goto";
@@ -2022,10 +2177,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SimpleInstructionThrowTests {
+    class SimpleInstructionThrowTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2034,7 +2191,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUse() {
+        void constructionRegistersUse()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
 
             int usesBefore = exception.getUseCount();
@@ -2045,7 +2203,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstant() {
+        void constructionWithConstant()
+        {
             NullConstant nullVal = NullConstant.INSTANCE;
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(nullVal);
 
@@ -2053,7 +2212,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void throwRuntimeException() {
+        void throwRuntimeException()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/RuntimeException"), "rte");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2061,7 +2221,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void throwThrowable() {
+        void throwThrowable()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Throwable"), "t");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2069,7 +2230,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2079,7 +2241,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue oldException = new SSAValue(new ReferenceType("java/lang/Exception"), "old");
             SSAValue newException = new SSAValue(new ReferenceType("java/lang/RuntimeException"), "new");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(oldException);
@@ -2095,7 +2258,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue oldException = new SSAValue(new ReferenceType("java/lang/Exception"), "old");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(oldException);
 
@@ -2109,7 +2273,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             NullConstant oldException = NullConstant.INSTANCE;
             SSAValue newException = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(oldException);
@@ -2123,7 +2288,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SSAValue other = new SSAValue(new ReferenceType("java/lang/Exception"), "other");
             SSAValue replacement = new SSAValue(new ReferenceType("java/lang/Exception"), "repl");
@@ -2135,7 +2301,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isTerminator() {
+        void isTerminator()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2143,11 +2310,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
-            String result = throwInstr.accept(new AbstractIRVisitor<String>() {
+            String result = throwInstr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSimple(SimpleInstruction i) {
                     return "visited_throw";
@@ -2158,7 +2326,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
@@ -2169,10 +2338,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class NewInstructionTests {
+    class NewInstructionTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             NewInstruction newInstr = new NewInstruction(result, "java/lang/Object");
 
@@ -2181,11 +2352,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             NewInstruction newInstr = new NewInstruction(result, "java/lang/Object");
 
-            String visitResult = newInstr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = newInstr.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitNew(NewInstruction i) {
                     return "visited_new";
@@ -2197,10 +2369,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class ArrayAccessInstructionLoadTests {
+    class ArrayAccessInstructionLoadTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "elem");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
@@ -2212,12 +2386,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "elem");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             ArrayAccessInstruction load = ArrayAccessInstruction.createLoad(result, array, IntConstant.of(0));
 
-            String visitResult = load.accept(new AbstractIRVisitor<String>() {
+            String visitResult = load.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitArrayAccess(ArrayAccessInstruction i) {
                     return "visited_arrload";
@@ -2229,10 +2404,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SimpleInstructionArrayLengthTests {
+    class SimpleInstructionArrayLengthTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "len");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SimpleInstruction len = SimpleInstruction.createArrayLength(result, array);
@@ -2242,12 +2419,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "len");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SimpleInstruction len = SimpleInstruction.createArrayLength(result, array);
 
-            String visitResult = len.accept(new AbstractIRVisitor<String>() {
+            String visitResult = len.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSimple(SimpleInstruction i) {
                     return "visited_arrlen";
@@ -2259,10 +2437,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class TypeCheckInstructionCastTests {
+    class TypeCheckInstructionCastTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, PrimitiveType.LONG);
@@ -2273,7 +2453,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUse() {
+        void constructionRegistersUse()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
 
@@ -2285,7 +2466,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstant() {
+        void constructionWithConstant()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/String"), "str");
             NullConstant nullVal = NullConstant.INSTANCE;
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, nullVal, new ReferenceType("java/lang/String"));
@@ -2294,7 +2476,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void primitiveCast() {
+        void primitiveCast()
+        {
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE, "d");
             SSAValue operand = new SSAValue(PrimitiveType.FLOAT, "f");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, PrimitiveType.DOUBLE);
@@ -2303,7 +2486,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void referenceCast() {
+        void referenceCast()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/String"), "str");
             SSAValue operand = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, new ReferenceType("java/lang/String"));
@@ -2312,7 +2496,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, PrimitiveType.LONG);
@@ -2323,7 +2508,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue oldOperand = new SSAValue(PrimitiveType.INT, "old");
             SSAValue newOperand = new SSAValue(PrimitiveType.INT, "new");
@@ -2340,7 +2526,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/String"), "str");
             SSAValue oldOperand = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, oldOperand, new ReferenceType("java/lang/String"));
@@ -2355,7 +2542,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/String"), "str");
             NullConstant oldOperand = NullConstant.INSTANCE;
             SSAValue newOperand = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
@@ -2370,7 +2558,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             SSAValue other = new SSAValue(PrimitiveType.INT, "other");
@@ -2383,12 +2572,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, PrimitiveType.LONG);
 
-            String visitResult = cast.accept(new AbstractIRVisitor<String>() {
+            String visitResult = cast.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitTypeCheck(TypeCheckInstruction i) {
                     return "visited_cast";
@@ -2399,7 +2589,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/String"), "str");
             SSAValue operand = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, new ReferenceType("java/lang/String"));
@@ -2412,10 +2603,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class TypeCheckInstructionInstanceOfTests {
+    class TypeCheckInstructionInstanceOfTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "isInstance");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
@@ -2426,7 +2619,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUse() {
+        void constructionRegistersUse()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
 
@@ -2438,7 +2632,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstant() {
+        void constructionWithConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             NullConstant nullVal = NullConstant.INSTANCE;
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, nullVal, new ReferenceType("java/lang/String"));
@@ -2447,7 +2642,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void checkDifferentTypes() {
+        void checkDifferentTypes()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/util/List"));
@@ -2456,7 +2652,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
@@ -2467,7 +2664,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "new");
@@ -2484,7 +2682,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, oldObject, new ReferenceType("java/lang/String"));
@@ -2499,7 +2698,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             NullConstant oldObject = NullConstant.INSTANCE;
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
@@ -2514,7 +2714,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "bool");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             SSAValue other = new SSAValue(new ReferenceType("java/lang/Object"), "other");
@@ -2527,12 +2728,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "b");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
 
-            String visitResult = instOf.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instOf.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitTypeCheck(TypeCheckInstruction i) {
                     return "visited_instanceof";
@@ -2543,7 +2745,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "isStr");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
@@ -2557,10 +2760,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SimpleInstructionMonitorEnterTests {
+    class SimpleInstructionMonitorEnterTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
@@ -2568,7 +2773,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUse() {
+        void constructionRegistersUse()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
 
             int usesBefore = object.getUseCount();
@@ -2579,7 +2785,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstant() {
+        void constructionWithConstant()
+        {
             NullConstant nullVal = NullConstant.INSTANCE;
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(nullVal);
 
@@ -2587,7 +2794,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
@@ -2597,7 +2805,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "new");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(oldObject);
@@ -2613,7 +2822,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(oldObject);
 
@@ -2627,7 +2837,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             NullConstant oldObject = NullConstant.INSTANCE;
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(oldObject);
@@ -2641,7 +2852,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SSAValue other = new SSAValue(new ReferenceType("java/lang/Object"), "other");
             SSAValue replacement = new SSAValue(new ReferenceType("java/lang/Object"), "repl");
@@ -2653,11 +2865,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
-            String result = monEnter.accept(new AbstractIRVisitor<String>() {
+            String result = monEnter.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSimple(SimpleInstruction i) {
                     return "visited_monenter";
@@ -2668,7 +2881,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
@@ -2678,7 +2892,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isNotTerminator() {
+        void isNotTerminator()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
@@ -2687,10 +2902,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class SimpleInstructionMonitorExitTests {
+    class SimpleInstructionMonitorExitTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
@@ -2698,7 +2915,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionRegistersUse() {
+        void constructionRegistersUse()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
 
             int usesBefore = object.getUseCount();
@@ -2709,7 +2927,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void constructionWithConstant() {
+        void constructionWithConstant()
+        {
             NullConstant nullVal = NullConstant.INSTANCE;
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(nullVal);
 
@@ -2717,7 +2936,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void getOperands() {
+        void getOperands()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
@@ -2727,7 +2947,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithSSAValue() {
+        void replaceOperandWithSSAValue()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "new");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(oldObject);
@@ -2743,7 +2964,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandWithConstant() {
+        void replaceOperandWithConstant()
+        {
             SSAValue oldObject = new SSAValue(new ReferenceType("java/lang/Object"), "old");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(oldObject);
 
@@ -2757,7 +2979,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandConstantToSSA() {
+        void replaceOperandConstantToSSA()
+        {
             NullConstant oldObject = NullConstant.INSTANCE;
             SSAValue newObject = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(oldObject);
@@ -2771,7 +2994,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void replaceOperandNoMatch() {
+        void replaceOperandNoMatch()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SSAValue other = new SSAValue(new ReferenceType("java/lang/Object"), "other");
             SSAValue replacement = new SSAValue(new ReferenceType("java/lang/Object"), "repl");
@@ -2783,11 +3007,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
-            String result = monExit.accept(new AbstractIRVisitor<String>() {
+            String result = monExit.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitSimple(SimpleInstruction i) {
                     return "visited_monexit";
@@ -2798,7 +3023,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void toStringFormat() {
+        void toStringFormat()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
@@ -2808,7 +3034,8 @@ class IRInstructionTest {
         }
 
         @Test
-        void isNotTerminator() {
+        void isNotTerminator()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
@@ -2817,10 +3044,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class CopyInstructionTests {
+    class CopyInstructionTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "copy");
             SSAValue source = new SSAValue(PrimitiveType.INT, "src");
             CopyInstruction copy = new CopyInstruction(result, source);
@@ -2830,12 +3059,13 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "copy");
             SSAValue source = new SSAValue(PrimitiveType.INT, "src");
             CopyInstruction copy = new CopyInstruction(result, source);
 
-            String visitResult = copy.accept(new AbstractIRVisitor<String>() {
+            String visitResult = copy.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitCopy(CopyInstruction i) {
                     return "visited_copy";
@@ -2847,10 +3077,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class LoadLocalInstructionTests {
+    class LoadLocalInstructionTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "loaded");
             LoadLocalInstruction load = new LoadLocalInstruction(result, 0);
 
@@ -2859,11 +3091,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "loaded");
             LoadLocalInstruction load = new LoadLocalInstruction(result, 1);
 
-            String visitResult = load.accept(new AbstractIRVisitor<String>() {
+            String visitResult = load.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitLoadLocal(LoadLocalInstruction i) {
                     return "visited_loadlocal";
@@ -2875,10 +3108,12 @@ class IRInstructionTest {
     }
 
     @Nested
-    class StoreLocalInstructionTests {
+    class StoreLocalInstructionTests
+    {
 
         @Test
-        void construction() {
+        void construction()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             StoreLocalInstruction store = new StoreLocalInstruction(0, value);
 
@@ -2887,11 +3122,12 @@ class IRInstructionTest {
         }
 
         @Test
-        void visitorAccept() {
+        void visitorAccept()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             StoreLocalInstruction store = new StoreLocalInstruction(1, value);
 
-            String result = store.accept(new AbstractIRVisitor<String>() {
+            String result = store.accept(new AbstractIRVisitor<>() {
                 @Override
                 public String visitStoreLocal(StoreLocalInstruction i) {
                     return "visited_storelocal";

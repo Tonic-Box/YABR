@@ -3,7 +3,8 @@ package com.tonic.analysis.source.ast.expr;
 /**
  * Kinds of method references.
  */
-public enum MethodRefKind {
+public enum MethodRefKind
+{
     /**
      * Static method reference: ClassName::staticMethod
      */

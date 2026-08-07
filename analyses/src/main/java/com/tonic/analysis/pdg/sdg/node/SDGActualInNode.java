@@ -9,36 +9,66 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.Collections;
 import java.util.List;
 
-public class SDGActualInNode extends PDGNode {
+/**
+ * SDG node for one actual argument passed at a call site.
+ */
+public class SDGActualInNode extends PDGNode
+{
 
     private SDGCallNode callNode;
     private final int parameterIndex;
     private final Value actualValue;
 
-    public SDGActualInNode(int id, int parameterIndex, Value actualValue, IRBlock block) {
+    /**
+     * Creates an actual-in node; the owning call node is set separately.
+     * @param id the node id
+     * @param parameterIndex the zero-based argument position
+     * @param actualValue the value passed at the call site
+     * @param block the block holding the call
+     */
+    public SDGActualInNode(int id, int parameterIndex, Value actualValue, IRBlock block)
+    {
         super(id, PDGNodeType.ACTUAL_IN, block);
         this.parameterIndex = parameterIndex;
         this.actualValue = actualValue;
     }
 
-    public SDGCallNode getCallNode() {
+    /**
+     * @return the call node
+     */
+    public SDGCallNode getCallNode()
+    {
         return callNode;
     }
 
-    public void setCallNode(SDGCallNode callNode) {
+    /**
+     * Links this node back to the call site that owns it.
+     * @param callNode the owning call node
+     */
+    public void setCallNode(SDGCallNode callNode)
+    {
         this.callNode = callNode;
     }
 
-    public int getParameterIndex() {
+    /**
+     * @return the parameter index
+     */
+    public int getParameterIndex()
+    {
         return parameterIndex;
     }
 
-    public Value getActualValue() {
+    /**
+     * @return the actual value
+     */
+    public Value getActualValue()
+    {
         return actualValue;
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         String name = actualValue instanceof SSAValue
             ? ((SSAValue) actualValue).getName()
             : actualValue.toString();
@@ -46,43 +76,63 @@ public class SDGActualInNode extends PDGNode {
     }
 
     @Override
-    public List<Value> getUsedValues() {
-        if (actualValue != null) {
+    public List<Value> getUsedValues()
+    {
+        if (actualValue != null)
+        {
             return Collections.singletonList(actualValue);
         }
         return Collections.emptyList();
     }
 
     @Override
-    public SSAValue getDefinedValue() {
+    public SSAValue getDefinedValue()
+    {
         return null;
     }
 
-    public boolean isSSAValue() {
+    /**
+     * @return true if the actual argument is an SSA value rather than a constant
+     */
+    public boolean isSSAValue()
+    {
         return actualValue instanceof SSAValue;
     }
 
-    public SSAValue getActualSSAValue() {
-        if (actualValue instanceof SSAValue) {
+    /**
+     * Narrows the actual argument to an SSA value.
+     * @return the SSA value, or null if the argument is not one
+     */
+    public SSAValue getActualSSAValue()
+    {
+        if (actualValue instanceof SSAValue)
+        {
             return (SSAValue) actualValue;
         }
         return null;
     }
 
-    public String getParameterName() {
-        if (actualValue instanceof SSAValue) {
+    /**
+     * Names the argument for display, falling back to argN when the value has no name.
+     * @return the display name
+     */
+    public String getParameterName()
+    {
+        if (actualValue instanceof SSAValue)
+        {
             return ((SSAValue) actualValue).getName();
         }
-        if (actualValue != null) {
+        if (actualValue != null)
+        {
             return actualValue.toString();
         }
         return "arg" + parameterIndex;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String valueName = actualValue != null ? actualValue.toString() : "null";
-        return String.format("SDGActualIn[%d: arg%d = %s]",
-            getId(), parameterIndex, valueName);
+        return String.format("SDGActualIn[%d: arg%d = %s]", getId(), parameterIndex, valueName);
     }
 }

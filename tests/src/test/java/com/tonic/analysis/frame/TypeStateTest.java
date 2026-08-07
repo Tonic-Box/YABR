@@ -20,24 +20,27 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for TypeState.
  * Verifies type state operations for stack and local variable tracking.
  */
-class TypeStateTest {
+class TypeStateTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private ConstPool constPool;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/TypeStateTest", access);
         constPool = classFile.getConstPool();
     }
 
-    // ========== Creation Tests ==========
+    // Creation Tests
 
     @Test
-    void emptyTypeStateHasNoLocalsOrStack() {
+    void emptyTypeStateHasNoLocalsOrStack()
+    {
         TypeState state = TypeState.empty();
 
         assertEquals(0, state.getLocalsCount());
@@ -46,7 +49,8 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateFromStaticMethod() throws IOException {
+    void typeStateFromStaticMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "staticMethod", "(I)V");
 
@@ -59,7 +63,8 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateFromInstanceMethod() throws IOException {
+    void typeStateFromInstanceMethod() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "instanceMethod", "()V");
 
@@ -72,7 +77,8 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateFromConstructor() throws IOException {
+    void typeStateFromConstructor() throws IOException
+    {
         int access = new AccessBuilder().setPublic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "<init>", "()V");
 
@@ -84,7 +90,8 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateWithMultipleParameters() throws IOException {
+    void typeStateWithMultipleParameters() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "multiParam", "(IJFD)V");
 
@@ -101,10 +108,10 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateWithObjectParameter() throws IOException {
+    void typeStateWithObjectParameter() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
-        MethodEntry method = classFile.createNewMethodWithDescriptor(access, "objParam",
-                "(Ljava/lang/String;)V");
+        MethodEntry method = classFile.createNewMethodWithDescriptor(access, "objParam", "(Ljava/lang/String;)V");
 
         TypeState state = TypeState.fromMethodEntry(method, constPool);
 
@@ -114,7 +121,8 @@ class TypeStateTest {
     }
 
     @Test
-    void typeStateWithArrayParameter() throws IOException {
+    void typeStateWithArrayParameter() throws IOException
+    {
         int access = new AccessBuilder().setPublic().setStatic().build();
         MethodEntry method = classFile.createNewMethodWithDescriptor(access, "arrayParam", "([I)V");
 
@@ -125,10 +133,11 @@ class TypeStateTest {
         assertEquals(VerificationType.TAG_OBJECT, type.getTag()); // Arrays are object references
     }
 
-    // ========== Stack Operations ==========
+    // Stack Operations
 
     @Test
-    void pushIncreasesStackSize() {
+    void pushIncreasesStackSize()
+    {
         TypeState state = TypeState.empty();
 
         TypeState newState = state.push(VerificationType.INTEGER);
@@ -138,7 +147,8 @@ class TypeStateTest {
     }
 
     @Test
-    void pushTwoSlotValue() {
+    void pushTwoSlotValue()
+    {
         TypeState state = TypeState.empty();
 
         TypeState newState = state.push(VerificationType.LONG);
@@ -150,7 +160,8 @@ class TypeStateTest {
     }
 
     @Test
-    void popDecreasesStackSize() {
+    void popDecreasesStackSize()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -162,14 +173,16 @@ class TypeStateTest {
     }
 
     @Test
-    void popThrowsOnEmptyStack() {
+    void popThrowsOnEmptyStack()
+    {
         TypeState state = TypeState.empty();
 
         assertThrows(IllegalStateException.class, state::pop);
     }
 
     @Test
-    void popMultipleValues() {
+    void popMultipleValues()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT)
@@ -182,7 +195,8 @@ class TypeStateTest {
     }
 
     @Test
-    void popMoreThanStackSizeThrows() {
+    void popMoreThanStackSizeThrows()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER);
 
@@ -190,7 +204,8 @@ class TypeStateTest {
     }
 
     @Test
-    void peekReturnsTopWithoutPopping() {
+    void peekReturnsTopWithoutPopping()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -202,7 +217,8 @@ class TypeStateTest {
     }
 
     @Test
-    void peekWithOffsetFromTop() {
+    void peekWithOffsetFromTop()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT)
@@ -215,14 +231,16 @@ class TypeStateTest {
     }
 
     @Test
-    void peekOnEmptyStackThrows() {
+    void peekOnEmptyStackThrows()
+    {
         TypeState state = TypeState.empty();
 
         assertThrows(IllegalStateException.class, state::peek);
     }
 
     @Test
-    void clearStackEmptiesStack() {
+    void clearStackEmptiesStack()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -234,10 +252,11 @@ class TypeStateTest {
         assertTrue(cleared.isStackEmpty());
     }
 
-    // ========== Local Variable Operations ==========
+    // Local Variable Operations
 
     @Test
-    void setLocalIncreasesLocalsSize() {
+    void setLocalIncreasesLocalsSize()
+    {
         TypeState state = TypeState.empty();
 
         TypeState newState = state.setLocal(0, VerificationType.INTEGER);
@@ -248,7 +267,8 @@ class TypeStateTest {
     }
 
     @Test
-    void setLocalAtHigherIndex() {
+    void setLocalAtHigherIndex()
+    {
         TypeState state = TypeState.empty();
 
         TypeState newState = state.setLocal(3, VerificationType.FLOAT);
@@ -259,7 +279,8 @@ class TypeStateTest {
     }
 
     @Test
-    void setTwoSlotLocal() {
+    void setTwoSlotLocal()
+    {
         TypeState state = TypeState.empty();
 
         TypeState newState = state.setLocal(1, VerificationType.LONG);
@@ -271,7 +292,8 @@ class TypeStateTest {
     }
 
     @Test
-    void getLocalBeyondSizeReturnsTop() {
+    void getLocalBeyondSizeReturnsTop()
+    {
         TypeState state = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER);
 
@@ -279,7 +301,8 @@ class TypeStateTest {
     }
 
     @Test
-    void withStackReplacesStack() {
+    void withStackReplacesStack()
+    {
         List<VerificationType> newStack = new ArrayList<>();
         newStack.add(VerificationType.INTEGER);
         newStack.add(VerificationType.FLOAT);
@@ -294,7 +317,8 @@ class TypeStateTest {
     }
 
     @Test
-    void withLocalsReplacesLocals() {
+    void withLocalsReplacesLocals()
+    {
         List<VerificationType> newLocals = new ArrayList<>();
         newLocals.add(VerificationType.INTEGER);
         newLocals.add(VerificationType.FLOAT);
@@ -308,10 +332,11 @@ class TypeStateTest {
         assertEquals(2, replaced.getLocalsCount());
     }
 
-    // ========== Merging Tests ==========
+    // Merging Tests
 
     @Test
-    void mergeIdenticalStatesUnchanged() {
+    void mergeIdenticalStatesUnchanged()
+    {
         TypeState state1 = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -327,7 +352,8 @@ class TypeStateTest {
     }
 
     @Test
-    void mergeDifferentLocalsBecomeTop() {
+    void mergeDifferentLocalsBecomeTop()
+    {
         TypeState state1 = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER);
 
@@ -340,7 +366,8 @@ class TypeStateTest {
     }
 
     @Test
-    void mergeDifferentStackSizes() {
+    void mergeDifferentStackSizes()
+    {
         TypeState state1 = TypeState.empty()
                 .push(VerificationType.INTEGER);
 
@@ -355,7 +382,8 @@ class TypeStateTest {
     }
 
     @Test
-    void mergeEqualDepthIncompatibleStacksToTop() {
+    void mergeEqualDepthIncompatibleStacksToTop()
+    {
         TypeState state1 = TypeState.empty()
                 .push(VerificationType.INTEGER);
 
@@ -371,7 +399,8 @@ class TypeStateTest {
     }
 
     @Test
-    void mergeDifferentLocalsSizes() {
+    void mergeDifferentLocalsSizes()
+    {
         TypeState state1 = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER);
 
@@ -385,10 +414,11 @@ class TypeStateTest {
         assertTrue(merged.getLocalsCount() >= 2);
     }
 
-    // ========== Conversion Tests ==========
+    // Conversion Tests
 
     @Test
-    void localsToVerificationTypeInfo() {
+    void localsToVerificationTypeInfo()
+    {
         TypeState state = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER)
                 .setLocal(1, VerificationType.FLOAT);
@@ -401,7 +431,8 @@ class TypeStateTest {
     }
 
     @Test
-    void stackToVerificationTypeInfo() {
+    void stackToVerificationTypeInfo()
+    {
         TypeState state = TypeState.empty()
                 .push(VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -414,7 +445,8 @@ class TypeStateTest {
     }
 
     @Test
-    void getReturnTypeForPrimitives() {
+    void getReturnTypeForPrimitives()
+    {
         assertEquals(VerificationType.INTEGER, TypeState.getReturnType("()I", constPool));
         assertEquals(VerificationType.LONG, TypeState.getReturnType("()J", constPool));
         assertEquals(VerificationType.FLOAT, TypeState.getReturnType("()F", constPool));
@@ -422,12 +454,14 @@ class TypeStateTest {
     }
 
     @Test
-    void getReturnTypeForVoid() {
+    void getReturnTypeForVoid()
+    {
         assertNull(TypeState.getReturnType("()V", constPool));
     }
 
     @Test
-    void getReturnTypeForObject() {
+    void getReturnTypeForObject()
+    {
         VerificationType type = TypeState.getReturnType("()Ljava/lang/String;", constPool);
 
         assertNotNull(type);
@@ -435,17 +469,19 @@ class TypeStateTest {
     }
 
     @Test
-    void getReturnTypeForArray() {
+    void getReturnTypeForArray()
+    {
         VerificationType type = TypeState.getReturnType("()[I", constPool);
 
         assertNotNull(type);
         assertEquals(VerificationType.TAG_OBJECT, type.getTag());
     }
 
-    // ========== Immutability Tests ==========
+    // Immutability Tests
 
     @Test
-    void typeStateIsImmutable() {
+    void typeStateIsImmutable()
+    {
         TypeState state = TypeState.empty();
 
         state.push(VerificationType.INTEGER);
@@ -457,7 +493,8 @@ class TypeStateTest {
     }
 
     @Test
-    void equalsComparesStateCorrectly() {
+    void equalsComparesStateCorrectly()
+    {
         TypeState state1 = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER)
                 .push(VerificationType.FLOAT);
@@ -471,7 +508,8 @@ class TypeStateTest {
     }
 
     @Test
-    void notEqualsForDifferentStates() {
+    void notEqualsForDifferentStates()
+    {
         TypeState state1 = TypeState.empty()
                 .push(VerificationType.INTEGER);
 
@@ -482,7 +520,8 @@ class TypeStateTest {
     }
 
     @Test
-    void toStringProvidesReadableOutput() {
+    void toStringProvidesReadableOutput()
+    {
         TypeState state = TypeState.empty()
                 .setLocal(0, VerificationType.INTEGER);
 

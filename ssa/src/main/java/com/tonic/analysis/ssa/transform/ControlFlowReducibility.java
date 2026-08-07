@@ -12,25 +12,28 @@ import java.util.*;
 
 /**
  * Transforms irreducible control flow into reducible form using node splitting.
- * This allows the decompiler to emit structured Java code instead of IR regions.
  */
-public class ControlFlowReducibility implements IRTransform {
+public class ControlFlowReducibility implements IRTransform
+{
 
     private static final int MAX_BLOCKS_CREATED = 100;
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "ControlFlowReducibility";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
         int iterations = 0;
         int maxIterations = 5;
         int blocksCreated = 0;
 
-        while (iterations < maxIterations && blocksCreated < MAX_BLOCKS_CREATED) {
+        while (iterations < maxIterations && blocksCreated < MAX_BLOCKS_CREATED)
+        {
             DominatorTree domTree = new DominatorTree(method);
             domTree.compute();
 
@@ -38,15 +41,19 @@ public class ControlFlowReducibility implements IRTransform {
             loops.compute();
 
             Set<IRBlock> multiEntryBlocks = findMultiEntryBlocks(method, domTree, loops);
-            if (multiEntryBlocks.isEmpty()) {
+            if (multiEntryBlocks.isEmpty())
+            {
                 break;
             }
 
             IRBlock toSplit = multiEntryBlocks.iterator().next();
-            if (splitBlock(method, toSplit, domTree, loops)) {
+            if (splitBlock(method, toSplit, domTree, loops))
+            {
                 changed = true;
                 blocksCreated++;
-            } else {
+            }
+            else
+            {
                 break;
             }
             iterations++;
@@ -55,38 +62,48 @@ public class ControlFlowReducibility implements IRTransform {
         return changed;
     }
 
-    private Set<IRBlock> findMultiEntryBlocks(IRMethod method, DominatorTree domTree, LoopAnalysis loops) {
+    private Set<IRBlock> findMultiEntryBlocks(IRMethod method, DominatorTree domTree, LoopAnalysis loops)
+    {
         Set<IRBlock> result = new HashSet<>();
 
-        for (IRBlock block : method.getBlocks()) {
+        for (IRBlock block : method.getBlocks())
+        {
             if (block == method.getEntryBlock()) continue;
             if (block.getPredecessors().size() < 2) continue;
 
-            if (hasMultipleLoopEntries(block, loops)) {
+            if (hasMultipleLoopEntries(block, loops))
+            {
                 result.add(block);
                 continue;
             }
 
-            if (hasIrreduciblePredecessors(block, domTree)) {
+            if (hasIrreduciblePredecessors(block, domTree))
+            {
                 result.add(block);
             }
         }
         return result;
     }
 
-    private boolean hasMultipleLoopEntries(IRBlock block, LoopAnalysis loops) {
+    private boolean hasMultipleLoopEntries(IRBlock block, LoopAnalysis loops)
+    {
         LoopAnalysis.Loop loop = loops.getLoop(block);
-        if (loop == null) {
+        if (loop == null)
+        {
             return false;
         }
 
         boolean hasInternalPred = false;
         boolean hasExternalPred = false;
 
-        for (IRBlock pred : block.getPredecessors()) {
-            if (loop.contains(pred)) {
+        for (IRBlock pred : block.getPredecessors())
+        {
+            if (loop.contains(pred))
+            {
                 hasInternalPred = true;
-            } else {
+            }
+            else
+            {
                 hasExternalPred = true;
             }
         }
@@ -94,14 +111,18 @@ public class ControlFlowReducibility implements IRTransform {
         return hasInternalPred && hasExternalPred && block != loop.getHeader();
     }
 
-    private boolean hasIrreduciblePredecessors(IRBlock block, DominatorTree domTree) {
+    private boolean hasIrreduciblePredecessors(IRBlock block, DominatorTree domTree)
+    {
         Set<IRBlock> preds = block.getPredecessors();
         if (preds.size() < 2) return false;
 
-        for (IRBlock pred : preds) {
+        for (IRBlock pred : preds)
+        {
             boolean dominatesAll = true;
-            for (IRBlock other : preds) {
-                if (other != pred && !domTree.dominates(pred, other)) {
+            for (IRBlock other : preds)
+            {
+                if (other != pred && !domTree.dominates(pred, other))
+                {
                     dominatesAll = false;
                     break;
                 }
@@ -109,8 +130,10 @@ public class ControlFlowReducibility implements IRTransform {
             if (dominatesAll) return false;
         }
 
-        for (IRBlock pred : preds) {
-            if (domTree.dominates(block, pred)) {
+        for (IRBlock pred : preds)
+        {
+            if (domTree.dominates(block, pred))
+            {
                 return true;
             }
         }
@@ -118,80 +141,97 @@ public class ControlFlowReducibility implements IRTransform {
         return false;
     }
 
-    private boolean splitBlock(IRMethod method, IRBlock block, DominatorTree domTree, LoopAnalysis loops) {
+    private boolean splitBlock(IRMethod method, IRBlock block, DominatorTree domTree, LoopAnalysis loops)
+    {
         LoopAnalysis.Loop loop = loops.getLoop(block);
 
         List<IRBlock> group1 = new ArrayList<>();
         List<IRBlock> group2 = new ArrayList<>();
 
-        if (loop != null) {
-            for (IRBlock pred : block.getPredecessors()) {
-                if (loop.contains(pred)) {
+        if (loop != null)
+        {
+            for (IRBlock pred : block.getPredecessors())
+            {
+                if (loop.contains(pred))
+                {
                     group1.add(pred);
-                } else {
+                }
+                else
+                {
                     group2.add(pred);
                 }
             }
-        } else {
-            for (IRBlock pred : block.getPredecessors()) {
-                if (domTree.dominates(block, pred)) {
+        }
+        else
+        {
+            for (IRBlock pred : block.getPredecessors())
+            {
+                if (domTree.dominates(block, pred))
+                {
                     group1.add(pred);
-                } else {
+                }
+                else
+                {
                     group2.add(pred);
                 }
             }
         }
 
-        if (group1.isEmpty() || group2.isEmpty()) {
+        if (group1.isEmpty() || group2.isEmpty())
+        {
             return false;
         }
 
         IRBlock duplicate = duplicateBlock(block, method);
 
-        for (IRBlock pred : group2) {
+        for (IRBlock pred : group2)
+        {
             redirectEdge(pred, block, duplicate);
         }
 
-        for (IRBlock succ : new ArrayList<>(block.getSuccessors())) {
-            updatePhisForSplit(succ, block, duplicate, group2);
+        for (IRBlock succ : new ArrayList<>(block.getSuccessors()))
+        {
+            updatePhisForSplit(succ, block, duplicate);
         }
 
         return true;
     }
 
-    private IRBlock duplicateBlock(IRBlock original, IRMethod method) {
+    private IRBlock duplicateBlock(IRBlock original, IRMethod method)
+    {
         IRBlock duplicate = new IRBlock(original.getName() + "_dup");
         method.addBlock(duplicate);
 
         Map<SSAValue, SSAValue> valueMap = new HashMap<>();
 
-        for (PhiInstruction phi : original.getPhiInstructions()) {
+        for (PhiInstruction phi : original.getPhiInstructions())
+        {
             SSAValue newResult = new SSAValue(phi.getResult().getType());
             valueMap.put(phi.getResult(), newResult);
 
             PhiInstruction newPhi = new PhiInstruction(newResult);
-            for (IRBlock pred : phi.getIncomingBlocks()) {
+            for (IRBlock pred : phi.getIncomingBlocks())
+            {
                 newPhi.addIncoming(phi.getIncoming(pred), pred);
             }
             duplicate.addPhiInstruction(newPhi);
         }
 
-        for (IRInstruction instr : original.getInstructions()) {
+        for (IRInstruction instr : original.getInstructions())
+        {
             IRInstruction copy = copyInstruction(instr, valueMap);
-            if (copy != null) {
-                duplicate.addInstruction(copy);
-            }
+            duplicate.addInstruction(copy);
         }
 
         IRInstruction term = original.getTerminator();
-        if (term != null) {
+        if (term != null)
+        {
             IRInstruction termCopy = copyInstruction(term, valueMap);
-            if (termCopy != null) {
-                duplicate.setTerminator(termCopy);
-            }
+            duplicate.setTerminator(termCopy);
         }
 
-        for (IRBlock succ : original.getSuccessors()) {
+        for (IRBlock succ : original.getSuccessors())
+        {
             duplicate.addSuccessor(succ);
             succ.addPredecessor(duplicate);
         }
@@ -199,27 +239,39 @@ public class ControlFlowReducibility implements IRTransform {
         return duplicate;
     }
 
-    private IRInstruction copyInstruction(IRInstruction instr, Map<SSAValue, SSAValue> valueMap) {
+    private IRInstruction copyInstruction(IRInstruction instr, Map<SSAValue, SSAValue> valueMap)
+    {
         SSAValue newResult = null;
-        if (instr.getResult() != null) {
+        if (instr.getResult() != null)
+        {
             newResult = new SSAValue(instr.getResult().getType());
             valueMap.put(instr.getResult(), newResult);
         }
 
         List<Value> newOperands = new ArrayList<>();
-        for (Value op : instr.getOperands()) {
-            if (op instanceof SSAValue && valueMap.containsKey((SSAValue) op)) {
+        for (Value op : instr.getOperands())
+        {
+            if (op instanceof SSAValue && valueMap.containsKey((SSAValue) op))
+            {
                 SSAValue ssa = (SSAValue) op;
                 newOperands.add(valueMap.get(ssa));
-            } else {
+            }
+            else
+            {
                 newOperands.add(op);
             }
         }
 
-        return instr.copyWithNewOperands(newResult, newOperands);
+        IRInstruction copy = instr.copyWithNewOperands(newResult, newOperands);
+        // The duplicate stands in for the original at the same source position: without the offset
+        // the recovery's LVT range attribution has nothing to match and falls back to generated
+        // names for every variable the duplicated block touches.
+        copy.setBytecodeOffset(instr.getBytecodeOffset());
+        return copy;
     }
 
-    private void redirectEdge(IRBlock pred, IRBlock oldTarget, IRBlock newTarget) {
+    private void redirectEdge(IRBlock pred, IRBlock oldTarget, IRBlock newTarget)
+    {
         pred.removeSuccessor(oldTarget);
         oldTarget.removePredecessor(pred);
 
@@ -227,15 +279,23 @@ public class ControlFlowReducibility implements IRTransform {
         newTarget.addPredecessor(pred);
 
         IRInstruction term = pred.getTerminator();
-        if (term != null) {
+        if (term != null)
+        {
             term.replaceTarget(oldTarget, newTarget);
         }
     }
 
-    private void updatePhisForSplit(IRBlock succ, IRBlock original, IRBlock duplicate, List<IRBlock> movedPreds) {
-        for (PhiInstruction phi : succ.getPhiInstructions()) {
+    /**
+     * Mirrors each successor phi's incoming from the original block onto the duplicate, since control can now
+     * arrive from either.
+     */
+    private void updatePhisForSplit(IRBlock succ, IRBlock original, IRBlock duplicate)
+    {
+        for (PhiInstruction phi : succ.getPhiInstructions())
+        {
             Value origValue = phi.getIncoming(original);
-            if (origValue != null) {
+            if (origValue != null)
+            {
                 phi.addIncoming(origValue, duplicate);
             }
         }

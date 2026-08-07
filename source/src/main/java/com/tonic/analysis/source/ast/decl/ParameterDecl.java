@@ -9,7 +9,12 @@ import com.tonic.analysis.source.visitor.SourceVisitor;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class ParameterDecl implements ASTNode {
+/**
+ * A method or constructor parameter in the source AST, carrying its type, annotations, and the final and varargs
+ * flags.
+ */
+public final class ParameterDecl implements ASTNode
+{
 
     private String name;
     private SourceType type;
@@ -19,7 +24,14 @@ public final class ParameterDecl implements ASTNode {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public ParameterDecl(String name, SourceType type, SourceLocation location) {
+    /**
+     * Creates a parameter that is neither final nor varargs and has no annotations.
+     * @param name the parameter name
+     * @param type the declared type
+     * @param location the source position, or null for UNKNOWN
+     */
+    public ParameterDecl(String name, SourceType type, SourceLocation location)
+    {
         this.name = name;
         this.type = type;
         this.isFinal = false;
@@ -28,101 +40,195 @@ public final class ParameterDecl implements ASTNode {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public ParameterDecl(String name, SourceType type) {
+    /**
+     * Creates a parameter with no source position.
+     * @param name the parameter name
+     * @param type the declared type
+     */
+    public ParameterDecl(String name, SourceType type)
+    {
         this(name, type, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Renames the parameter.
+     * @param name the new name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public void setType(SourceType type) {
-        this.type = type;
+    /**
+     * Replaces the declared type.
+     * @param type the new type
+     */
+    public void setType(SourceType type)
+    {
+        withType(type);
     }
 
-    public boolean isFinal() {
+    /**
+     * @return whether final
+     */
+    public boolean isFinal()
+    {
         return isFinal;
     }
 
-    public void setFinal(boolean isFinal) {
+    /**
+     * Marks the parameter final or not.
+     * @param isFinal true to print a final modifier
+     */
+    public void setFinal(boolean isFinal)
+    {
         this.isFinal = isFinal;
     }
 
-    public boolean isVarArgs() {
+    /**
+     * @return whether var args
+     */
+    public boolean isVarArgs()
+    {
         return isVarArgs;
     }
 
-    public void setVarArgs(boolean isVarArgs) {
+    /**
+     * Marks the parameter varargs or not.
+     * @param isVarArgs true to print the type with a trailing ellipsis
+     */
+    public void setVarArgs(boolean isVarArgs)
+    {
         this.isVarArgs = isVarArgs;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the location
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Records the node this parameter hangs under.
+     * @param parent the enclosing node
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public ParameterDecl withName(String name) {
+    /**
+     * Renames the parameter.
+     * @param name the new name
+     * @return this parameter
+     */
+    public ParameterDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public ParameterDecl withType(SourceType type) {
+    /**
+     * Replaces the declared type.
+     * @param type the new type
+     * @return this parameter
+     */
+    public ParameterDecl withType(SourceType type)
+    {
         this.type = type;
         return this;
     }
 
-    public ParameterDecl withFinal(boolean isFinal) {
+    /**
+     * Marks the parameter final or not.
+     * @param isFinal true to print a final modifier
+     * @return this parameter
+     */
+    public ParameterDecl withFinal(boolean isFinal)
+    {
         this.isFinal = isFinal;
         return this;
     }
 
-    public ParameterDecl withVarArgs(boolean isVarArgs) {
+    /**
+     * Marks the parameter varargs or not.
+     * @param isVarArgs true to print the type with a trailing ellipsis
+     * @return this parameter
+     */
+    public ParameterDecl withVarArgs(boolean isVarArgs)
+    {
         this.isVarArgs = isVarArgs;
         return this;
     }
 
-    public ParameterDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Appends an annotation.
+     * @param annotation the annotation to add
+     * @return this parameter
+     */
+    public ParameterDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>(annotations);
-        if (type != null) {
+        if (type != null)
+        {
             children.add(type);
         }
         return children;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append(" ");
         }
         if (isFinal) sb.append("final ");

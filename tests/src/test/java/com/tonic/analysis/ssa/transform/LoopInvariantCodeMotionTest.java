@@ -15,28 +15,32 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests hoisting of loop-invariant computations to loop preheaders
  * to avoid redundant recalculation on each iteration.
  */
-class LoopInvariantCodeMotionTest {
+class LoopInvariantCodeMotionTest
+{
 
     private LoopInvariantCodeMotion transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new LoopInvariantCodeMotion();
     }
 
-    // ========== getName Tests ==========
+    // getName Tests
 
     @Test
-    void getNameReturnsLoopInvariantCodeMotion() {
+    void getNameReturnsLoopInvariantCodeMotion()
+    {
         assertEquals("LoopInvariantCodeMotion", transform.getName());
     }
 
-    // ========== Loop Invariant Detection Tests ==========
+    // Loop Invariant Detection Tests
 
     @Test
-    void hoistsLoopInvariantComputation() {
+    void hoistsLoopInvariantComputation()
+    {
         // Create simple loop with invariant computation
         // preheader -> header -> body -> header
         IRMethod method = new IRMethod("Test", "test", "()V", true);
@@ -75,8 +79,7 @@ class LoopInvariantCodeMotionTest {
         header.addPhi(counterPhi);
 
         // Header: branch on counter
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, counter, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, counter, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 
@@ -111,10 +114,13 @@ class LoopInvariantCodeMotionTest {
 
         // Check that invariant add is now in preheader
         boolean foundInPreheader = false;
-        for (IRInstruction instr : preheader.getInstructions()) {
-            if (instr instanceof BinaryOpInstruction) {
+        for (IRInstruction instr : preheader.getInstructions())
+        {
+            if (instr instanceof BinaryOpInstruction)
+            {
                 BinaryOpInstruction binOp = (BinaryOpInstruction) instr;
-                if (binOp.getOp() == BinaryOp.ADD && binOp.getLeft() == a && binOp.getRight() == b) {
+                if (binOp.getOp() == BinaryOp.ADD && binOp.getLeft() == a && binOp.getRight() == b)
+                {
                     foundInPreheader = true;
                     break;
                 }
@@ -123,10 +129,11 @@ class LoopInvariantCodeMotionTest {
         assertTrue(foundInPreheader);
     }
 
-    // ========== No Change Tests ==========
+    // No Change Tests
 
     @Test
-    void returnsFalseWhenNoInvariants() {
+    void returnsFalseWhenNoInvariants()
+    {
         // Loop with no invariant computations
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock preheader = new IRBlock("preheader");
@@ -157,8 +164,7 @@ class LoopInvariantCodeMotionTest {
         counterPhi.addIncoming(counterNext, body);
         header.addPhi(counterPhi);
 
-        BranchInstruction headerBranch = new BranchInstruction(
-            CompareOp.IFLT, counter, IntConstant.of(10), body, exit);
+        BranchInstruction headerBranch = new BranchInstruction(CompareOp.IFLT, counter, IntConstant.of(10), body, exit);
         headerBranch.setBlock(header);
         header.addInstruction(headerBranch);
 
@@ -186,7 +192,8 @@ class LoopInvariantCodeMotionTest {
     }
 
     @Test
-    void returnsFalseForNullEntryBlock() {
+    void returnsFalseForNullEntryBlock()
+    {
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         // No entry block set
 
@@ -196,7 +203,8 @@ class LoopInvariantCodeMotionTest {
     }
 
     @Test
-    void returnsFalseForMethodWithNoLoops() {
+    void returnsFalseForMethodWithNoLoops()
+    {
         // Straight-line code with no loops
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock entry = new IRBlock("entry");
@@ -229,7 +237,8 @@ class LoopInvariantCodeMotionTest {
     }
 
     @Test
-    void returnsFalseWhenLoopHasNoPreheader() {
+    void returnsFalseWhenLoopHasNoPreheader()
+    {
         // Loop without proper preheader cannot be optimized
         IRMethod method = new IRMethod("Test", "test", "()V", true);
         IRBlock header = new IRBlock("header");

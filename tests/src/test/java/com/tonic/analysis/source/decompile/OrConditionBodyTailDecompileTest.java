@@ -15,26 +15,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * true condition was the dropped term. It must recover as `if (a || b || c) { body }` with the tail
  * emitted once.
  */
-public class OrConditionBodyTailDecompileTest {
+public class OrConditionBodyTailDecompileTest
+{
 
     @Test
-    public void compoundOrWithBodyAndSharedTail() throws Exception {
+    public void compoundOrWithBodyAndSharedTail() throws Exception
+    {
         ClassFile cf = TestUtils.loadTestFixture("OrConditionBodyTail");
         String src = ClassDecompiler.decompile(cf);
         String flat = src.replaceAll("\\s+", " ");
 
         assertTrue(flat.contains("if (a || b || c)"),
                 "the short-circuit condition must be recovered as a single `a || b || c`:\n" + src);
-        assertFalse(flat.matches(".*if \\(!a && !b\\).*"),
-                "the guard must not be negated/inverted:\n" + src);
+        assertFalse(flat.matches(".*if \\(!a && !b\\).*"), "the guard must not be negated/inverted:\n" + src);
         assertEquals(1, countOccurrences(flat, "sb.append(\"after\")"),
                 "the shared tail must be emitted exactly once:\n" + src);
     }
 
-    private int countOccurrences(String text, String pattern) {
+    private int countOccurrences(String text, String pattern)
+    {
         int count = 0;
         int index = 0;
-        while ((index = text.indexOf(pattern, index)) != -1) {
+        while ((index = text.indexOf(pattern, index)) != -1)
+        {
             count++;
             index += pattern.length();
         }

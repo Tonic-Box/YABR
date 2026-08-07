@@ -16,24 +16,28 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for RedundantCopyElimination transform.
  * Verifies that redundant copy instructions are removed.
  */
-class RedundantCopyEliminationTest {
+class RedundantCopyEliminationTest
+{
 
     private RedundantCopyElimination transform;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
         transform = new RedundantCopyElimination();
     }
 
     @Test
-    void getNameReturnsRedundantCopyElimination() {
+    void getNameReturnsRedundantCopyElimination()
+    {
         assertEquals("RedundantCopyElimination", transform.getName());
     }
 
     @Test
-    void returnsFalseWhenNoRedundantCopies() {
+    void returnsFalseWhenNoRedundantCopies()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -50,7 +54,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void removesIdentityCopy() {
+    void removesIdentityCopy()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -70,7 +75,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void preservesHandlerExceptionCaptureMarker() {
+    void preservesHandlerExceptionCaptureMarker()
+    {
         // The leading self-copy of a handler block is the caught-exception capture marker: the lowerer
         // turns it into the astore that stores the JVM-pushed exception off the entry stack into its local.
         // It IS an identity copy, but removing it as a no-op drops that astore and corrupts the handler
@@ -97,7 +103,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void doesNotRemoveCopyChain() {
+    void doesNotRemoveCopyChain()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -121,7 +128,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void returnsFalseForEmptyMethod() {
+    void returnsFalseForEmptyMethod()
+    {
         IRMethod method = new IRMethod("com/test/Test", "empty", "()V", true);
 
         boolean changed = transform.run(method);
@@ -130,7 +138,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void handlesLoadStoreSequence() {
+    void handlesLoadStoreSequence()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -148,12 +157,12 @@ class RedundantCopyEliminationTest {
 
         boolean changed = transform.run(method);
 
-        // Should optimize the load-store pair
         assertTrue(changed);
     }
 
     @Test
-    void preservesNonRedundantCopies() {
+    void preservesNonRedundantCopies()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(II)I", true);
         IRBlock entry = new IRBlock("entry");
 
@@ -178,7 +187,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void handlesMultipleBlocks() {
+    void handlesMultipleBlocks()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "()I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -206,7 +216,8 @@ class RedundantCopyEliminationTest {
     }
 
     @Test
-    void handlesPhiInstructions() {
+    void handlesPhiInstructions()
+    {
         IRMethod method = new IRMethod("com/test/Test", "foo", "(I)I", true);
         IRBlock entry = new IRBlock("entry");
         IRBlock b1 = new IRBlock("b1");
@@ -247,7 +258,6 @@ class RedundantCopyEliminationTest {
 
         transform.run(method);
 
-        // Should handle phi instructions correctly
         assertNotNull(merge.getPhiInstructions());
     }
 }

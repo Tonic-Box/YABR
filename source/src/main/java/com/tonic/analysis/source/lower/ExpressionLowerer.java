@@ -3,88 +3,89 @@ package com.tonic.analysis.source.lower;
 import com.tonic.analysis.source.ast.ASTNode;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.type.ArraySourceType;
+import com.tonic.analysis.source.ast.type.GenericSourceType;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
 import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.ast.type.SourceType;
 import com.tonic.analysis.source.ast.type.VoidSourceType;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
+import com.tonic.analysis.ssa.cfg.EdgeType;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
 import com.tonic.analysis.ssa.type.*;
 import com.tonic.analysis.ssa.value.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Lowers AST Expression nodes to IR instructions.
- * Returns the SSAValue representing the result of the expression.
  */
-public class ExpressionLowerer {
+public class ExpressionLowerer
+{
 
     private final LoweringContext ctx;
 
     /**
      * Creates a new expression lowerer.
-     *
      * @param ctx the lowering context
      */
-    public ExpressionLowerer(LoweringContext ctx) {
+    public ExpressionLowerer(LoweringContext ctx)
+    {
         this.ctx = ctx;
     }
 
     /**
      * Lowers a condition expression for control flow (if/while/for).
-     * Creates a branch instruction directly without creating extra blocks.
-     *
      * @param condition the condition expression
      * @param trueTarget block to branch to if condition is true
      * @param falseTarget block to branch to if condition is false
      */
-    public void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget) {
+    public void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget)
+    {
         lowerCondition(condition, trueTarget, falseTarget, false);
     }
 
     /**
-     * Lowers {@code condition} (optionally negated) as control flow that branches to {@code trueTarget} when
-     * the (negated) condition holds, else {@code falseTarget}. A logical NOT inverts the leaf branch opcode and
-     * applies De Morgan to {@code &&}/{@code ||} - keeping the THEN block as the branch's jump target - rather
-     * than swapping the true/false targets. Swapping would make the ELSE arm the fall-through, flipping the
-     * recovered branch polarity on the round trip (javac keeps the THEN arm as the jump target).
+     * Lowers {@code condition} (optionally negated) as control flow that branches to {@code trueTarget} when the
+     * (negated) condition holds, else {@code falseTarget}.
      */
-    private void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget, boolean negate) {
-        if (condition instanceof UnaryExpr) {
+    private void lowerCondition(Expression condition, IRBlock trueTarget, IRBlock falseTarget, boolean negate)
+    {
+        if (condition instanceof UnaryExpr)
+        {
             UnaryExpr unary = (UnaryExpr) condition;
-            if (unary.getOperator() == UnaryOperator.NOT) {
+            if (unary.getOperator() == UnaryOperator.NOT)
+            {
                 lowerCondition(unary.getOperand(), trueTarget, falseTarget, !negate);
                 return;
             }
         }
 
-        if (condition instanceof BinaryExpr) {
+        if (condition instanceof BinaryExpr)
+        {
             BinaryExpr bin = (BinaryExpr) condition;
             BinaryOperator op = bin.getOperator();
-            if (op.isComparison()) {
+            if (op.isComparison())
+            {
                 lowerComparisonForControlFlow(bin, trueTarget, falseTarget, negate);
                 return;
             }
             // Short-circuit && / ||: chain the operands as branches through an intermediate block. Under a
             // negation De Morgan turns && into || and vice versa, with the negation pushed into each operand.
-            if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+            if (op == BinaryOperator.AND || op == BinaryOperator.OR)
+            {
                 boolean effectiveAnd = (op == BinaryOperator.AND) != negate;
                 IRBlock evalRight = ctx.createBlock();
-                if (effectiveAnd) {
+                if (effectiveAnd)
+                {
                     lowerCondition(bin.getLeft(), evalRight, falseTarget, negate);
-                    ctx.setCurrentBlock(evalRight);
-                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
-                } else {
-                    lowerCondition(bin.getLeft(), trueTarget, evalRight, negate);
-                    ctx.setCurrentBlock(evalRight);
-                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
                 }
+                else
+                {
+                    lowerCondition(bin.getLeft(), trueTarget, evalRight, negate);
+                }
+                ctx.setCurrentBlock(evalRight);
+                lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
                 return;
             }
         }
@@ -93,29 +94,35 @@ public class ExpressionLowerer {
         CompareOp leaf = negate ? CompareOp.IFEQ : CompareOp.IFNE;
         BranchInstruction branch = new BranchInstruction(leaf, cond, trueTarget, falseTarget);
         ctx.getCurrentBlock().addInstruction(branch);
-        ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(trueTarget, EdgeType.NORMAL);
+        ctx.getCurrentBlock().addSuccessor(falseTarget, EdgeType.NORMAL);
     }
 
-    /** The inverse of {@code op} when {@code negate} (null-safe), else {@code op} unchanged. */
-    private static CompareOp maybeInvert(CompareOp op, boolean negate) {
+    /**
+     * The inverse of {@code op} when {@code negate} (null-safe), else {@code op} unchanged.
+     */
+    private static CompareOp maybeInvert(CompareOp op, boolean negate)
+    {
         return negate && op != null ? op.invert() : op;
     }
 
-    private void lowerComparisonForControlFlow(BinaryExpr bin, IRBlock trueTarget, IRBlock falseTarget, boolean negate) {
+    private void lowerComparisonForControlFlow(BinaryExpr bin, IRBlock trueTarget, IRBlock falseTarget, boolean negate)
+    {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
         // Reference == / != (including against null) must compare with acmp, not the integer icmp. Decide from the
         // lowered VALUE types (reliable) - the AST operand types are often unqualified or unset, and
         // getCommonComparisonType defaults non-floating operands to int.
-        if (isReferenceValue(left) || isReferenceValue(right)) {
+        if (isReferenceValue(left) || isReferenceValue(right))
+        {
             BinaryOperator binOp = bin.getOperator();
-            if (binOp == BinaryOperator.EQ || binOp == BinaryOperator.NE) {
+            if (binOp == BinaryOperator.EQ || binOp == BinaryOperator.NE)
+            {
                 CompareOp op = binOp == BinaryOperator.EQ ? CompareOp.ACMPEQ : CompareOp.ACMPNE;
                 ctx.getCurrentBlock().addInstruction(new BranchInstruction(maybeInvert(op, negate), left, right, trueTarget, falseTarget));
-                ctx.getCurrentBlock().addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-                ctx.getCurrentBlock().addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(trueTarget, EdgeType.NORMAL);
+                ctx.getCurrentBlock().addSuccessor(falseTarget, EdgeType.NORMAL);
                 return;
             }
         }
@@ -123,6 +130,11 @@ public class ExpressionLowerer {
         SourceType leftType = bin.getLeft().getType();
         SourceType rightType = bin.getRight().getType();
         SourceType commonType = getCommonComparisonType(leftType, rightType);
+        // The AST operand types can be unset (a parsed call's return type is not resolved on the
+        // expression), which defaults the comparison to int and emits an integer compare over a
+        // two-slot value. The lowered VALUES carry the true JVM types - widen the comparison to
+        // the widest lowered operand type, mirroring the reference check above.
+        commonType = widestOfValues(commonType, left, right);
         IRType commonIRType = commonType.toIRType();
 
         left = widenIfNeeded(left, commonIRType);
@@ -131,7 +143,8 @@ public class ExpressionLowerer {
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
         IRBlock currentBlock = ctx.getCurrentBlock();
 
-        if (commonType == PrimitiveSourceType.LONG) {
+        if (commonType == PrimitiveSourceType.LONG)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
             currentBlock.addInstruction(lcmp);
@@ -139,83 +152,141 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
-        } else if (commonType == PrimitiveSourceType.FLOAT) {
+        }
+        else if (commonType == PrimitiveSourceType.FLOAT)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            // An ordered comparison must be FALSE when either side is NaN, so the compare has to bias NaN
+            // the way that makes the following branch fail: `<`/`<=` take fcmpg (NaN reads as greater),
+            // `>`/`>=` take fcmpl (NaN reads as less). The bias follows the operator as written - a negated
+            // comparison keeps its own, exactly as javac emits it - and having it the other way round made
+            // every float comparison answer the opposite of the source for NaN.
+            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
             currentBlock.addInstruction(fcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
-        } else if (commonType == PrimitiveSourceType.DOUBLE) {
+        }
+        else if (commonType == PrimitiveSourceType.DOUBLE)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
             currentBlock.addInstruction(dcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(maybeInvert(singleCmp, negate), cmpResult, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
-        } else {
+        }
+        else
+        {
             BranchInstruction branch = new BranchInstruction(maybeInvert(cmpOp, negate), left, right, trueTarget, falseTarget);
             currentBlock.addInstruction(branch);
         }
 
-        currentBlock.addSuccessor(trueTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(falseTarget, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(trueTarget, EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseTarget, EdgeType.NORMAL);
     }
 
     /**
      * Lowers an expression and returns the SSAValue result.
+     *
+     * @param expr the source expression to lower
+     * @return the value the lowered instructions produce
+     * @throws LoweringException if the expression form is unsupported or cannot be resolved
      */
-    public Value lower(Expression expr) {
-        if (expr instanceof LiteralExpr) {
+    public Value lower(Expression expr)
+    {
+        if (expr instanceof LiteralExpr)
+        {
             return lowerLiteral((LiteralExpr) expr);
-        } else if (expr instanceof VarRefExpr) {
+        }
+        else if (expr instanceof VarRefExpr)
+        {
             return lowerVarRef((VarRefExpr) expr);
-        } else if (expr instanceof BinaryExpr) {
+        }
+        else if (expr instanceof BinaryExpr)
+        {
             return lowerBinary((BinaryExpr) expr);
-        } else if (expr instanceof UnaryExpr) {
+        }
+        else if (expr instanceof UnaryExpr)
+        {
             return lowerUnary((UnaryExpr) expr);
-        } else if (expr instanceof MethodCallExpr) {
+        }
+        else if (expr instanceof MethodCallExpr)
+        {
             return lowerMethodCall((MethodCallExpr) expr);
-        } else if (expr instanceof FieldAccessExpr) {
+        }
+        else if (expr instanceof FieldAccessExpr)
+        {
             return lowerFieldAccess((FieldAccessExpr) expr);
-        } else if (expr instanceof ArrayAccessExpr) {
+        }
+        else if (expr instanceof ArrayAccessExpr)
+        {
             return lowerArrayAccess((ArrayAccessExpr) expr);
-        } else if (expr instanceof NewExpr) {
+        }
+        else if (expr instanceof NewExpr)
+        {
             return lowerNew((NewExpr) expr);
-        } else if (expr instanceof NewArrayExpr) {
+        }
+        else if (expr instanceof NewArrayExpr)
+        {
             return lowerNewArray((NewArrayExpr) expr);
-        } else if (expr instanceof CastExpr) {
+        }
+        else if (expr instanceof CastExpr)
+        {
             return lowerCast((CastExpr) expr);
-        } else if (expr instanceof TernaryExpr) {
+        }
+        else if (expr instanceof TernaryExpr)
+        {
             return lowerTernary((TernaryExpr) expr);
-        } else if (expr instanceof InstanceOfExpr) {
+        }
+        else if (expr instanceof InstanceOfExpr)
+        {
             return lowerInstanceOf((InstanceOfExpr) expr);
-        } else if (expr instanceof ThisExpr) {
+        }
+        else if (expr instanceof ThisExpr)
+        {
             return lowerThis();
-        } else if (expr instanceof ArrayInitExpr) {
+        }
+        else if (expr instanceof ArrayInitExpr)
+        {
             return lowerArrayInit((ArrayInitExpr) expr);
-        } else if (expr instanceof LambdaExpr) {
+        }
+        else if (expr instanceof LambdaExpr)
+        {
             return lowerLambda((LambdaExpr) expr);
-        } else if (expr instanceof MethodRefExpr) {
+        }
+        else if (expr instanceof MethodRefExpr)
+        {
             return lowerMethodRef((MethodRefExpr) expr);
-        } else if (expr instanceof ClassExpr) {
+        }
+        else if (expr instanceof ClassExpr)
+        {
             return lowerClass((ClassExpr) expr);
-        } else if (expr instanceof SuperExpr) {
+        }
+        else if (expr instanceof SuperExpr)
+        {
             return lowerSuper();
-        } else if (expr instanceof InvokeDynamicExpr) {
+        }
+        else if (expr instanceof InvokeDynamicExpr)
+        {
             return lowerInvokeDynamic((InvokeDynamicExpr) expr);
-        } else if (expr instanceof DynamicConstantExpr) {
+        }
+        else if (expr instanceof DynamicConstantExpr)
+        {
             return lowerDynamicConstant((DynamicConstantExpr) expr);
-        } else {
+        }
+        else
+        {
             throw new LoweringException("Unsupported expression type: " + expr.getClass().getSimpleName());
         }
     }
 
-    private Value lowerLiteral(LiteralExpr lit) {
+    private Value lowerLiteral(LiteralExpr lit)
+    {
         Constant constant = toConstant(lit.getValue(), lit.getType());
 
         IRType irType = lit.getType().toIRType();
@@ -226,69 +297,86 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Constant toConstant(Object value, SourceType type) {
-        if (value == null) {
+    private Constant toConstant(Object value, SourceType type)
+    {
+        if (value == null)
+        {
             return NullConstant.INSTANCE;
         }
 
-        if (type instanceof PrimitiveSourceType) {
+        if (type instanceof PrimitiveSourceType)
+        {
             PrimitiveSourceType prim = (PrimitiveSourceType) type;
-            if (prim == PrimitiveSourceType.BOOLEAN) {
+            if (prim == PrimitiveSourceType.BOOLEAN)
+            {
                 return IntConstant.of(((Boolean) value) ? 1 : 0);
             }
             // A char literal arrives as a Character, not a Number; treat it as its integer code value.
             Number num = (value instanceof Character) ? (int) (Character) value
                        : (value instanceof Number) ? (Number) value : null;
-            if (num != null) {
+            if (num != null)
+            {
                 if (prim == PrimitiveSourceType.BYTE || prim == PrimitiveSourceType.CHAR ||
-                    prim == PrimitiveSourceType.SHORT || prim == PrimitiveSourceType.INT) {
+                    prim == PrimitiveSourceType.SHORT || prim == PrimitiveSourceType.INT)
+                    {
                     return IntConstant.of(num.intValue());
-                } else if (prim == PrimitiveSourceType.LONG) {
+                }
+                else if (prim == PrimitiveSourceType.LONG)
+                {
                     return new LongConstant(num.longValue());
-                } else if (prim == PrimitiveSourceType.FLOAT) {
+                }
+                else if (prim == PrimitiveSourceType.FLOAT)
+                {
                     return new FloatConstant(num.floatValue());
-                } else if (prim == PrimitiveSourceType.DOUBLE) {
+                }
+                else if (prim == PrimitiveSourceType.DOUBLE)
+                {
                     return new DoubleConstant(num.doubleValue());
                 }
             }
         }
 
-        if (value instanceof String) {
+        if (value instanceof String)
+        {
             return new StringConstant((String) value);
         }
 
         throw new LoweringException("Cannot convert value to constant: " + value);
     }
 
-    private Value lowerVarRef(VarRefExpr var) {
-        if (var.getSsaValue() != null) {
+    private Value lowerVarRef(VarRefExpr var)
+    {
+        if (var.getSsaValue() != null)
+        {
             return var.getSsaValue();
         }
         String name = var.getName();
-        if (ctx.hasVariable(name)) {
+        if (ctx.hasVariable(name))
+        {
             return ctx.getVariable(name);
         }
         Value field = tryLowerImplicitFieldRead(name);
-        if (field != null) {
+        if (field != null)
+        {
             return field;
         }
         return ctx.getVariable(name);
     }
 
     /**
-     * Resolves an unqualified name that is not a local variable as a read of a field
-     * declared on the current class (or inherited). The decompiler emits own-class field
-     * references as bare names; this rewrites them to the appropriate getfield/getstatic.
-     * Returns null when the name does not resolve to a field, leaving the caller to surface
-     * the original "undefined variable" error.
+     * Resolves an unqualified name that is not a local variable as a read of a field declared on the current class
+     * (or inherited).
      */
-    private Value tryLowerImplicitFieldRead(String name) {
+    private Value tryLowerImplicitFieldRead(String name)
+    {
         String ownerClass = ctx.getOwnerClass();
-        if (ownerClass == null || ownerClass.isEmpty()) {
+        if (ownerClass == null || ownerClass.isEmpty())
+        {
             return null;
         }
         SourceType fieldType = ctx.getTypeResolver().findFieldType(ownerClass, name);
-        if (fieldType == null) {
+        if (fieldType == null)
+        {
             return null;
         }
 
@@ -297,10 +385,14 @@ public class ExpressionLowerer {
         String descriptor = irType.getDescriptor();
 
         FieldAccessInstruction instr;
-        if (ctx.getTypeResolver().isStaticField(ownerClass, name)) {
+        if (ctx.getTypeResolver().isStaticField(ownerClass, name))
+        {
             instr = FieldAccessInstruction.createStaticLoad(result, ownerClass, name, descriptor);
-        } else {
-            if (!ctx.hasVariable("this")) {
+        }
+        else
+        {
+            if (!ctx.hasVariable("this"))
+            {
                 return null;
             }
             instr = FieldAccessInstruction.createLoad(result, ownerClass, name, descriptor, ctx.getVariable("this"));
@@ -310,28 +402,32 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Stores a value into a field referenced by an unqualified name (no local variable of
-     * that name exists). Mirrors {@link #tryLowerImplicitFieldRead} for the write side of
-     * assignment, compound-assignment and increment/decrement. Returns false when the name
-     * does not resolve to a field.
+     * Stores a value into a field referenced by an unqualified name (no local variable of that name exists).
      */
-    private boolean tryLowerImplicitFieldStore(String name, Value value) {
+    private boolean tryLowerImplicitFieldStore(String name, Value value)
+    {
         String ownerClass = ctx.getOwnerClass();
-        if (ownerClass == null || ownerClass.isEmpty()) {
+        if (ownerClass == null || ownerClass.isEmpty())
+        {
             return false;
         }
         SourceType fieldType = ctx.getTypeResolver().findFieldType(ownerClass, name);
-        if (fieldType == null) {
+        if (fieldType == null)
+        {
             return false;
         }
 
         String descriptor = fieldType.toIRType().getDescriptor();
 
         FieldAccessInstruction instr;
-        if (ctx.getTypeResolver().isStaticField(ownerClass, name)) {
+        if (ctx.getTypeResolver().isStaticField(ownerClass, name))
+        {
             instr = FieldAccessInstruction.createStaticStore(ownerClass, name, descriptor, value);
-        } else {
-            if (!ctx.hasVariable("this")) {
+        }
+        else
+        {
+            if (!ctx.hasVariable("this"))
+            {
                 return false;
             }
             instr = FieldAccessInstruction.createStore(ownerClass, name, descriptor, ctx.getVariable("this"), value);
@@ -340,46 +436,74 @@ public class ExpressionLowerer {
         return true;
     }
 
-    private Value lowerBinary(BinaryExpr bin) {
+    private Value lowerBinary(BinaryExpr bin)
+    {
         BinaryOperator op = bin.getOperator();
 
-        if (op == BinaryOperator.ASSIGN) {
+        if (op == BinaryOperator.ASSIGN)
+        {
             return lowerAssignment(bin);
         }
 
-        if (op.isAssignment()) {
+        if (op.isAssignment())
+        {
             return lowerCompoundAssignment(bin);
         }
 
-        if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+        if (op == BinaryOperator.AND || op == BinaryOperator.OR)
+        {
             return lowerShortCircuit(bin);
         }
 
-        if (op.isComparison()) {
+        if (op.isComparison())
+        {
             return lowerComparison(bin);
         }
 
-        if (op == BinaryOperator.ADD && isStringType(bin.getType())) {
+        if (op == BinaryOperator.ADD && isStringType(bin.getType()))
+        {
             return lowerStringConcat(bin.getLeft(), bin.getRight());
         }
 
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
+        // The parser types `+` as a string concatenation only when it can see an operand's type at parse time; a
+        // call operand (e.g. `strMethod() + strMethod()`) has no resolved return type then, so the `+` looks
+        // numeric and would emit an iadd on two Strings (a VerifyError). The lowered operand types ARE resolved
+        // (against the pool), so fall back to them: if either operand lowered to a String, it is a concatenation.
+        if (op == BinaryOperator.ADD && (isStringValue(left) || isStringValue(right)))
+        {
+            return concatValues(left, right);
+        }
+
         BinaryOp irOp = ReverseOperatorMapper.toIRBinaryOp(op);
-        if (irOp == null) {
+        if (irOp == null)
+        {
             throw new LoweringException("No IR binary op for: " + op);
         }
 
         IRType resultType = bin.getType().toIRType();
-        if (!(resultType instanceof PrimitiveType) || resultType == PrimitiveType.BOOLEAN) {
+        if (!(resultType instanceof PrimitiveType) || resultType == PrimitiveType.BOOLEAN)
+        {
             IRType inferred = arithmeticResultType(left, right);
-            if (inferred != null) {
+            if (inferred != null)
+            {
                 resultType = inferred;
             }
         }
         left = widenIfNeeded(left, resultType);
-        right = widenIfNeeded(right, resultType);
+        // A shift's count operand is ALWAYS int, never widened to the (possibly long) result type: the
+        // JVM shift instructions (ishl/lshl/...) take a long-or-int value and an INT count. Widening the
+        // count to long stacks a long_2nd where the verifier expects an integer.
+        if (op == BinaryOperator.SHL || op == BinaryOperator.SHR || op == BinaryOperator.USHR)
+        {
+            right = widenIfNeeded(right, PrimitiveType.INT);
+        }
+        else
+        {
+            right = widenIfNeeded(right, resultType);
+        }
 
         SSAValue result = ctx.newValue(resultType);
         BinaryOpInstruction instr = new BinaryOpInstruction(result, irOp, left, right);
@@ -389,45 +513,50 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Infers the result type of a binary arithmetic operation from its operand IR types,
-     * following JVM numeric promotion (double &gt; float &gt; long &gt; int). Used as a fallback
-     * when the AST node lacks a resolved numeric type, which happens for hand-written source
-     * with unqualified self-references the parser could not type. Returns null for
-     * non-numeric operands.
+     * Infers the result type of a binary arithmetic operation from its operand types, following JVM numeric promotion.
      */
-    private IRType arithmeticResultType(Value left, Value right) {
+    private IRType arithmeticResultType(Value left, Value right)
+    {
         IRType lt = left.getType();
         IRType rt = right.getType();
-        if (lt == PrimitiveType.DOUBLE || rt == PrimitiveType.DOUBLE) {
+        if (lt == PrimitiveType.DOUBLE || rt == PrimitiveType.DOUBLE)
+        {
             return PrimitiveType.DOUBLE;
         }
-        if (lt == PrimitiveType.FLOAT || rt == PrimitiveType.FLOAT) {
+        if (lt == PrimitiveType.FLOAT || rt == PrimitiveType.FLOAT)
+        {
             return PrimitiveType.FLOAT;
         }
-        if (lt == PrimitiveType.LONG || rt == PrimitiveType.LONG) {
+        if (lt == PrimitiveType.LONG || rt == PrimitiveType.LONG)
+        {
             return PrimitiveType.LONG;
         }
-        if (isIntegralIRType(lt) && isIntegralIRType(rt)) {
+        if (isIntegralIRType(lt) && isIntegralIRType(rt))
+        {
             return PrimitiveType.INT;
         }
         return null;
     }
 
-    private boolean isIntegralIRType(IRType type) {
+    private boolean isIntegralIRType(IRType type)
+    {
         return type == PrimitiveType.INT || type == PrimitiveType.BYTE
             || type == PrimitiveType.CHAR || type == PrimitiveType.SHORT
             || type == PrimitiveType.BOOLEAN;
     }
 
-    private boolean isStringType(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private boolean isStringType(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             String name = ((ReferenceSourceType) type).getInternalName();
             return "java/lang/String".equals(name);
         }
         return false;
     }
 
-    private Value lowerStringConcat(Expression leftExpr, Expression rightExpr) {
+    private Value lowerStringConcat(Expression leftExpr, Expression rightExpr)
+    {
         List<Object> parts = new ArrayList<>();
         collectConcatParts(leftExpr, parts);
         collectConcatParts(rightExpr, parts);
@@ -436,10 +565,21 @@ public class ExpressionLowerer {
         StringBuilder descriptor = new StringBuilder("(");
         List<Value> dynamicArgs = new ArrayList<>();
 
-        for (Object part : parts) {
-            if (part instanceof String) {
+        for (Object part : parts)
+        {
+            if (part instanceof String)
+            {
                 recipe.append((String) part);
-            } else if (part instanceof Value) {
+            }
+            else if (part instanceof TypedConcatOperand)
+            {
+                recipe.append('\u0001');
+                TypedConcatOperand to = (TypedConcatOperand) part;
+                dynamicArgs.add(to.value);
+                descriptor.append(to.descriptor);
+            }
+            else if (part instanceof Value)
+            {
                 recipe.append('\u0001');
                 Value v = (Value) part;
                 dynamicArgs.add(v);
@@ -478,26 +618,86 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private void collectConcatParts(Expression expr, List<Object> parts) {
-        if (expr instanceof BinaryExpr) {
+    private boolean isStringValue(Value v)
+    {
+        return v != null && v.getType() != null && "Ljava/lang/String;".equals(v.getType().getDescriptor());
+    }
+
+    /**
+     * Builds a two-operand {@code makeConcatWithConstants} from already-lowered values - the fallback for a `+`
+     * the parser could not type as a concatenation.
+     */
+    private Value concatValues(Value left, Value right)
+    {
+        String descriptor = "(" + getDescriptorForValue(left) + getDescriptorForValue(right) + ")Ljava/lang/String;";
+
+        MethodHandleConstant bsm = new MethodHandleConstant(
+            MethodHandleConstant.REF_invokeStatic,
+            "java/lang/invoke/StringConcatFactory",
+            "makeConcatWithConstants",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;"
+        );
+        List<Constant> bsArgs = new ArrayList<>();
+        bsArgs.add(new StringConstant(""));
+        BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
+
+        SSAValue result = ctx.newValue(new ReferenceType("java/lang/String"));
+        List<Value> dynamicArgs = new ArrayList<>();
+        dynamicArgs.add(left);
+        dynamicArgs.add(right);
+        InvokeInstruction indy = new InvokeInstruction(
+            result, InvokeType.DYNAMIC, null, "makeConcatWithConstants",
+                descriptor, dynamicArgs, 0, bsInfo
+        );
+        ctx.getCurrentBlock().addInstruction(indy);
+        return result;
+    }
+
+    /**
+     * A concat operand whose declared descriptor differs from its lowered value's IR type.
+     */
+    private static final class TypedConcatOperand
+    {
+        final Value value;
+        final String descriptor;
+        TypedConcatOperand(Value value, String descriptor)
+        {
+            this.value = value;
+            this.descriptor = descriptor;
+        }
+    }
+
+    private void collectConcatParts(Expression expr, List<Object> parts)
+    {
+        if (expr instanceof BinaryExpr)
+        {
             BinaryExpr bin = (BinaryExpr) expr;
-            if (bin.getOperator() == BinaryOperator.ADD && isStringType(bin.getType())) {
+            if (bin.getOperator() == BinaryOperator.ADD && isStringType(bin.getType()))
+            {
                 collectConcatParts(bin.getLeft(), parts);
                 collectConcatParts(bin.getRight(), parts);
                 return;
             }
         }
-        if (expr instanceof LiteralExpr) {
+        if (expr instanceof LiteralExpr)
+        {
             LiteralExpr lit = (LiteralExpr) expr;
-            if (lit.getValue() instanceof String) {
+            if (lit.getValue() instanceof String)
+            {
                 parts.add(lit.getValue());
                 return;
             }
         }
+        if (expr.getType() == PrimitiveSourceType.BOOLEAN)
+        {
+            parts.add(new TypedConcatOperand(lower(expr), "Z"));
+            return;
+        }
         parts.add(lower(expr));
     }
 
-    private String getDescriptorForValue(Value value) {
+    private String getDescriptorForValue(Value value)
+    {
         IRType type = value.getType();
         if (type == PrimitiveType.INT) return "I";
         if (type == PrimitiveType.LONG) return "J";
@@ -507,20 +707,23 @@ public class ExpressionLowerer {
         if (type == PrimitiveType.CHAR) return "C";
         if (type == PrimitiveType.BYTE) return "B";
         if (type == PrimitiveType.SHORT) return "S";
-        if (type instanceof ReferenceType) {
+        if (type instanceof ReferenceType)
+        {
             return "L" + ((ReferenceType) type).getInternalName() + ";";
         }
         return "Ljava/lang/Object;";
     }
 
-    private Value lowerAssignment(BinaryExpr bin) {
+    private Value lowerAssignment(BinaryExpr bin)
+    {
         Expression left = bin.getLeft();
         // Java evaluates an array store's array reference and index BEFORE the value (`a[i] = expr` evaluates
         // `a`, then `i`, then `expr`). Lower them in that order so the value is the last operand built - it can
         // then stay stack-resident (javac's `<array>; <index>; new; dup; init; aastore`) instead of being
         // spilled to a local and reloaded on round trip. (The previous rhs-first order was also a subtle
         // evaluation-order bug when the value expression reads the array or index.)
-        if (left instanceof ArrayAccessExpr) {
+        if (left instanceof ArrayAccessExpr)
+        {
             ArrayAccessExpr arr = (ArrayAccessExpr) left;
             Value array = lower(arr.getArray());
             Value index = lower(arr.getIndex());
@@ -529,24 +732,68 @@ public class ExpressionLowerer {
             return rhs;
         }
 
+        // A lambda or method reference assigned to a FIELD takes its functional interface from the
+        // field's declared type - the parser types the expression Object, and lowering it without the
+        // target type builds an invokedynamic site the metafactory rejects.
+        if (left instanceof FieldAccessExpr
+                && (bin.getRight() instanceof LambdaExpr || bin.getRight() instanceof MethodRefExpr))
+        {
+            FieldAccessExpr fa = (FieldAccessExpr) left;
+            String fieldOwner = fa.getOwnerClass() != null && !"java/lang/Object".equals(fa.getOwnerClass())
+                    ? fa.getOwnerClass() : ctx.getOwnerClass();
+            SourceType declared = ctx.getTypeResolver().findFieldType(fieldOwner, fa.getFieldName());
+            if (declared != null && !isObjectOrNull(declared))
+            {
+                ctx.pushExpectedType(declared);
+                try
+                {
+                    Value fieldRhs = lower(bin.getRight());
+                    return lowerFieldStore(fa, fieldRhs);
+                }
+                finally
+                {
+                    ctx.popExpectedType();
+                }
+            }
+        }
+
         Value rhs = lower(bin.getRight());
-        if (left instanceof VarRefExpr) {
+        if (left instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) left;
-            if (!ctx.hasVariable(varRef.getName()) && tryLowerImplicitFieldStore(varRef.getName(), rhs)) {
+            if (!ctx.hasVariable(varRef.getName()) && tryLowerImplicitFieldStore(varRef.getName(), rhs))
+            {
                 return rhs;
             }
-            ctx.setVariable(varRef.getName(), (SSAValue) rhs);
+            storeNamedVariable(varRef.getName(), (SSAValue) rhs);
             return rhs;
-        } else if (left instanceof FieldAccessExpr) {
+        }
+        else if (left instanceof FieldAccessExpr)
+        {
             return lowerFieldStore((FieldAccessExpr) left, rhs);
         }
 
         throw new LoweringException("Invalid assignment target: " + left.getClass().getSimpleName());
     }
 
-    private Value lowerCompoundAssignment(BinaryExpr bin) {
+    /**
+     * Records a store to a named variable, failing loudly when the name was never declared and did not resolve to
+     * a field.
+     */
+    private void storeNamedVariable(String name, SSAValue value)
+    {
+        if (!ctx.hasVariable(name) && ctx.declaredTypeOf(name) == null)
+        {
+            throw new LoweringException("Assignment to undeclared variable: " + name);
+        }
+        ctx.setVariable(name, value);
+    }
+
+    private Value lowerCompoundAssignment(BinaryExpr bin)
+    {
         BinaryOperator baseOp = ReverseOperatorMapper.getBaseOperator(bin.getOperator());
-        if (baseOp == null) {
+        if (baseOp == null)
+        {
             throw new LoweringException("Unknown compound assignment: " + bin.getOperator());
         }
 
@@ -560,66 +807,73 @@ public class ExpressionLowerer {
         BinaryOpInstruction instr = new BinaryOpInstruction(result, irOp, leftVal, rightVal);
         ctx.getCurrentBlock().addInstruction(instr);
 
-        if (left instanceof VarRefExpr) {
+        if (left instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) left;
-            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), result)) {
-                ctx.setVariable(varRef.getName(), result);
+            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), result))
+            {
+                storeNamedVariable(varRef.getName(), result);
             }
-        } else if (left instanceof FieldAccessExpr) {
+        }
+        else if (left instanceof FieldAccessExpr)
+        {
             lowerFieldStore((FieldAccessExpr) left, result);
-        } else if (left instanceof ArrayAccessExpr) {
+        }
+        else if (left instanceof ArrayAccessExpr)
+        {
             lowerArrayStore((ArrayAccessExpr) left, result);
         }
 
         return result;
     }
 
-    private Value lowerShortCircuit(BinaryExpr bin) {
-        boolean isAnd = bin.getOperator() == BinaryOperator.AND;
-
-        Value left = lower(bin.getLeft());
-
-        IRBlock shortCircuitBlock = ctx.createBlock();
-        IRBlock evalRight = ctx.createBlock();
+    /**
+     * Lowers {@code &&}/{@code ||} in value position as one branch tree into a shared {@code 1}/{@code 0} pair,
+     * exactly as a compiler does.
+     */
+    private Value lowerShortCircuit(BinaryExpr bin)
+    {
+        IRBlock trueBlock = ctx.createBlock();
+        IRBlock falseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
 
-        IRBlock currentBlock = ctx.getCurrentBlock();
-        CompareOp cmp = isAnd ? CompareOp.IFEQ : CompareOp.IFNE;
-        BranchInstruction branch = new BranchInstruction(cmp, left, shortCircuitBlock, evalRight);
-        currentBlock.addInstruction(branch);
-        currentBlock.addSuccessor(shortCircuitBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(evalRight, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        lowerCondition(bin, trueBlock, falseBlock, false);
 
-        ctx.setCurrentBlock(shortCircuitBlock);
-        IntConstant shortCircuitValue = isAnd ? IntConstant.ZERO : IntConstant.ONE;
-        SSAValue shortCircuitResult = ctx.newValue(PrimitiveType.INT);
-        ctx.getCurrentBlock().addInstruction(new ConstantInstruction(shortCircuitResult, shortCircuitValue));
-        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        shortCircuitBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.setCurrentBlock(trueBlock);
+        SSAValue one = ctx.newValue(PrimitiveType.INT);
+        trueBlock.addInstruction(new ConstantInstruction(one, IntConstant.ONE));
+        trueBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
-        ctx.setCurrentBlock(evalRight);
-        Value right = lower(bin.getRight());
-        IRBlock rightEndBlock = ctx.getCurrentBlock();
-        ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        rightEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        ctx.setCurrentBlock(falseBlock);
+        SSAValue zero = ctx.newValue(PrimitiveType.INT);
+        falseBlock.addInstruction(new ConstantInstruction(zero, IntConstant.ZERO));
+        falseBlock.addInstruction(SimpleInstruction.createGoto(mergeBlock));
+        falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
         PhiInstruction phi = new PhiInstruction(result);
-        phi.addIncoming(shortCircuitResult, shortCircuitBlock);
-        phi.addIncoming(right, rightEndBlock);
+        phi.addIncoming(one, trueBlock);
+        phi.addIncoming(zero, falseBlock);
         mergeBlock.addPhi(phi);
 
         return result;
     }
 
-    private Value lowerComparison(BinaryExpr bin) {
+    private Value lowerComparison(BinaryExpr bin)
+    {
         Value left = lower(bin.getLeft());
         Value right = lower(bin.getRight());
 
         SourceType leftType = bin.getLeft().getType();
         SourceType rightType = bin.getRight().getType();
         SourceType commonType = getCommonComparisonType(leftType, rightType);
+        // The AST operand types can be unset (a parsed call's return type is not resolved on the
+        // expression), which defaults the comparison to int and emits an integer compare over a
+        // two-slot value. The lowered VALUES carry the true JVM types - widen the comparison to
+        // the widest lowered operand type, mirroring the reference check above.
+        commonType = widestOfValues(commonType, left, right);
         IRType commonIRType = commonType.toIRType();
 
         left = widenIfNeeded(left, commonIRType);
@@ -632,7 +886,8 @@ public class ExpressionLowerer {
         CompareOp cmpOp = ReverseOperatorMapper.toCompareOp(bin.getOperator());
         IRBlock currentBlock = ctx.getCurrentBlock();
 
-        if (commonType == PrimitiveSourceType.LONG) {
+        if (commonType == PrimitiveSourceType.LONG)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
             BinaryOpInstruction lcmp = new BinaryOpInstruction(cmpResult, BinaryOp.LCMP, left, right);
             currentBlock.addInstruction(lcmp);
@@ -640,31 +895,41 @@ public class ExpressionLowerer {
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-        } else if (commonType == PrimitiveSourceType.FLOAT) {
+        }
+        else if (commonType == PrimitiveSourceType.FLOAT)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp fcmp = ReverseOperatorMapper.getFloatCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction fcmpInstr = new BinaryOpInstruction(cmpResult, fcmp, left, right);
             currentBlock.addInstruction(fcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-        } else if (commonType == PrimitiveSourceType.DOUBLE) {
+        }
+        else if (commonType == PrimitiveSourceType.DOUBLE)
+        {
             SSAValue cmpResult = ctx.newValue(PrimitiveType.INT);
-            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(bin.getOperator() == BinaryOperator.GT || bin.getOperator() == BinaryOperator.GE);
+            BinaryOp dcmp = ReverseOperatorMapper.getDoubleCompareOp(nanReadsAsGreater(bin.getOperator()));
             BinaryOpInstruction dcmpInstr = new BinaryOpInstruction(cmpResult, dcmp, left, right);
             currentBlock.addInstruction(dcmpInstr);
 
             CompareOp singleCmp = ReverseOperatorMapper.toSingleOperandCompareOp(bin.getOperator());
             BranchInstruction branch = new BranchInstruction(singleCmp, cmpResult, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-        } else {
+        }
+        else
+        {
             // Reference == / != (value context, e.g. `return x != null`) must use acmp, not the integer icmp.
             CompareOp op = cmpOp;
-            if (isReferenceValue(left) || isReferenceValue(right)) {
-                if (bin.getOperator() == BinaryOperator.EQ) {
+            if (isReferenceValue(left) || isReferenceValue(right))
+            {
+                if (bin.getOperator() == BinaryOperator.EQ)
+                {
                     op = CompareOp.ACMPEQ;
-                } else if (bin.getOperator() == BinaryOperator.NE) {
+                }
+                else if (bin.getOperator() == BinaryOperator.NE)
+                {
                     op = CompareOp.ACMPNE;
                 }
             }
@@ -672,20 +937,20 @@ public class ExpressionLowerer {
             currentBlock.addInstruction(branch);
         }
 
-        currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-        currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        currentBlock.addSuccessor(trueBlock, EdgeType.NORMAL);
+        currentBlock.addSuccessor(falseBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(trueBlock);
         SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(falseBlock);
         SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -697,28 +962,40 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerUnary(UnaryExpr unary) {
+    private Value lowerUnary(UnaryExpr unary)
+    {
         UnaryOperator op = unary.getOperator();
 
         // Increment/decrement lower their own operand (read-modify-write); dispatch before the
         // eager operand lowering below so the operand isn't read twice, leaving a dead load.
-        if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC) {
+        if (op == UnaryOperator.PRE_INC || op == UnaryOperator.PRE_DEC)
+        {
             return lowerIncDec(unary, true);
-        } else if (op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC) {
+        }
+        else if (op == UnaryOperator.POST_INC || op == UnaryOperator.POST_DEC)
+        {
             return lowerIncDec(unary, false);
         }
 
         Value operand = lower(unary.getOperand());
 
-        if (op == UnaryOperator.NEG) {
-            IRType resultType = unary.getType().toIRType();
+        if (op == UnaryOperator.NEG)
+        {
+            // xneg preserves its operand's type; the AST type is a parse-time guess that can claim
+            // the ENCLOSING cast's target and swallow the conversion (`(double) -floatField`).
+            IRType resultType = operand.getType() instanceof PrimitiveType
+                    ? operand.getType() : unary.getType().toIRType();
             SSAValue result = ctx.newValue(resultType);
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
             ctx.getCurrentBlock().addInstruction(instr);
             return result;
-        } else if (op == UnaryOperator.POS) {
+        }
+        else if (op == UnaryOperator.POS)
+        {
             return operand;
-        } else if (op == UnaryOperator.BNOT) {
+        }
+        else if (op == UnaryOperator.BNOT)
+        {
             IRType resultType = unary.getType().toIRType();
             SSAValue minusOne = ctx.newValue(resultType);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(minusOne, IntConstant.MINUS_ONE));
@@ -726,7 +1003,9 @@ public class ExpressionLowerer {
             SSAValue result = ctx.newValue(resultType);
             ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(result, BinaryOp.XOR, operand, minusOne));
             return result;
-        } else if (op == UnaryOperator.NOT) {
+        }
+        else if (op == UnaryOperator.NOT)
+        {
             IRBlock trueBlock = ctx.createBlock();
             IRBlock falseBlock = ctx.createBlock();
             IRBlock mergeBlock = ctx.createBlock();
@@ -734,20 +1013,20 @@ public class ExpressionLowerer {
             IRBlock currentBlock = ctx.getCurrentBlock();
             BranchInstruction branch = new BranchInstruction(CompareOp.IFEQ, operand, trueBlock, falseBlock);
             currentBlock.addInstruction(branch);
-            currentBlock.addSuccessor(trueBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
-            currentBlock.addSuccessor(falseBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            currentBlock.addSuccessor(trueBlock, EdgeType.NORMAL);
+            currentBlock.addSuccessor(falseBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(trueBlock);
             SSAValue trueVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(trueVal, IntConstant.ONE));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-            trueBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            trueBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(falseBlock);
             SSAValue falseVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(falseVal, IntConstant.ZERO));
             ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-            falseBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+            falseBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
             ctx.setCurrentBlock(mergeBlock);
             SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -757,27 +1036,36 @@ public class ExpressionLowerer {
             mergeBlock.addPhi(phi);
 
             return result;
-        } else {
+        }
+        else
+        {
             throw new LoweringException("Unsupported unary operator: " + op);
         }
     }
 
-    /** The constant {@code 1} typed to match {@code type}, so {@code ++}/{@code --} on a long/double/float
-     * operand adds a category-correct value (e.g. {@code lconst_1}, not {@code iconst_1}). */
-    private static Constant oneConstant(IRType type) {
-        if (type == PrimitiveType.LONG) {
+    /**
+     * The constant {@code 1} typed to match {@code type}, so {@code ++}/{@code --} on a long/double/float operand
+     * adds a category-correct value.
+     */
+    private static Constant oneConstant(IRType type)
+    {
+        if (type == PrimitiveType.LONG)
+        {
             return LongConstant.ONE;
         }
-        if (type == PrimitiveType.DOUBLE) {
+        if (type == PrimitiveType.DOUBLE)
+        {
             return DoubleConstant.ONE;
         }
-        if (type == PrimitiveType.FLOAT) {
+        if (type == PrimitiveType.FLOAT)
+        {
             return FloatConstant.ONE;
         }
         return IntConstant.ONE;
     }
 
-    private Value lowerIncDec(UnaryExpr unary, boolean isPrefix) {
+    private Value lowerIncDec(UnaryExpr unary, boolean isPrefix)
+    {
         UnaryOperator op = unary.getOperator();
         boolean isInc = (op == UnaryOperator.PRE_INC || op == UnaryOperator.POST_INC);
 
@@ -792,81 +1080,132 @@ public class ExpressionLowerer {
         BinaryOp binOp = isInc ? BinaryOp.ADD : BinaryOp.SUB;
         ctx.getCurrentBlock().addInstruction(new BinaryOpInstruction(newValue, binOp, oldValue, one));
 
-        if (operand instanceof VarRefExpr) {
+        if (operand instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) operand;
-            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), newValue)) {
-                ctx.setVariable(varRef.getName(), newValue);
+            if (ctx.hasVariable(varRef.getName()) || !tryLowerImplicitFieldStore(varRef.getName(), newValue))
+            {
+                storeNamedVariable(varRef.getName(), newValue);
             }
-        } else if (operand instanceof FieldAccessExpr) {
+        }
+        else if (operand instanceof FieldAccessExpr)
+        {
             lowerFieldStore((FieldAccessExpr) operand, newValue);
-        } else if (operand instanceof ArrayAccessExpr) {
+        }
+        else if (operand instanceof ArrayAccessExpr)
+        {
             lowerArrayStore((ArrayAccessExpr) operand, newValue);
         }
 
         return isPrefix ? newValue : oldValue;
     }
 
-    private Value lowerMethodCall(MethodCallExpr call) {
+    /**
+     * Whether an ordered floating-point comparison needs the NaN-reads-as-greater compare ({@code fcmpg} / {@code
+     * dcmpg}).
+     */
+    private static boolean nanReadsAsGreater(BinaryOperator op)
+    {
+        return op == BinaryOperator.LT || op == BinaryOperator.LE;
+    }
+
+    private Value lowerMethodCall(MethodCallExpr call)
+    {
         InvokeType invokeType;
         List<Value> args = new ArrayList<>();
         String ownerClass = call.getOwnerClass();
 
-        if (call.isStatic()) {
+        if (call.isStatic())
+        {
             invokeType = InvokeType.STATIC;
-        } else {
+        }
+        else
+        {
             Expression receiver = call.getReceiver();
-            if (receiver instanceof VarRefExpr) {
+            if (receiver instanceof VarRefExpr)
+            {
                 VarRefExpr varRef = (VarRefExpr) receiver;
                 SourceType fieldType = ctx.hasVariable(varRef.getName())
                         ? null
                         : ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName());
-                if (!ctx.hasVariable(varRef.getName()) && !(fieldType instanceof ReferenceSourceType)) {
+                if (!ctx.hasVariable(varRef.getName()) && fieldType == null)
+                {
                     // A bare identifier that is neither a local variable nor a field: a class name (static call).
                     invokeType = InvokeType.STATIC;
                     ownerClass = resolveClassName(varRef.getName());
-                } else {
+                }
+                else
+                {
                     // A local variable, or an own-class field used as the receiver: a virtual call on its type.
                     Value receiverValue = lower(receiver);
                     args.add(receiverValue);
                     invokeType = InvokeType.VIRTUAL;
-                    if (ownerClass == null || ownerClass.isEmpty()) {
+                    if (ownerClass == null || ownerClass.isEmpty())
+                    {
                         ownerClass = fieldType instanceof ReferenceSourceType
                                 ? ((ReferenceSourceType) fieldType).getInternalName()
                                 : ownerClassFromValue(receiverValue, receiver);
                     }
                 }
-            } else if (receiver instanceof SuperExpr) {
+            }
+            else if (receiver instanceof SuperExpr)
+            {
                 args.add(lower(receiver));
                 invokeType = InvokeType.SPECIAL;
-                if (ownerClass == null || ownerClass.isEmpty()) {
+                if (ownerClass == null || ownerClass.isEmpty())
+                {
                     ownerClass = ctx.getSuperClassName();
-                    if (ownerClass == null) {
+                    if (ownerClass == null)
+                    {
                         ownerClass = "java/lang/Object";
                     }
                 }
-            } else if (receiver instanceof ThisExpr && "<init>".equals(call.getMethodName())) {
+            }
+            else if (receiver instanceof ThisExpr && "<init>".equals(call.getMethodName()))
+            {
                 // this(...) constructor chaining: invokespecial on the current class.
                 args.add(lower(receiver));
                 invokeType = InvokeType.SPECIAL;
-                if (ownerClass == null || ownerClass.isEmpty()) {
+                if (ownerClass == null || ownerClass.isEmpty())
+                {
                     ownerClass = ctx.getOwnerClass();
                 }
-            } else if (receiver != null) {
-                Value receiverValue = lower(receiver);
-                args.add(receiverValue);
-                invokeType = InvokeType.VIRTUAL;
-                if (ownerClass == null || ownerClass.isEmpty()) {
-                    ownerClass = ownerClassFromValue(receiverValue, receiver);
+            }
+            else if (receiver != null)
+            {
+                // A dotted chain naming a class (`a.b.Outer.Inner.create(...)`) parses as nested field
+                // accesses; calling through it is a static call on that class, not a virtual call on a value.
+                String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
+                if (qualifiedOwner != null)
+                {
+                    invokeType = InvokeType.STATIC;
+                    ownerClass = qualifiedOwner;
                 }
-            } else {
-                if (ownerClass == null || ownerClass.isEmpty()) {
+                else
+                {
+                    Value receiverValue = lower(receiver);
+                    args.add(receiverValue);
+                    invokeType = InvokeType.VIRTUAL;
+                    if (ownerClass == null || ownerClass.isEmpty())
+                    {
+                        ownerClass = ownerClassFromValue(receiverValue, receiver);
+                    }
+                }
+            }
+            else
+            {
+                if (ownerClass == null || ownerClass.isEmpty())
+                {
                     ownerClass = ctx.getOwnerClass();
                 }
                 boolean staticContext = !ctx.hasVariable("this");
                 boolean staticTarget = ctx.getTypeResolver().isStaticMethodInCurrentClass(call.getMethodName());
-                if (staticContext || staticTarget) {
+                if (staticContext || staticTarget)
+                {
                     invokeType = InvokeType.STATIC;
-                } else {
+                }
+                else
+                {
                     args.add(ctx.getVariable("this"));
                     invokeType = InvokeType.VIRTUAL;
                 }
@@ -882,24 +1221,31 @@ public class ExpressionLowerer {
         IRBlock argBlock = ctx.getCurrentBlock();
         int[] argInstrStart = new int[callArguments.size()];
         boolean argsSingleBlock = true;
-        for (int i = 0; i < callArguments.size(); i++) {
+        for (int i = 0; i < callArguments.size(); i++)
+        {
             Expression arg = callArguments.get(i);
-            if (calleeParamTypes != null && i < calleeParamTypes.size()) {
+            if (calleeParamTypes != null && i < calleeParamTypes.size())
+            {
                 arg = retypeFunctionalArg(arg, calleeParamTypes.get(i));
             }
             argInstrStart[i] = argsSingleBlock && ctx.getCurrentBlock() == argBlock
                     ? argBlock.getInstructions().size() : -1;
             loweredArgs.add(lower(arg));
-            if (ctx.getCurrentBlock() != argBlock) {
+            if (ctx.getCurrentBlock() != argBlock)
+            {
                 argsSingleBlock = false;
             }
         }
         List<SourceType> argTypes = new ArrayList<>();
         List<IRType> argIrTypes = new ArrayList<>();
-        for (Value arg : loweredArgs) {
-            if (arg instanceof SSAValue) {
+        for (Value arg : loweredArgs)
+        {
+            if (arg instanceof SSAValue)
+            {
                 argTypes.add(irTypeToSourceType(arg.getType()));
-            } else {
+            }
+            else
+            {
                 argTypes.add(ReferenceSourceType.OBJECT);
             }
             IRType t = arg.getType();
@@ -912,6 +1258,11 @@ public class ExpressionLowerer {
         // descriptor instead of the real (Object,Object) and fails verification.
         String declaredDescriptor =
             ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, call.getMethodName(), argIrTypes);
+        if (declaredDescriptor == null)
+        {
+            declaredDescriptor = ctx.getTypeResolver()
+                .resolveMethodDescriptorViaReflection(ownerClass, call.getMethodName(), argIrTypes);
+        }
 
         // Varargs calls are decompiled as flat trailing arguments; the bytecode invoke needs them packed into the
         // declared component[] array. Pack here (before adding to the arg list) when the resolved method is varargs.
@@ -921,26 +1272,33 @@ public class ExpressionLowerer {
 
         SourceType returnType;
         String descriptor;
-        if (declaredDescriptor != null) {
+        if (declaredDescriptor != null)
+        {
             descriptor = declaredDescriptor;
             returnType = ctx.getTypeResolver().returnTypeFromDescriptor(declaredDescriptor);
-        } else if ("<init>".equals(call.getMethodName())) {
+        }
+        else if ("<init>".equals(call.getMethodName()))
+        {
             // A constructor (super(...)/this(...)) is always void; the generic fallback otherwise defaults an
             // unresolved <init> (e.g. a JDK super not in the pool) to Object, producing an invalid
             // (...)Ljava/lang/Object; descriptor that the decompiler then mis-renders as a duplicate super().
             returnType = VoidSourceType.INSTANCE;
             descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
-        } else {
+        }
+        else
+        {
             returnType = resolveMethodReturnType(call, ownerClass, argTypes);
             descriptor = buildMethodDescriptorWithReturn(argTypes, returnType);
         }
 
-        if (invokeType == InvokeType.VIRTUAL && ctx.getTypeResolver().isInterface(ownerClass)) {
+        if (invokeType == InvokeType.VIRTUAL && ctx.getTypeResolver().isInterface(ownerClass))
+        {
             invokeType = InvokeType.INTERFACE;
         }
 
         SSAValue result = null;
-        if (!(returnType instanceof VoidSourceType)) {
+        if (!(returnType instanceof VoidSourceType))
+        {
             result = ctx.newValue(returnType.toIRType());
         }
 
@@ -957,26 +1315,27 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Packs the trailing arguments of a varargs call into a fresh array of the declared component type (the decompiler
-     * renders varargs as flat arguments, but the invoke descriptor's last parameter is an array). Returns the original
-     * list unchanged for non-varargs calls or when an array is already passed explicitly for the varargs parameter.
+     * Packs the trailing arguments of a varargs call into a fresh array of the declared component type.
      */
-    private List<Value> packVarargsIfNeeded(String ownerClass, String methodName, String declaredDescriptor,
-                                            List<Value> loweredArgs, IRBlock argBlock, int[] argInstrStart,
-                                            boolean argsSingleBlock) {
+    private List<Value> packVarargsIfNeeded(String ownerClass, String methodName, String declaredDescriptor, List<Value> loweredArgs, IRBlock argBlock, int[] argInstrStart, boolean argsSingleBlock)
+    {
         if (declaredDescriptor == null
-                || !ctx.getTypeResolver().isVarargsMethod(ownerClass, methodName, declaredDescriptor)) {
+                || !ctx.getTypeResolver().isVarargsMethod(ownerClass, methodName, declaredDescriptor))
+        {
             return loweredArgs;
         }
         List<SourceType> params = ctx.getTypeResolver().paramTypesFromDescriptor(declaredDescriptor);
-        if (params.isEmpty() || !(params.get(params.size() - 1) instanceof ArraySourceType)) {
+        if (params.isEmpty() || !(params.get(params.size() - 1) instanceof ArraySourceType))
+        {
             return loweredArgs;
         }
         int fixedCount = params.size() - 1;
-        if (loweredArgs.size() == params.size() && loweredArgs.get(loweredArgs.size() - 1).getType() instanceof ArrayType) {
+        if (loweredArgs.size() == params.size() && loweredArgs.get(loweredArgs.size() - 1).getType() instanceof ArrayType)
+        {
             return loweredArgs;   // an explicit array is already supplied for the varargs parameter
         }
-        if (loweredArgs.size() < fixedCount) {
+        if (loweredArgs.size() < fixedCount)
+        {
             return loweredArgs;
         }
         IRType componentType = ((ArraySourceType) params.get(params.size() - 1)).getElementType().toIRType();
@@ -993,16 +1352,18 @@ public class ExpressionLowerer {
         block.addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(count)));
         SSAValue arrayVal = ctx.newValue(new ArrayType(componentType));
         block.addInstruction(new NewArrayInstruction(arrayVal, componentType, List.of(sizeVal)));
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
+        {
             SSAValue idx = ctx.newValue(PrimitiveType.INT);
             block.addInstruction(new ConstantInstruction(idx, IntConstant.of(i)));
-            if (elementGroups != null) {
-                for (IRInstruction moved : elementGroups.get(i)) {
+            if (elementGroups != null)
+            {
+                for (IRInstruction moved : elementGroups.get(i))
+                {
                     block.addInstruction(moved);
                 }
             }
-            block.addInstruction(
-                    ArrayAccessInstruction.createStore(arrayVal, idx, loweredArgs.get(fixedCount + i)));
+            block.addInstruction(ArrayAccessInstruction.createStore(arrayVal, idx, loweredArgs.get(fixedCount + i)));
         }
         List<Value> packed = new ArrayList<>(loweredArgs.subList(0, fixedCount));
         packed.add(arrayVal);
@@ -1010,68 +1371,77 @@ public class ExpressionLowerer {
     }
 
     /**
-     * If the varargs element arguments all lowered contiguously into {@code argBlock} (which must still be the
-     * current block), removes their instructions from the block and returns them grouped per element, so the
-     * caller can re-emit each group immediately before its array store. Returns null when the move would be
-     * unsafe - multi-block args, a changed current block, or a non-monotonic/invalid range - in which case the
-     * already-emitted values are left in place (and the scheduler materializes them, as before).
+     * Removes the varargs element arguments from {@code argBlock} and returns them grouped per element.
      */
-    private List<List<IRInstruction>> extractVarargsElementGroups(IRBlock argBlock, int[] argInstrStart,
-                                                                  int fixedCount, int count, boolean argsSingleBlock) {
+    private List<List<IRInstruction>> extractVarargsElementGroups(IRBlock argBlock, int[] argInstrStart, int fixedCount, int count, boolean argsSingleBlock)
+    {
         if (!argsSingleBlock || ctx.getCurrentBlock() != argBlock || count <= 0
-                || fixedCount + count > argInstrStart.length) {
+                || fixedCount + count > argInstrStart.length)
+        {
             return null;
         }
         List<IRInstruction> instrs = argBlock.getInstructions();
         int end = instrs.size();
         int[] bounds = new int[count + 1];
         bounds[count] = end;
-        for (int j = 0; j < count; j++) {
+        for (int j = 0; j < count; j++)
+        {
             int start = argInstrStart[fixedCount + j];
-            if (start < 0 || start > end || (j > 0 && start < bounds[j - 1])) {
+            if (start < 0 || start > end || (j > 0 && start < bounds[j - 1]))
+            {
                 return null;
             }
             bounds[j] = start;
         }
         List<List<IRInstruction>> groups = new ArrayList<>();
-        for (int j = 0; j < count; j++) {
+        for (int j = 0; j < count; j++)
+        {
             groups.add(new ArrayList<>(instrs.subList(bounds[j], bounds[j + 1])));
         }
         instrs.subList(bounds[0], end).clear();
         return groups;
     }
 
-    private List<SourceType> resolveCalleeParamTypes(String ownerClass, String methodName, int argCount) {
+    private List<SourceType> resolveCalleeParamTypes(String ownerClass, String methodName, int argCount)
+    {
         List<SourceType> jdk = jdkConsumerParamTypes(ownerClass, methodName, argCount);
-        if (jdk != null) {
+        if (jdk != null)
+        {
             return jdk;
         }
-        if (ownerClass == null || ownerClass.isEmpty()) {
+        if (ownerClass == null || ownerClass.isEmpty())
+        {
             return null;
         }
         String descriptor = ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, methodName, argCount);
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
             return null;
         }
         return ctx.getTypeResolver().paramTypesFromDescriptor(descriptor);
     }
 
-    private List<SourceType> jdkConsumerParamTypes(String ownerClass, String methodName, int argCount) {
-        if (ownerClass == null) {
+    private List<SourceType> jdkConsumerParamTypes(String ownerClass, String methodName, int argCount)
+    {
+        if (ownerClass == null)
+        {
             return null;
         }
         String runnable = "java/lang/Runnable";
         String consumer = "java/util/function/Consumer";
-        switch (ownerClass) {
+        switch (ownerClass)
+        {
             case "javax/swing/SwingUtilities":
             case "java/awt/EventQueue":
-                if (("invokeLater".equals(methodName) || "invokeAndWait".equals(methodName)) && argCount == 1) {
+                if (("invokeLater".equals(methodName) || "invokeAndWait".equals(methodName)) && argCount == 1)
+                {
                     return List.of(new ReferenceSourceType(runnable));
                 }
                 break;
             case "java/util/concurrent/Executor":
             case "java/util/concurrent/ExecutorService":
-                if ("execute".equals(methodName) && argCount == 1) {
+                if ("execute".equals(methodName) && argCount == 1)
+                {
                     return List.of(new ReferenceSourceType(runnable));
                 }
                 break;
@@ -1079,28 +1449,33 @@ public class ExpressionLowerer {
                 break;
         }
         if (("forEach".equals(methodName)) && argCount == 1
-                && (ownerClass.startsWith("java/util/") || ownerClass.startsWith("java/lang/Iterable"))) {
+                && (ownerClass.startsWith("java/util/") || ownerClass.startsWith("java/lang/Iterable")))
+        {
             return List.of(new ReferenceSourceType(consumer));
         }
         return null;
     }
 
     /**
-     * Re-types a lambda argument with the functional-interface type the callee expects, when the
-     * lambda's own type is unknown (Object). Other argument kinds are returned unchanged.
+     * Re-types a lambda argument with the functional-interface type the callee expects, when the lambda's own type
+     * is unknown (Object).
      */
-    private Expression retypeFunctionalArg(Expression arg, SourceType expected) {
-        if (!(arg instanceof LambdaExpr) || !(expected instanceof ReferenceSourceType)) {
+    private Expression retypeFunctionalArg(Expression arg, SourceType expected)
+    {
+        if (!(arg instanceof LambdaExpr) || !(expected instanceof ReferenceSourceType))
+        {
             return arg;
         }
         String expectedName = ((ReferenceSourceType) expected).getInternalName();
-        if (expectedName == null || expectedName.isEmpty() || "java/lang/Object".equals(expectedName)) {
+        if (expectedName == null || expectedName.isEmpty() || "java/lang/Object".equals(expectedName))
+        {
             return arg;
         }
         LambdaExpr lambda = (LambdaExpr) arg;
         SourceType current = lambda.getType();
         if (current instanceof ReferenceSourceType
-                && !"java/lang/Object".equals(((ReferenceSourceType) current).getInternalName())) {
+                && !"java/lang/Object".equals(((ReferenceSourceType) current).getInternalName()))
+        {
             return arg;
         }
         return new LambdaExpr(lambda.getParameters(), lambda.getBody(), expected)
@@ -1108,104 +1483,141 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Resolves the owning class for a virtual call on a local-variable receiver. The lowered value's IR type
-     * is authoritative (e.g. a caught exception, whose AST reference carries no declared type), so it is
-     * preferred over the AST-based {@link #resolveReceiverOwnerClass} fallback.
+     * Resolves the owning class for a virtual call on a local-variable receiver.
      */
-    private String ownerClassFromValue(Value receiverValue, Expression receiver) {
-        if (receiverValue instanceof SSAValue && receiverValue.getType() instanceof ReferenceType) {
+    private String ownerClassFromValue(Value receiverValue, Expression receiver)
+    {
+        if (receiverValue instanceof SSAValue && receiverValue.getType() instanceof ReferenceType)
+        {
             String internalName = ((ReferenceType) receiverValue.getType()).getInternalName();
-            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object"))
+            {
                 return internalName;
             }
         }
         return resolveReceiverOwnerClass(receiver);
     }
 
-    private String resolveReceiverOwnerClass(Expression receiver) {
-        if (receiver instanceof FieldAccessExpr) {
+    private String resolveReceiverOwnerClass(Expression receiver)
+    {
+        if (receiver instanceof FieldAccessExpr)
+        {
             FieldAccessExpr field = (FieldAccessExpr) receiver;
             Expression fieldReceiver = field.getReceiver();
             String fieldOwner;
-            if (fieldReceiver instanceof VarRefExpr) {
+            if (fieldReceiver instanceof VarRefExpr)
+            {
                 VarRefExpr varRef = (VarRefExpr) fieldReceiver;
-                if (!ctx.hasVariable(varRef.getName())) {
+                if (!ctx.hasVariable(varRef.getName()))
+                {
                     fieldOwner = resolveClassName(varRef.getName());
-                } else {
+                }
+                else
+                {
                     return "java/lang/Object";
                 }
-            } else {
+            }
+            else
+            {
                 fieldOwner = field.getOwnerClass();
-                if (fieldOwner == null || fieldOwner.isEmpty()) {
+                if (fieldOwner == null || fieldOwner.isEmpty())
+                {
                     return "java/lang/Object";
                 }
             }
             SourceType fieldType = ctx.getTypeResolver().resolveFieldType(fieldOwner, field.getFieldName());
-            if (fieldType instanceof ReferenceSourceType) {
+            if (fieldType instanceof ReferenceSourceType)
+            {
                 return ((ReferenceSourceType) fieldType).getInternalName();
             }
         }
-        if (receiver instanceof MethodCallExpr) {
+        if (receiver instanceof MethodCallExpr)
+        {
             MethodCallExpr methodCall = (MethodCallExpr) receiver;
             String methodOwner = methodCall.getOwnerClass();
-            if (methodOwner == null || methodOwner.isEmpty()) {
+            if (methodOwner == null || methodOwner.isEmpty())
+            {
                 Expression methodReceiver = methodCall.getReceiver();
-                if (methodReceiver instanceof VarRefExpr) {
+                if (methodReceiver instanceof VarRefExpr)
+                {
                     VarRefExpr varRef = (VarRefExpr) methodReceiver;
-                    if (!ctx.hasVariable(varRef.getName())) {
+                    if (!ctx.hasVariable(varRef.getName()))
+                    {
                         methodOwner = resolveClassName(varRef.getName());
                     }
-                } else if (methodReceiver != null) {
+                }
+                else if (methodReceiver != null)
+                {
                     methodOwner = resolveReceiverOwnerClass(methodReceiver);
                 }
             }
-            if (methodOwner != null && !methodOwner.isEmpty()) {
+            if (methodOwner != null && !methodOwner.isEmpty())
+            {
                 List<SourceType> argTypes = new ArrayList<>();
-                for (Expression arg : methodCall.getArguments()) {
+                for (Expression arg : methodCall.getArguments())
+                {
                     argTypes.add(arg.getType() != null ? arg.getType() : ReferenceSourceType.OBJECT);
                 }
                 SourceType returnType = ctx.getTypeResolver().resolveMethodReturnType(
                     methodOwner, methodCall.getMethodName(), argTypes);
-                if (returnType instanceof ReferenceSourceType) {
+                if (returnType instanceof ReferenceSourceType)
+                {
                     String internalName = ((ReferenceSourceType) returnType).getInternalName();
-                    if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+                    if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object"))
+                    {
                         return internalName;
                     }
                 }
             }
         }
         SourceType type = receiver.getType();
-        if (type instanceof ReferenceSourceType) {
+        if (type instanceof ReferenceSourceType)
+        {
             String internalName = ((ReferenceSourceType) type).getInternalName();
-            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object")) {
+            if (internalName != null && !internalName.isEmpty() && !internalName.equals("java/lang/Object"))
+            {
                 return internalName.contains("/") ? internalName : resolveClassName(internalName);
             }
         }
         return "java/lang/Object";
     }
 
-    private SourceType resolveMethodReturnType(MethodCallExpr call, String ownerClass, List<SourceType> argTypes) {
+    private SourceType resolveMethodReturnType(MethodCallExpr call, String ownerClass, List<SourceType> argTypes)
+    {
         SourceType declaredType = call.getType();
         // Value check, not identity: the decompiler hands us fresh ReferenceSourceType("java/lang/Object") instances,
         // so `== ReferenceSourceType.OBJECT` misses them and a real return type (e.g. LocalDateTime.isAfter -> boolean)
         // is left as Object -> wrong descriptor -> "Bad type on operand stack" when an ifeq consumes it.
-        if (isObjectOrNull(declaredType)) {
+        if (isObjectOrNull(declaredType))
+        {
             SourceType resolved = ctx.getTypeResolver().resolveMethodReturnType(ownerClass, call.getMethodName(), argTypes);
-            if (resolved != null) {
+            if (resolved != null)
+            {
                 return resolved;
+            }
+            // The callee is unresolvable (not in the pool, not reflectively loadable). The surrounding
+            // declaration knows what it expects; a descriptor built with that return links against the
+            // real method where Object never can.
+            SourceType expected = ctx.peekExpectedType();
+            if (expected != null && !isObjectOrNull(expected))
+            {
+                return expected;
             }
         }
         return declaredType != null ? declaredType : ReferenceSourceType.OBJECT;
     }
 
-    private static boolean isObjectOrNull(SourceType t) {
+    private static boolean isObjectOrNull(SourceType t)
+    {
         return t == null
             || (t instanceof ReferenceSourceType && "java/lang/Object".equals(((ReferenceSourceType) t).getInternalName()));
     }
 
-    private String buildMethodDescriptorWithReturn(List<SourceType> argTypes, SourceType returnType) {
+    private String buildMethodDescriptorWithReturn(List<SourceType> argTypes, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SourceType t : argTypes) {
+        for (SourceType t : argTypes)
+        {
             sb.append(t.toIRType().getDescriptor());
         }
         sb.append(")");
@@ -1213,7 +1625,8 @@ public class ExpressionLowerer {
         return sb.toString();
     }
 
-    private Value lowerFieldAccess(FieldAccessExpr field) {
+    private Value lowerFieldAccess(FieldAccessExpr field)
+    {
         String ownerClass;
         boolean isStatic = field.isStatic();
         Expression receiver = field.getReceiver();
@@ -1222,9 +1635,11 @@ public class ExpressionLowerer {
         // (reliable) so a genuine field literally named "length" on a class still lowers as a getfield. Skip
         // class-name receivers (static access). Lower the receiver exactly once to preserve side effects.
         if (!isStatic && "length".equals(field.getFieldName()) && receiver != null
-                && !(receiver instanceof VarRefExpr && !ctx.hasVariable(((VarRefExpr) receiver).getName()))) {
+                && !(receiver instanceof VarRefExpr && isClassNameReceiver((VarRefExpr) receiver)))
+        {
             Value recv = lower(receiver);
-            if (recv.getType() instanceof ArrayType) {
+            if (recv.getType() instanceof ArrayType)
+            {
                 SSAValue len = ctx.newValue(PrimitiveType.INT);
                 ctx.getCurrentBlock().addInstruction(SimpleInstruction.createArrayLength(len, recv));
                 return len;
@@ -1238,31 +1653,48 @@ public class ExpressionLowerer {
             return res;
         }
 
-        if (isStatic) {
+        if (isStatic)
+        {
             ownerClass = field.getOwnerClass();
-        } else if (receiver instanceof VarRefExpr) {
+        }
+        else if (receiver instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) receiver;
-            if (!ctx.hasVariable(varRef.getName())) {
+            if (isClassNameReceiver(varRef))
+            {
                 ownerClass = resolveClassName(varRef.getName());
                 isStatic = true;
-            } else {
+            }
+            else
+            {
                 ownerClass = field.getOwnerClass();
             }
-        } else if (receiver instanceof ThisExpr) {
+        }
+        else if (receiver instanceof ThisExpr)
+        {
             ownerClass = ctx.getOwnerClass();
-        } else if (receiver instanceof SuperExpr) {
+        }
+        else if (receiver instanceof SuperExpr)
+        {
             ownerClass = ctx.getSuperClassName();
-            if (ownerClass == null || ownerClass.isEmpty()) {
+            if (ownerClass == null || ownerClass.isEmpty())
+            {
                 ownerClass = "java/lang/Object";
             }
-        } else {
+        }
+        else
+        {
             String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
-            if (qualifiedOwner != null) {
+            if (qualifiedOwner != null)
+            {
                 ownerClass = qualifiedOwner;
                 isStatic = true;
-            } else {
+            }
+            else
+            {
                 ownerClass = field.getOwnerClass();
-                if (ownerClass == null || ownerClass.isEmpty()) {
+                if (ownerClass == null || ownerClass.isEmpty())
+                {
                     ownerClass = ctx.getOwnerClass();
                 }
             }
@@ -1271,11 +1703,25 @@ public class ExpressionLowerer {
         ownerClass = normalizeOwnerClass(ownerClass);
 
         Value receiverVal = null;
-        if (!isStatic) {
+        if (!isStatic)
+        {
             receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            String fromValue = receiverOwner(receiverVal);
-            if (fromValue != null) {
-                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            // A named local's DECLARED type is its static type in the Java sense and the authority
+            // for member resolution; the value's flow type only refines an undeclared receiver
+            // (Java resolves `pv0.f` against pv0's declaration even right after `pv0 = narrower`).
+            String declaredOwner = receiver instanceof VarRefExpr
+                    ? declaredReferenceOwner(((VarRefExpr) receiver).getName()) : null;
+            if (declaredOwner != null)
+            {
+                ownerClass = declaredOwner;
+            }
+            else
+            {
+                String fromValue = receiverOwner(receiverVal);
+                if (fromValue != null)
+                {
+                    ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+                }
             }
         }
 
@@ -1284,9 +1730,12 @@ public class ExpressionLowerer {
         String descriptor = fieldType.getDescriptor();
 
         FieldAccessInstruction instr;
-        if (isStatic) {
+        if (isStatic)
+        {
             instr = FieldAccessInstruction.createStaticLoad(result, ownerClass, field.getFieldName(), descriptor);
-        } else {
+        }
+        else
+        {
             instr = FieldAccessInstruction.createLoad(result, ownerClass, field.getFieldName(), descriptor, receiverVal);
         }
         ctx.getCurrentBlock().addInstruction(instr);
@@ -1294,22 +1743,61 @@ public class ExpressionLowerer {
         return result;
     }
 
-    /** The receiver value's reference type as an internal owner name, or null when it is not a usable named reference. */
-    private static String receiverOwner(Value receiverVal) {
-        if (receiverVal != null && receiverVal.getType() instanceof ReferenceType) {
-            String n = ((ReferenceType) receiverVal.getType()).getInternalName();
-            if (n != null && !n.isEmpty() && !n.equals("java/lang/Object")) {
+    /**
+     * Whether a bare identifier used as a receiver names a class rather than a value.
+     */
+    private boolean isClassNameReceiver(VarRefExpr varRef)
+    {
+        if (ctx.hasVariable(varRef.getName()))
+        {
+            return false;
+        }
+        // ANY field of that name disqualifies class-ness - an ARRAY-typed field (`axisNames.length`)
+        // is as much a value receiver as a reference-typed one.
+        return ctx.getTypeResolver().findFieldType(ctx.getOwnerClass(), varRef.getName()) == null;
+    }
+
+    /**
+     * The declared type of a live named local as an internal owner name, or null.
+     */
+    private String declaredReferenceOwner(String name)
+    {
+        IRType declared = ctx.declaredTypeOf(name);
+        if (declared instanceof ReferenceType)
+        {
+            String n = ((ReferenceType) declared).getInternalName();
+            if (n != null && !n.isEmpty() && !n.equals("java/lang/Object"))
+            {
                 return n;
             }
         }
         return null;
     }
 
-    private IRType resolveFieldType(FieldAccessExpr field, String ownerClass) {
+    /**
+     * The receiver value's reference type as an internal owner name, or null when it is not a usable named reference.
+     */
+    private static String receiverOwner(Value receiverVal)
+    {
+        if (receiverVal != null && receiverVal.getType() instanceof ReferenceType)
+        {
+            String n = ((ReferenceType) receiverVal.getType()).getInternalName();
+            if (n != null && !n.isEmpty() && !n.equals("java/lang/Object"))
+            {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private IRType resolveFieldType(FieldAccessExpr field, String ownerClass)
+    {
         SourceType declaredType = field.getType();
-        if (isObjectOrNull(declaredType)) {
+        if (isObjectOrNull(declaredType))
+        {
             SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
-            if (resolved == null) {
+            if (resolved == null)
+            {
                 String fieldRef = (ownerClass != null ? ownerClass.replace('/', '.') : "<unknown>")
                     + "." + field.getFieldName();
                 throw new LoweringException("Unable to resolve field type: " + fieldRef);
@@ -1322,32 +1810,50 @@ public class ExpressionLowerer {
         return IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(declaredType));
     }
 
-    private String resolveClassName(String simpleName) {
+    private String resolveClassName(String simpleName)
+    {
         return ctx.getTypeResolver().resolveClassName(simpleName);
     }
 
     /**
      * If {@code receiver} is a pure dotted-name chain that names a class in the pool, returns that class's
-     * internal name; otherwise null. The decompiler emits a static/enum member fully qualified
-     * ({@code a.b.Outer$Inner.CONST}), which the parser builds as a field-access chain rather than a type
-     * reference - so a {@code .CONST} access whose receiver is such a chain is really a static field access on
-     * the named class. A chain rooted at a local variable is a genuine field access and is left alone.
+     * internal name; otherwise null.
      */
-    private String resolveQualifiedTypeReceiver(Expression receiver) {
+    private String resolveQualifiedTypeReceiver(Expression receiver)
+    {
         String dottedName = flattenDottedName(receiver);
-        if (dottedName == null) {
+        if (dottedName == null)
+        {
             return null;
         }
         String internalName = ctx.getTypeResolver().resolveInternalName(dottedName);
-        return ctx.getTypeResolver().classExists(internalName) ? internalName : null;
+        if (ctx.getTypeResolver().classExists(internalName))
+        {
+            return internalName;
+        }
+        // A NESTED type spelled with dots (java.lang.StackWalker.StackFrame) slashes to a name no
+        // class has; rewrite separators to '$' from the right until one resolves.
+        String candidate = internalName;
+        for (int cut = candidate.lastIndexOf('/'); cut > 0; cut = candidate.lastIndexOf('/', cut - 1))
+        {
+            candidate = candidate.substring(0, cut) + '$' + candidate.substring(cut + 1);
+            if (ctx.getTypeResolver().classExists(candidate))
+            {
+                return candidate;
+            }
+        }
+        return null;
     }
 
-    private String flattenDottedName(Expression expr) {
-        if (expr instanceof VarRefExpr) {
+    private String flattenDottedName(Expression expr)
+    {
+        if (expr instanceof VarRefExpr)
+        {
             String name = ((VarRefExpr) expr).getName();
             return ctx.hasVariable(name) ? null : name;
         }
-        if (expr instanceof FieldAccessExpr) {
+        if (expr instanceof FieldAccessExpr)
+        {
             FieldAccessExpr access = (FieldAccessExpr) expr;
             String base = flattenDottedName(access.getReceiver());
             return base != null ? base + "." + access.getFieldName() : null;
@@ -1356,13 +1862,12 @@ public class ExpressionLowerer {
     }
 
     /**
-     * Normalizes a field-owner class name to a fully-qualified internal name. Decompiled source
-     * refers to same-package and imported types by their simple name; this resolves such names
-     * (e.g. {@code MainFrame} -> {@code osrs/dev/MainFrame}) against imports and the loaded pool so
-     * the field can be located. Already-qualified or empty names are returned unchanged.
+     * Normalizes a field-owner class name to a fully-qualified internal name.
      */
-    private String normalizeOwnerClass(String ownerClass) {
-        if (ownerClass == null || ownerClass.isEmpty()) {
+    private String normalizeOwnerClass(String ownerClass)
+    {
+        if (ownerClass == null || ownerClass.isEmpty())
+        {
             return ownerClass;
         }
         // resolveInternalName (not resolveClassName) so a nested type spelled Outer.Inner / Outer/Inner becomes
@@ -1373,53 +1878,74 @@ public class ExpressionLowerer {
     /**
      * Converts a source type to an IR type with its class name(s) resolved through the type resolver, so a simple,
      * same-package, or imported name (e.g. {@code Main} in its own package) becomes the fully-qualified internal
-     * name. Use this where a reference type names a class constant in the bytecode - {@code .class} literals, casts,
-     * and {@code instanceof} - which {@link SourceType#toIRType()} alone leaves unqualified (emitting e.g. {@code
-     * Main} instead of {@code osrs/dev/Main}, which fails to load at runtime).
+     * name.
      */
-    private IRType resolveTypeForConstant(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private IRType resolveTypeForConstant(SourceType type)
+    {
+        if (type instanceof ReferenceSourceType)
+        {
             String resolved = normalizeOwnerClass(((ReferenceSourceType) type).getInternalName());
-            if (resolved != null && !resolved.isEmpty()) {
+            if (resolved != null && !resolved.isEmpty())
+            {
                 return new ReferenceType(resolved);
             }
-        } else if (type instanceof ArraySourceType) {
+        }
+        else if (type instanceof ArraySourceType)
+        {
             ArraySourceType array = (ArraySourceType) type;
             return new ArrayType(resolveTypeForConstant(array.getElementType()), array.getTotalDimensions());
         }
         return type.toIRType();
     }
 
-    private Value lowerFieldStore(FieldAccessExpr field, Value value) {
+    private Value lowerFieldStore(FieldAccessExpr field, Value value)
+    {
         String ownerClass;
         boolean isStatic = field.isStatic();
         Expression receiver = field.getReceiver();
 
-        if (isStatic) {
+        if (isStatic)
+        {
             ownerClass = field.getOwnerClass();
-        } else if (receiver instanceof VarRefExpr) {
+        }
+        else if (receiver instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) receiver;
-            if (!ctx.hasVariable(varRef.getName())) {
+            if (isClassNameReceiver(varRef))
+            {
                 ownerClass = resolveClassName(varRef.getName());
                 isStatic = true;
-            } else {
+            }
+            else
+            {
                 ownerClass = field.getOwnerClass();
             }
-        } else if (receiver instanceof ThisExpr) {
+        }
+        else if (receiver instanceof ThisExpr)
+        {
             ownerClass = ctx.getOwnerClass();
-        } else if (receiver instanceof SuperExpr) {
+        }
+        else if (receiver instanceof SuperExpr)
+        {
             ownerClass = ctx.getSuperClassName();
-            if (ownerClass == null || ownerClass.isEmpty()) {
+            if (ownerClass == null || ownerClass.isEmpty())
+            {
                 ownerClass = "java/lang/Object";
             }
-        } else {
+        }
+        else
+        {
             String qualifiedOwner = resolveQualifiedTypeReceiver(receiver);
-            if (qualifiedOwner != null) {
+            if (qualifiedOwner != null)
+            {
                 ownerClass = qualifiedOwner;
                 isStatic = true;
-            } else {
+            }
+            else
+            {
                 ownerClass = field.getOwnerClass();
-                if (ownerClass == null || ownerClass.isEmpty()) {
+                if (ownerClass == null || ownerClass.isEmpty())
+                {
                     ownerClass = ctx.getOwnerClass();
                 }
             }
@@ -1428,11 +1954,25 @@ public class ExpressionLowerer {
         ownerClass = normalizeOwnerClass(ownerClass);
 
         Value receiverVal = null;
-        if (!isStatic) {
+        if (!isStatic)
+        {
             receiverVal = receiver != null ? lower(receiver) : ctx.getVariable("this");
-            String fromValue = receiverOwner(receiverVal);
-            if (fromValue != null) {
-                ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+            // A named local's DECLARED type is its static type in the Java sense and the authority
+            // for member resolution; the value's flow type only refines an undeclared receiver
+            // (Java resolves `pv0.f` against pv0's declaration even right after `pv0 = narrower`).
+            String declaredOwner = receiver instanceof VarRefExpr
+                    ? declaredReferenceOwner(((VarRefExpr) receiver).getName()) : null;
+            if (declaredOwner != null)
+            {
+                ownerClass = declaredOwner;
+            }
+            else
+            {
+                String fromValue = receiverOwner(receiverVal);
+                if (fromValue != null)
+                {
+                    ownerClass = fromValue;   // the receiver's actual type beats the decompiler's owner guess
+                }
             }
         }
 
@@ -1440,9 +1980,12 @@ public class ExpressionLowerer {
         String descriptor = fieldType.getDescriptor();
 
         FieldAccessInstruction instr;
-        if (isStatic) {
+        if (isStatic)
+        {
             instr = FieldAccessInstruction.createStaticStore(ownerClass, field.getFieldName(), descriptor, value);
-        } else {
+        }
+        else
+        {
             instr = FieldAccessInstruction.createStore(ownerClass, field.getFieldName(), descriptor, receiverVal, value);
         }
         ctx.getCurrentBlock().addInstruction(instr);
@@ -1450,20 +1993,43 @@ public class ExpressionLowerer {
         return value;
     }
 
-    private Value lowerArrayAccess(ArrayAccessExpr arr) {
+    private Value lowerArrayAccess(ArrayAccessExpr arr)
+    {
         Value array = lower(arr.getArray());
         Value index = lower(arr.getIndex());
 
         SourceType declaredType = arr.getType();
         IRType elementType;
 
-        SourceType arrayType = resolveArrayType(arr.getArray());
-        if (arrayType instanceof ArraySourceType) {
-            elementType = ((ArraySourceType) arrayType).getElementType().toIRType();
-        } else if (declaredType != null && declaredType != ReferenceSourceType.OBJECT) {
-            elementType = declaredType.toIRType();
-        } else {
-            elementType = new ReferenceType("java/lang/Object");
+        // The lowered array value already carries its exact IR type, propagated through nested accesses
+        // (`cube[i][j]` - which resolveArrayType, keyed on VarRef/FieldAccess, cannot see). An index
+        // peels ONE array level: `[[I` -> `[I`, `[I` -> the base element.
+        if (array.getType() instanceof ArrayType)
+        {
+            ArrayType at = (ArrayType) array.getType();
+            elementType = at.getDimensions() > 1
+                    ? new ArrayType(at.getElementType(), at.getDimensions() - 1)
+                    : at.getElementType();
+        }
+        else
+        {
+            SourceType arrayType = resolveArrayType(arr.getArray());
+            if (arrayType instanceof ArraySourceType)
+            {
+                ArraySourceType ast = (ArraySourceType) arrayType;
+                SourceType immediate = ast.getDimensions() > 1
+                        ? new ArraySourceType(ast.getComponentType(), ast.getDimensions() - 1)
+                        : ast.getComponentType();
+                elementType = immediate.toIRType();
+            }
+            else if (declaredType != null && declaredType != ReferenceSourceType.OBJECT)
+            {
+                elementType = declaredType.toIRType();
+            }
+            else
+            {
+                elementType = new ReferenceType("java/lang/Object");
+            }
         }
 
         SSAValue result = ctx.newValue(elementType);
@@ -1474,41 +2040,57 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private SourceType resolveArrayType(Expression arrayExpr) {
-        if (arrayExpr instanceof FieldAccessExpr) {
+    private SourceType resolveArrayType(Expression arrayExpr)
+    {
+        if (arrayExpr instanceof FieldAccessExpr)
+        {
             FieldAccessExpr field = (FieldAccessExpr) arrayExpr;
             String ownerClass = field.getOwnerClass();
-            if (ownerClass == null || ownerClass.isEmpty() || ownerClass.equals("java/lang/Object")) {
+            if (ownerClass == null || ownerClass.isEmpty() || ownerClass.equals("java/lang/Object"))
+            {
                 Expression receiver = field.getReceiver();
-                if (receiver instanceof VarRefExpr) {
+                if (receiver instanceof VarRefExpr)
+                {
                     VarRefExpr varRef = (VarRefExpr) receiver;
-                    if (!ctx.hasVariable(varRef.getName())) {
+                    if (!ctx.hasVariable(varRef.getName()))
+                    {
                         ownerClass = resolveClassName(varRef.getName());
                     }
                 }
             }
-            if (ownerClass != null && !ownerClass.isEmpty()) {
+            if (ownerClass != null && !ownerClass.isEmpty())
+            {
                 SourceType resolved = ctx.getTypeResolver().resolveFieldType(ownerClass, field.getFieldName());
-                if (resolved != null) {
+                if (resolved != null)
+                {
                     return resolved;
                 }
             }
-        } else if (arrayExpr instanceof VarRefExpr) {
+        }
+        else if (arrayExpr instanceof VarRefExpr)
+        {
             VarRefExpr varRef = (VarRefExpr) arrayExpr;
-            if (ctx.hasVariable(varRef.getName())) {
+            if (ctx.hasVariable(varRef.getName()))
+            {
                 SSAValue val = ctx.getVariable(varRef.getName());
-                if (val != null) {
+                if (val != null)
+                {
                     IRType irType = val.getType();
-                    if (irType instanceof ArrayType) {
+                    if (irType instanceof ArrayType)
+                    {
                         ArrayType arrType = (ArrayType) irType;
                         return new ArraySourceType(irTypeToSourceType(arrType.getElementType()));
                     }
                 }
-            } else {
+            }
+            else
+            {
                 String ownerClass = ctx.getOwnerClass();
-                if (ownerClass != null && !ownerClass.isEmpty()) {
+                if (ownerClass != null && !ownerClass.isEmpty())
+                {
                     SourceType resolved = ctx.getTypeResolver().findFieldType(ownerClass, varRef.getName());
-                    if (resolved != null) {
+                    if (resolved != null)
+                    {
                         return resolved;
                     }
                 }
@@ -1517,33 +2099,54 @@ public class ExpressionLowerer {
         return arrayExpr.getType();
     }
 
-    private SourceType irTypeToSourceType(IRType irType) {
-        if (irType == PrimitiveType.INT) {
+    private SourceType irTypeToSourceType(IRType irType)
+    {
+        if (irType == PrimitiveType.INT)
+        {
             return PrimitiveSourceType.INT;
-        } else if (irType == PrimitiveType.LONG) {
+        }
+        else if (irType == PrimitiveType.LONG)
+        {
             return PrimitiveSourceType.LONG;
-        } else if (irType == PrimitiveType.FLOAT) {
+        }
+        else if (irType == PrimitiveType.FLOAT)
+        {
             return PrimitiveSourceType.FLOAT;
-        } else if (irType == PrimitiveType.DOUBLE) {
+        }
+        else if (irType == PrimitiveType.DOUBLE)
+        {
             return PrimitiveSourceType.DOUBLE;
-        } else if (irType == PrimitiveType.BOOLEAN) {
+        }
+        else if (irType == PrimitiveType.BOOLEAN)
+        {
             return PrimitiveSourceType.BOOLEAN;
-        } else if (irType == PrimitiveType.BYTE) {
+        }
+        else if (irType == PrimitiveType.BYTE)
+        {
             return PrimitiveSourceType.BYTE;
-        } else if (irType == PrimitiveType.CHAR) {
+        }
+        else if (irType == PrimitiveType.CHAR)
+        {
             return PrimitiveSourceType.CHAR;
-        } else if (irType == PrimitiveType.SHORT) {
+        }
+        else if (irType == PrimitiveType.SHORT)
+        {
             return PrimitiveSourceType.SHORT;
-        } else if (irType instanceof ReferenceType) {
+        }
+        else if (irType instanceof ReferenceType)
+        {
             return new ReferenceSourceType(((ReferenceType) irType).getInternalName());
-        } else if (irType instanceof ArrayType) {
+        }
+        else if (irType instanceof ArrayType)
+        {
             ArrayType arr = (ArrayType) irType;
             return new ArraySourceType(irTypeToSourceType(arr.getElementType()), arr.getDimensions());
         }
         return ReferenceSourceType.OBJECT;
     }
 
-    private Value lowerArrayStore(ArrayAccessExpr arr, Value value) {
+    private Value lowerArrayStore(ArrayAccessExpr arr, Value value)
+    {
         Value array = lower(arr.getArray());
         Value index = lower(arr.getIndex());
 
@@ -1553,7 +2156,8 @@ public class ExpressionLowerer {
         return value;
     }
 
-    private Value lowerNew(NewExpr newExpr) {
+    private Value lowerNew(NewExpr newExpr)
+    {
         String className = normalizeOwnerClass(newExpr.getClassName());
         IRType type = new ReferenceType(className);
         SSAValue result = ctx.newValue(type);
@@ -1564,7 +2168,23 @@ public class ExpressionLowerer {
         List<Value> args = new ArrayList<>();
         args.add(result);
 
-        for (Expression arg : newExpr.getArguments()) {
+        List<Expression> ctorArgs = newExpr.getArguments();
+        for (int idx = 0; idx < ctorArgs.size(); idx++)
+        {
+            Expression arg = ctorArgs.get(idx);
+            // A lambda argument cannot type itself; the functional interface comes from the target
+            // constructor's declared parameter. Without it the lambda falls back to the enclosing
+            // method's return type - VOID inside a constructor - and the built descriptor carries a
+            // void parameter that fails to lift.
+            if (arg instanceof LambdaExpr)
+            {
+                SourceType expected = ctx.getTypeResolver()
+                        .functionalConstructorParamType(className, ctorArgs.size(), idx);
+                if (expected != null)
+                {
+                    arg = retypeFunctionalArg(arg, expected);
+                }
+            }
             args.add(lower(arg));
         }
 
@@ -1573,44 +2193,58 @@ public class ExpressionLowerer {
         // raw AST types (which leave wildcard/same-package names unqualified -> e.g. `new LoginDialog(parent)`
         // emitting `(LFrame;)V` instead of `(Ljava/awt/Frame;)V` -> ClassNotFoundException: Frame).
         List<IRType> argIrTypes = new ArrayList<>();
-        for (int k = 1; k < args.size(); k++) {
+        for (int k = 1; k < args.size(); k++)
+        {
             argIrTypes.add(args.get(k).getType());
         }
         // Match the constructor by argument types (disambiguates same-arity overloads, e.g. ArrayList(int) vs
         // ArrayList(Collection)); only when the class isn't in the pool do we build a descriptor from the value types.
         String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(className, argIrTypes);
-        if (descriptor == null) {
+        if (descriptor == null)
+        {
+            descriptor = ctx.getTypeResolver().resolveMethodDescriptorViaReflection(className, "<init>", argIrTypes);
+        }
+        if (descriptor == null)
+        {
             StringBuilder descBuilder = new StringBuilder("(");
-            for (IRType argIrType : argIrTypes) {
+            for (IRType argIrType : argIrTypes)
+            {
                 descBuilder.append(argIrType.getDescriptor());
             }
             descBuilder.append(")V");
             descriptor = descBuilder.toString();
         }
 
-        InvokeInstruction initInstr = new InvokeInstruction(
-            InvokeType.SPECIAL, className, "<init>", descriptor, args
-        );
+        InvokeInstruction initInstr = new InvokeInstruction(InvokeType.SPECIAL, className, "<init>", descriptor, args);
         ctx.getCurrentBlock().addInstruction(initInstr);
 
         return result;
     }
 
-    private Value lowerNewArray(NewArrayExpr newArr) {
+    private Value lowerNewArray(NewArrayExpr newArr)
+    {
         // new T[]{...}: no dimension expression, an inline initializer instead. Emit the length from the
         // element count, allocate, then store each element - otherwise NEWARRAY gets no count on the stack
         // (stack underflow) and the elements are dropped.
-        if (newArr.hasInitializer()) {
+        if (newArr.hasInitializer())
+        {
             return lowerNewArrayWithInitializer(newArr);
         }
 
         List<Value> dims = new ArrayList<>();
-        for (Expression dim : newArr.getDimensions()) {
+        for (Expression dim : newArr.getDimensions())
+        {
             dims.add(lower(dim));
         }
 
-        IRType elementType = getElementType(newArr.getType());
-        IRType arrayType = newArr.getType().toIRType();
+        // The instruction's element type is the result peeled by the number of COUNT dimensions, not
+        // the flattened base: `new int[2][]` supplies one count and builds an array whose elements are
+        // int[] (ANEWARRAY [I -> int[][]). Flattening to the base int would emit NEWARRAY int -> int[].
+        // For a fully-counted allocation (`new int[2][3]`) the peel reaches the base and the emitter
+        // picks MULTIANEWARRAY from the >1 count.
+        SourceType declared = resolveArrayElement(newArr.getType());
+        IRType elementType = peelArrayType(declared, dims.size());
+        IRType arrayType = declared.toIRType();
         SSAValue result = ctx.newValue(arrayType);
 
         NewArrayInstruction instr = new NewArrayInstruction(result, elementType, dims);
@@ -1619,11 +2253,16 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerNewArrayWithInitializer(NewArrayExpr newArr) {
+    private Value lowerNewArrayWithInitializer(NewArrayExpr newArr)
+    {
         List<Expression> elements = newArr.getInitializer().getElements();
         int size = elements.size();
-        IRType elementType = getElementType(newArr.getType());
-        IRType arrayType = newArr.getType().toIRType();
+        // The allocation covers ONE dimension, so its component is the type reached by a single index -
+        // `int[]` for an `int[][]` initializer, not the base `int`. Using the base built the outer array as
+        // a primitive one, and storing the inner arrays into it produced bytecode that does not verify.
+        SourceType declared = resolveArrayElement(newArr.getType());
+        IRType elementType = peelArrayType(declared, 1);
+        IRType arrayType = declared.toIRType();
 
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
         ctx.getCurrentBlock().addInstruction(new ConstantInstruction(sizeVal, IntConstant.of(size)));
@@ -1632,7 +2271,8 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(new NewArrayInstruction(result, elementType, List.of(sizeVal)));
 
         int i = 0;
-        for (Expression elem : elements) {
+        for (Expression elem : elements)
+        {
             Value elemVal = lower(elem);
             SSAValue indexVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVal, IntConstant.of(i)));
@@ -1643,28 +2283,67 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private IRType getElementType(SourceType arrayType) {
-        if (arrayType instanceof ArraySourceType) {
-            ArraySourceType arr = (ArraySourceType) arrayType;
-            return arr.getElementType().toIRType();
+    /**
+     * The array type with its reference base resolved to a real internal name.
+     */
+    private SourceType resolveArrayElement(SourceType type)
+    {
+        if (type instanceof ArraySourceType)
+        {
+            ArraySourceType arr = (ArraySourceType) type;
+            SourceType base = resolveArrayElement(arr.getElementType());
+            return base == arr.getElementType() ? arr : new ArraySourceType(base, arr.getTotalDimensions());
         }
-        throw new LoweringException("Expected array type: " + arrayType);
+        if (type instanceof ReferenceSourceType)
+        {
+            String name = ((ReferenceSourceType) type).getInternalName();
+            String resolved = ctx.getTypeResolver().resolveInternalName(name);
+            if (resolved != null && !resolved.equals(name))
+            {
+                return new ReferenceSourceType(resolved, ((ReferenceSourceType) type).getTypeArguments());
+            }
+        }
+        return type;
     }
 
-    private Value lowerCast(CastExpr cast) {
+    /**
+     * Removes {@code count} array levels from {@code arrayType}, returning the type of a value reached by {@code
+     * count} index operations.
+     */
+    private IRType peelArrayType(SourceType arrayType, int count)
+    {
+        if (!(arrayType instanceof ArraySourceType))
+        {
+            throw new LoweringException("Expected array type: " + arrayType);
+        }
+        int total = ((ArraySourceType) arrayType).getTotalDimensions();
+        SourceType base = ((ArraySourceType) arrayType).getElementType();
+        int remaining = total - count;
+        if (remaining <= 0)
+        {
+            return base.toIRType();
+        }
+        return new ArraySourceType(base, remaining).toIRType();
+    }
+
+    private Value lowerCast(CastExpr cast)
+    {
         Value operand = lower(cast.getExpression());
         SourceType toType = cast.getTargetType();
 
         SourceType fromType = cast.getExpression().getType();
-        if (operand instanceof SSAValue) {
+        if (operand instanceof SSAValue)
+        {
             SourceType actualType = irTypeToSourceType(operand.getType());
-            if (actualType != null) {
+            if (actualType != null)
+            {
                 fromType = actualType;
             }
         }
 
         UnaryOp castOp = ReverseOperatorMapper.getCastOp(fromType, toType);
-        if (castOp != null) {
+        if (castOp != null)
+        {
             IRType resultType = toType.toIRType();
             SSAValue result = ctx.newValue(resultType);
             UnaryOpInstruction instr = new UnaryOpInstruction(result, castOp, operand);
@@ -1672,7 +2351,11 @@ public class ExpressionLowerer {
             return result;
         }
 
-        if (toType instanceof ReferenceSourceType) {
+        // An array type is a reference type too, and its cast is just as load-bearing: dropping
+        // `(String[]) objectArray` leaves the method returning `Object[]` under a `String[]` signature.
+        // Only a primitive target reaches the fall-through, where the conversion op above already covers it.
+        if (toType instanceof ReferenceSourceType || toType instanceof ArraySourceType)
+        {
             IRType resultType = resolveTypeForConstant(toType);
             SSAValue result = ctx.newValue(resultType);
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, operand, resultType);
@@ -1683,7 +2366,8 @@ public class ExpressionLowerer {
         return operand;
     }
 
-    private Value lowerTernary(TernaryExpr ternary) {
+    private Value lowerTernary(TernaryExpr ternary)
+    {
         IRBlock thenBlock = ctx.createBlock();
         IRBlock elseBlock = ctx.createBlock();
         IRBlock mergeBlock = ctx.createBlock();
@@ -1694,13 +2378,13 @@ public class ExpressionLowerer {
         Value thenVal = lower(ternary.getThenExpr());
         IRBlock thenEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        thenEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        thenEndBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(elseBlock);
         Value elseVal = lower(ternary.getElseExpr());
         IRBlock elseEndBlock = ctx.getCurrentBlock();
         ctx.getCurrentBlock().addInstruction(SimpleInstruction.createGoto(mergeBlock));
-        elseEndBlock.addSuccessor(mergeBlock, com.tonic.analysis.ssa.cfg.EdgeType.NORMAL);
+        elseEndBlock.addSuccessor(mergeBlock, EdgeType.NORMAL);
 
         ctx.setCurrentBlock(mergeBlock);
         IRType resultType = ternary.getType().toIRType();
@@ -1713,14 +2397,24 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerInstanceOf(InstanceOfExpr inst) {
+    private Value lowerInstanceOf(InstanceOfExpr inst)
+    {
         Value operand = lower(inst.getExpression());
 
         IRType checkType;
-        if (inst.getCheckType() instanceof ReferenceSourceType) {
+        if (inst.getCheckType() instanceof ReferenceSourceType)
+        {
             checkType = resolveTypeForConstant(inst.getCheckType());
-        } else {
-            throw new LoweringException("instanceof requires reference type");
+        }
+        else if (!(inst.getCheckType() instanceof PrimitiveSourceType))
+        {
+            // Arrays and generic types are reference types too - `x instanceof float[]` and
+            // `x instanceof List<?>` (erased to the raw type) both check fine; only a primitive cannot.
+            checkType = IRType.fromDescriptor(ctx.getTypeResolver().descriptorOf(inst.getCheckType()));
+        }
+        else
+        {
+            throw new LoweringException("instanceof requires reference type: " + inst.getCheckType());
         }
 
         SSAValue result = ctx.newValue(PrimitiveType.INT);
@@ -1730,11 +2424,13 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerThis() {
+    private Value lowerThis()
+    {
         return ctx.getVariable("this");
     }
 
-    private Value lowerClass(ClassExpr classExpr) {
+    private Value lowerClass(ClassExpr classExpr)
+    {
         IRType classType = resolveTypeForConstant(classExpr.getClassType());
         ClassConstant constant = new ClassConstant(classType);
         SSAValue result = ctx.newValue(ReferenceType.CLASS);
@@ -1743,13 +2439,16 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerSuper() {
+    private Value lowerSuper()
+    {
         return ctx.getVariable("this");
     }
 
-    private Value lowerInvokeDynamic(InvokeDynamicExpr expr) {
+    private Value lowerInvokeDynamic(InvokeDynamicExpr expr)
+    {
         List<Value> args = new ArrayList<>();
-        for (Expression arg : expr.getArguments()) {
+        for (Expression arg : expr.getArguments())
+        {
             args.add(lower(arg));
         }
 
@@ -1766,14 +2465,16 @@ public class ExpressionLowerer {
         // For SwitchBootstraps.typeSwitch the bootstrap static arguments are the case-type Class
         // constants, in declaration order; other bootstraps modeled here carry none.
         List<Constant> bsArgs = new ArrayList<>();
-        for (String classArg : expr.getBootstrapClassArgs()) {
+        for (String classArg : expr.getBootstrapClassArgs())
+        {
             bsArgs.add(new ClassConstant(classArg));
         }
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
         IRType returnType = expr.getType().toIRType();
         SSAValue result = null;
-        if (!(returnType instanceof VoidType)) {
+        if (!(returnType instanceof VoidType))
+        {
             result = ctx.newValue(returnType);
         }
 
@@ -1787,7 +2488,8 @@ public class ExpressionLowerer {
         return result != null ? result : NullConstant.INSTANCE;
     }
 
-    private Value lowerDynamicConstant(DynamicConstantExpr expr) {
+    private Value lowerDynamicConstant(DynamicConstantExpr expr)
+    {
         DynamicConstant dynConst = new DynamicConstant(
             expr.getName(),
             expr.getDescriptor(),
@@ -1802,9 +2504,12 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerArrayInit(ArrayInitExpr arrInit) {
+    private Value lowerArrayInit(ArrayInitExpr arrInit)
+    {
         int size = arrInit.getElements().size();
-        IRType elementType = getElementType(arrInit.getType());
+        // One dimension per allocation, so the component is what a single index reaches - see
+        // lowerNewArrayWithInitializer, which builds the same shape from the other syntax.
+        IRType elementType = peelArrayType(arrInit.getType(), 1);
         IRType arrayType = arrInit.getType().toIRType();
 
         SSAValue sizeVal = ctx.newValue(PrimitiveType.INT);
@@ -1815,7 +2520,8 @@ public class ExpressionLowerer {
         ctx.getCurrentBlock().addInstruction(newArr);
 
         int i = 0;
-        for (Expression elem : arrInit.getElements()) {
+        for (Expression elem : arrInit.getElements())
+        {
             Value elemVal = lower(elem);
             SSAValue indexVal = ctx.newValue(PrimitiveType.INT);
             ctx.getCurrentBlock().addInstruction(new ConstantInstruction(indexVal, IntConstant.of(i)));
@@ -1827,19 +2533,23 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value widenIfNeeded(Value value, IRType targetType) {
-        if (!(value instanceof SSAValue)) {
+    private Value widenIfNeeded(Value value, IRType targetType)
+    {
+        if (!(value instanceof SSAValue))
+        {
             return value;
         }
 
         SSAValue ssaValue = (SSAValue) value;
         IRType sourceType = ssaValue.getType();
 
-        if (sourceType.equals(targetType)) {
+        if (sourceType.equals(targetType))
+        {
             return value;
         }
 
-        if (!(sourceType instanceof PrimitiveType) || !(targetType instanceof PrimitiveType)) {
+        if (!(sourceType instanceof PrimitiveType) || !(targetType instanceof PrimitiveType))
+        {
             return value;
         }
 
@@ -1847,7 +2557,8 @@ public class ExpressionLowerer {
         PrimitiveType tgtPrim = (PrimitiveType) targetType;
 
         UnaryOp conversionOp = getWideningOp(srcPrim, tgtPrim);
-        if (conversionOp == null) {
+        if (conversionOp == null)
+        {
             return value;
         }
 
@@ -1857,41 +2568,89 @@ public class ExpressionLowerer {
         return widened;
     }
 
-    private UnaryOp getWideningOp(PrimitiveType from, PrimitiveType to) {
-        if (from == PrimitiveType.INT) {
+    private UnaryOp getWideningOp(PrimitiveType from, PrimitiveType to)
+    {
+        // byte/short/char sit on the stack as int; their widenings are the int ones.
+        if (from == PrimitiveType.BYTE || from == PrimitiveType.SHORT || from == PrimitiveType.CHAR)
+        {
+            from = PrimitiveType.INT;
+        }
+        if (from == PrimitiveType.INT)
+        {
             if (to == PrimitiveType.LONG) return UnaryOp.I2L;
             if (to == PrimitiveType.FLOAT) return UnaryOp.I2F;
             if (to == PrimitiveType.DOUBLE) return UnaryOp.I2D;
-        } else if (from == PrimitiveType.LONG) {
+        }
+        else if (from == PrimitiveType.LONG)
+        {
             if (to == PrimitiveType.FLOAT) return UnaryOp.L2F;
             if (to == PrimitiveType.DOUBLE) return UnaryOp.L2D;
-        } else if (from == PrimitiveType.FLOAT) {
+        }
+        else if (from == PrimitiveType.FLOAT)
+        {
             if (to == PrimitiveType.DOUBLE) return UnaryOp.F2D;
         }
         return null;
     }
 
-    private static boolean isReferenceValue(Value v) {
+    private static boolean isReferenceValue(Value v)
+    {
         return v != null && v.getType() != null && v.getType().isReference();
     }
 
-    private SourceType getCommonComparisonType(SourceType left, SourceType right) {
-        if (left == PrimitiveSourceType.DOUBLE || right == PrimitiveSourceType.DOUBLE) {
+    /**
+     * Widens {@code astCommon} to the widest primitive type among the lowered operand VALUES.
+     */
+    private static SourceType widestOfValues(SourceType astCommon, Value left, Value right)
+    {
+        SourceType widest = astCommon;
+        for (Value v : new Value[]{left, right})
+        {
+            if (v == null || v.getType() == null)
+            {
+                continue;
+            }
+            IRType t = v.getType();
+            if (t == PrimitiveType.DOUBLE)
+            {
+                return PrimitiveSourceType.DOUBLE;
+            }
+            if (t == PrimitiveType.FLOAT && widest != PrimitiveSourceType.DOUBLE)
+            {
+                widest = PrimitiveSourceType.FLOAT;
+            }
+            else if (t == PrimitiveType.LONG
+                    && widest != PrimitiveSourceType.DOUBLE && widest != PrimitiveSourceType.FLOAT)
+            {
+                widest = PrimitiveSourceType.LONG;
+            }
+        }
+        return widest;
+    }
+
+    private SourceType getCommonComparisonType(SourceType left, SourceType right)
+    {
+        if (left == PrimitiveSourceType.DOUBLE || right == PrimitiveSourceType.DOUBLE)
+        {
             return PrimitiveSourceType.DOUBLE;
         }
-        if (left == PrimitiveSourceType.FLOAT || right == PrimitiveSourceType.FLOAT) {
+        if (left == PrimitiveSourceType.FLOAT || right == PrimitiveSourceType.FLOAT)
+        {
             return PrimitiveSourceType.FLOAT;
         }
-        if (left == PrimitiveSourceType.LONG || right == PrimitiveSourceType.LONG) {
+        if (left == PrimitiveSourceType.LONG || right == PrimitiveSourceType.LONG)
+        {
             return PrimitiveSourceType.LONG;
         }
         return PrimitiveSourceType.INT;
     }
 
-    private Value lowerLambda(LambdaExpr lambda) {
+    private Value lowerLambda(LambdaExpr lambda)
+    {
         List<SyntheticLambdaMethod.CapturedVariable> captures = collectCaptures(lambda);
         String ownerClass = ctx.getOwnerClass();
-        if (ownerClass == null) {
+        if (ownerClass == null)
+        {
             ownerClass = "UnknownClass";
         }
         // Resolve the name to the class's existing lambda method for this enclosing method + in-method index
@@ -1901,11 +2660,29 @@ public class ExpressionLowerer {
         String lambdaMethodName = ctx.generateLambdaMethodName();
         String[] existingLambda =
                 ctx.getTypeResolver().findLambdaMethod(ownerClass, ctx.getCurrentMethodName(), lambdaIndex);
-        if (existingLambda != null) {
+        if (existingLambda != null)
+        {
             lambdaMethodName = existingLambda[0];
         }
 
         SourceType lambdaType = lambda.getType();
+        // The parser cannot type a lambda; its functional interface comes from the assignment or
+        // declaration target when one is in scope, else a returned lambda takes the enclosing
+        // method's declared return type. Without either the call site descriptor says Object, and
+        // the metafactory rejects the site outright ("Functional interface java.lang.Object is not
+        // an interface").
+        if (isObjectOrNull(lambdaType) && ctx.peekExpectedType() != null && !isObjectOrNull(ctx.peekExpectedType()))
+        {
+            lambdaType = ctx.peekExpectedType();
+        }
+        // VOID can never be a functional interface: inside a constructor (or void method) the
+        // enclosing return type is no lambda target, and adopting it poisons the call descriptor.
+        if (isObjectOrNull(lambdaType) && ctx.getCurrentMethodReturnType() != null
+                && !isObjectOrNull(ctx.getCurrentMethodReturnType())
+                && !(ctx.getCurrentMethodReturnType() instanceof VoidSourceType))
+        {
+            lambdaType = ctx.getCurrentMethodReturnType();
+        }
         String samInterfaceName = extractInterfaceName(lambdaType);
 
         // Resolve the functional interface's single abstract method so the lambda's return type
@@ -1916,11 +2693,14 @@ public class ExpressionLowerer {
         SourceType returnType;
         String samMethodName;
         String samDescriptor;
-        if (sam != null) {
+        if (sam != null)
+        {
             samMethodName = sam[0];
             samDescriptor = sam[1];
             returnType = ctx.getTypeResolver().returnTypeFromDescriptor(sam[1]);
-        } else {
+        }
+        else
+        {
             returnType = inferLambdaReturnType(lambda);
             samMethodName = extractSamMethodName(samInterfaceName);
             samDescriptor = extractSamDescriptor(lambda.getParameters(), returnType);
@@ -1936,16 +2716,19 @@ public class ExpressionLowerer {
         // parameters) and reuse the exact descriptor, so the recompiled invokedynamic resolves to it.
         List<LambdaParameter> lambdaParams = lambda.getParameters();
         String existingDescriptor = ctx.getTypeResolver().descriptorOfMethod(ownerClass, lambdaMethodName);
-        if (existingDescriptor != null) {
+        if (existingDescriptor != null)
+        {
             // Reuse the existing method's exact descriptor so the recompiled invokedynamic resolves to it
             // (works for both static and instance `this`-capturing lambdas). The SAM parameters are the
             // TRAILING descriptor args - captures, including an implicit receiver for instance lambdas,
             // precede them - so retype the lambda params from the tail, independent of capture order.
             List<SourceType> existingArgs = ctx.getTypeResolver().paramTypesFromDescriptor(existingDescriptor);
             int n = lambdaParams.size();
-            if (existingArgs.size() >= n) {
+            if (existingArgs.size() >= n)
+            {
                 List<LambdaParameter> retyped = new ArrayList<>();
-                for (int i = 0; i < n; i++) {
+                for (int i = 0; i < n; i++)
+                {
                     retyped.add(LambdaParameter.implicit(
                         lambdaParams.get(i).name(), existingArgs.get(existingArgs.size() - n + i)));
                 }
@@ -1975,18 +2758,45 @@ public class ExpressionLowerer {
             implRefKind, ownerClass, lambdaMethodName, syntheticDescriptor
         );
 
+        // The metafactory's third argument is the INSTANTIATED method type - the SAM specialized to
+        // the actual types, which are the impl descriptor's trailing SAM parameters and its return.
+        // Passing the erased SAM type again fails the link when the impl narrowed a parameter
+        // ("Object is not convertible to String").
+        String instantiated;
+        List<SourceType> implArgs = ctx.getTypeResolver().paramTypesFromDescriptor(syntheticDescriptor);
+        if (implArgs.size() >= lambdaParams.size())
+        {
+            StringBuilder inst = new StringBuilder("(");
+            for (int i = implArgs.size() - lambdaParams.size(); i < implArgs.size(); i++)
+            {
+                inst.append(ctx.getTypeResolver().descriptorOf(implArgs.get(i)));
+            }
+            inst.append(syntheticDescriptor.substring(syntheticDescriptor.indexOf(')')));
+            instantiated = inst.toString();
+        }
+        else
+        {
+            // An impl whose receiver carries the first SAM parameter has fewer descriptor args than
+            // the lambda has parameters; the erased SAM type is the best remaining answer.
+            instantiated = samDescriptor;
+        }
+
         List<Constant> bsArgs = new ArrayList<>();
         bsArgs.add(new MethodTypeConstant(samDescriptor));
         bsArgs.add(implHandle);
-        bsArgs.add(new MethodTypeConstant(samDescriptor));
+        bsArgs.add(new MethodTypeConstant(instantiated));
 
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
         List<Value> dynArgs = new ArrayList<>();
-        for (SyntheticLambdaMethod.CapturedVariable capture : captures) {
-            if ("this".equals(capture.getName())) {
+        for (SyntheticLambdaMethod.CapturedVariable capture : captures)
+        {
+            if ("this".equals(capture.getName()))
+            {
                 dynArgs.add(ctx.getVariable("this"));
-            } else {
+            }
+            else
+            {
                 dynArgs.add(ctx.getVariable(capture.getName()));
             }
         }
@@ -2003,7 +2813,8 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerMethodRef(MethodRefExpr methodRef) {
+    private Value lowerMethodRef(MethodRefExpr methodRef)
+    {
         String ownerClass = methodRef.getOwnerClass();
         String methodName = methodRef.getMethodName();
         MethodRefKind kind = methodRef.getKind();
@@ -2017,7 +2828,8 @@ public class ExpressionLowerer {
         boolean hasBoundReceiver = false;
         Value boundReceiver = null;
 
-        switch (kind) {
+        switch (kind)
+        {
             case STATIC:
                 refKind = MethodHandleConstant.REF_invokeStatic;
                 implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
@@ -2027,13 +2839,29 @@ public class ExpressionLowerer {
                 implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
                 break;
             case BOUND:
+            {
+                // A reference the parser read as bound (`java.lang.StackWalker.StackFrame::x`) can
+                // really be UNBOUND on a nested type spelled with dots - the receiver chain names a
+                // class, not a value. Lowering it as a value would emit a field load of the nested
+                // class's simple name.
+                String typeReceiver = methodRef.getReceiver() != null
+                        ? resolveQualifiedTypeReceiver(methodRef.getReceiver()) : null;
+                if (typeReceiver != null)
+                {
+                    ownerClass = typeReceiver;
+                    refKind = MethodHandleConstant.REF_invokeVirtual;
+                    implDescriptor = inferMethodDescriptor(ownerClass, methodName, MethodRefKind.INSTANCE, returnType);
+                    break;
+                }
                 refKind = MethodHandleConstant.REF_invokeVirtual;
                 implDescriptor = inferMethodDescriptor(ownerClass, methodName, kind, returnType);
-                if (methodRef.getReceiver() != null) {
+                if (methodRef.getReceiver() != null)
+                {
                     boundReceiver = lower(methodRef.getReceiver());
                     hasBoundReceiver = true;
                 }
                 break;
+            }
             case CONSTRUCTOR:
                 refKind = MethodHandleConstant.REF_newInvokeSpecial;
                 methodName = "<init>";
@@ -2066,7 +2894,8 @@ public class ExpressionLowerer {
         BootstrapMethodInfo bsInfo = new BootstrapMethodInfo(bsm, bsArgs);
 
         List<Value> dynArgs = new ArrayList<>();
-        if (hasBoundReceiver && boundReceiver != null) {
+        if (hasBoundReceiver && boundReceiver != null)
+        {
             dynArgs.add(boundReceiver);
         }
 
@@ -2082,7 +2911,8 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private Value lowerArrayConstructorRef(MethodRefExpr methodRef) {
+    private Value lowerArrayConstructorRef(MethodRefExpr methodRef)
+    {
         SourceType returnType = methodRef.getType();
         String samInterfaceName = extractInterfaceName(returnType);
         String samMethodName = extractSamMethodName(samInterfaceName);
@@ -2100,7 +2930,8 @@ public class ExpressionLowerer {
         ctx.registerArrayConstructor(synthetic);
 
         String ownerClass = ctx.getOwnerClass();
-        if (ownerClass == null || ownerClass.isEmpty()) {
+        if (ownerClass == null || ownerClass.isEmpty())
+        {
             ownerClass = "UnknownClass";
         }
 
@@ -2141,9 +2972,11 @@ public class ExpressionLowerer {
         return result;
     }
 
-    private List<SyntheticLambdaMethod.CapturedVariable> collectCaptures(LambdaExpr lambda) {
+    private List<SyntheticLambdaMethod.CapturedVariable> collectCaptures(LambdaExpr lambda)
+    {
         Set<String> paramNames = new HashSet<>();
-        for (LambdaParameter param : lambda.getParameters()) {
+        for (LambdaParameter param : lambda.getParameters())
+        {
             paramNames.add(param.name());
         }
 
@@ -2156,8 +2989,10 @@ public class ExpressionLowerer {
         CaptureCollector collector = new CaptureCollector(paramNames, capturedNames);
         lambda.getBody().accept(collector);
 
-        for (String name : capturedNames) {
-            if (ctx.hasVariable(name)) {
+        for (String name : capturedNames)
+        {
+            if (ctx.hasVariable(name))
+            {
                 SSAValue val = ctx.getVariable(name);
                 SourceType type = irTypeToSourceType(val.getType());
                 captures.add(new SyntheticLambdaMethod.CapturedVariable(name, type));
@@ -2167,53 +3002,73 @@ public class ExpressionLowerer {
         return captures;
     }
 
-    private boolean capturesThis(List<SyntheticLambdaMethod.CapturedVariable> captures) {
-        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
-            if ("this".equals(c.getName())) {
+    private boolean capturesThis(List<SyntheticLambdaMethod.CapturedVariable> captures)
+    {
+        for (SyntheticLambdaMethod.CapturedVariable c : captures)
+        {
+            if ("this".equals(c.getName()))
+            {
                 return true;
             }
         }
         return false;
     }
 
-    private SourceType inferLambdaReturnType(LambdaExpr lambda) {
+    private SourceType inferLambdaReturnType(LambdaExpr lambda)
+    {
         ASTNode body = lambda.getBody();
-        if (body instanceof Expression) {
+        if (body instanceof Expression)
+        {
             return ((Expression) body).getType();
         }
         return ReferenceSourceType.OBJECT;
     }
 
-    private String buildSyntheticMethodDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures,
-                                                   List<LambdaParameter> params, SourceType returnType) {
+    private String buildSyntheticMethodDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures, List<LambdaParameter> params, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
+        for (SyntheticLambdaMethod.CapturedVariable c : captures)
+        {
             sb.append(c.getType().toIRType().getDescriptor());
         }
-        for (LambdaParameter p : params) {
-            if (p.type() != null) {
+        for (LambdaParameter p : params)
+        {
+            if (p.type() != null)
+            {
                 sb.append(p.type().toIRType().getDescriptor());
-            } else {
+            }
+            else
+            {
                 sb.append("Ljava/lang/Object;");
             }
         }
         sb.append(")");
-        if (returnType == null || returnType instanceof VoidSourceType) {
+        if (returnType == null || returnType instanceof VoidSourceType)
+        {
             sb.append("V");
-        } else {
+        }
+        else
+        {
             sb.append(returnType.toIRType().getDescriptor());
         }
         return sb.toString();
     }
 
-    private String extractInterfaceName(SourceType type) {
-        if (type instanceof ReferenceSourceType) {
+    private String extractInterfaceName(SourceType type)
+    {
+        if (type instanceof GenericSourceType)
+        {
+            return ((GenericSourceType) type).getRawType().getInternalName();
+        }
+        if (type instanceof ReferenceSourceType)
+        {
             return ((ReferenceSourceType) type).getInternalName();
         }
         return "java/lang/Object";
     }
 
-    private String extractSamMethodName(String interfaceName) {
+    private String extractSamMethodName(String interfaceName)
+    {
         if (interfaceName.endsWith("Supplier")) return "get";
         if (interfaceName.endsWith("Consumer")) return "accept";
         if (interfaceName.endsWith("Function")) return "apply";
@@ -2225,27 +3080,37 @@ public class ExpressionLowerer {
         return "apply";
     }
 
-    private String extractSamDescriptor(List<LambdaParameter> params, SourceType returnType) {
+    private String extractSamDescriptor(List<LambdaParameter> params, SourceType returnType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (LambdaParameter p : params) {
-            if (p.type() != null) {
+        for (LambdaParameter p : params)
+        {
+            if (p.type() != null)
+            {
                 sb.append(p.type().toIRType().getDescriptor());
-            } else {
+            }
+            else
+            {
                 sb.append("Ljava/lang/Object;");
             }
         }
         sb.append(")");
-        if (returnType == null || returnType instanceof VoidSourceType) {
+        if (returnType == null || returnType instanceof VoidSourceType)
+        {
             sb.append("V");
-        } else {
+        }
+        else
+        {
             sb.append(returnType.toIRType().getDescriptor());
         }
         return sb.toString();
     }
 
-    private String buildCallSiteDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures, SourceType lambdaType) {
+    private String buildCallSiteDescriptor(List<SyntheticLambdaMethod.CapturedVariable> captures, SourceType lambdaType)
+    {
         StringBuilder sb = new StringBuilder("(");
-        for (SyntheticLambdaMethod.CapturedVariable c : captures) {
+        for (SyntheticLambdaMethod.CapturedVariable c : captures)
+        {
             sb.append(c.getType().toIRType().getDescriptor());
         }
         sb.append(")");
@@ -2253,37 +3118,37 @@ public class ExpressionLowerer {
         return sb.toString();
     }
 
-    private String inferMethodDescriptor(String ownerClass, String methodName, MethodRefKind kind, SourceType samType) {
+    private String inferMethodDescriptor(String ownerClass, String methodName, MethodRefKind kind, SourceType samType)
+    {
         int expectedParamCount = inferExpectedParamCount(samType, kind);
         String descriptor = ctx.getTypeResolver().resolveMethodDescriptor(ownerClass, methodName, expectedParamCount);
-        if (descriptor != null) {
-            return descriptor;
-        }
-        return "()Ljava/lang/Object;";
+        return Objects.requireNonNullElse(descriptor, "()Ljava/lang/Object;");
     }
 
-    private String inferConstructorDescriptor(String ownerClass, SourceType samType) {
+    private String inferConstructorDescriptor(String ownerClass, SourceType samType)
+    {
         int expectedParamCount = inferExpectedParamCount(samType, MethodRefKind.CONSTRUCTOR);
         String descriptor = ctx.getTypeResolver().resolveConstructorDescriptor(ownerClass, expectedParamCount);
-        if (descriptor != null) {
-            return descriptor;
-        }
-        return "()V";
+        return Objects.requireNonNullElse(descriptor, "()V");
     }
 
-    private int inferExpectedParamCount(SourceType samType, MethodRefKind kind) {
-        if (samType == null) {
+    private int inferExpectedParamCount(SourceType samType, MethodRefKind kind)
+    {
+        if (samType == null)
+        {
             return -1;
         }
         String typeName = extractInterfaceName(samType);
         int baseCount = getSamParamCount(typeName);
-        if (kind == MethodRefKind.INSTANCE && baseCount > 0) {
+        if (kind == MethodRefKind.INSTANCE && baseCount > 0)
+        {
             return baseCount - 1;
         }
         return baseCount;
     }
 
-    private int getSamParamCount(String interfaceName) {
+    private int getSamParamCount(String interfaceName)
+    {
         if (interfaceName.endsWith("Supplier") || interfaceName.endsWith("Callable")) return 0;
         if (interfaceName.endsWith("Runnable")) return 0;
         if (interfaceName.endsWith("Consumer") || interfaceName.endsWith("Function") ||
@@ -2297,31 +3162,38 @@ public class ExpressionLowerer {
         return -1;
     }
 
-    private String inferSamDescriptorFromMethodRef(MethodRefExpr methodRef, String implDescriptor, MethodRefKind kind) {
+    private String inferSamDescriptorFromMethodRef(MethodRefExpr methodRef, String implDescriptor, MethodRefKind kind)
+    {
         SourceType targetType = methodRef.getType();
-        if (targetType != null) {
+        if (targetType != null)
+        {
             String internalName = extractInterfaceName(targetType);
-            if (internalName != null) {
+            if (internalName != null)
+            {
                 int lastSlash = internalName.lastIndexOf('/');
                 String simpleName = lastSlash >= 0 ? internalName.substring(lastSlash + 1) : internalName;
                 String samDescriptor = getSamDescriptor(simpleName, implDescriptor);
-                if (samDescriptor != null) {
+                if (samDescriptor != null)
+                {
                     return samDescriptor;
                 }
             }
         }
 
-        if (kind == MethodRefKind.INSTANCE) {
+        if (kind == MethodRefKind.INSTANCE)
+        {
             String returnDesc = implDescriptor.substring(implDescriptor.indexOf(')') + 1);
             return "(Ljava/lang/Object;)" + returnDesc;
         }
         return implDescriptor;
     }
 
-    private String getSamDescriptor(String interfaceName, String implDescriptor) {
+    private String getSamDescriptor(String interfaceName, String implDescriptor)
+    {
         String implReturn = implDescriptor.substring(implDescriptor.indexOf(')') + 1);
 
-        switch (interfaceName) {
+        switch (interfaceName)
+        {
             case "Runnable":
                 return "()V";
             case "Callable":
@@ -2418,9 +3290,11 @@ public class ExpressionLowerer {
         }
     }
 
-    private String buildMethodRefCallSiteDescriptor(MethodRefExpr methodRef, boolean hasBoundReceiver) {
+    private String buildMethodRefCallSiteDescriptor(MethodRefExpr methodRef, boolean hasBoundReceiver)
+    {
         StringBuilder sb = new StringBuilder("(");
-        if (hasBoundReceiver && methodRef.getReceiver() != null) {
+        if (hasBoundReceiver && methodRef.getReceiver() != null)
+        {
             SourceType receiverType = methodRef.getReceiver().getType();
             sb.append(receiverType.toIRType().getDescriptor());
         }
@@ -2429,26 +3303,31 @@ public class ExpressionLowerer {
         return sb.toString();
     }
 
-    private static class CaptureCollector extends AbstractSourceVisitor<Void> {
+    private static class CaptureCollector extends AbstractSourceVisitor<Void>
+    {
         private final Set<String> paramNames;
         private final Set<String> capturedNames;
 
-        CaptureCollector(Set<String> paramNames, Set<String> capturedNames) {
+        CaptureCollector(Set<String> paramNames, Set<String> capturedNames)
+        {
             this.paramNames = paramNames;
             this.capturedNames = capturedNames;
         }
 
         @Override
-        public Void visitVarRef(VarRefExpr expr) {
+        public Void visitVarRef(VarRefExpr expr)
+        {
             String name = expr.getName();
-            if (!paramNames.contains(name)) {
+            if (!paramNames.contains(name))
+            {
                 capturedNames.add(name);
             }
             return null;
         }
 
         @Override
-        public Void visitThis(ThisExpr expr) {
+        public Void visitThis(ThisExpr expr)
+        {
             // A lambda that references the enclosing instance captures `this` (javac emits an instance
             // synthetic and passes the receiver as the first captured arg). Without this the recompiled call
             // site drops the receiver and the synthetic descriptor no longer matches the class's lambda method.
@@ -2457,41 +3336,50 @@ public class ExpressionLowerer {
         }
     }
 
-    private static class ArrayTypeInfo {
+    private static class ArrayTypeInfo
+    {
         final SourceType elementType;
         final int dimensions;
 
-        ArrayTypeInfo(SourceType elementType, int dimensions) {
+        ArrayTypeInfo(SourceType elementType, int dimensions)
+        {
             this.elementType = elementType;
             this.dimensions = dimensions;
         }
 
-        String getArrayDescriptor() {
+        String getArrayDescriptor()
+        {
             return "[".repeat(Math.max(0, dimensions)) +
                     elementType.toIRType().getDescriptor();
         }
     }
 
-    private ArrayTypeInfo parseArrayType(String arrayTypeName) {
+    private ArrayTypeInfo parseArrayType(String arrayTypeName)
+    {
         int dims = 0;
         String baseName = arrayTypeName;
 
-        while (baseName.endsWith("[]")) {
+        while (baseName.endsWith("[]"))
+        {
             dims++;
             baseName = baseName.substring(0, baseName.length() - 2);
         }
 
-        if (dims == 0) {
+        if (dims == 0)
+        {
             dims = countLeadingBrackets(arrayTypeName);
-            if (dims > 0) {
+            if (dims > 0)
+            {
                 baseName = arrayTypeName.substring(dims);
-                if (baseName.startsWith("L") && baseName.endsWith(";")) {
+                if (baseName.startsWith("L") && baseName.endsWith(";"))
+                {
                     baseName = baseName.substring(1, baseName.length() - 1);
                 }
             }
         }
 
-        if (dims == 0) {
+        if (dims == 0)
+        {
             dims = 1;
         }
 
@@ -2499,16 +3387,20 @@ public class ExpressionLowerer {
         return new ArrayTypeInfo(elementType, dims);
     }
 
-    private int countLeadingBrackets(String s) {
+    private int countLeadingBrackets(String s)
+    {
         int count = 0;
-        for (int i = 0; i < s.length() && s.charAt(i) == '['; i++) {
+        for (int i = 0; i < s.length() && s.charAt(i) == '['; i++)
+        {
             count++;
         }
         return count;
     }
 
-    private SourceType parseElementType(String typeName) {
-        switch (typeName) {
+    private SourceType parseElementType(String typeName)
+    {
+        switch (typeName)
+        {
             case "int":
             case "I":
                 return PrimitiveSourceType.INT;
@@ -2534,8 +3426,12 @@ public class ExpressionLowerer {
             case "S":
                 return PrimitiveSourceType.SHORT;
             default:
-                String internalName = typeName.replace('.', '/');
-                return new ReferenceSourceType(internalName);
+                // The resolver, not a blind dot-to-slash swap: a dotted NESTED name
+                // (com.jme3.animation.AnimationFactory.Type) must become Outer$Nested, or the
+                // allocation references a class that does not exist and the method throws
+                // NoClassDefFoundError the first time it runs. Simple names resolve through
+                // imports and the current declaration the same way every other type use does.
+                return new ReferenceSourceType(ctx.getTypeResolver().resolveClassName(typeName));
         }
     }
 }

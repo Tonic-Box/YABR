@@ -6,15 +6,14 @@ import com.tonic.parser.constpool.Utf8Item;
 
 /**
  * Represents an entry in the LocalVariableTable attribute.
- * Describes a local variable's name, type, and scope within a method.
  */
-public class LocalVariableTableEntry {
+public class LocalVariableTableEntry
+{
     private final ConstPool constPool;
     private final int startPc, lengthPc, nameIndex, descriptorIndex, index;
 
     /**
      * Constructs a local variable table entry.
-     *
      * @param constPool the constant pool for resolving references
      * @param startPc the bytecode offset where the variable scope begins
      * @param lengthPc the length of the variable scope in bytecode
@@ -22,7 +21,8 @@ public class LocalVariableTableEntry {
      * @param descriptorIndex constant pool index of the variable type descriptor
      * @param index the local variable index in the frame
      */
-    public LocalVariableTableEntry(ConstPool constPool, int startPc, int lengthPc, int nameIndex, int descriptorIndex, int index) {
+    public LocalVariableTableEntry(ConstPool constPool, int startPc, int lengthPc, int nameIndex, int descriptorIndex, int index)
+    {
         this.constPool = constPool;
         this.startPc = startPc;
         this.lengthPc = lengthPc;
@@ -31,28 +31,49 @@ public class LocalVariableTableEntry {
         this.index = index;
     }
 
-    public int getStartPc() {
+    /**
+     * @return the start pc
+     */
+    public int getStartPc()
+    {
         return startPc;
     }
 
-    public int getLengthPc() {
+    /**
+     * @return the length pc
+     */
+    public int getLengthPc()
+    {
         return lengthPc;
     }
 
-    public int getNameIndex() {
+    /**
+     * @return the name index
+     */
+    public int getNameIndex()
+    {
         return nameIndex;
     }
 
-    public int getDescriptorIndex() {
+    /**
+     * @return the descriptor index
+     */
+    public int getDescriptorIndex()
+    {
         return descriptorIndex;
     }
 
-    public int getIndex() {
+    /**
+     * @return the index
+     */
+    public int getIndex()
+    {
         return index;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         String name = resolveUtf8(nameIndex);
         String descriptor = resolveUtf8(descriptorIndex);
         return "LocalVariableTableEntry{" +
@@ -64,9 +85,11 @@ public class LocalVariableTableEntry {
                 '}';
     }
 
-    private String resolveUtf8(int utf8Index) {
+    private String resolveUtf8(int utf8Index)
+    {
         Item<?> utf8Item = constPool.getItem(utf8Index);
-        if (utf8Item instanceof Utf8Item) {
+        if (utf8Item instanceof Utf8Item)
+        {
             return ((Utf8Item) utf8Item).getValue();
         }
         return "Unknown";

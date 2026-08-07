@@ -1,20 +1,21 @@
 package com.tonic.analysis.ssa.ir;
 
 import com.tonic.analysis.ssa.cfg.IRBlock;
+import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import com.tonic.analysis.ssa.visitor.IRVisitor;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-class PhiInstructionTest {
+class PhiInstructionTest
+{
 
     private PhiInstruction phi;
     private SSAValue result;
@@ -23,7 +24,8 @@ class PhiInstructionTest {
     private IRBlock block3;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         SSAValue.resetIdCounter();
         IRBlock.resetIdCounter();
         IRInstruction.resetIdCounter();
@@ -36,31 +38,37 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorSetsResultValue() {
+        void constructorSetsResultValue()
+        {
             assertNotNull(phi.getResult());
             assertEquals(result, phi.getResult());
         }
 
         @Test
-        void constructorInitializesEmptyIncomingValues() {
+        void constructorInitializesEmptyIncomingValues()
+        {
             assertTrue(phi.getIncomingValues().isEmpty());
             assertTrue(phi.getIncomingBlocks().isEmpty());
         }
 
         @Test
-        void constructorSetsResultDefinition() {
+        void constructorSetsResultDefinition()
+        {
             assertEquals(phi, result.getDefinition());
         }
     }
 
     @Nested
-    class AddIncomingTests {
+    class AddIncomingTests
+    {
 
         @Test
-        void addIncomingSingleValue() {
+        void addIncomingSingleValue()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
 
             phi.addIncoming(value1, block1);
@@ -70,7 +78,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void addIncomingMultipleValues() {
+        void addIncomingMultipleValues()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue value2 = new SSAValue(PrimitiveType.INT);
             SSAValue value3 = new SSAValue(PrimitiveType.INT);
@@ -86,7 +95,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void addIncomingUpdatesValueUses() {
+        void addIncomingUpdatesValueUses()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
 
             phi.addIncoming(value1, block1);
@@ -96,7 +106,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void addIncomingReplacesExistingBlockMapping() {
+        void addIncomingReplacesExistingBlockMapping()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue value2 = new SSAValue(PrimitiveType.INT);
 
@@ -108,7 +119,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void addIncomingWithNonSSAValue() {
+        void addIncomingWithNonSSAValue()
+        {
             Value constantValue = new TestConstantValue();
 
             phi.addIncoming(constantValue, block1);
@@ -118,10 +130,12 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class RemoveIncomingTests {
+    class RemoveIncomingTests
+    {
 
         @Test
-        void removeIncomingRemovesMapping() {
+        void removeIncomingRemovesMapping()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
 
@@ -132,7 +146,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void removeIncomingUpdatesValueUses() {
+        void removeIncomingUpdatesValueUses()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
 
@@ -143,7 +158,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void removeIncomingNonExistentBlockDoesNothing() {
+        void removeIncomingNonExistentBlockDoesNothing()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
 
@@ -154,7 +170,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void removeIncomingPreservesOtherMappings() {
+        void removeIncomingPreservesOtherMappings()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue value2 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
@@ -168,10 +185,12 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class GetIncomingTests {
+    class GetIncomingTests
+    {
 
         @Test
-        void getIncomingReturnsCorrectValue() {
+        void getIncomingReturnsCorrectValue()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
 
@@ -179,12 +198,14 @@ class PhiInstructionTest {
         }
 
         @Test
-        void getIncomingReturnsNullForNonExistentBlock() {
+        void getIncomingReturnsNullForNonExistentBlock()
+        {
             assertNull(phi.getIncoming(block1));
         }
 
         @Test
-        void getIncomingBlocksReturnsAllBlocks() {
+        void getIncomingBlocksReturnsAllBlocks()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue value2 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
@@ -198,7 +219,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void getIncomingBlocksReturnsEmptySetWhenNoIncoming() {
+        void getIncomingBlocksReturnsEmptySetWhenNoIncoming()
+        {
             Set<IRBlock> blocks = phi.getIncomingBlocks();
 
             assertTrue(blocks.isEmpty());
@@ -206,10 +228,12 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class OperandTests {
+    class OperandTests
+    {
 
         @Test
-        void getOperandsReturnsAllIncomingValues() {
+        void getOperandsReturnsAllIncomingValues()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue value2 = new SSAValue(PrimitiveType.INT);
             SSAValue value3 = new SSAValue(PrimitiveType.INT);
@@ -226,14 +250,16 @@ class PhiInstructionTest {
         }
 
         @Test
-        void getOperandsReturnsEmptyListWhenNoIncoming() {
+        void getOperandsReturnsEmptyListWhenNoIncoming()
+        {
             List<Value> operands = phi.getOperands();
 
             assertTrue(operands.isEmpty());
         }
 
         @Test
-        void getOperandsReturnsNewList() {
+        void getOperandsReturnsNewList()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(value1, block1);
 
@@ -245,10 +271,12 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class ReplaceOperandTests {
+    class ReplaceOperandTests
+    {
 
         @Test
-        void replaceOperandReplacesMatchingValue() {
+        void replaceOperandReplacesMatchingValue()
+        {
             SSAValue oldValue = new SSAValue(PrimitiveType.INT);
             SSAValue newValue = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(oldValue, block1);
@@ -259,7 +287,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void replaceOperandUpdatesOldValueUses() {
+        void replaceOperandUpdatesOldValueUses()
+        {
             SSAValue oldValue = new SSAValue(PrimitiveType.INT);
             SSAValue newValue = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(oldValue, block1);
@@ -271,7 +300,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void replaceOperandUpdatesNewValueUses() {
+        void replaceOperandUpdatesNewValueUses()
+        {
             SSAValue oldValue = new SSAValue(PrimitiveType.INT);
             SSAValue newValue = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(oldValue, block1);
@@ -283,7 +313,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void replaceOperandReplacesMultipleOccurrences() {
+        void replaceOperandReplacesMultipleOccurrences()
+        {
             SSAValue oldValue = new SSAValue(PrimitiveType.INT);
             SSAValue newValue = new SSAValue(PrimitiveType.INT);
             phi.addIncoming(oldValue, block1);
@@ -296,7 +327,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void replaceOperandDoesNothingForNonExistentValue() {
+        void replaceOperandDoesNothingForNonExistentValue()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT);
             SSAValue oldValue = new SSAValue(PrimitiveType.INT);
             SSAValue newValue = new SSAValue(PrimitiveType.INT);
@@ -310,10 +342,12 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class VisitorTests {
+    class VisitorTests
+    {
 
         @Test
-        void acceptCallsVisitPhi() {
+        void acceptCallsVisitPhi()
+        {
             TestVisitor visitor = new TestVisitor();
 
             phi.accept(visitor);
@@ -323,7 +357,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void acceptReturnsVisitorResult() {
+        void acceptReturnsVisitorResult()
+        {
             TestVisitor visitor = new TestVisitor();
             visitor.returnValue = 42;
 
@@ -334,19 +369,23 @@ class PhiInstructionTest {
     }
 
     @Nested
-    class PredicateTests {
+    class PredicateTests
+    {
 
         @Test
-        void isPhiReturnsTrue() {
+        void isPhiReturnsTrue()
+        {
             assertTrue(phi.isPhi());
         }
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringWithNoIncoming() {
+        void toStringWithNoIncoming()
+        {
             String str = phi.toString();
 
             assertTrue(str.contains("result"));
@@ -354,7 +393,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void toStringWithSingleIncoming() {
+        void toStringWithSingleIncoming()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT, "v1");
             phi.addIncoming(value1, block1);
 
@@ -367,7 +407,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void toStringWithMultipleIncoming() {
+        void toStringWithMultipleIncoming()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT, "v1");
             SSAValue value2 = new SSAValue(PrimitiveType.INT, "v2");
             phi.addIncoming(value1, block1);
@@ -382,7 +423,8 @@ class PhiInstructionTest {
         }
 
         @Test
-        void toStringFormatMatchesExpectedPattern() {
+        void toStringFormatMatchesExpectedPattern()
+        {
             SSAValue value1 = new SSAValue(PrimitiveType.INT, "v1");
             phi.addIncoming(value1, block1);
 
@@ -392,13 +434,15 @@ class PhiInstructionTest {
         }
     }
 
-    private static class TestVisitor implements IRVisitor<Integer> {
+    private static class TestVisitor implements IRVisitor<Integer>
+    {
         boolean visitedPhi = false;
         PhiInstruction lastPhi = null;
         Integer returnValue = 0;
 
         @Override
-        public Integer visitPhi(PhiInstruction phi) {
+        public Integer visitPhi(PhiInstruction phi)
+        {
             visitedPhi = true;
             lastPhi = phi;
             return returnValue;
@@ -453,14 +497,17 @@ class PhiInstructionTest {
         public Integer visitSimple(SimpleInstruction simple) { return null; }
     }
 
-    private static class TestConstantValue implements Value {
+    private static class TestConstantValue implements Value
+    {
         @Override
-        public com.tonic.analysis.ssa.type.IRType getType() {
+        public IRType getType()
+        {
             return PrimitiveType.INT;
         }
 
         @Override
-        public boolean isConstant() {
+        public boolean isConstant()
+        {
             return true;
         }
     }

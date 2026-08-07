@@ -9,70 +9,117 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.Collections;
 import java.util.List;
 
-public class SDGFormalInNode extends PDGNode {
+/**
+ * System dependence graph node for one formal parameter at a method entry; it defines the
+ * parameter's SSA value and uses nothing.
+ */
+public class SDGFormalInNode extends PDGNode
+{
 
     private SDGEntryNode entryNode;
     private final int parameterIndex;
     private final SSAValue formalParameter;
     private final String parameterType;
 
-    public SDGFormalInNode(int id, int parameterIndex, SSAValue formalParameter,
-                           String parameterType, IRBlock entryBlock) {
+    /**
+     * Creates a formal-in node that is not yet linked to its entry node.
+     * @param id node id
+     * @param parameterIndex zero-based parameter position
+     * @param formalParameter SSA value defined for the parameter, may be null
+     * @param parameterType parameter descriptor, may be null
+     * @param entryBlock the method's entry block
+     */
+    public SDGFormalInNode(int id, int parameterIndex, SSAValue formalParameter, String parameterType, IRBlock entryBlock)
+    {
         super(id, PDGNodeType.FORMAL_IN, entryBlock);
         this.parameterIndex = parameterIndex;
         this.formalParameter = formalParameter;
         this.parameterType = parameterType;
     }
 
-    public SDGEntryNode getEntryNode() {
+    /**
+     * @return the entry node
+     */
+    public SDGEntryNode getEntryNode()
+    {
         return entryNode;
     }
 
-    public void setEntryNode(SDGEntryNode entryNode) {
+    /**
+     * Links this parameter back to the entry node of its owning method.
+     * @param entryNode owning method's entry node
+     */
+    public void setEntryNode(SDGEntryNode entryNode)
+    {
         this.entryNode = entryNode;
     }
 
-    public int getParameterIndex() {
+    /**
+     * @return the parameter index
+     */
+    public int getParameterIndex()
+    {
         return parameterIndex;
     }
 
-    public SSAValue getFormalParameter() {
+    /**
+     * @return the formal parameter
+     */
+    public SSAValue getFormalParameter()
+    {
         return formalParameter;
     }
 
-    public String getParameterType() {
+    /**
+     * @return the parameter type
+     */
+    public String getParameterType()
+    {
         return parameterType;
     }
 
     @Override
-    public String getLabel() {
+    public String getLabel()
+    {
         String name = formalParameter != null ? formalParameter.getName() : "param" + parameterIndex;
         return "FORMAL_IN:" + name;
     }
 
     @Override
-    public List<Value> getUsedValues() {
+    public List<Value> getUsedValues()
+    {
         return Collections.emptyList();
     }
 
     @Override
-    public SSAValue getDefinedValue() {
+    public SSAValue getDefinedValue()
+    {
         return formalParameter;
     }
 
-    public boolean hasParameterType() {
+    /**
+     * @return true if a descriptor was recorded for this parameter
+     */
+    public boolean hasParameterType()
+    {
         return parameterType != null;
     }
 
-    public String getParameterName() {
-        if (formalParameter != null) {
+    /**
+     * @return the SSA value's name, or "paramN" when no formal value is bound
+     */
+    public String getParameterName()
+    {
+        if (formalParameter != null)
+        {
             return formalParameter.getName();
         }
         return "param" + parameterIndex;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return String.format("SDGFormalIn[%d: param%d (%s)]",
             getId(), parameterIndex, parameterType != null ? parameterType : "?");
     }

@@ -1,9 +1,7 @@
 package com.tonic.analysis.ssa.lift;
 
 import com.tonic.analysis.ssa.SSA;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -20,14 +18,16 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ObfuscatedControlFlowTest {
+class ObfuscatedControlFlowTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private SSA ssa;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         pool = TestUtils.emptyPool();
         int access = new AccessBuilder().setPublic().build();
         classFile = pool.createNewClass("com/test/SwitchDispatcher", access);
@@ -35,10 +35,12 @@ class ObfuscatedControlFlowTest {
     }
 
     @Nested
-    class TableSwitchControlFlowTests {
+    class TableSwitchControlFlowTests
+    {
 
         @Test
-        void tableSwitchWithMultipleCasesAndMerge() throws IOException {
+        void tableSwitchWithMultipleCasesAndMerge() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "dispatch", "I", "I");
 
@@ -61,7 +63,8 @@ class ObfuscatedControlFlowTest {
         }
 
         @Test
-        void tableSwitchWithStackValuesAcrossBranches() throws IOException {
+        void tableSwitchWithStackValuesAcrossBranches() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "stackDispatch", "I", "I");
 
@@ -85,7 +88,8 @@ class ObfuscatedControlFlowTest {
             assertTrue(loweredCode.getCode().length > 0);
         }
 
-        private byte[] buildTableSwitchBytecode() throws IOException {
+        private byte[] buildTableSwitchBytecode() throws IOException
+        {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
 
@@ -94,7 +98,8 @@ class ObfuscatedControlFlowTest {
 
             int switchStart = 1;
             int padding = (4 - ((switchStart + 1) % 4)) % 4;
-            for (int i = 0; i < padding; i++) {
+            for (int i = 0; i < padding; i++)
+            {
                 dos.writeByte(0);
             }
 
@@ -129,7 +134,8 @@ class ObfuscatedControlFlowTest {
             return baos.toByteArray();
         }
 
-        private byte[] buildTableSwitchWithStackBytecode() throws IOException {
+        private byte[] buildTableSwitchWithStackBytecode() throws IOException
+        {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
 
@@ -140,7 +146,8 @@ class ObfuscatedControlFlowTest {
 
             int switchStart = 3;
             int padding = (4 - ((switchStart + 1) % 4)) % 4;
-            for (int i = 0; i < padding; i++) {
+            for (int i = 0; i < padding; i++)
+            {
                 dos.writeByte(0);
             }
 
@@ -173,10 +180,12 @@ class ObfuscatedControlFlowTest {
     }
 
     @Nested
-    class LookupSwitchControlFlowTests {
+    class LookupSwitchControlFlowTests
+    {
 
         @Test
-        void lookupSwitchWithSparseCases() throws IOException {
+        void lookupSwitchWithSparseCases() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "sparseDispatch", "I", "I");
 
@@ -197,7 +206,8 @@ class ObfuscatedControlFlowTest {
             assertTrue(loweredCode.getCode().length > 0);
         }
 
-        private byte[] buildLookupSwitchBytecode() throws IOException {
+        private byte[] buildLookupSwitchBytecode() throws IOException
+        {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
 
@@ -206,7 +216,8 @@ class ObfuscatedControlFlowTest {
 
             int switchStart = 1;
             int padding = (4 - ((switchStart + 1) % 4)) % 4;
-            for (int i = 0; i < padding; i++) {
+            for (int i = 0; i < padding; i++)
+            {
                 dos.writeByte(0);
             }
 
@@ -237,10 +248,12 @@ class ObfuscatedControlFlowTest {
     }
 
     @Nested
-    class ComplexControlFlowTests {
+    class ComplexControlFlowTests
+    {
 
         @Test
-        void nestedSwitchAndBranches() throws IOException {
+        void nestedSwitchAndBranches() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "complexFlow", "I", "I", "I");
 
@@ -262,7 +275,8 @@ class ObfuscatedControlFlowTest {
         }
 
         @Test
-        void switchFollowedByConditional() throws IOException {
+        void switchFollowedByConditional() throws IOException
+        {
             int access = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry method = classFile.createNewMethod(access, "switchThenBranch", "I", "I", "I");
 
@@ -283,7 +297,8 @@ class ObfuscatedControlFlowTest {
             assertTrue(loweredCode.getCode().length > 0);
         }
 
-        private byte[] buildComplexControlFlowBytecode() throws IOException {
+        private byte[] buildComplexControlFlowBytecode() throws IOException
+        {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
 
@@ -301,7 +316,8 @@ class ObfuscatedControlFlowTest {
             return baos.toByteArray();
         }
 
-        private byte[] buildSwitchThenBranchBytecode() throws IOException {
+        private byte[] buildSwitchThenBranchBytecode() throws IOException
+        {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
 
@@ -310,7 +326,8 @@ class ObfuscatedControlFlowTest {
 
             int switchStart = 1;
             int padding = (4 - ((switchStart + 1) % 4)) % 4;
-            for (int i = 0; i < padding; i++) {
+            for (int i = 0; i < padding; i++)
+            {
                 dos.writeByte(0);
             }
 

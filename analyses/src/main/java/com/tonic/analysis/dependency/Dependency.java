@@ -3,34 +3,55 @@ package com.tonic.analysis.dependency;
 import java.util.Objects;
 
 /**
- * Represents a dependency from one class to another.
+ * A directed dependency edge from one class to another, tagged with its kind.
  */
-public class Dependency {
+public class Dependency
+{
 
     private final String fromClass;
     private final String toClass;
     private final DependencyType type;
 
-    public Dependency(String fromClass, String toClass, DependencyType type) {
+    /**
+     * Creates a dependency edge.
+     * @param fromClass the depending class
+     * @param toClass the class depended upon
+     * @param type the kind of dependency
+     */
+    public Dependency(String fromClass, String toClass, DependencyType type)
+    {
         this.fromClass = fromClass;
         this.toClass = toClass;
         this.type = type;
     }
 
-    public String getFromClass() {
+    /**
+     * @return the from class
+     */
+    public String getFromClass()
+    {
         return fromClass;
     }
 
-    public String getToClass() {
+    /**
+     * @return the to class
+     */
+    public String getToClass()
+    {
         return toClass;
     }
 
-    public DependencyType getType() {
+    /**
+     * @return the type
+     */
+    public DependencyType getType()
+    {
         return type;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof Dependency)) return false;
         Dependency that = (Dependency) o;
@@ -40,12 +61,14 @@ public class Dependency {
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return Objects.hash(fromClass, toClass, type);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return fromClass + " --[" + type + "]--> " + toClass;
     }
 }

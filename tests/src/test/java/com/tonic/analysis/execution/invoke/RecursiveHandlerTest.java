@@ -9,15 +9,20 @@ import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.parser.ClassFile;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
+import com.tonic.parser.attribute.CodeAttribute;
+import com.tonic.parser.constpool.Utf8Item;
+import java.util.ArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
 
-class RecursiveHandlerTest {
+class RecursiveHandlerTest
+{
 
     private ClassResolver resolver;
     private NativeRegistry nativeRegistry;
@@ -26,7 +31,8 @@ class RecursiveHandlerTest {
     private HeapManager heapManager;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         resolver = mock(ClassResolver.class);
         nativeRegistry = new NativeRegistry();
         handler = new RecursiveHandler(resolver, nativeRegistry);
@@ -36,34 +42,40 @@ class RecursiveHandlerTest {
 
         context = new InvocationContext() {
             @Override
-            public CallStack getCallStack() {
+            public CallStack getCallStack()
+            {
                 return callStack;
             }
 
             @Override
-            public HeapManager getHeapManager() {
+            public HeapManager getHeapManager()
+            {
                 return heapManager;
             }
 
             @Override
-            public ClassResolver getClassResolver() {
+            public ClassResolver getClassResolver()
+            {
                 return resolver;
             }
         };
     }
 
     @Test
-    void testConstructorWithNullResolver() {
+    void testConstructorWithNullResolver()
+    {
         assertThrows(IllegalArgumentException.class, () -> new RecursiveHandler(null));
     }
 
     @Test
-    void testConstructorWithNullRegistry() {
+    void testConstructorWithNullRegistry()
+    {
         assertThrows(IllegalArgumentException.class, () -> new RecursiveHandler(resolver, null));
     }
 
     @Test
-    void testStaticMethodInvocation() {
+    void testStaticMethodInvocation()
+    {
         MethodEntry method = createTestMethod("TestClass", "staticMethod", "()I", 0x0009);
         ConcreteValue[] args = new ConcreteValue[0];
 
@@ -74,14 +86,14 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testInstanceMethodInvocation() {
+    void testInstanceMethodInvocation()
+    {
         MethodEntry method = createTestMethod("TestClass", "instanceMethod", "()V", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] args = new ConcreteValue[0];
 
         when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
-            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
-                ResolvedMethod.InvokeKind.VIRTUAL));
+            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class), ResolvedMethod.InvokeKind.VIRTUAL));
 
         InvocationResult result = handler.invoke(method, receiver, args, context);
 
@@ -92,7 +104,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testInstanceMethodWithArguments() {
+    void testInstanceMethodWithArguments()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "(II)I", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] args = new ConcreteValue[] {
@@ -101,8 +114,7 @@ class RecursiveHandlerTest {
         };
 
         when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
-            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
-                ResolvedMethod.InvokeKind.VIRTUAL));
+            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class), ResolvedMethod.InvokeKind.VIRTUAL));
 
         InvocationResult result = handler.invoke(method, receiver, args, context);
 
@@ -114,7 +126,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testStaticMethodWithArguments() {
+    void testStaticMethodWithArguments()
+    {
         MethodEntry method = createTestMethod("TestClass", "staticMethod", "(JI)J", 0x0009);
         ConcreteValue[] args = new ConcreteValue[] {
             ConcreteValue.longValue(100L),
@@ -131,7 +144,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testWideArgumentExpansion() {
+    void testWideArgumentExpansion()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "(DJI)V", 0x0009);
         ConcreteValue[] args = new ConcreteValue[] {
             ConcreteValue.doubleValue(3.14),
@@ -151,14 +165,14 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testVirtualDispatchResolution() {
+    void testVirtualDispatchResolution()
+    {
         MethodEntry baseMethod = createTestMethod("BaseClass", "method", "()V", 0x0001);
         MethodEntry derivedMethod = createTestMethod("DerivedClass", "method", "()V", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "DerivedClass");
 
         when(resolver.resolveVirtualMethod(eq("DerivedClass"), eq("method"), eq("()V")))
-            .thenReturn(new ResolvedMethod(derivedMethod, mock(ClassFile.class),
-                ResolvedMethod.InvokeKind.VIRTUAL));
+            .thenReturn(new ResolvedMethod(derivedMethod, mock(ClassFile.class), ResolvedMethod.InvokeKind.VIRTUAL));
 
         InvocationResult result = handler.invoke(baseMethod, receiver, new ConcreteValue[0], context);
 
@@ -167,7 +181,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testPrivateMethodNoVirtualDispatch() {
+    void testPrivateMethodNoVirtualDispatch()
+    {
         MethodEntry method = createTestMethod("TestClass", "privateMethod", "()V", 0x0002);
         ObjectInstance receiver = new ObjectInstance(1, "DerivedClass");
 
@@ -178,7 +193,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testConstructorNoVirtualDispatch() {
+    void testConstructorNoVirtualDispatch()
+    {
         MethodEntry method = createTestMethod("TestClass", "<init>", "()V", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
 
@@ -189,7 +205,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testNativeMethodWithHandler() {
+    void testNativeMethodWithHandler()
+    {
         MethodEntry method = createTestMethod("TestClass", "nativeMethod", "()I", 0x0101);
         nativeRegistry.register("TestClass", "nativeMethod", "()I",
             (receiver, args, ctx) -> ConcreteValue.intValue(42));
@@ -201,14 +218,16 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testNativeMethodWithoutHandler() {
+    void testNativeMethodWithoutHandler()
+    {
         MethodEntry method = createTestMethod("TestClass", "nativeMethod", "()V", 0x0101);
 
         assertThrows(UnsupportedOperationException.class, () -> handler.invoke(method, null, new ConcreteValue[0], context));
     }
 
     @Test
-    void testNativeMethodThrowsException() {
+    void testNativeMethodThrowsException()
+    {
         MethodEntry method = createTestMethod("TestClass", "nativeMethod", "()V", 0x0101);
         nativeRegistry.register("TestClass", "nativeMethod", "()V",
             (receiver, args, ctx) -> {
@@ -223,14 +242,14 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testReceiverPrepending() {
+    void testReceiverPrepending()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "(I)V", 0x0001);
         ObjectInstance receiver = new ObjectInstance(1, "TestClass");
         ConcreteValue[] args = new ConcreteValue[] { ConcreteValue.intValue(99) };
 
         when(resolver.resolveVirtualMethod(anyString(), anyString(), anyString()))
-            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class),
-                ResolvedMethod.InvokeKind.VIRTUAL));
+            .thenReturn(new ResolvedMethod(method, mock(ClassFile.class), ResolvedMethod.InvokeKind.VIRTUAL));
 
         InvocationResult result = handler.invoke(method, receiver, args, context);
 
@@ -241,7 +260,8 @@ class RecursiveHandlerTest {
     }
 
     @Test
-    void testNullReceiverHandling() {
+    void testNullReceiverHandling()
+    {
         MethodEntry method = createTestMethod("TestClass", "method", "()V", 0x0001);
 
         InvocationResult result = handler.invoke(method, null, new ConcreteValue[0], context);
@@ -251,13 +271,14 @@ class RecursiveHandlerTest {
         assertTrue(frame.getLocals().get(0).isNull());
     }
 
-    private MethodEntry createTestMethod(String owner, String name, String desc, int access) {
+    private MethodEntry createTestMethod(String owner, String name, String desc, int access)
+    {
         ClassFile classFile = mock(ClassFile.class);
         when(classFile.getClassName()).thenReturn(owner);
 
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
-        com.tonic.parser.constpool.Utf8Item nameItem = mock(com.tonic.parser.constpool.Utf8Item.class);
-        com.tonic.parser.constpool.Utf8Item descItem = mock(com.tonic.parser.constpool.Utf8Item.class);
+        ConstPool constPool = mock(ConstPool.class);
+        Utf8Item nameItem = mock(Utf8Item.class);
+        Utf8Item descItem = mock(Utf8Item.class);
         when(nameItem.getValue()).thenReturn(name);
         when(descItem.getValue()).thenReturn(desc);
         doReturn(nameItem).when(constPool).getItem(1);
@@ -266,7 +287,7 @@ class RecursiveHandlerTest {
 
         MethodEntry method = spy(new MethodEntry(classFile, access, 1, 2, new ArrayList<>()));
 
-        com.tonic.parser.attribute.CodeAttribute codeAttr = mock(com.tonic.parser.attribute.CodeAttribute.class);
+        CodeAttribute codeAttr = mock(CodeAttribute.class);
         when(codeAttr.getMaxLocals()).thenReturn(10);
         when(codeAttr.getMaxStack()).thenReturn(10);
         when(codeAttr.getCode()).thenReturn(new byte[] { (byte)0xB1 });

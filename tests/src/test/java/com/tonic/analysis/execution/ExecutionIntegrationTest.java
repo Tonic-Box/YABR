@@ -17,14 +17,16 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExecutionIntegrationTest {
+class ExecutionIntegrationTest
+{
 
     private ClassFile classFile;
     private ClassPool classPool;
     private BytecodeContext context;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         classFile = TestUtils.loadTestFixture("ExecutionTestFixture");
         classPool = new ClassPool();
         classPool.put(classFile);
@@ -38,22 +40,26 @@ class ExecutionIntegrationTest {
             .build();
     }
 
-    private MethodEntry findMethod(String name) {
+    private MethodEntry findMethod(String name)
+    {
         return classFile.getMethods().stream()
             .filter(m -> m.getName().equals(name))
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("Method not found: " + name));
     }
 
-    private BytecodeEngine createEngine() {
+    private BytecodeEngine createEngine()
+    {
         return new BytecodeEngine(context);
     }
 
     @Nested
-    class SimpleRecursionTests {
+    class SimpleRecursionTests
+    {
 
         @Test
-        void testFactorial_baseCase_zero() {
+        void testFactorial_baseCase_zero()
+        {
             MethodEntry method = findMethod("factorial");
             BytecodeEngine engine = createEngine();
 
@@ -64,7 +70,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFactorial_baseCase_one() {
+        void testFactorial_baseCase_one()
+        {
             MethodEntry method = findMethod("factorial");
             BytecodeEngine engine = createEngine();
 
@@ -75,7 +82,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFactorial_five() {
+        void testFactorial_five()
+        {
             MethodEntry method = findMethod("factorial");
             BytecodeEngine engine = createEngine();
 
@@ -86,7 +94,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFactorial_ten() {
+        void testFactorial_ten()
+        {
             MethodEntry method = findMethod("factorial");
             BytecodeEngine engine = createEngine();
 
@@ -97,7 +106,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFibonacci_baseCase_zero() {
+        void testFibonacci_baseCase_zero()
+        {
             MethodEntry method = findMethod("fibonacci");
             BytecodeEngine engine = createEngine();
 
@@ -108,7 +118,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFibonacci_baseCase_one() {
+        void testFibonacci_baseCase_one()
+        {
             MethodEntry method = findMethod("fibonacci");
             BytecodeEngine engine = createEngine();
 
@@ -119,7 +130,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFibonacci_ten() {
+        void testFibonacci_ten()
+        {
             MethodEntry method = findMethod("fibonacci");
             BytecodeEngine engine = createEngine();
 
@@ -130,7 +142,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testSumDigits() {
+        void testSumDigits()
+        {
             MethodEntry method = findMethod("sumDigits");
             BytecodeEngine engine = createEngine();
 
@@ -141,7 +154,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testSumDigits_zero() {
+        void testSumDigits_zero()
+        {
             MethodEntry method = findMethod("sumDigits");
             BytecodeEngine engine = createEngine();
 
@@ -152,12 +166,14 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFactorialIterative_matchesRecursive() {
+        void testFactorialIterative_matchesRecursive()
+        {
             MethodEntry recursive = findMethod("factorial");
             MethodEntry iterative = findMethod("factorialIterative");
             BytecodeEngine engine = createEngine();
 
-            for (int n = 0; n <= 10; n++) {
+            for (int n = 0; n <= 10; n++)
+            {
                 BytecodeResult recursiveResult = engine.execute(recursive, ConcreteValue.intValue(n));
                 BytecodeResult iterativeResult = engine.execute(iterative, ConcreteValue.intValue(n));
 
@@ -169,10 +185,12 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class MutualRecursionTests {
+    class MutualRecursionTests
+    {
 
         @Test
-        void testIsEven_zero() {
+        void testIsEven_zero()
+        {
             MethodEntry method = findMethod("isEven");
             BytecodeEngine engine = createEngine();
 
@@ -183,7 +201,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testIsEven_ten() {
+        void testIsEven_ten()
+        {
             MethodEntry method = findMethod("isEven");
             BytecodeEngine engine = createEngine();
 
@@ -194,7 +213,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testIsEven_seven() {
+        void testIsEven_seven()
+        {
             MethodEntry method = findMethod("isEven");
             BytecodeEngine engine = createEngine();
 
@@ -205,7 +225,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testIsOdd_zero() {
+        void testIsOdd_zero()
+        {
             MethodEntry method = findMethod("isOdd");
             BytecodeEngine engine = createEngine();
 
@@ -216,7 +237,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testIsOdd_seven() {
+        void testIsOdd_seven()
+        {
             MethodEntry method = findMethod("isOdd");
             BytecodeEngine engine = createEngine();
 
@@ -227,7 +249,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testIsOdd_ten() {
+        void testIsOdd_ten()
+        {
             MethodEntry method = findMethod("isOdd");
             BytecodeEngine engine = createEngine();
 
@@ -238,7 +261,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testMaleSequence_zero() {
+        void testMaleSequence_zero()
+        {
             MethodEntry method = findMethod("maleSequence");
             BytecodeEngine engine = createEngine();
 
@@ -249,7 +273,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFemaleSequence_zero() {
+        void testFemaleSequence_zero()
+        {
             MethodEntry method = findMethod("femaleSequence");
             BytecodeEngine engine = createEngine();
 
@@ -261,16 +286,16 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class MultiMethodChainTests {
+    class MultiMethodChainTests
+    {
 
         @Test
-        void testChainedComputation() {
+        void testChainedComputation()
+        {
             MethodEntry method = findMethod("chainedComputation");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(3),
-                ConcreteValue.intValue(4));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(3), ConcreteValue.intValue(4));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             // a=3, b=4
@@ -281,7 +306,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testMixedChain() {
+        void testMixedChain()
+        {
             MethodEntry method = findMethod("mixedChain");
             BytecodeEngine engine = createEngine();
 
@@ -299,10 +325,12 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class PrimitiveOperationsTests {
+    class PrimitiveOperationsTests
+    {
 
         @Test
-        void testBitwiseMagic() {
+        void testBitwiseMagic()
+        {
             MethodEntry method = findMethod("bitwiseMagic");
             BytecodeEngine engine = createEngine();
 
@@ -320,7 +348,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testCompareChain_aGreaterThanB_bGreaterThanC() {
+        void testCompareChain_aGreaterThanB_bGreaterThanC()
+        {
             MethodEntry method = findMethod("compareChain");
             BytecodeEngine engine = createEngine();
 
@@ -330,12 +359,13 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(2));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
-            // a > b (10 > 5): true, b > c (5 > 2): true → return a + b + c = 17
+            // a > b (10 > 5): true, b > c (5 > 2): true -> return a + b + c = 17
             assertEquals(17, result.getReturnValue().asInt());
         }
 
         @Test
-        void testCompareChain_aGreaterThanB_bNotGreaterThanC() {
+        void testCompareChain_aGreaterThanB_bNotGreaterThanC()
+        {
             MethodEntry method = findMethod("compareChain");
             BytecodeEngine engine = createEngine();
 
@@ -345,12 +375,13 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(8));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
-            // a > b (10 > 5): true, b > c (5 > 8): false → return a - b + c = 10 - 5 + 8 = 13
+            // a > b (10 > 5): true, b > c (5 > 8): false -> return a - b + c = 10 - 5 + 8 = 13
             assertEquals(13, result.getReturnValue().asInt());
         }
 
         @Test
-        void testCompareChain_aNotGreaterThanB_aGreaterThanC() {
+        void testCompareChain_aNotGreaterThanB_aGreaterThanC()
+        {
             MethodEntry method = findMethod("compareChain");
             BytecodeEngine engine = createEngine();
 
@@ -360,12 +391,13 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(3));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
-            // a > b (5 > 10): false, a > c (5 > 3): true → return a * 2 = 10
+            // a > b (5 > 10): false, a > c (5 > 3): true -> return a * 2 = 10
             assertEquals(10, result.getReturnValue().asInt());
         }
 
         @Test
-        void testCompareChain_aNotGreaterThanB_aNotGreaterThanC() {
+        void testCompareChain_aNotGreaterThanB_aNotGreaterThanC()
+        {
             MethodEntry method = findMethod("compareChain");
             BytecodeEngine engine = createEngine();
 
@@ -375,12 +407,13 @@ class ExecutionIntegrationTest {
                 ConcreteValue.intValue(8));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
-            // a > b (5 > 10): false, a > c (5 > 8): false → return c * 2 = 16
+            // a > b (5 > 10): false, a > c (5 > 8): false -> return c * 2 = 16
             assertEquals(16, result.getReturnValue().asInt());
         }
 
         @Test
-        void testPrimitiveOrchestra() {
+        void testPrimitiveOrchestra()
+        {
             MethodEntry method = findMethod("primitiveOrchestra");
             BytecodeEngine engine = createEngine();
 
@@ -400,10 +433,12 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class ArrayOperationsTests {
+    class ArrayOperationsTests
+    {
 
         @Test
-        void testSumArray_simple() {
+        void testSumArray_simple()
+        {
             MethodEntry method = findMethod("sumArray");
             BytecodeEngine engine = createEngine();
 
@@ -417,7 +452,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testSumArray_empty() {
+        void testSumArray_empty()
+        {
             MethodEntry method = findMethod("sumArray");
             BytecodeEngine engine = createEngine();
 
@@ -431,7 +467,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testSumArray_single() {
+        void testSumArray_single()
+        {
             MethodEntry method = findMethod("sumArray");
             BytecodeEngine engine = createEngine();
 
@@ -445,7 +482,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFindMax_typical() {
+        void testFindMax_typical()
+        {
             MethodEntry method = findMethod("findMax");
             BytecodeEngine engine = createEngine();
 
@@ -459,7 +497,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFindMax_allSame() {
+        void testFindMax_allSame()
+        {
             MethodEntry method = findMethod("findMax");
             BytecodeEngine engine = createEngine();
 
@@ -473,7 +512,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFindMax_negatives() {
+        void testFindMax_negatives()
+        {
             MethodEntry method = findMethod("findMax");
             BytecodeEngine engine = createEngine();
 
@@ -487,7 +527,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testCreateAndSum() {
+        void testCreateAndSum()
+        {
             MethodEntry method = findMethod("createAndSum");
             BytecodeEngine engine = createEngine();
 
@@ -501,7 +542,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testBinarySearch_found() {
+        void testBinarySearch_found()
+        {
             MethodEntry method = findMethod("binarySearch");
             BytecodeEngine engine = createEngine();
 
@@ -519,7 +561,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testBinarySearch_notFound() {
+        void testBinarySearch_notFound()
+        {
             MethodEntry method = findMethod("binarySearch");
             BytecodeEngine engine = createEngine();
 
@@ -537,7 +580,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testBinarySearch_firstElement() {
+        void testBinarySearch_firstElement()
+        {
             MethodEntry method = findMethod("binarySearch");
             BytecodeEngine engine = createEngine();
 
@@ -555,7 +599,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testBinarySearch_lastElement() {
+        void testBinarySearch_lastElement()
+        {
             MethodEntry method = findMethod("binarySearch");
             BytecodeEngine engine = createEngine();
 
@@ -572,9 +617,11 @@ class ExecutionIntegrationTest {
             assertEquals(4, result.getReturnValue().asInt());
         }
 
-        private ConcreteValue createIntArray(int[] data) {
+        private ConcreteValue createIntArray(int[] data)
+        {
             ArrayInstance array = context.getHeapManager().newArray("I", data.length);
-            for (int i = 0; i < data.length; i++) {
+            for (int i = 0; i < data.length; i++)
+            {
                 array.setInt(i, data[i]);
             }
             return ConcreteValue.reference(array);
@@ -582,62 +629,60 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class ExceptionHandlingTests {
+    class ExceptionHandlingTests
+    {
 
         @Test
-        void testSafeDivide_normal() {
+        void testSafeDivide_normal()
+        {
             MethodEntry method = findMethod("safeDivide");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(2));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(2));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(5, result.getReturnValue().asInt());
         }
 
         @Test
-        void testSafeDivide_byZero() {
+        void testSafeDivide_byZero()
+        {
             MethodEntry method = findMethod("safeDivide");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(0));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(0));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(-1, result.getReturnValue().asInt());
         }
 
         @Test
-        void testDivideOrThrow_normal() {
+        void testDivideOrThrow_normal()
+        {
             MethodEntry method = findMethod("divideOrThrow");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(20),
-                ConcreteValue.intValue(4));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(20), ConcreteValue.intValue(4));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(5, result.getReturnValue().asInt());
         }
 
         @Test
-        void testDivideOrThrow_byZero() {
+        void testDivideOrThrow_byZero()
+        {
             MethodEntry method = findMethod("divideOrThrow");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(10),
-                ConcreteValue.intValue(0));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(10), ConcreteValue.intValue(0));
 
             assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
             assertNotNull(result.getStackTrace());
         }
 
         @Test
-        void testNestedTryCatch_noException() {
+        void testNestedTryCatch_noException()
+        {
             MethodEntry method = findMethod("nestedTryCatch");
             BytecodeEngine engine = createEngine();
 
@@ -651,7 +696,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testNestedTryCatch_innerException() {
+        void testNestedTryCatch_innerException()
+        {
             MethodEntry method = findMethod("nestedTryCatch");
             BytecodeEngine engine = createEngine();
 
@@ -665,52 +711,48 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testSafeRecursiveSum_withinLimit() {
+        void testSafeRecursiveSum_withinLimit()
+        {
             MethodEntry method = findMethod("safeRecursiveSum");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(5),
-                ConcreteValue.intValue(10));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(5), ConcreteValue.intValue(10));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(15, result.getReturnValue().asInt());
         }
 
         @Test
-        void testSafeRecursiveSum_exceedsLimit() {
+        void testSafeRecursiveSum_exceedsLimit()
+        {
             MethodEntry method = findMethod("safeRecursiveSum");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(15),
-                ConcreteValue.intValue(10));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(15), ConcreteValue.intValue(10));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(-1, result.getReturnValue().asInt());
         }
 
         @Test
-        void testRecursiveWithException_normal() {
+        void testRecursiveWithException_normal()
+        {
             MethodEntry method = findMethod("recursiveWithException");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(5),
-                ConcreteValue.intValue(10));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(5), ConcreteValue.intValue(10));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(15, result.getReturnValue().asInt());
         }
 
         @Test
-        void testRecursiveWithException_exceedsLimit() {
+        void testRecursiveWithException_exceedsLimit()
+        {
             MethodEntry method = findMethod("recursiveWithException");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(15),
-                ConcreteValue.intValue(10));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(15), ConcreteValue.intValue(10));
 
             assertEquals(BytecodeResult.Status.EXCEPTION, result.getStatus());
             assertNotNull(result.getStackTrace());
@@ -718,10 +760,12 @@ class ExecutionIntegrationTest {
     }
 
     @Nested
-    class VerificationTests {
+    class VerificationTests
+    {
 
         @Test
-        void testFactorial_completes() {
+        void testFactorial_completes()
+        {
             MethodEntry method = findMethod("factorial");
             BytecodeEngine engine = createEngine();
 
@@ -731,7 +775,8 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testFibonacci_completes() {
+        void testFibonacci_completes()
+        {
             MethodEntry method = findMethod("fibonacci");
             BytecodeEngine engine = createEngine();
 
@@ -741,13 +786,12 @@ class ExecutionIntegrationTest {
         }
 
         @Test
-        void testAckermann_small() {
+        void testAckermann_small()
+        {
             MethodEntry method = findMethod("ackermann");
             BytecodeEngine engine = createEngine();
 
-            BytecodeResult result = engine.execute(method,
-                ConcreteValue.intValue(2),
-                ConcreteValue.intValue(2));
+            BytecodeResult result = engine.execute(method, ConcreteValue.intValue(2), ConcreteValue.intValue(2));
 
             assertEquals(BytecodeResult.Status.COMPLETED, result.getStatus());
             assertEquals(7, result.getReturnValue().asInt());

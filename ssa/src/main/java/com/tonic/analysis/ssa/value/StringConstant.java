@@ -3,42 +3,51 @@ package com.tonic.analysis.ssa.value;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 
+import java.util.Objects;
+
 /**
  * Represents a string constant.
  */
-public final class StringConstant extends Constant {
+public final class StringConstant extends Constant
+{
 
     private final String value;
 
     /**
      * Creates a string constant with the given value.
-     *
      * @param value the string value
      */
-    public StringConstant(String value) {
+    public StringConstant(String value)
+    {
         this.value = value;
     }
 
     @Override
-    public IRType getType() {
+    public IRType getType()
+    {
         return ReferenceType.STRING;
     }
 
     @Override
-    public String getValue() {
+    public String getValue()
+    {
         return value;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return "\"" + escape(value) + "\"";
     }
 
-    private static String escape(String s) {
+    private static String escape(String s)
+    {
         if (s == null) return "null";
         StringBuilder sb = new StringBuilder();
-        for (char c : s.toCharArray()) {
-            switch (c) {
+        for (char c : s.toCharArray())
+        {
+            switch (c)
+            {
                 case '\n':
                     sb.append("\\n");
                     break;
@@ -63,15 +72,17 @@ public final class StringConstant extends Constant {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(Object o)
+    {
         if (this == o) return true;
         if (!(o instanceof StringConstant)) return false;
         StringConstant that = (StringConstant) o;
-        return value != null ? value.equals(that.value) : that.value == null;
+        return Objects.equals(value, that.value);
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
         return value != null ? value.hashCode() : 0;
     }
 }

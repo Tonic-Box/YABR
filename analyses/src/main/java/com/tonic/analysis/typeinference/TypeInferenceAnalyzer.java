@@ -12,15 +12,11 @@ import com.tonic.analysis.ssa.value.Value;
 import java.util.*;
 
 /**
- * Performs type inference and nullability analysis on SSA IR.
- *
- * <p>This analyzer computes:
- * - Inferred types for values without explicit type info
- * - Nullability states (definitely null, definitely not null, unknown)
- * - Possible types for polymorphic receivers
- * - Type narrowing from instanceof checks and null comparisons
+ * Dataflow analyzer that infers types and nullability for SSA values, narrowing them at
+ * instanceof checks and null comparisons.
  */
-public class TypeInferenceAnalyzer {
+public class TypeInferenceAnalyzer
+{
 
     private final IRMethod method;
     private final Map<SSAValue, TypeState> valueTypes;
@@ -29,7 +25,12 @@ public class TypeInferenceAnalyzer {
     private final Map<SSAValue, TypeCheckInstruction> instanceOfDefs;
     private boolean analyzed;
 
-    public TypeInferenceAnalyzer(IRMethod method) {
+    /**
+     * Creates an analyzer with no state computed; call analyze() to populate it.
+     * @param method SSA method to analyze
+     */
+    public TypeInferenceAnalyzer(IRMethod method)
+    {
         this.method = method;
         this.valueTypes = new HashMap<>();
         this.blockEntryStates = new HashMap<>();
@@ -39,9 +40,10 @@ public class TypeInferenceAnalyzer {
     }
 
     /**
-     * Runs the type inference analysis.
+     * Seeds parameter types, indexes instanceof checks and runs the dataflow to fixpoint.
      */
-    public void analyze() {
+    public void analyze()
+    {
         if (analyzed) return;
 
         initializeParameters();
@@ -53,16 +55,20 @@ public class TypeInferenceAnalyzer {
         analyzed = true;
     }
 
-    private void initializeParameters() {
-        for (SSAValue param : method.getParameters()) {
+    private void initializeParameters()
+    {
+        for (SSAValue param : method.getParameters())
+        {
             IRType type = param.getType();
             Nullability nullability = type.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
             valueTypes.put(param, new TypeState(type, nullability));
         }
     }
 
-    private void runDataflowAnalysis() {
-        for (IRBlock block : method.getBlocks()) {
+    private void runDataflowAnalysis()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
             blockEntryStates.put(block, new HashMap<>());
             blockExitStates.put(block, new HashMap<>());
         }
@@ -71,7 +77,8 @@ public class TypeInferenceAnalyzer {
         Queue<IRBlock> worklist = new LinkedList<>(method.getReversePostOrder());
         Set<IRBlock> inWorklist = new HashSet<>(worklist);
 
-        while (!worklist.isEmpty()) {
+        while (!worklist.isEmpty())
+        {
             IRBlock block = worklist.poll();
             inWorklist.remove(block);
 
@@ -82,10 +89,13 @@ public class TypeInferenceAnalyzer {
             Map<SSAValue, TypeState> exitState = processBlock(block, new HashMap<>(entryState));
 
             Map<SSAValue, TypeState> oldExit = blockExitStates.get(block);
-            if (!exitState.equals(oldExit)) {
+            if (!exitState.equals(oldExit))
+            {
                 blockExitStates.put(block, exitState);
-                for (IRBlock succ : block.getSuccessors()) {
-                    if (!inWorklist.contains(succ)) {
+                for (IRBlock succ : block.getSuccessors())
+                {
+                    if (!inWorklist.contains(succ))
+                    {
                         worklist.add(succ);
                         inWorklist.add(succ);
                     }
@@ -94,28 +104,37 @@ public class TypeInferenceAnalyzer {
         }
     }
 
-    private Map<SSAValue, TypeState> computeBlockEntryState(IRBlock block) {
+    private Map<SSAValue, TypeState> computeBlockEntryState(IRBlock block)
+    {
         Map<SSAValue, TypeState> entryState = new HashMap<>();
 
         Set<IRBlock> preds = block.getPredecessors();
-        if (preds.isEmpty()) {
+        if (preds.isEmpty())
+        {
             // Entry block - use parameter types
             entryState.putAll(valueTypes);
-        } else {
+        }
+        else
+        {
             // Join all predecessor exit states
-            for (IRBlock pred : preds) {
+            for (IRBlock pred : preds)
+            {
                 Map<SSAValue, TypeState> predExit = blockExitStates.get(pred);
                 if (predExit == null) continue;
 
                 predExit = narrowOnEdge(pred, block, predExit);
 
-                for (Map.Entry<SSAValue, TypeState> e : predExit.entrySet()) {
+                for (Map.Entry<SSAValue, TypeState> e : predExit.entrySet())
+                {
                     SSAValue value = e.getKey();
                     TypeState state = e.getValue();
                     TypeState existing = entryState.get(value);
-                    if (existing == null) {
+                    if (existing == null)
+                    {
                         entryState.put(value, state);
-                    } else {
+                    }
+                    else
+                    {
                         entryState.put(value, existing.join(state));
                     }
                 }
@@ -125,12 +144,17 @@ public class TypeInferenceAnalyzer {
         return entryState;
     }
 
-    private void indexInstanceOfChecks() {
-        for (IRBlock block : method.getBlocks()) {
-            for (IRInstruction instr : block.getInstructions()) {
-                if (instr instanceof TypeCheckInstruction) {
+    private void indexInstanceOfChecks()
+    {
+        for (IRBlock block : method.getBlocks())
+        {
+            for (IRInstruction instr : block.getInstructions())
+            {
+                if (instr instanceof TypeCheckInstruction)
+                {
                     TypeCheckInstruction tc = (TypeCheckInstruction) instr;
-                    if (tc.isInstanceOf() && tc.getResult() != null) {
+                    if (tc.isInstanceOf() && tc.getResult() != null)
+                    {
                         instanceOfDefs.put(tc.getResult(), tc);
                     }
                 }
@@ -140,19 +164,19 @@ public class TypeInferenceAnalyzer {
 
     /**
      * Refines value states along the edge from {@code pred}'s terminating branch into {@code succ}.
-     * Null checks (ifnull/ifnonnull, acmp against null) sharpen nullability; an instanceof check
-     * sharpens the tested value's type on the edge where the check holds. Returns a narrowed copy of
-     * {@code predExit}, or {@code predExit} unchanged when no narrowing applies.
      */
-    private Map<SSAValue, TypeState> narrowOnEdge(IRBlock pred, IRBlock succ, Map<SSAValue, TypeState> predExit) {
+    private Map<SSAValue, TypeState> narrowOnEdge(IRBlock pred, IRBlock succ, Map<SSAValue, TypeState> predExit)
+    {
         BranchInstruction branch = terminatingBranch(pred);
-        if (branch == null) {
+        if (branch == null)
+        {
             return predExit;
         }
 
         boolean trueEdge = succ == branch.getTrueTarget();
         boolean falseEdge = succ == branch.getFalseTarget();
-        if (trueEdge == falseEdge) {
+        if (trueEdge == falseEdge)
+        {
             return predExit;
         }
 
@@ -163,31 +187,42 @@ public class TypeInferenceAnalyzer {
         SSAValue value = null;
         TypeState refined = null;
 
-        if (cond == CompareOp.IFNULL && left instanceof SSAValue) {
+        if (cond == CompareOp.IFNULL && left instanceof SSAValue)
+        {
             value = (SSAValue) left;
             refined = currentState(value, predExit).withNullability(trueEdge ? Nullability.NULL : Nullability.NOT_NULL);
-        } else if (cond == CompareOp.IFNONNULL && left instanceof SSAValue) {
+        }
+        else if (cond == CompareOp.IFNONNULL && left instanceof SSAValue)
+        {
             value = (SSAValue) left;
             refined = currentState(value, predExit).withNullability(trueEdge ? Nullability.NOT_NULL : Nullability.NULL);
-        } else if (cond == CompareOp.ACMPEQ || cond == CompareOp.ACMPNE) {
+        }
+        else if (cond == CompareOp.ACMPEQ || cond == CompareOp.ACMPNE)
+        {
             SSAValue ref = nullComparisonRef(left, right);
-            if (ref != null) {
+            if (ref != null)
+            {
                 boolean nullOnEdge = (cond == CompareOp.ACMPEQ) == trueEdge;
                 value = ref;
                 refined = currentState(ref, predExit).withNullability(nullOnEdge ? Nullability.NULL : Nullability.NOT_NULL);
             }
-        } else if ((cond == CompareOp.IFNE || cond == CompareOp.IFEQ) && left instanceof SSAValue) {
+        }
+        else if ((cond == CompareOp.IFNE || cond == CompareOp.IFEQ) && left instanceof SSAValue)
+        {
             TypeCheckInstruction iof = instanceOfDefs.get((SSAValue) left);
-            if (iof != null && iof.getOperand() instanceof SSAValue) {
+            if (iof != null && iof.getOperand() instanceof SSAValue)
+            {
                 boolean holdsOnEdge = (cond == CompareOp.IFNE) == trueEdge;
-                if (holdsOnEdge) {
+                if (holdsOnEdge)
+                {
                     value = (SSAValue) iof.getOperand();
                     refined = new TypeState(iof.getTargetType(), Nullability.NOT_NULL);
                 }
             }
         }
 
-        if (value == null || refined == null) {
+        if (value == null || refined == null)
+        {
             return predExit;
         }
 
@@ -196,32 +231,42 @@ public class TypeInferenceAnalyzer {
         return narrowed;
     }
 
-    private BranchInstruction terminatingBranch(IRBlock block) {
+    private BranchInstruction terminatingBranch(IRBlock block)
+    {
         List<IRInstruction> instructions = block.getInstructions();
-        if (instructions.isEmpty()) {
+        if (instructions.isEmpty())
+        {
             return null;
         }
         IRInstruction last = instructions.get(instructions.size() - 1);
         return last instanceof BranchInstruction ? (BranchInstruction) last : null;
     }
 
-    /** The reference operand of an acmp when the other operand is the null constant, else null. */
-    private SSAValue nullComparisonRef(Value left, Value right) {
-        if (right instanceof NullConstant && left instanceof SSAValue) {
+    /**
+     * The reference operand of an acmp when the other operand is the null constant, else null.
+     */
+    private SSAValue nullComparisonRef(Value left, Value right)
+    {
+        if (right instanceof NullConstant && left instanceof SSAValue)
+        {
             return (SSAValue) left;
         }
-        if (left instanceof NullConstant && right instanceof SSAValue) {
+        if (left instanceof NullConstant && right instanceof SSAValue)
+        {
             return (SSAValue) right;
         }
         return null;
     }
 
-    private TypeState currentState(SSAValue value, Map<SSAValue, TypeState> predExit) {
+    private TypeState currentState(SSAValue value, Map<SSAValue, TypeState> predExit)
+    {
         TypeState s = predExit.get(value);
-        if (s == null) {
+        if (s == null)
+        {
             s = valueTypes.get(value);
         }
-        if (s != null) {
+        if (s != null)
+        {
             return s;
         }
         IRType type = value.getType();
@@ -229,18 +274,23 @@ public class TypeInferenceAnalyzer {
         return new TypeState(type, nullability);
     }
 
-    private Map<SSAValue, TypeState> processBlock(IRBlock block, Map<SSAValue, TypeState> state) {
-        for (PhiInstruction phi : block.getPhiInstructions()) {
+    private Map<SSAValue, TypeState> processBlock(IRBlock block, Map<SSAValue, TypeState> state)
+    {
+        for (PhiInstruction phi : block.getPhiInstructions())
+        {
             TypeState phiState = processPhiInstruction(phi, state);
-            if (phi.getResult() != null) {
+            if (phi.getResult() != null)
+            {
                 state.put(phi.getResult(), phiState);
                 valueTypes.put(phi.getResult(), phiState);
             }
         }
 
-        for (IRInstruction instr : block.getInstructions()) {
+        for (IRInstruction instr : block.getInstructions())
+        {
             TypeState instrState = processInstruction(instr, state);
-            if (instr.getResult() != null) {
+            if (instr.getResult() != null)
+            {
                 state.put(instr.getResult(), instrState);
                 valueTypes.put(instr.getResult(), instrState);
             }
@@ -249,10 +299,12 @@ public class TypeInferenceAnalyzer {
         return state;
     }
 
-    private TypeState processPhiInstruction(PhiInstruction phi, Map<SSAValue, TypeState> state) {
+    private TypeState processPhiInstruction(PhiInstruction phi, Map<SSAValue, TypeState> state)
+    {
         TypeState result = TypeState.BOTTOM;
 
-        for (Value operand : phi.getOperands()) {
+        for (Value operand : phi.getOperands())
+        {
             TypeState opState = getValueState(operand, state);
             result = result.join(opState);
         }
@@ -260,41 +312,70 @@ public class TypeInferenceAnalyzer {
         return result;
     }
 
-    private TypeState processInstruction(IRInstruction instr, Map<SSAValue, TypeState> state) {
-        if (instr instanceof NewInstruction) {
+    private TypeState processInstruction(IRInstruction instr, Map<SSAValue, TypeState> state)
+    {
+        if (instr instanceof NewInstruction)
+        {
             return processNew((NewInstruction) instr);
-        } else if (instr instanceof NewArrayInstruction) {
+        }
+        else if (instr instanceof NewArrayInstruction)
+        {
             return processNewArray((NewArrayInstruction) instr);
-        } else if (instr instanceof InvokeInstruction) {
+        }
+        else if (instr instanceof InvokeInstruction)
+        {
             return processInvoke((InvokeInstruction) instr);
-        } else if (instr instanceof FieldAccessInstruction) {
+        }
+        else if (instr instanceof FieldAccessInstruction)
+        {
             FieldAccessInstruction fieldAccess = (FieldAccessInstruction) instr;
-            if (fieldAccess.isLoad()) {
+            if (fieldAccess.isLoad())
+            {
                 return processFieldAccess(fieldAccess);
             }
-        } else if (instr instanceof ArrayAccessInstruction) {
+        }
+        else if (instr instanceof ArrayAccessInstruction)
+        {
             ArrayAccessInstruction arrayAccess = (ArrayAccessInstruction) instr;
-            if (arrayAccess.isLoad()) {
+            if (arrayAccess.isLoad())
+            {
                 return processArrayAccess(arrayAccess);
             }
-        } else if (instr instanceof TypeCheckInstruction) {
+        }
+        else if (instr instanceof TypeCheckInstruction)
+        {
             TypeCheckInstruction typeCheck = (TypeCheckInstruction) instr;
-            if (typeCheck.isCast()) {
-                return processTypeCheck(typeCheck, state);
-            } else if (typeCheck.isInstanceOf()) {
+            if (typeCheck.isCast())
+            {
                 return processTypeCheck(typeCheck, state);
             }
-        } else if (instr instanceof ConstantInstruction) {
+            else if (typeCheck.isInstanceOf())
+            {
+                return processTypeCheck(typeCheck, state);
+            }
+        }
+        else if (instr instanceof ConstantInstruction)
+        {
             return processConstant((ConstantInstruction) instr);
-        } else if (instr instanceof CopyInstruction) {
+        }
+        else if (instr instanceof CopyInstruction)
+        {
             return processCopy((CopyInstruction) instr, state);
-        } else if (instr instanceof BinaryOpInstruction) {
+        }
+        else if (instr instanceof BinaryOpInstruction)
+        {
             return processBinaryOp((BinaryOpInstruction) instr);
-        } else if (instr instanceof UnaryOpInstruction) {
+        }
+        else if (instr instanceof UnaryOpInstruction)
+        {
             return processUnaryOp((UnaryOpInstruction) instr);
-        } else if (instr instanceof LoadLocalInstruction) {
+        }
+        else if (instr instanceof LoadLocalInstruction)
+        {
             return processLoadLocal((LoadLocalInstruction) instr);
-        } else if (instr.getResult() != null) {
+        }
+        else if (instr.getResult() != null)
+        {
             // Default: use declared type with unknown nullability
             IRType type = instr.getResult().getType();
             Nullability nullability = type != null && type.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
@@ -304,25 +385,30 @@ public class TypeInferenceAnalyzer {
         return TypeState.BOTTOM;
     }
 
-    private TypeState processNew(NewInstruction instr) {
+    private TypeState processNew(NewInstruction instr)
+    {
         // NEW always produces a non-null value of the exact type
         IRType type = new ReferenceType(instr.getClassName());
         return TypeState.notNull(type);
     }
 
-    private TypeState processNewArray(NewArrayInstruction instr) {
+    private TypeState processNewArray(NewArrayInstruction instr)
+    {
         // NEWARRAY always produces a non-null array
         IRType type = instr.getResult().getType();
         return TypeState.notNull(type);
     }
 
-    private TypeState processInvoke(InvokeInstruction instr) {
-        if (instr.getResult() == null) {
+    private TypeState processInvoke(InvokeInstruction instr)
+    {
+        if (instr.getResult() == null)
+        {
             return TypeState.BOTTOM;
         }
 
         IRType returnType = instr.getResult().getType();
-        if (returnType == null || returnType.isVoid()) {
+        if (returnType == null || returnType.isVoid())
+        {
             return TypeState.BOTTOM;
         }
 
@@ -330,12 +416,14 @@ public class TypeInferenceAnalyzer {
         String owner = instr.getOwner();
 
         // Constructor calls (invokespecial <init>) return non-null
-        if ("<init>".equals(methodName)) {
+        if ("<init>".equals(methodName))
+        {
             return TypeState.notNull(returnType);
         }
 
         // Some well-known methods that return non-null
-        if (isKnownNonNullReturn(owner, methodName, instr.getDescriptor())) {
+        if (isKnownNonNullReturn(owner, methodName, instr.getDescriptor()))
+        {
             return TypeState.notNull(returnType);
         }
 
@@ -344,10 +432,13 @@ public class TypeInferenceAnalyzer {
         return new TypeState(returnType, nullability);
     }
 
-    private boolean isKnownNonNullReturn(String owner, String name, String descriptor) {
+    private boolean isKnownNonNullReturn(String owner, String name, String descriptor)
+    {
         // String methods that return non-null
-        if ("java/lang/String".equals(owner)) {
-            switch (name) {
+        if ("java/lang/String".equals(owner))
+        {
+            switch (name)
+            {
                 case "toString":
                 case "substring":
                 case "toLowerCase":
@@ -361,8 +452,10 @@ public class TypeInferenceAnalyzer {
         }
 
         // StringBuilder/StringBuffer methods
-        if ("java/lang/StringBuilder".equals(owner) || "java/lang/StringBuffer".equals(owner)) {
-            if ("append".equals(name) || "toString".equals(name)) {
+        if ("java/lang/StringBuilder".equals(owner) || "java/lang/StringBuffer".equals(owner))
+        {
+            if ("append".equals(name) || "toString".equals(name))
+            {
                 return true;
             }
         }
@@ -371,34 +464,42 @@ public class TypeInferenceAnalyzer {
         return "getClass".equals(name) && "()Ljava/lang/Class;".equals(descriptor);
     }
 
-    private TypeState processFieldAccess(FieldAccessInstruction instr) {
+    private TypeState processFieldAccess(FieldAccessInstruction instr)
+    {
         IRType fieldType = instr.getResult().getType();
         Nullability nullability = fieldType.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
         return new TypeState(fieldType, nullability);
     }
 
-    private TypeState processArrayAccess(ArrayAccessInstruction instr) {
+    private TypeState processArrayAccess(ArrayAccessInstruction instr)
+    {
         IRType elementType = instr.getResult().getType();
         Nullability nullability = elementType.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
         return new TypeState(elementType, nullability);
     }
 
-    private TypeState processTypeCheck(TypeCheckInstruction instr, Map<SSAValue, TypeState> state) {
-        if (instr.isCast()) {
+    private TypeState processTypeCheck(TypeCheckInstruction instr, Map<SSAValue, TypeState> state)
+    {
+        if (instr.isCast())
+        {
             IRType targetType = instr.getTargetType();
             TypeState sourceState = getValueState(instr.getOperand(), state);
             return new TypeState(targetType, sourceState.getNullability());
-        } else if (instr.isInstanceOf()) {
+        }
+        else if (instr.isInstanceOf())
+        {
             return TypeState.notNull(PrimitiveType.INT);
         }
         return TypeState.BOTTOM;
     }
 
-    private TypeState processConstant(ConstantInstruction instr) {
+    private TypeState processConstant(ConstantInstruction instr)
+    {
         Constant constant = instr.getConstant();
         IRType type = instr.getResult().getType();
 
-        if (constant == null || constant.getValue() == null) {
+        if (constant == null || constant.getValue() == null)
+        {
             return TypeState.NULL;
         }
 
@@ -406,34 +507,41 @@ public class TypeInferenceAnalyzer {
         return TypeState.notNull(type);
     }
 
-    private TypeState processCopy(CopyInstruction instr, Map<SSAValue, TypeState> state) {
+    private TypeState processCopy(CopyInstruction instr, Map<SSAValue, TypeState> state)
+    {
         return getValueState(instr.getSource(), state);
     }
 
-    private TypeState processBinaryOp(BinaryOpInstruction instr) {
+    private TypeState processBinaryOp(BinaryOpInstruction instr)
+    {
         // Binary operations produce primitives (non-null)
         IRType type = instr.getResult().getType();
         return TypeState.notNull(type);
     }
 
-    private TypeState processUnaryOp(UnaryOpInstruction instr) {
+    private TypeState processUnaryOp(UnaryOpInstruction instr)
+    {
         // Unary operations produce primitives (non-null)
         IRType type = instr.getResult().getType();
         return TypeState.notNull(type);
     }
 
-    private TypeState processLoadLocal(LoadLocalInstruction instr) {
+    private TypeState processLoadLocal(LoadLocalInstruction instr)
+    {
         IRType type = instr.getResult().getType();
         Nullability nullability = type.isReference() ? Nullability.UNKNOWN : Nullability.NOT_NULL;
         return new TypeState(type, nullability);
     }
 
-    private TypeState getValueState(Value value, Map<SSAValue, TypeState> state) {
-        if (value instanceof NullConstant) {
+    private TypeState getValueState(Value value, Map<SSAValue, TypeState> state)
+    {
+        if (value instanceof NullConstant)
+        {
             return TypeState.NULL;
         }
 
-        if (value instanceof SSAValue) {
+        if (value instanceof SSAValue)
+        {
             SSAValue ssa = (SSAValue) value;
             TypeState s = state.get(ssa);
             if (s != null) return s;
@@ -449,58 +557,80 @@ public class TypeInferenceAnalyzer {
         return TypeState.BOTTOM;
     }
 
-    // ===== Public API =====
+    // Public API
 
     /**
-     * Gets the inferred type state for a value.
+     * Runs the analysis if needed and gets the inferred type state for a value.
+     * @param value the SSA value to query
+     * @return the inferred state, or {@code TypeState.BOTTOM} if the value was never seen
      */
-    public TypeState getTypeState(SSAValue value) {
+    public TypeState getTypeState(SSAValue value)
+    {
         if (!analyzed) analyze();
         return valueTypes.getOrDefault(value, TypeState.BOTTOM);
     }
 
     /**
-     * Gets the inferred type for a value.
+     * Gets a single inferred type for a value, picking one when several are possible.
+     * @param value the SSA value to query
+     * @return the inferred type, or null when nothing was inferred
      */
-    public IRType getInferredType(SSAValue value) {
+    public IRType getInferredType(SSAValue value)
+    {
         TypeState state = getTypeState(value);
         return state.getAnyType();
     }
 
     /**
      * Gets the nullability state for a value.
+     * @param value the SSA value to query
+     * @return the inferred nullability
      */
-    public Nullability getNullability(SSAValue value) {
+    public Nullability getNullability(SSAValue value)
+    {
         TypeState state = getTypeState(value);
         return state.getNullability();
     }
 
     /**
      * Checks if a value is definitely null.
+     * @param value the SSA value to query
+     * @return true when the inferred nullability is null on every path
      */
-    public boolean isDefinitelyNull(SSAValue value) {
+    public boolean isDefinitelyNull(SSAValue value)
+    {
         return getNullability(value).isDefinitelyNull();
     }
 
     /**
      * Checks if a value is definitely not null.
+     * @param value the SSA value to query
+     * @return true when the inferred nullability rules out null
      */
-    public boolean isDefinitelyNotNull(SSAValue value) {
+    public boolean isDefinitelyNotNull(SSAValue value)
+    {
         return getNullability(value).isDefinitelyNotNull();
     }
 
     /**
      * Gets all possible types for a polymorphic value.
+     * @param value the SSA value to query
+     * @return the inferred type set
      */
-    public TypeSet getPossibleTypes(SSAValue value) {
+    public TypeSet getPossibleTypes(SSAValue value)
+    {
         TypeState state = getTypeState(value);
         return state.getTypeSet();
     }
 
     /**
-     * Gets the type state at block entry for a value.
+     * Gets the type state a value holds on entering a block.
+     * @param block the block whose entry state is read
+     * @param value the SSA value to query
+     * @return the recorded entry state, or {@code TypeState.BOTTOM} if the block or value has none
      */
-    public TypeState getTypeStateAtBlockEntry(IRBlock block, SSAValue value) {
+    public TypeState getTypeStateAtBlockEntry(IRBlock block, SSAValue value)
+    {
         if (!analyzed) analyze();
         Map<SSAValue, TypeState> entryState = blockEntryStates.get(block);
         if (entryState == null) return TypeState.BOTTOM;
@@ -508,9 +638,13 @@ public class TypeInferenceAnalyzer {
     }
 
     /**
-     * Gets the type state at block exit for a value.
+     * Gets the type state a value holds on leaving a block.
+     * @param block the block whose exit state is read
+     * @param value the SSA value to query
+     * @return the recorded exit state, or {@code TypeState.BOTTOM} if the block or value has none
      */
-    public TypeState getTypeStateAtBlockExit(IRBlock block, SSAValue value) {
+    public TypeState getTypeStateAtBlockExit(IRBlock block, SSAValue value)
+    {
         if (!analyzed) analyze();
         Map<SSAValue, TypeState> exitState = blockExitStates.get(block);
         if (exitState == null) return TypeState.BOTTOM;
@@ -518,13 +652,17 @@ public class TypeInferenceAnalyzer {
     }
 
     /**
-     * Gets all values that are definitely null.
+     * Runs the analysis if needed and collects the values proven null.
+     * @return the values whose inferred nullability is definitely null
      */
-    public Set<SSAValue> getNullValues() {
+    public Set<SSAValue> getNullValues()
+    {
         if (!analyzed) analyze();
         Set<SSAValue> result = new LinkedHashSet<>();
-        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet()) {
-            if (e.getValue().isDefinitelyNull()) {
+        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet())
+        {
+            if (e.getValue().isDefinitelyNull())
+            {
                 result.add(e.getKey());
             }
         }
@@ -532,13 +670,17 @@ public class TypeInferenceAnalyzer {
     }
 
     /**
-     * Gets all values that are definitely not null.
+     * Runs the analysis if needed and collects the values proven non-null.
+     * @return the values whose inferred nullability is definitely not null
      */
-    public Set<SSAValue> getNonNullValues() {
+    public Set<SSAValue> getNonNullValues()
+    {
         if (!analyzed) analyze();
         Set<SSAValue> result = new LinkedHashSet<>();
-        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet()) {
-            if (e.getValue().isDefinitelyNotNull()) {
+        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet())
+        {
+            if (e.getValue().isDefinitelyNotNull())
+            {
                 result.add(e.getKey());
             }
         }
@@ -546,26 +688,33 @@ public class TypeInferenceAnalyzer {
     }
 
     /**
-     * Gets all values with their type states.
+     * Runs the analysis if needed and exposes every value's type state.
+     * @return an unmodifiable view of the value-to-type-state map
      */
-    public Map<SSAValue, TypeState> getAllTypeStates() {
+    public Map<SSAValue, TypeState> getAllTypeStates()
+    {
         if (!analyzed) analyze();
         return Collections.unmodifiableMap(valueTypes);
     }
 
     /**
      * Checks if a value has a precise (exact) type known.
+     * @param value the SSA value to query
+     * @return true when the inferred type set holds exactly one type
      */
-    public boolean hasPreciseType(SSAValue value) {
+    public boolean hasPreciseType(SSAValue value)
+    {
         TypeState state = getTypeState(value);
         return state.isPrecise();
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
         sb.append("TypeInferenceAnalyzer for ").append(method.getName()).append(":\n");
-        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet()) {
+        for (Map.Entry<SSAValue, TypeState> e : valueTypes.entrySet())
+        {
             sb.append("  ").append(e.getKey().getName()).append(": ").append(e.getValue()).append("\n");
         }
         return sb.toString();

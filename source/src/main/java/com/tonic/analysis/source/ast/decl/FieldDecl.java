@@ -12,7 +12,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-public final class FieldDecl implements ASTNode {
+/**
+ * A Java field declaration: name, type, modifiers, annotations, and optional initializer.
+ */
+public final class FieldDecl implements ASTNode
+{
 
     private String name;
     private final Set<Modifier> modifiers;
@@ -22,7 +26,14 @@ public final class FieldDecl implements ASTNode {
     private final SourceLocation location;
     private ASTNode parent;
 
-    public FieldDecl(String name, SourceType type, SourceLocation location) {
+    /**
+     * Creates a field declaration without an initializer.
+     * @param name the field name
+     * @param type the field type
+     * @param location the source location, or null for unknown
+     */
+    public FieldDecl(String name, SourceType type, SourceLocation location)
+    {
         this.name = name;
         this.type = type;
         this.modifiers = EnumSet.noneOf(Modifier.class);
@@ -30,152 +41,282 @@ public final class FieldDecl implements ASTNode {
         this.location = location != null ? location : SourceLocation.UNKNOWN;
     }
 
-    public FieldDecl(String name, SourceType type) {
+    /**
+     * Creates a field declaration at an unknown location.
+     * @param name the field name
+     * @param type the field type
+     */
+    public FieldDecl(String name, SourceType type)
+    {
         this(name, type, SourceLocation.UNKNOWN);
     }
 
-    public String getName() {
+    /**
+     * @return the name
+     */
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     * Sets the field name.
+     * @param name the field name
+     */
+    public void setName(String name)
+    {
         this.name = name;
     }
 
-    public Set<Modifier> getModifiers() {
+    /**
+     * @return the modifiers
+     */
+    public Set<Modifier> getModifiers()
+    {
         return modifiers;
     }
 
-    public NodeList<AnnotationExpr> getAnnotations() {
+    /**
+     * @return the annotations
+     */
+    public NodeList<AnnotationExpr> getAnnotations()
+    {
         return annotations;
     }
 
-    public SourceType getType() {
+    /**
+     * @return the type
+     */
+    public SourceType getType()
+    {
         return type;
     }
 
-    public void setType(SourceType type) {
-        this.type = type;
+    /**
+     * Sets the field type.
+     * @param type the field type
+     */
+    public void setType(SourceType type)
+    {
+        withType(type);
     }
 
-    public Expression getInitializer() {
+    /**
+     * @return the initializer
+     */
+    public Expression getInitializer()
+    {
         return initializer;
     }
 
-    public void setInitializer(Expression initializer) {
-        this.initializer = initializer;
+    /**
+     * Sets the initializer expression.
+     * @param initializer the initial value, or null for none
+     */
+      public void setInitializer(Expression initializer)
+      {
+        withInitializer(initializer);
     }
 
-    public SourceLocation getLocation() {
+    /**
+     * @return the source location, or null if unknown
+     */
+    public SourceLocation getLocation()
+    {
         return location;
     }
 
-    public ASTNode getParent() {
+    /**
+     * @return the parent
+     */
+    public ASTNode getParent()
+    {
         return parent;
     }
 
-    public void setParent(ASTNode parent) {
+    /**
+     * Sets the parent node.
+     * @param parent the new parent
+     */
+    public void setParent(ASTNode parent)
+    {
         this.parent = parent;
     }
 
-    public FieldDecl withName(String name) {
+    /**
+     * Sets the field name.
+     * @param name the field name
+     * @return this declaration
+     */
+    public FieldDecl withName(String name)
+    {
         this.name = name;
         return this;
     }
 
-    public FieldDecl withType(SourceType type) {
+    /**
+     * Sets the field type.
+     * @param type the field type
+     * @return this declaration
+     */
+    public FieldDecl withType(SourceType type)
+    {
         this.type = type;
         return this;
     }
 
-    public FieldDecl withModifiers(Set<Modifier> modifiers) {
+    /**
+     * Replaces all modifiers with the given set.
+     * @param modifiers the modifiers to apply
+     * @return this declaration
+     */
+    public FieldDecl withModifiers(Set<Modifier> modifiers)
+    {
         this.modifiers.clear();
         this.modifiers.addAll(modifiers);
         return this;
     }
 
-    public FieldDecl addModifier(Modifier modifier) {
+    /**
+     * Adds a modifier.
+     * @param modifier the modifier to add
+     * @return this declaration
+     */
+    public FieldDecl addModifier(Modifier modifier)
+    {
         modifiers.add(modifier);
         return this;
     }
 
-    public FieldDecl addAnnotation(AnnotationExpr annotation) {
+    /**
+     * Adds an annotation.
+     * @param annotation the annotation to add
+     * @return this declaration
+     */
+    public FieldDecl addAnnotation(AnnotationExpr annotation)
+    {
         annotations.add(annotation);
         return this;
     }
 
-    public FieldDecl withInitializer(Expression initializer) {
-        if (this.initializer != null) {
-            this.initializer.setParent(null);
-        }
+    /**
+     * Replaces the initializer, adopting the new expression and releasing the old one.
+     * @param initializer the initial value, or null for none
+     * @return this declaration
+     */
+    public FieldDecl withInitializer(Expression initializer)
+    {
+        ASTNode previous = this.initializer;
         this.initializer = initializer;
-        if (initializer != null) {
+        if (initializer != null)
+        {
             initializer.setParent(this);
         }
+        ASTNode.releaseFormerChild(previous, this);
         return this;
     }
 
-    public boolean hasInitializer() {
+    /**
+     * @return true if the field has an initializer
+     */
+    public boolean hasInitializer()
+    {
         return initializer != null;
     }
 
-    public boolean isPublic() {
+    /**
+     * @return true if the public modifier is present
+     */
+    public boolean isPublic()
+    {
         return modifiers.contains(Modifier.PUBLIC);
     }
 
-    public boolean isProtected() {
+    /**
+     * @return true if the protected modifier is present
+     */
+    public boolean isProtected()
+    {
         return modifiers.contains(Modifier.PROTECTED);
     }
 
-    public boolean isPrivate() {
+    /**
+     * @return true if the private modifier is present
+     */
+    public boolean isPrivate()
+    {
         return modifiers.contains(Modifier.PRIVATE);
     }
 
-    public boolean isStatic() {
+    /**
+     * @return true if the static modifier is present
+     */
+    public boolean isStatic()
+    {
         return modifiers.contains(Modifier.STATIC);
     }
 
-    public boolean isFinal() {
+    /**
+     * @return true if the final modifier is present
+     */
+    public boolean isFinal()
+    {
         return modifiers.contains(Modifier.FINAL);
     }
 
-    public boolean isTransient() {
+    /**
+     * @return true if the transient modifier is present
+     */
+    public boolean isTransient()
+    {
         return modifiers.contains(Modifier.TRANSIENT);
     }
 
-    public boolean isVolatile() {
+    /**
+     * @return true if the volatile modifier is present
+     */
+    public boolean isVolatile()
+    {
         return modifiers.contains(Modifier.VOLATILE);
     }
 
     @Override
-    public List<ASTNode> getChildren() {
+    public List<ASTNode> getChildren()
+    {
         List<ASTNode> children = new ArrayList<>(annotations);
-        if (type != null) {
+        if (type != null)
+        {
             children.add(type);
         }
-        if (initializer != null) {
+        if (initializer != null)
+        {
             children.add(initializer);
         }
         return children;
     }
 
     @Override
-    public <T> T accept(SourceVisitor<T> visitor) {
+    public <T> T accept(SourceVisitor<T> visitor)
+    {
         return null;
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         StringBuilder sb = new StringBuilder();
-        for (AnnotationExpr ann : annotations) {
+        for (AnnotationExpr ann : annotations)
+        {
             sb.append(ann).append(" ");
         }
         String mods = Modifier.toSourceString(modifiers);
-        if (!mods.isEmpty()) {
+        if (!mods.isEmpty())
+        {
             sb.append(mods).append(" ");
         }
         sb.append(type).append(" ").append(name);
-        if (initializer != null) {
+        if (initializer != null)
+        {
             sb.append(" = ").append(initializer);
         }
         return sb.toString();

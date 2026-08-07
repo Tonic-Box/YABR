@@ -1,6 +1,7 @@
 package com.tonic.analysis.pattern;
 
 import com.tonic.analysis.Bytecode;
+import com.tonic.analysis.instruction.PopInstruction;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
@@ -11,11 +12,10 @@ import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import com.tonic.util.ReturnType;
+import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Covers all pattern matchers: method calls, field access, type checks, object creation,
  * control flow, and combination patterns.
  */
-class PatternsTest {
+class PatternsTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
@@ -32,7 +33,8 @@ class PatternsTest {
     private IRMethod irMethod;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -44,11 +46,13 @@ class PatternsTest {
         methodEntry = classFile.createNewMethod(methodAccess, "testMethod", "V");
     }
 
-    private void buildIR() throws IOException {
+    private void buildIR()
+    {
         irMethod = TestUtils.liftMethod(methodEntry);
     }
 
-    private boolean matchFirstInstruction(PatternMatcher matcher) throws IOException {
+    private boolean matchFirstInstruction(PatternMatcher matcher) throws IOException
+    {
         buildIR();
         if (irMethod.getBlocks().isEmpty()) return false;
         IRBlock firstBlock = irMethod.getBlocks().get(0);
@@ -57,7 +61,8 @@ class PatternsTest {
         return matcher.matches(firstInstr, irMethod, methodEntry, classFile);
     }
 
-    private boolean matchInstruction(PatternMatcher matcher, int instructionIndex) throws IOException {
+    private boolean matchInstruction(PatternMatcher matcher, int instructionIndex) throws IOException
+    {
         buildIR();
         if (irMethod.getBlocks().isEmpty()) return false;
         IRBlock firstBlock = irMethod.getBlocks().get(0);
@@ -66,17 +71,18 @@ class PatternsTest {
         return matcher.matches(instr, irMethod, methodEntry, classFile);
     }
 
-    // ===== Method Call Pattern Tests =====
+    // Method Call Pattern Tests
 
     @Nested
-    class MethodCallPatterns {
+    class MethodCallPatterns
+    {
 
         @Test
-        void anyMethodCallMatchesInvokeInstruction() throws IOException {
+        void anyMethodCallMatchesInvokeInstruction() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -84,11 +90,11 @@ class PatternsTest {
         }
 
         @Test
-        void anyMethodCallDoesNotMatchNonInvoke() throws IOException {
+        void anyMethodCallDoesNotMatchNonInvoke() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -96,11 +102,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallToMatchesCorrectOwner() throws IOException {
+        void methodCallToMatchesCorrectOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -108,11 +114,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallToDoesNotMatchWrongOwner() throws IOException {
+        void methodCallToDoesNotMatchWrongOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -120,11 +126,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallNamedMatchesCorrectName() throws IOException {
+        void methodCallNamedMatchesCorrectName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -132,11 +138,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallNamedDoesNotMatchWrongName() throws IOException {
+        void methodCallNamedDoesNotMatchWrongName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -144,11 +150,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallMatchesBothOwnerAndName() throws IOException {
+        void methodCallMatchesBothOwnerAndName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -156,11 +162,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallDoesNotMatchWrongOwner() throws IOException {
+        void methodCallDoesNotMatchWrongOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -168,11 +174,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallDoesNotMatchWrongName() throws IOException {
+        void methodCallDoesNotMatchWrongName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -180,11 +186,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallOwnerMatchingWithValidRegex() throws IOException {
+        void methodCallOwnerMatchingWithValidRegex() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -192,11 +198,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallOwnerMatchingDoesNotMatchInvalidRegex() throws IOException {
+        void methodCallOwnerMatchingDoesNotMatchInvalidRegex() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -204,11 +210,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallNameMatchingWithValidRegex() throws IOException {
+        void methodCallNameMatchingWithValidRegex() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -216,11 +222,11 @@ class PatternsTest {
         }
 
         @Test
-        void methodCallNameMatchingDoesNotMatchInvalidRegex() throws IOException {
+        void methodCallNameMatchingDoesNotMatchInvalidRegex() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -228,11 +234,11 @@ class PatternsTest {
         }
 
         @Test
-        void staticMethodCallMatchesStatic() throws IOException {
+        void staticMethodCallMatchesStatic() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -240,7 +246,8 @@ class PatternsTest {
         }
 
         @Test
-        void staticMethodCallDoesNotMatchVirtual() throws IOException {
+        void staticMethodCallDoesNotMatchVirtual() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.addLdc("Hello");
@@ -252,7 +259,8 @@ class PatternsTest {
         }
 
         @Test
-        void virtualMethodCallMatchesVirtual() throws IOException {
+        void virtualMethodCallMatchesVirtual() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
             bc.addLdc("Hello");
@@ -264,11 +272,11 @@ class PatternsTest {
         }
 
         @Test
-        void virtualMethodCallDoesNotMatchStatic() throws IOException {
+        void virtualMethodCallDoesNotMatchStatic() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -276,24 +284,26 @@ class PatternsTest {
         }
 
         @Test
-        void dynamicCallMatchesInvokeDynamic() {
+        void dynamicCallMatchesInvokeDynamic()
+        {
             // Test that dynamicCall matcher can be created
             PatternMatcher matcher = Patterns.dynamicCall();
             assertNotNull(matcher);
         }
     }
 
-    // ===== Field Access Pattern Tests =====
+    // Field Access Pattern Tests
 
     @Nested
-    class FieldAccessPatterns {
+    class FieldAccessPatterns
+    {
 
         @Test
-        void anyFieldReadMatchesGetField() throws IOException {
+        void anyFieldReadMatchesGetField() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -301,11 +311,11 @@ class PatternsTest {
         }
 
         @Test
-        void anyFieldReadDoesNotMatchOther() throws IOException {
+        void anyFieldReadDoesNotMatchOther() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -313,18 +323,19 @@ class PatternsTest {
         }
 
         @Test
-        void anyFieldWriteMatchesPutField() {
+        void anyFieldWriteMatchesPutField()
+        {
             // Test that anyFieldWrite matcher can be created
             PatternMatcher matcher = Patterns.anyFieldWrite();
             assertNotNull(matcher);
         }
 
         @Test
-        void fieldAccessOnMatchesCorrectOwner() throws IOException {
+        void fieldAccessOnMatchesCorrectOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -332,11 +343,11 @@ class PatternsTest {
         }
 
         @Test
-        void fieldAccessOnDoesNotMatchWrongOwner() throws IOException {
+        void fieldAccessOnDoesNotMatchWrongOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -344,11 +355,11 @@ class PatternsTest {
         }
 
         @Test
-        void fieldNamedMatchesCorrectName() throws IOException {
+        void fieldNamedMatchesCorrectName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -356,11 +367,11 @@ class PatternsTest {
         }
 
         @Test
-        void fieldNamedDoesNotMatchWrongName() throws IOException {
+        void fieldNamedDoesNotMatchWrongName() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -368,79 +379,92 @@ class PatternsTest {
         }
     }
 
-    // ===== Type Check Pattern Tests =====
+    // Type Check Pattern Tests
 
     @Nested
-    class TypeCheckPatterns {
+    class TypeCheckPatterns
+    {
 
         @Test
-        void anyInstanceOfMatcherCreated() {
+        void anyInstanceOfMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.anyInstanceOf();
             assertNotNull(matcher);
         }
 
         @Test
-        void instanceOfMatcherCreated() {
+        void instanceOfMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.instanceOf("java/lang/String");
             assertNotNull(matcher);
         }
 
         @Test
-        void anyCastMatcherCreated() {
+        void anyCastMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.anyCast();
             assertNotNull(matcher);
         }
 
         @Test
-        void castToMatcherCreated() {
+        void castToMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.castTo("java/lang/String");
             assertNotNull(matcher);
         }
     }
 
-    // ===== Object Creation Pattern Tests =====
+    // Object Creation Pattern Tests
 
     @Nested
-    class ObjectCreationPatterns {
+    class ObjectCreationPatterns
+    {
 
         @Test
-        void anyNewMatcherCreated() {
+        void anyNewMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.anyNew();
             assertNotNull(matcher);
         }
 
         @Test
-        void newInstanceMatcherCreated() {
+        void newInstanceMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.newInstance("java/lang/String");
             assertNotNull(matcher);
         }
 
         @Test
-        void anyNewArrayMatcherCreated() {
+        void anyNewArrayMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.anyNewArray();
             assertNotNull(matcher);
         }
     }
 
-    // ===== Control Flow Pattern Tests =====
+    // Control Flow Pattern Tests
 
     @Nested
-    class ControlFlowPatterns {
+    class ControlFlowPatterns
+    {
 
         @Test
-        void nullCheckMatcherCreated() {
+        void nullCheckMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.nullCheck();
             assertNotNull(matcher);
         }
 
         @Test
-        void anyThrowMatcherCreated() {
+        void anyThrowMatcherCreated()
+        {
             PatternMatcher matcher = Patterns.anyThrow();
             assertNotNull(matcher);
         }
 
         @Test
-        void anyReturnMatchesReturnInstruction() throws IOException {
+        void anyReturnMatchesReturnInstruction() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
@@ -449,7 +473,8 @@ class PatternsTest {
         }
 
         @Test
-        void anyReturnMatchesIntReturn() throws IOException {
+        void anyReturnMatchesIntReturn() throws IOException
+        {
             int methodAccess = new AccessBuilder().setPublic().setStatic().build();
             MethodEntry intMethod = classFile.createNewMethod(methodAccess, "intMethod", "I");
 
@@ -459,9 +484,11 @@ class PatternsTest {
             bc.finalizeBytecode();
 
             IRMethod ir = TestUtils.liftMethod(intMethod);
-            if (!ir.getBlocks().isEmpty()) {
+            if (!ir.getBlocks().isEmpty())
+            {
                 IRBlock block = ir.getBlocks().get(0);
-                if (block.getInstructions().size() > 1) {
+                if (block.getInstructions().size() > 1)
+                {
                     IRInstruction ret = block.getInstructions().get(1);
                     assertTrue(Patterns.anyReturn().matches(ret, ir, intMethod, classFile));
                 }
@@ -469,51 +496,46 @@ class PatternsTest {
         }
     }
 
-    // ===== Combination Pattern Tests =====
+    // Combination Pattern Tests
 
     @Nested
-    class CombinationPatterns {
+    class CombinationPatterns
+    {
 
         @Test
-        void andCombinesBothMatchers() throws IOException {
+        void andCombinesBothMatchers() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
-            PatternMatcher combined = Patterns.and(
-                Patterns.anyMethodCall(),
-                Patterns.methodCallTo("java/lang/System")
-            );
+            PatternMatcher combined = Patterns.and(Patterns.anyMethodCall(), Patterns.methodCallTo("java/lang/System"));
 
             assertTrue(matchFirstInstruction(combined));
         }
 
         @Test
-        void andFailsIfOneMatcherFails() throws IOException {
+        void andFailsIfOneMatcherFails() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
-            PatternMatcher combined = Patterns.and(
-                Patterns.anyMethodCall(),
-                Patterns.methodCallTo("java/lang/String")
-            );
+            PatternMatcher combined = Patterns.and(Patterns.anyMethodCall(), Patterns.methodCallTo("java/lang/String"));
 
             assertFalse(matchFirstInstruction(combined));
         }
 
         @Test
-        void andWithMultipleMatchers() throws IOException {
+        void andWithMultipleMatchers() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -527,11 +549,11 @@ class PatternsTest {
         }
 
         @Test
-        void orSucceedsIfOneMatcherSucceeds() throws IOException {
+        void orSucceedsIfOneMatcherSucceeds() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -544,11 +566,11 @@ class PatternsTest {
         }
 
         @Test
-        void orFailsIfAllMatchersFail() throws IOException {
+        void orFailsIfAllMatchersFail() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -561,29 +583,25 @@ class PatternsTest {
         }
 
         @Test
-        void orWithMultipleMatchers() throws IOException {
+        void orWithMultipleMatchers() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addGetStatic("java/lang/System", "out", "Ljava/io/PrintStream;");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
-            PatternMatcher combined = Patterns.or(
-                Patterns.anyMethodCall(),
-                Patterns.anyFieldRead(),
-                Patterns.anyNew()
-            );
+            PatternMatcher combined = Patterns.or(Patterns.anyMethodCall(), Patterns.anyFieldRead(), Patterns.anyNew());
 
             assertTrue(matchFirstInstruction(combined));
         }
 
         @Test
-        void notNegatesMatch() throws IOException {
+        void notNegatesMatch() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addIConst(42);
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -593,11 +611,11 @@ class PatternsTest {
         }
 
         @Test
-        void notNegatesNonMatch() throws IOException {
+        void notNegatesNonMatch() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -607,11 +625,11 @@ class PatternsTest {
         }
 
         @Test
-        void complexCombination() throws IOException {
+        void complexCombination() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -625,59 +643,60 @@ class PatternsTest {
         }
 
         @Test
-        void notWithAnd() throws IOException {
+        void notWithAnd() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
             // NOT (anyMethodCall AND methodCallTo("java/lang/String"))
             PatternMatcher combined = Patterns.not(
-                Patterns.and(
-                    Patterns.anyMethodCall(),
-                    Patterns.methodCallTo("java/lang/String")
-                )
+                Patterns.and(Patterns.anyMethodCall(), Patterns.methodCallTo("java/lang/String"))
             );
 
             assertTrue(matchFirstInstruction(combined));
         }
     }
 
-    // ===== Edge Cases and Null Safety =====
+    // Edge Cases and Null Safety
 
     @Nested
-    class EdgeCases {
+    class EdgeCases
+    {
 
         @Test
-        void emptyMethodReturnsNoMatches() throws IOException {
+        void emptyMethodReturnsNoMatches() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
             buildIR();
-            assertTrue(irMethod.getBlocks().size() > 0);
+            assertFalse(irMethod.getBlocks().isEmpty());
         }
 
         @Test
-        void matcherHandlesNullOwnerGracefully() {
+        void matcherHandlesNullOwnerGracefully()
+        {
             PatternMatcher matcher = Patterns.methodCallTo(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void matcherHandlesNullMethodNameGracefully() {
+        void matcherHandlesNullMethodNameGracefully()
+        {
             PatternMatcher matcher = Patterns.methodCallNamed(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void methodCallOwnerMatchingHandlesNullOwner() throws IOException {
+        void methodCallOwnerMatchingHandlesNullOwner() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -686,23 +705,25 @@ class PatternsTest {
         }
 
         @Test
-        void andWithEmptyMatcherArray() {
+        void andWithEmptyMatcherArray()
+        {
             PatternMatcher matcher = Patterns.and();
             assertNotNull(matcher);
         }
 
         @Test
-        void orWithEmptyMatcherArray() {
+        void orWithEmptyMatcherArray()
+        {
             PatternMatcher matcher = Patterns.or();
             assertNotNull(matcher);
         }
 
         @Test
-        void andWithSingleMatcher() throws IOException {
+        void andWithSingleMatcher() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -711,11 +732,11 @@ class PatternsTest {
         }
 
         @Test
-        void orWithSingleMatcher() throws IOException {
+        void orWithSingleMatcher() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -724,17 +745,18 @@ class PatternsTest {
         }
 
         @Test
-        void regexPatternCompiles() {
+        void regexPatternCompiles()
+        {
             PatternMatcher matcher = Patterns.methodCallOwnerMatching("java/.*");
             assertNotNull(matcher);
         }
 
         @Test
-        void andWithEmptyArrayMatchesAll() throws IOException {
+        void andWithEmptyArrayMatchesAll() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -743,11 +765,11 @@ class PatternsTest {
         }
 
         @Test
-        void orWithEmptyArrayMatchesNone() throws IOException {
+        void orWithEmptyArrayMatchesNone() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -756,21 +778,18 @@ class PatternsTest {
         }
 
         @Test
-        void nestedCombinations() throws IOException {
+        void nestedCombinations() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
             // ((A AND B) OR C) AND NOT D
             PatternMatcher matcher = Patterns.and(
                 Patterns.or(
-                    Patterns.and(
-                        Patterns.anyMethodCall(),
-                        Patterns.staticMethodCall()
-                    ),
+                    Patterns.and(Patterns.anyMethodCall(), Patterns.staticMethodCall()),
                     Patterns.anyFieldRead()
                 ),
                 Patterns.not(Patterns.anyNew())
@@ -780,59 +799,67 @@ class PatternsTest {
         }
 
         @Test
-        void matcherWorksWithNullInstruction() {
+        void matcherWorksWithNullInstruction()
+        {
             PatternMatcher matcher = Patterns.anyMethodCall();
             assertFalse(matcher.matches(null, irMethod, methodEntry, classFile));
         }
     }
 
-    // ===== Additional Pattern Coverage =====
+    // Additional Pattern Coverage
 
     @Nested
-    class AdditionalPatterns {
+    class AdditionalPatterns
+    {
 
         @Test
-        void methodCallWithNullParametersDoesNotCrash() {
+        void methodCallWithNullParametersDoesNotCrash()
+        {
             PatternMatcher matcher = Patterns.methodCall(null, null);
             assertNotNull(matcher);
         }
 
         @Test
-        void fieldAccessOnWithNullOwner() {
+        void fieldAccessOnWithNullOwner()
+        {
             PatternMatcher matcher = Patterns.fieldAccessOn(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void fieldNamedWithNullName() {
+        void fieldNamedWithNullName()
+        {
             PatternMatcher matcher = Patterns.fieldNamed(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void instanceOfWithNullType() {
+        void instanceOfWithNullType()
+        {
             PatternMatcher matcher = Patterns.instanceOf(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void castToWithNullType() {
+        void castToWithNullType()
+        {
             PatternMatcher matcher = Patterns.castTo(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void newInstanceWithNullClass() {
+        void newInstanceWithNullClass()
+        {
             PatternMatcher matcher = Patterns.newInstance(null);
             assertNotNull(matcher);
         }
 
         @Test
-        void multipleNestedNot() throws IOException {
+        void multipleNestedNot() throws IOException
+        {
             Bytecode bc = new Bytecode(methodEntry);
             bc.addInvokeStatic("java/lang/System", "currentTimeMillis", "()J");
-            bc.getCodeWriter().appendInstruction(
-                new com.tonic.analysis.instruction.PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
+            bc.getCodeWriter().appendInstruction(new PopInstruction(0x57, bc.getCodeWriter().getBytecodeSize()));
             bc.addReturn(ReturnType.RETURN);
             bc.finalizeBytecode();
 
@@ -842,7 +869,8 @@ class PatternsTest {
         }
 
         @Test
-        void allMatchersCanBeCreated() {
+        void allMatchersCanBeCreated()
+        {
             assertNotNull(Patterns.anyMethodCall());
             assertNotNull(Patterns.methodCallTo("test"));
             assertNotNull(Patterns.methodCallNamed("test"));

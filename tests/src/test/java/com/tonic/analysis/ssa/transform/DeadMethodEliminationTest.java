@@ -2,10 +2,6 @@ package com.tonic.analysis.ssa.transform;
 
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -24,14 +20,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests elimination of unused methods from classes.
  * This is a ClassTransform, not an IRTransform.
  */
-class DeadMethodEliminationTest {
+class DeadMethodEliminationTest
+{
 
     private ClassPool pool;
     private ClassFile classFile;
     private SSA ssa;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
 
@@ -42,13 +40,15 @@ class DeadMethodEliminationTest {
     }
 
     @Test
-    void getNameReturnsDeadMethodElimination() {
+    void getNameReturnsDeadMethodElimination()
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
         assertEquals("DeadMethodElimination", transform.getName());
     }
 
     @Test
-    void eliminatesUnusedMethods() throws IOException {
+    void eliminatesUnusedMethods() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().build();
@@ -63,18 +63,17 @@ class DeadMethodEliminationTest {
 
         boolean changed = transform.run(classFile, ssa);
 
-        // Should have analyzed the class
         assertNotNull(classFile);
         assertTrue(initialMethodCount > 0);
     }
 
     @Test
-    void keepsUsedMethods() throws IOException {
+    void keepsUsedMethods() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().build();
 
-        // Create a main method
         MethodEntry mainMethod = classFile.createNewMethod(access | 0x0008, "main", "([Ljava/lang/String;)V");
 
         // Create a used helper method (called from main)
@@ -82,13 +81,13 @@ class DeadMethodEliminationTest {
 
         boolean changed = transform.run(classFile, ssa);
 
-        // Verify class structure is intact
         assertNotNull(classFile);
-        assertTrue(classFile.getMethods().size() > 0);
+        assertFalse(classFile.getMethods().isEmpty());
     }
 
     @Test
-    void handlesEmptyClass() {
+    void handlesEmptyClass()
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         boolean changed = transform.run(classFile, ssa);
@@ -98,7 +97,8 @@ class DeadMethodEliminationTest {
     }
 
     @Test
-    void keepsConstructors() throws IOException {
+    void keepsConstructors() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().build();
@@ -115,7 +115,8 @@ class DeadMethodEliminationTest {
     }
 
     @Test
-    void keepsStaticInitializers() throws IOException {
+    void keepsStaticInitializers() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().setStatic().build();
@@ -132,12 +133,12 @@ class DeadMethodEliminationTest {
     }
 
     @Test
-    void handlesMultipleMethods() throws IOException {
+    void handlesMultipleMethods() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().build();
 
-        // Create several methods
         MethodEntry method1 = classFile.createNewMethod(access, "method1", "()V");
         MethodEntry method2 = classFile.createNewMethod(access, "method2", "()I");
         MethodEntry method3 = classFile.createNewMethod(access, "method3", "(I)I");
@@ -146,13 +147,13 @@ class DeadMethodEliminationTest {
 
         transform.run(classFile, ssa);
 
-        // Verify class has methods
-        assertTrue(classFile.getMethods().size() > 0);
+        assertFalse(classFile.getMethods().isEmpty());
         assertTrue(initialMethodCount > 0);
     }
 
     @Test
-    void preservesClassStructure() throws IOException {
+    void preservesClassStructure() throws IOException
+    {
         DeadMethodElimination transform = new DeadMethodElimination();
 
         int access = new AccessBuilder().setPublic().build();

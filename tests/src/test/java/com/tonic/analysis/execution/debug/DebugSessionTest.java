@@ -3,22 +3,25 @@ package com.tonic.analysis.execution.debug;
 import com.tonic.analysis.execution.core.BytecodeContext;
 import com.tonic.analysis.execution.core.BytecodeResult;
 import com.tonic.analysis.execution.heap.HeapManager;
+import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.heap.SimpleHeapManager;
 import com.tonic.analysis.execution.resolve.ClassResolver;
 import com.tonic.analysis.execution.state.ConcreteValue;
+import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class DebugSessionTest {
+class DebugSessionTest
+{
 
     private HeapManager heapManager;
     private ClassResolver classResolver;
@@ -26,7 +29,8 @@ class DebugSessionTest {
     private BreakpointManager breakpointManager;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException
+    {
         heapManager = new SimpleHeapManager();
         ClassPool pool = new ClassPool();
         classResolver = new ClassResolver(pool);
@@ -43,35 +47,36 @@ class DebugSessionTest {
     }
 
     @Test
-    void testCreateSessionInIdleState() {
+    void testCreateSessionInIdleState()
+    {
         DebugSession session = new DebugSession(context);
         assertEquals(DebugSessionState.IDLE, session.getState());
         assertTrue(session.isStopped() || session.getState() == DebugSessionState.IDLE);
     }
 
     @Test
-    void testCreateSessionWithBreakpointManager() {
+    void testCreateSessionWithBreakpointManager()
+    {
         DebugSession session = new DebugSession(context, breakpointManager);
         assertNotNull(session);
         assertEquals(DebugSessionState.IDLE, session.getState());
     }
 
     @Test
-    void testRejectsNullContext() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DebugSession(null);
-        });
+    void testRejectsNullContext()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new DebugSession(null));
     }
 
     @Test
-    void testRejectsNullBreakpointManager() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DebugSession(context, null);
-        });
+    void testRejectsNullBreakpointManager()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new DebugSession(context, null));
     }
 
     @Test
-    void testStartTransitionsToPaused() {
+    void testStartTransitionsToPaused()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -82,19 +87,19 @@ class DebugSessionTest {
     }
 
     @Test
-    void testCannotStartTwice() {
+    void testCannotStartTwice()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.start(method);
-        });
+        assertThrows(IllegalStateException.class, () -> session.start(method));
     }
 
     @Test
-    void testStopFromPausedAfterStart() {
+    void testStopFromPausedAfterStart()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -106,7 +111,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStopFromPaused() {
+    void testStopFromPaused()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -117,51 +123,48 @@ class DebugSessionTest {
     }
 
     @Test
-    void testCannotStopWhenIdle() {
+    void testCannotStopWhenIdle()
+    {
         DebugSession session = new DebugSession(context);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stop();
-        });
+        assertThrows(IllegalStateException.class, session::stop);
     }
 
     @Test
-    void testCannotStepWhenIdle() {
+    void testCannotStepWhenIdle()
+    {
         DebugSession session = new DebugSession(context);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
-    void testCannotStepWhenStopped() {
+    void testCannotStepWhenStopped()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
         session.stop();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
-    void testCannotStepWhenRunning() {
+    void testCannotStepWhenRunning()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
         session.resume();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.stepInto();
-        });
+        assertThrows(IllegalStateException.class, session::stepInto);
     }
 
     @Test
-    void testStepIntoReturnsPausedState() {
+    void testStepIntoReturnsPausedState()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -173,7 +176,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStepOverReturnsPausedState() {
+    void testStepOverReturnsPausedState()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -185,7 +189,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStepOutReturnsPausedState() {
+    void testStepOutReturnsPausedState()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -197,7 +202,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testRunToCursorReturnsPausedState() {
+    void testRunToCursorReturnsPausedState()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -209,7 +215,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testResumeReturnsPausedState() {
+    void testResumeReturnsPausedState()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -221,7 +228,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testIsRunningPredicates() {
+    void testIsRunningPredicates()
+    {
         DebugSession session = new DebugSession(context);
         assertFalse(session.isRunning());
 
@@ -233,7 +241,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testIsPausedPredicates() {
+    void testIsPausedPredicates()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -243,7 +252,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testIsStoppedPredicates() {
+    void testIsStoppedPredicates()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -256,7 +266,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testGetCurrentStateReturnsValidSnapshot() {
+    void testGetCurrentStateReturnsValidSnapshot()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -267,15 +278,14 @@ class DebugSessionTest {
     }
 
     @Test
-    void testGetResultOnlyValidWhenStopped() {
+    void testGetResultOnlyValidWhenStopped()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.getResult();
-        });
+        assertThrows(IllegalStateException.class, session::getResult);
 
         session.stop();
         BytecodeResult result = session.getResult();
@@ -284,7 +294,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testAddBreakpoint() {
+    void testAddBreakpoint()
+    {
         DebugSession session = new DebugSession(context);
         Breakpoint bp = new Breakpoint("TestClass", "testMethod", "()V", 10);
 
@@ -295,7 +306,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testRemoveBreakpoint() {
+    void testRemoveBreakpoint()
+    {
         DebugSession session = new DebugSession(context);
         Breakpoint bp = new Breakpoint("TestClass", "testMethod", "()V", 10);
 
@@ -307,7 +319,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testGetBreakpoints() {
+    void testGetBreakpoints()
+    {
         DebugSession session = new DebugSession(context);
 
         List<Breakpoint> breakpoints = session.getBreakpoints();
@@ -316,7 +329,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testMultipleBreakpointsOnSameMethod() {
+    void testMultipleBreakpointsOnSameMethod()
+    {
         DebugSession session = new DebugSession(context);
         Breakpoint bp1 = new Breakpoint("TestClass", "testMethod", "()V", 10);
         Breakpoint bp2 = new Breakpoint("TestClass", "testMethod", "()V", 20);
@@ -329,7 +343,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testDisabledBreakpointsIgnored() {
+    void testDisabledBreakpointsIgnored()
+    {
         DebugSession session = new DebugSession(context);
         Breakpoint bp = new Breakpoint("TestClass", "testMethod", "()V", 10);
         bp.setEnabled(false);
@@ -342,13 +357,15 @@ class DebugSessionTest {
     }
 
     @Test
-    void testGetCurrentFrameWhenNotStarted() {
+    void testGetCurrentFrameWhenNotStarted()
+    {
         DebugSession session = new DebugSession(context);
         assertNull(session.getCurrentFrame());
     }
 
     @Test
-    void testGetCallStackWhenNotStarted() {
+    void testGetCallStackWhenNotStarted()
+    {
         DebugSession session = new DebugSession(context);
         List<?> stack = session.getCallStack();
 
@@ -357,7 +374,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testGetCallStackAfterStart() {
+    void testGetCallStackAfterStart()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -368,7 +386,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testAddListener() {
+    void testAddListener()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
 
@@ -381,7 +400,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testRemoveListener() {
+    void testRemoveListener()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
 
@@ -395,19 +415,22 @@ class DebugSessionTest {
     }
 
     @Test
-    void testAddNullListenerIsIgnored() {
+    void testAddNullListenerIsIgnored()
+    {
         DebugSession session = new DebugSession(context);
         assertDoesNotThrow(() -> session.addListener(null));
     }
 
     @Test
-    void testRemoveNullListenerIsIgnored() {
+    void testRemoveNullListenerIsIgnored()
+    {
         DebugSession session = new DebugSession(context);
         assertDoesNotThrow(() -> session.removeListener(null));
     }
 
     @Test
-    void testOnSessionStartFires() {
+    void testOnSessionStartFires()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
         session.addListener(listener);
@@ -419,7 +442,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testOnSessionStopFires() {
+    void testOnSessionStopFires()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
         session.addListener(listener);
@@ -432,7 +456,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testOnStepCompleteFires() {
+    void testOnStepCompleteFires()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
         session.addListener(listener);
@@ -445,7 +470,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testOnStateChangeFires() {
+    void testOnStateChangeFires()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener = new TestListener();
         session.addListener(listener);
@@ -457,7 +483,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testEmptyMethodExecution() {
+    void testEmptyMethodExecution()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -468,7 +495,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testAbortDuringExecution() {
+    void testAbortDuringExecution()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -479,20 +507,20 @@ class DebugSessionTest {
     }
 
     @Test
-    void testResumeWhenAlreadyRunning() {
+    void testResumeWhenAlreadyRunning()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
         session.resume();
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.resume();
-        });
+        assertThrows(IllegalStateException.class, session::resume);
     }
 
     @Test
-    void testPauseTransitionsCorrectly() {
+    void testPauseTransitionsCorrectly()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -502,19 +530,19 @@ class DebugSessionTest {
     }
 
     @Test
-    void testCannotPauseWhenNotRunning() {
+    void testCannotPauseWhenNotRunning()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
         session.start(method);
 
-        assertThrows(IllegalStateException.class, () -> {
-            session.pause();
-        });
+        assertThrows(IllegalStateException.class, session::pause);
     }
 
     @Test
-    void testMultipleListeners() {
+    void testMultipleListeners()
+    {
         DebugSession session = new DebugSession(context);
         TestListener listener1 = new TestListener();
         TestListener listener2 = new TestListener();
@@ -530,7 +558,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStartWithArguments() {
+    void testStartWithArguments()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -543,7 +572,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStartWithNoArguments() {
+    void testStartWithNoArguments()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -553,7 +583,8 @@ class DebugSessionTest {
     }
 
     @Test
-    void testStopIdempotent() {
+    void testStopIdempotent()
+    {
         DebugSession session = new DebugSession(context);
         MethodEntry method = createMockMethod();
 
@@ -564,11 +595,12 @@ class DebugSessionTest {
         assertEquals(DebugSessionState.STOPPED, session.getState());
     }
 
-    private MethodEntry createMockMethod() {
+    private MethodEntry createMockMethod()
+    {
         MethodEntry method = mock(MethodEntry.class);
         CodeAttribute codeAttr = mock(CodeAttribute.class);
-        com.tonic.parser.ClassFile classFile = mock(com.tonic.parser.ClassFile.class);
-        com.tonic.parser.ConstPool constPool = mock(com.tonic.parser.ConstPool.class);
+        ClassFile classFile = mock(ClassFile.class);
+        ConstPool constPool = mock(ConstPool.class);
 
         when(method.getCodeAttribute()).thenReturn(codeAttr);
         when(method.getName()).thenReturn("testMethod");
@@ -585,7 +617,8 @@ class DebugSessionTest {
         return method;
     }
 
-    private static class TestListener implements DebugEventListener {
+    private static class TestListener implements DebugEventListener
+    {
         boolean sessionStartCalled = false;
         boolean sessionStopCalled = false;
         boolean breakpointHitCalled = false;
@@ -594,32 +627,38 @@ class DebugSessionTest {
         boolean stateChangeCalled = false;
 
         @Override
-        public void onSessionStart(DebugSession session) {
+        public void onSessionStart(DebugSession session)
+        {
             sessionStartCalled = true;
         }
 
         @Override
-        public void onSessionStop(DebugSession session, BytecodeResult result) {
+        public void onSessionStop(DebugSession session, BytecodeResult result)
+        {
             sessionStopCalled = true;
         }
 
         @Override
-        public void onBreakpointHit(DebugSession session, Breakpoint breakpoint) {
+        public void onBreakpointHit(DebugSession session, Breakpoint breakpoint)
+        {
             breakpointHitCalled = true;
         }
 
         @Override
-        public void onStepComplete(DebugSession session, DebugState state) {
+        public void onStepComplete(DebugSession session, DebugState state)
+        {
             stepCompleteCalled = true;
         }
 
         @Override
-        public void onException(DebugSession session, com.tonic.analysis.execution.heap.ObjectInstance exception) {
+        public void onException(DebugSession session, ObjectInstance exception)
+        {
             exceptionCalled = true;
         }
 
         @Override
-        public void onStateChange(DebugSession session, DebugSessionState oldState, DebugSessionState newState) {
+        public void onStateChange(DebugSession session, DebugSessionState oldState, DebugSessionState newState)
+        {
             stateChangeCalled = true;
         }
     }

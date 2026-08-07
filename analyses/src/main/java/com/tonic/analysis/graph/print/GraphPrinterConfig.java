@@ -1,6 +1,11 @@
 package com.tonic.analysis.graph.print;
 
-public class GraphPrinterConfig {
+/**
+ * Immutable rendering settings shared by the dependence-graph printers, built
+ * through {@link Builder} or one of the named presets.
+ */
+public class GraphPrinterConfig
+{
 
     private final Verbosity verbosity;
     private final boolean showNodeIds;
@@ -14,7 +19,8 @@ public class GraphPrinterConfig {
     private final boolean truncateLongLabels;
     private final int maxLabelLength;
 
-    private GraphPrinterConfig(Builder builder) {
+    private GraphPrinterConfig(Builder builder)
+    {
         this.verbosity = builder.verbosity;
         this.showNodeIds = builder.showNodeIds;
         this.showEdgeLabels = builder.showEdgeLabels;
@@ -28,55 +34,109 @@ public class GraphPrinterConfig {
         this.maxLabelLength = builder.maxLabelLength;
     }
 
-    public Verbosity getVerbosity() {
+    /**
+     * @return the verbosity
+     */
+    public Verbosity getVerbosity()
+    {
         return verbosity;
     }
 
-    public boolean isShowNodeIds() {
+    /**
+     * @return whether show node ids
+     */
+    public boolean isShowNodeIds()
+    {
         return showNodeIds;
     }
 
-    public boolean isShowEdgeLabels() {
+    /**
+     * @return whether show edge labels
+     */
+    public boolean isShowEdgeLabels()
+    {
         return showEdgeLabels;
     }
 
-    public boolean isShowProperties() {
+    /**
+     * @return whether show properties
+     */
+    public boolean isShowProperties()
+    {
         return showProperties;
     }
 
-    public boolean isShowLineNumbers() {
+    /**
+     * @return whether show line numbers
+     */
+    public boolean isShowLineNumbers()
+    {
         return showLineNumbers;
     }
 
-    public boolean isGroupByMethod() {
+    /**
+     * @return whether group by method
+     */
+    public boolean isGroupByMethod()
+    {
         return groupByMethod;
     }
 
-    public boolean isShowStatistics() {
+    /**
+     * @return whether show statistics
+     */
+    public boolean isShowStatistics()
+    {
         return showStatistics;
     }
 
-    public String getIndentString() {
+    /**
+     * @return the indent string
+     */
+    public String getIndentString()
+    {
         return indentString;
     }
 
-    public int getMaxNodesPerMethod() {
+    /**
+     * @return the max nodes per method
+     */
+    public int getMaxNodesPerMethod()
+    {
         return maxNodesPerMethod;
     }
 
-    public boolean isTruncateLongLabels() {
+    /**
+     * @return whether truncate long labels
+     */
+    public boolean isTruncateLongLabels()
+    {
         return truncateLongLabels;
     }
 
-    public int getMaxLabelLength() {
+    /**
+     * @return the max label length
+     */
+    public int getMaxLabelLength()
+    {
         return maxLabelLength;
     }
 
-    public static GraphPrinterConfig defaults() {
+    /**
+     * @return a config with every builder default left in place
+     */
+    public static GraphPrinterConfig defaults()
+    {
         return GraphPrinterConfig.builder().build();
     }
 
-    public static GraphPrinterConfig minimal() {
+    /**
+     * Builds a config that prints bare structure - no ids, edge labels, properties
+     * or statistics.
+     * @return the minimal config
+     */
+    public static GraphPrinterConfig minimal()
+    {
         return GraphPrinterConfig.builder()
             .verbosity(Verbosity.MINIMAL)
             .showNodeIds(false)
@@ -86,14 +146,25 @@ public class GraphPrinterConfig {
             .build();
     }
 
-    public static GraphPrinterConfig verbose() {
+    /**
+     * Builds a config at verbose verbosity with node properties printed.
+     * @return the verbose config
+     */
+    public static GraphPrinterConfig verbose()
+    {
         return GraphPrinterConfig.builder()
             .verbosity(Verbosity.VERBOSE)
             .showProperties(true)
             .build();
     }
 
-    public static GraphPrinterConfig debug() {
+    /**
+     * Builds a config that prints everything: debug verbosity, properties on, no
+     * label truncation and no node limit.
+     * @return the debug config
+     */
+    public static GraphPrinterConfig debug()
+    {
         return GraphPrinterConfig.builder()
             .verbosity(Verbosity.DEBUG)
             .showProperties(true)
@@ -102,11 +173,19 @@ public class GraphPrinterConfig {
             .build();
     }
 
-    public static Builder builder() {
+    /**
+     * @return a fresh builder holding the default settings
+     */
+    public static Builder builder()
+    {
         return new Builder();
     }
 
-    public static class Builder {
+    /**
+     * Mutable accumulator for the printer settings, seeded with the normal defaults.
+     */
+    public static class Builder
+    {
         private Verbosity verbosity = Verbosity.NORMAL;
         private boolean showNodeIds = true;
         private boolean showEdgeLabels = true;
@@ -119,62 +198,134 @@ public class GraphPrinterConfig {
         private boolean truncateLongLabels = true;
         private int maxLabelLength = 60;
 
-        public Builder verbosity(Verbosity verbosity) {
+        /**
+         * Sets the detail level printers compare against when deciding what to emit.
+         * @param verbosity the detail level
+         * @return this builder
+         */
+        public Builder verbosity(Verbosity verbosity)
+        {
             this.verbosity = verbosity;
             return this;
         }
 
-        public Builder showNodeIds(boolean showNodeIds) {
+        /**
+         * Sets whether each node is prefixed with its numeric id.
+         * @param showNodeIds true to print ids
+         * @return this builder
+         */
+        public Builder showNodeIds(boolean showNodeIds)
+        {
             this.showNodeIds = showNodeIds;
             return this;
         }
 
-        public Builder showEdgeLabels(boolean showEdgeLabels) {
+        /**
+         * Sets whether an edge carries its type name inline.
+         * @param showEdgeLabels true to label edges
+         * @return this builder
+         */
+        public Builder showEdgeLabels(boolean showEdgeLabels)
+        {
             this.showEdgeLabels = showEdgeLabels;
             return this;
         }
 
-        public Builder showProperties(boolean showProperties) {
+        /**
+         * Sets whether per-node detail lines are printed under each node.
+         * @param showProperties true to print properties
+         * @return this builder
+         */
+        public Builder showProperties(boolean showProperties)
+        {
             this.showProperties = showProperties;
             return this;
         }
 
-        public Builder showLineNumbers(boolean showLineNumbers) {
+        /**
+         * Sets whether source line numbers are printed with nodes.
+         * @param showLineNumbers true to print line numbers
+         * @return this builder
+         */
+        public Builder showLineNumbers(boolean showLineNumbers)
+        {
             this.showLineNumbers = showLineNumbers;
             return this;
         }
 
-        public Builder groupByMethod(boolean groupByMethod) {
+        /**
+         * Sets whether nodes are grouped under their owning procedure rather than
+         * listed flat.
+         * @param groupByMethod true to group by method
+         * @return this builder
+         */
+        public Builder groupByMethod(boolean groupByMethod)
+        {
             this.groupByMethod = groupByMethod;
             return this;
         }
 
-        public Builder showStatistics(boolean showStatistics) {
+        /**
+         * Sets whether a trailing node and edge count section is printed.
+         * @param showStatistics true to print statistics
+         * @return this builder
+         */
+        public Builder showStatistics(boolean showStatistics)
+        {
             this.showStatistics = showStatistics;
             return this;
         }
 
-        public Builder indentString(String indentString) {
+        /**
+         * Sets the text emitted for one level of indentation.
+         * @param indentString the indent unit
+         * @return this builder
+         */
+        public Builder indentString(String indentString)
+        {
             this.indentString = indentString;
             return this;
         }
 
-        public Builder maxNodesPerMethod(int maxNodesPerMethod) {
+        /**
+         * Sets how many nodes are printed per method before the rest are elided.
+         * @param maxNodesPerMethod the node budget
+         * @return this builder
+         */
+        public Builder maxNodesPerMethod(int maxNodesPerMethod)
+        {
             this.maxNodesPerMethod = maxNodesPerMethod;
             return this;
         }
 
-        public Builder truncateLongLabels(boolean truncateLongLabels) {
+        /**
+         * Sets whether labels longer than the maximum length are cut short.
+         * @param truncateLongLabels true to truncate
+         * @return this builder
+         */
+        public Builder truncateLongLabels(boolean truncateLongLabels)
+        {
             this.truncateLongLabels = truncateLongLabels;
             return this;
         }
 
-        public Builder maxLabelLength(int maxLabelLength) {
+        /**
+         * Sets the character budget a label gets before truncation applies.
+         * @param maxLabelLength the cut-off length
+         * @return this builder
+         */
+        public Builder maxLabelLength(int maxLabelLength)
+        {
             this.maxLabelLength = maxLabelLength;
             return this;
         }
 
-        public GraphPrinterConfig build() {
+        /**
+         * Builds a config from the values set so far.
+         * @return the immutable config
+         */
+        public GraphPrinterConfig build()
+        {
             return new GraphPrinterConfig(this);
         }
     }

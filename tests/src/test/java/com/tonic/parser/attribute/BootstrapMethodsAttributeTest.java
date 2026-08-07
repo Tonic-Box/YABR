@@ -15,13 +15,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class BootstrapMethodsAttributeTest {
+class BootstrapMethodsAttributeTest
+{
 
     @Nested
-    class ConstructorTests {
+    class ConstructorTests
+    {
 
         @Test
-        void constructorWithMemberParent() throws IOException {
+        void constructorWithMemberParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Member").build();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute("BootstrapMethods", cf, 1, 100);
 
@@ -30,7 +33,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void constructorWithConstPool() throws IOException {
+        void constructorWithConstPool() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ConstPool").build();
             ConstPool constPool = cf.getConstPool();
 
@@ -42,7 +46,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void constructorWithClassFileParent() throws IOException {
+        void constructorWithClassFileParent() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ClassFile").build();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute("BootstrapMethods", cf, 1, 100);
 
@@ -51,10 +56,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class AddBootstrapMethodTests {
+    class AddBootstrapMethodTests
+    {
 
         @Test
-        void addBootstrapMethodWithNoArguments() throws IOException {
+        void addBootstrapMethodWithNoArguments() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -68,7 +75,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void addBootstrapMethodWithArguments() throws IOException {
+        void addBootstrapMethodWithArguments() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/WithArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -86,12 +94,13 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void addMultipleBootstrapMethods() throws IOException {
+        void addMultipleBootstrapMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Multiple").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
             attr.addBootstrapMethod(2, Arrays.asList(20, 30));
             attr.addBootstrapMethod(3, new ArrayList<>());
 
@@ -99,7 +108,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void addBootstrapMethodInitializesListIfNull() throws IOException {
+        void addBootstrapMethodInitializesListIfNull() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/InitList").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -112,10 +122,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class GetBootstrapMethodsTests {
+    class GetBootstrapMethodsTests
+    {
 
         @Test
-        void getBootstrapMethodsReturnsEmptyListInitially() throws IOException {
+        void getBootstrapMethodsReturnsEmptyListInitially() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Empty").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -125,13 +137,14 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void getBootstrapMethodsReturnsAddedMethods() throws IOException {
+        void getBootstrapMethodsReturnsAddedMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Added").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
             attr.addBootstrapMethod(1, Arrays.asList(10, 20));
-            attr.addBootstrapMethod(2, Arrays.asList(30));
+            attr.addBootstrapMethod(2, List.of(30));
 
             List<BootstrapMethod> methods = attr.getBootstrapMethods();
             assertEquals(2, methods.size());
@@ -141,10 +154,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class UpdateLengthTests {
+    class UpdateLengthTests
+    {
 
         @Test
-        void updateLengthCalculatesCorrectSizeWithNoMethods() throws IOException {
+        void updateLengthCalculatesCorrectSizeWithNoMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NoMethods").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -155,7 +170,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void updateLengthCalculatesCorrectSizeWithMethodsNoArgs() throws IOException {
+        void updateLengthCalculatesCorrectSizeWithMethodsNoArgs() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/MethodsNoArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -167,7 +183,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void updateLengthCalculatesCorrectSizeWithArguments() throws IOException {
+        void updateLengthCalculatesCorrectSizeWithArguments() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/WithArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -180,12 +197,13 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void updateLengthCalculatesCorrectSizeWithMultipleMethods() throws IOException {
+        void updateLengthCalculatesCorrectSizeWithMultipleMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Multiple").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
             attr.addBootstrapMethod(2, Arrays.asList(20, 30));
             attr.updateLength();
 
@@ -194,10 +212,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class WriteAndReadTests {
+    class WriteAndReadTests
+    {
 
         @Test
-        void roundTripWithNoBootstrapMethods() throws IOException {
+        void roundTripWithNoBootstrapMethods() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/RoundTrip").build();
             ConstPool constPool = original.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -207,13 +227,15 @@ class BootstrapMethodsAttributeTest {
             ClassFile parsed = new ClassFile(new ByteArrayInputStream(bytes));
 
             BootstrapMethodsAttribute parsedAttr = findBootstrapMethodsAttribute(parsed);
-            if (parsedAttr != null) {
+            if (parsedAttr != null)
+            {
                 assertEquals(0, parsedAttr.getBootstrapMethods().size());
             }
         }
 
         @Test
-        void roundTripWithSingleBootstrapMethod() throws IOException {
+        void roundTripWithSingleBootstrapMethod() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Single").build();
             ConstPool constPool = original.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -235,14 +257,15 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void roundTripWithMultipleBootstrapMethods() throws IOException {
+        void roundTripWithMultipleBootstrapMethods() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Multiple").build();
             ConstPool constPool = original.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
             int handle1 = constPool.addMethodHandle(6, 1);
             int handle2 = constPool.addMethodHandle(6, 2);
-            attr.addBootstrapMethod(handle1, Arrays.asList(10));
+            attr.addBootstrapMethod(handle1, List.of(10));
             attr.addBootstrapMethod(handle2, Arrays.asList(20, 30, 40));
             original.getClassAttributes().add(attr);
 
@@ -255,7 +278,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void roundTripPreservesArgumentOrder() throws IOException {
+        void roundTripPreservesArgumentOrder() throws IOException
+        {
             ClassFile original = BytecodeBuilder.forClass("com/test/Order").build();
             ConstPool constPool = original.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -273,14 +297,18 @@ class BootstrapMethodsAttributeTest {
 
             BootstrapMethod bm = parsedAttr.getBootstrapMethods().get(0);
             assertEquals(args.size(), bm.getBootstrapArguments().size());
-            for (int i = 0; i < args.size(); i++) {
+            for (int i = 0; i < args.size(); i++)
+            {
                 assertEquals(args.get(i), bm.getBootstrapArguments().get(i));
             }
         }
 
-        private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile cf) {
-            for (Attribute attr : cf.getClassAttributes()) {
-                if (attr instanceof BootstrapMethodsAttribute) {
+        private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile cf)
+        {
+            for (Attribute attr : cf.getClassAttributes())
+            {
+                if (attr instanceof BootstrapMethodsAttribute)
+                {
                     return (BootstrapMethodsAttribute) attr;
                 }
             }
@@ -289,15 +317,17 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class ToStringTests {
+    class ToStringTests
+    {
 
         @Test
-        void toStringContainsBootstrapMethods() throws IOException {
+        void toStringContainsBootstrapMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ToString").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
 
             String str = attr.toString();
             assertNotNull(str);
@@ -305,7 +335,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void toStringNonEmpty() throws IOException {
+        void toStringNonEmpty() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/NonEmpty").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -317,10 +348,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class EdgeCasesTests {
+    class EdgeCasesTests
+    {
 
         @Test
-        void emptyArgumentList() throws IOException {
+        void emptyArgumentList() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/EmptyArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -332,13 +365,15 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void largeNumberOfArguments() throws IOException {
+        void largeNumberOfArguments() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ManyArgs").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
             List<Integer> manyArgs = new ArrayList<>();
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
+            {
                 manyArgs.add(i);
             }
             attr.addBootstrapMethod(1, manyArgs);
@@ -348,20 +383,23 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void largeNumberOfBootstrapMethods() throws IOException {
+        void largeNumberOfBootstrapMethods() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ManyMethods").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            for (int i = 0; i < 50; i++) {
-                attr.addBootstrapMethod(i, Arrays.asList(i * 10));
+            for (int i = 0; i < 50; i++)
+            {
+                attr.addBootstrapMethod(i, List.of(i * 10));
             }
 
             assertEquals(50, attr.getBootstrapMethods().size());
         }
 
         @Test
-        void zeroMethodHandleIndex() throws IOException {
+        void zeroMethodHandleIndex() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/ZeroIndex").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -373,7 +411,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void highMethodHandleIndex() throws IOException {
+        void highMethodHandleIndex() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/HighIndex").build();
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
@@ -386,10 +425,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class BootstrapMethodIntegrationTests {
+    class BootstrapMethodIntegrationTests
+    {
 
         @Test
-        void bootstrapMethodWithLambda() throws IOException {
+        void bootstrapMethodWithLambda() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/Lambda")
                 .publicStaticMethod("test", "()V")
                     .vreturn()
@@ -422,7 +463,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void bootstrapMethodWithInvokeDynamic() throws IOException {
+        void bootstrapMethodWithInvokeDynamic() throws IOException
+        {
             ClassFile cf = BytecodeBuilder.forClass("com/test/InvokeDynamic")
                 .build();
 
@@ -440,9 +482,12 @@ class BootstrapMethodsAttributeTest {
             assertNotNull(parsedAttr);
         }
 
-        private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile cf) {
-            for (Attribute attr : cf.getClassAttributes()) {
-                if (attr instanceof BootstrapMethodsAttribute) {
+        private BootstrapMethodsAttribute findBootstrapMethodsAttribute(ClassFile cf)
+        {
+            for (Attribute attr : cf.getClassAttributes())
+            {
+                if (attr instanceof BootstrapMethodsAttribute)
+                {
                     return (BootstrapMethodsAttribute) attr;
                 }
             }
@@ -451,10 +496,12 @@ class BootstrapMethodsAttributeTest {
     }
 
     @Nested
-    class BootstrapMethodObjectTests {
+    class BootstrapMethodObjectTests
+    {
 
         @Test
-        void bootstrapMethodConstructor() {
+        void bootstrapMethodConstructor()
+        {
             BootstrapMethod bm = new BootstrapMethod(5, Arrays.asList(10, 20, 30));
 
             assertEquals(5, bm.getBootstrapMethodRef());
@@ -465,7 +512,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void bootstrapMethodToString() {
+        void bootstrapMethodToString()
+        {
             BootstrapMethod bm = new BootstrapMethod(5, Arrays.asList(10, 20));
 
             String str = bm.toString();
@@ -475,7 +523,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void bootstrapMethodWithEmptyArguments() {
+        void bootstrapMethodWithEmptyArguments()
+        {
             BootstrapMethod bm = new BootstrapMethod(1, new ArrayList<>());
 
             assertEquals(1, bm.getBootstrapMethodRef());
@@ -483,7 +532,8 @@ class BootstrapMethodsAttributeTest {
         }
 
         @Test
-        void bootstrapMethodArgumentsImmutable() {
+        void bootstrapMethodArgumentsImmutable()
+        {
             List<Integer> args = new ArrayList<>(Arrays.asList(10, 20));
             BootstrapMethod bm = new BootstrapMethod(1, args);
 

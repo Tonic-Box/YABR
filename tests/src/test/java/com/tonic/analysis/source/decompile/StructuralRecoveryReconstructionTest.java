@@ -26,10 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code try}/{@code finally} whose protected region returns a value (the finally is inlined on the normal
  * exit path). Each previously decompiled to wrong source (dropped/empty bodies or duplicated clauses).
  */
-class StructuralRecoveryReconstructionTest {
+class StructuralRecoveryReconstructionTest
+{
 
     @Test
-    void synchronizedBlockReconstructed() throws Exception {
+    void synchronizedBlockReconstructed() throws Exception
+    {
         String src =
             "public class Sync {\n" +
             "  private final Object lock = new Object();\n" +
@@ -43,7 +45,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void synchronizedOnParameterReconstructed() throws Exception {
+    void synchronizedOnParameterReconstructed() throws Exception
+    {
         String src =
             "public class SyncP {\n" +
             "  public int f(Object lock, int x) { synchronized (lock) { return x * 2; } }\n" +
@@ -54,7 +57,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void multiCatchCoalescedIntoOneClause() throws Exception {
+    void multiCatchCoalescedIntoOneClause() throws Exception
+    {
         String src =
             "public class Multi {\n" +
             "  public static int f(String s) {\n" +
@@ -71,7 +75,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void stringSwitchReconstructedFromHashCodePattern() throws Exception {
+    void stringSwitchReconstructedFromHashCodePattern() throws Exception
+    {
         String src =
             "public class StrSw {\n" +
             "  public static int f(String s) {\n" +
@@ -87,7 +92,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void stringSwitchWithBreakAndFallThroughReconstructed() throws Exception {
+    void stringSwitchWithBreakAndFallThroughReconstructed() throws Exception
+    {
         // The assign-per-case form is recovered as a switch on the string (the downstream switch-expression
         // pass may render it with arrow arms, which is Java 14+, so structure is asserted rather than
         // recompiled on the Java 11 test toolchain).
@@ -107,7 +113,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void stringSwitchWithHashCollisionRecompiles() throws Exception {
+    void stringSwitchWithHashCollisionRecompiles() throws Exception
+    {
         // "Aa" and "BB" share hashCode 2112, so one hashCode case chains two equals() guards.
         String src =
             "public class StrSw3 {\n" +
@@ -122,7 +129,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void tryFinallyWithValueReturnKeepsBothBodies() throws Exception {
+    void tryFinallyWithValueReturnKeepsBothBodies() throws Exception
+    {
         String src =
             "public class FinVal {\n" +
             "  static int compute() { return 7; }\n" +
@@ -138,7 +146,8 @@ class StructuralRecoveryReconstructionTest {
     }
 
     @Test
-    void tryFinallyWithReturnInFinallyPreservesBehaviour() throws Exception {
+    void tryFinallyWithReturnInFinallyPreservesBehaviour() throws Exception
+    {
         // A finally that itself returns overrides the try's value on the normal path but not on the exception
         // path; the recovered source must round-trip to the same observable behaviour.
         String src =
@@ -156,7 +165,8 @@ class StructuralRecoveryReconstructionTest {
             "the exception must still propagate (finally does not catch it)");
     }
 
-    private Class<?> compileAndLoad(String className, String source) throws Exception {
+    private Class<?> compileAndLoad(String className, String source) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path dir = Files.createTempDirectory("yabr-struct-run");
         Path srcFile = dir.resolve(className + ".java");
@@ -167,52 +177,66 @@ class StructuralRecoveryReconstructionTest {
         return Class.forName(className, true, loader);
     }
 
-    private int count(String text, String needle) {
+    private int count(String text, String needle)
+    {
         int n = 0;
-        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + needle.length())) {
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + needle.length()))
+        {
             n++;
         }
         return n;
     }
 
-    private String roundTrip(String className, String src) throws Exception {
+    private String roundTrip(String className, String src) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path dir = Files.createTempDirectory("yabr-struct");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, src);
             assertEquals(0, compiler.run(null, null, null, "-g", "-d", dir.toString(), srcFile.toString()),
                 "javac of source fixture failed");
             byte[] bytes = Files.readAllBytes(dir.resolve(className + ".class"));
             return new ClassDecompiler(new ClassFile(new ByteArrayInputStream(bytes))).decompile();
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private void assertRecompiles(String className, String decompiled) throws Exception {
+    private void assertRecompiles(String className, String decompiled) throws Exception
+    {
         JavaCompiler compiler = requireCompiler();
         Path dir = Files.createTempDirectory("yabr-struct-recompile");
-        try {
+        try
+        {
             Path srcFile = dir.resolve(className + ".java");
             Files.writeString(srcFile, decompiled);
             assertEquals(0, compiler.run(null, null, null, "-d", dir.toString(), srcFile.toString()),
                 "decompiled output did not recompile:\n" + decompiled);
-        } finally {
+        }
+        finally
+        {
             deleteTree(dir);
         }
     }
 
-    private JavaCompiler requireCompiler() {
+    private JavaCompiler requireCompiler()
+    {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
+        if (compiler == null)
+        {
             throw new TestAbortedException("no system Java compiler available");
         }
         return compiler;
     }
 
-    private void deleteTree(Path dir) throws Exception {
-        try (var paths = Files.walk(dir)) {
+    private void deleteTree(Path dir) throws Exception
+    {
+        try (var paths = Files.walk(dir))
+        {
             paths.sorted(Comparator.reverseOrder()).forEach(p -> {
                 try { Files.deleteIfExists(p); } catch (Exception ignored) {}
             });

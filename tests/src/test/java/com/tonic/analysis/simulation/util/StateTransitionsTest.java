@@ -7,11 +7,11 @@ import com.tonic.analysis.ssa.type.ArrayType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
+import com.tonic.analysis.ssa.visitor.IRVisitor;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,20 +19,24 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for StateTransitions class.
  * Tests all instruction types and stack effect calculations.
  */
-class StateTransitionsTest {
+class StateTransitionsTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         SSAValue.resetIdCounter();
     }
 
-    // ========== ConstantInstruction Tests ==========
+    // ConstantInstruction Tests
 
     @Nested
-    class ConstantInstructionTests {
+    class ConstantInstructionTests
+    {
 
         @Test
-        void applyIntConstant() {
+        void applyIntConstant()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(42));
@@ -44,7 +48,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyLongConstant() {
+        void applyLongConstant()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             ConstantInstruction instr = new ConstantInstruction(result, LongConstant.of(100L));
@@ -56,7 +61,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyDoubleConstant() {
+        void applyDoubleConstant()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.DOUBLE, "r");
             ConstantInstruction instr = new ConstantInstruction(result, DoubleConstant.of(3.14));
@@ -67,7 +73,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyNullConstant() {
+        void applyNullConstant()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "r");
             ConstantInstruction instr = new ConstantInstruction(result, NullConstant.INSTANCE);
@@ -78,7 +85,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountConstant() {
+        void getPopCountConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(1));
 
@@ -86,7 +94,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountConstant() {
+        void getPushCountConstant()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(1));
 
@@ -94,7 +103,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountConstantWide() {
+        void getPushCountConstantWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             ConstantInstruction instr = new ConstantInstruction(result, LongConstant.of(1L));
 
@@ -102,13 +112,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== LoadLocalInstruction Tests ==========
+    // LoadLocalInstruction Tests
 
     @Nested
-    class LoadLocalInstructionTests {
+    class LoadLocalInstructionTests
+    {
 
         @Test
-        void applyLoadLocal() {
+        void applyLoadLocal()
+        {
             SimulationState state = SimulationState.empty()
                 .setLocal(0, SimValue.constant(42, PrimitiveType.INT, null));
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
@@ -120,7 +132,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyLoadLocalWide() {
+        void applyLoadLocalWide()
+        {
             SimulationState state = SimulationState.empty()
                 .setLocalWide(0, SimValue.ofType(PrimitiveType.LONG, null));
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
@@ -132,7 +145,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyLoadLocalUndefined() {
+        void applyLoadLocalUndefined()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             LoadLocalInstruction instr = new LoadLocalInstruction(result, 5);
@@ -144,7 +158,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountLoadLocal() {
+        void getPopCountLoadLocal()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             LoadLocalInstruction instr = new LoadLocalInstruction(result, 0);
 
@@ -152,7 +167,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountLoadLocal() {
+        void getPushCountLoadLocal()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             LoadLocalInstruction instr = new LoadLocalInstruction(result, 0);
 
@@ -160,7 +176,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountLoadLocalWide() {
+        void getPushCountLoadLocalWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             LoadLocalInstruction instr = new LoadLocalInstruction(result, 0);
 
@@ -168,13 +185,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== StoreLocalInstruction Tests ==========
+    // StoreLocalInstruction Tests
 
     @Nested
-    class StoreLocalInstructionTests {
+    class StoreLocalInstructionTests
+    {
 
         @Test
-        void applyStoreLocal() {
+        void applyStoreLocal()
+        {
             SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(value);
             SSAValue ssaValue = new SSAValue(PrimitiveType.INT, "v");
@@ -187,7 +206,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyStoreLocalWide() {
+        void applyStoreLocalWide()
+        {
             SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
             SimulationState state = SimulationState.empty().pushWide(value);
             SSAValue ssaValue = new SSAValue(PrimitiveType.LONG, "v");
@@ -201,7 +221,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountStoreLocal() {
+        void getPopCountStoreLocal()
+        {
             SSAValue value = new SSAValue(PrimitiveType.INT, "v");
             StoreLocalInstruction instr = new StoreLocalInstruction(0, value);
 
@@ -209,7 +230,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountStoreLocalWide() {
+        void getPopCountStoreLocalWide()
+        {
             SSAValue value = new SSAValue(PrimitiveType.LONG, "v");
             StoreLocalInstruction instr = new StoreLocalInstruction(0, value);
 
@@ -217,13 +239,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== BinaryOpInstruction Tests ==========
+    // BinaryOpInstruction Tests
 
     @Nested
-    class BinaryOpInstructionTests {
+    class BinaryOpInstructionTests
+    {
 
         @Test
-        void applyBinaryOpInt() {
+        void applyBinaryOpInt()
+        {
             SimValue v1 = SimValue.constant(5, PrimitiveType.INT, null);
             SimValue v2 = SimValue.constant(3, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v1).push(v2);
@@ -239,7 +263,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyBinaryOpLong() {
+        void applyBinaryOpLong()
+        {
             SimValue v1 = SimValue.ofType(PrimitiveType.LONG, null);
             SimValue v2 = SimValue.ofType(PrimitiveType.LONG, null);
             SimulationState state = SimulationState.empty().pushWide(v1).pushWide(v2);
@@ -255,7 +280,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountBinaryOpInt() {
+        void getPopCountBinaryOpInt()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue left = new SSAValue(PrimitiveType.INT, "l");
             SSAValue right = new SSAValue(PrimitiveType.INT, "r2");
@@ -265,7 +291,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountBinaryOpLong() {
+        void getPopCountBinaryOpLong()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue left = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue right = new SSAValue(PrimitiveType.LONG, "r2");
@@ -275,7 +302,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountBinaryOp() {
+        void getPushCountBinaryOp()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue left = new SSAValue(PrimitiveType.INT, "l");
             SSAValue right = new SSAValue(PrimitiveType.INT, "r2");
@@ -285,7 +313,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountBinaryOpWide() {
+        void getPushCountBinaryOpWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue left = new SSAValue(PrimitiveType.LONG, "l");
             SSAValue right = new SSAValue(PrimitiveType.LONG, "r2");
@@ -295,13 +324,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== UnaryOpInstruction Tests ==========
+    // UnaryOpInstruction Tests
 
     @Nested
-    class UnaryOpInstructionTests {
+    class UnaryOpInstructionTests
+    {
 
         @Test
-        void applyUnaryOpInt() {
+        void applyUnaryOpInt()
+        {
             SimValue v = SimValue.constant(5, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
 
@@ -315,7 +346,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyUnaryOpLongToInt() {
+        void applyUnaryOpLongToInt()
+        {
             SimValue v = SimValue.ofType(PrimitiveType.LONG, null);
             SimulationState state = SimulationState.empty().pushWide(v);
 
@@ -329,7 +361,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyUnaryOpIntToLong() {
+        void applyUnaryOpIntToLong()
+        {
             SimValue v = SimValue.constant(5, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
 
@@ -343,7 +376,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountUnaryOp() {
+        void getPopCountUnaryOp()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
@@ -352,7 +386,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountUnaryOpWide() {
+        void getPopCountUnaryOpWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue operand = new SSAValue(PrimitiveType.LONG, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.L2I, operand);
@@ -361,7 +396,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountUnaryOp() {
+        void getPushCountUnaryOp()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
@@ -370,7 +406,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountUnaryOpWide() {
+        void getPushCountUnaryOpWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.I2L, operand);
@@ -379,13 +416,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== TypeCheckInstruction Tests (Cast) ==========
+    // TypeCheckInstruction Tests (Cast)
 
     @Nested
-    class TypeCheckInstructionTests {
+    class TypeCheckInstructionTests
+    {
 
         @Test
-        void applyCastIntToLong() {
+        void applyCastIntToLong()
+        {
             SimValue v = SimValue.constant(5, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
 
@@ -399,7 +438,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyCastLongToInt() {
+        void applyCastLongToInt()
+        {
             SimValue v = SimValue.ofType(PrimitiveType.LONG, null);
             SimulationState state = SimulationState.empty().pushWide(v);
 
@@ -413,7 +453,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountCast() {
+        void getPopCountCast()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue source = new SSAValue(PrimitiveType.INT, "src");
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, source, PrimitiveType.LONG);
@@ -422,7 +463,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountCastWide() {
+        void getPopCountCastWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue source = new SSAValue(PrimitiveType.LONG, "src");
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, source, PrimitiveType.INT);
@@ -431,7 +473,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountCast() {
+        void getPushCountCast()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue source = new SSAValue(PrimitiveType.LONG, "src");
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, source, PrimitiveType.INT);
@@ -440,7 +483,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountCastWide() {
+        void getPushCountCastWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue source = new SSAValue(PrimitiveType.INT, "src");
             TypeCheckInstruction instr = TypeCheckInstruction.createCast(result, source, PrimitiveType.LONG);
@@ -449,13 +493,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== FieldAccessInstruction Tests (Load) ==========
+    // FieldAccessInstruction Tests (Load)
 
     @Nested
-    class FieldAccessInstructionLoadTests {
+    class FieldAccessInstructionLoadTests
+    {
 
         @Test
-        void applyGetFieldInstance() {
+        void applyGetFieldInstance()
+        {
             SimValue obj = SimValue.ofType(new ReferenceType("com/test/A"), null);
             SimulationState state = SimulationState.empty().push(obj);
 
@@ -469,7 +515,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyGetFieldStatic() {
+        void applyGetFieldStatic()
+        {
             SimulationState state = SimulationState.empty();
 
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
@@ -481,7 +528,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyGetFieldWide() {
+        void applyGetFieldWide()
+        {
             SimulationState state = SimulationState.empty();
 
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
@@ -493,7 +541,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountGetFieldInstance() {
+        void getPopCountGetFieldInstance()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue objectRef = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction instr = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", objectRef);
@@ -502,7 +551,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountGetFieldStatic() {
+        void getPopCountGetFieldStatic()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             FieldAccessInstruction instr = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "CONST", "I");
 
@@ -510,7 +560,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountGetField() {
+        void getPushCountGetField()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue objectRef = new SSAValue(new ReferenceType("com/test/A"), "obj");
             FieldAccessInstruction instr = FieldAccessInstruction.createLoad(result, "com/test/A", "field", "I", objectRef);
@@ -519,7 +570,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountGetFieldWide() {
+        void getPushCountGetFieldWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             FieldAccessInstruction instr = FieldAccessInstruction.createStaticLoad(result, "com/test/A", "field", "J");
 
@@ -527,13 +579,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== FieldAccessInstruction Tests (Store) ==========
+    // FieldAccessInstruction Tests (Store)
 
     @Nested
-    class FieldAccessInstructionStoreTests {
+    class FieldAccessInstructionStoreTests
+    {
 
         @Test
-        void applyPutFieldInstance() {
+        void applyPutFieldInstance()
+        {
             SimValue obj = SimValue.ofType(new ReferenceType("com/test/A"), null);
             SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(obj).push(value);
@@ -548,7 +602,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyPutFieldStatic() {
+        void applyPutFieldStatic()
+        {
             SimValue value = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(value);
 
@@ -561,7 +616,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyPutFieldWide() {
+        void applyPutFieldWide()
+        {
             SimValue value = SimValue.ofType(PrimitiveType.LONG, null);
             SimulationState state = SimulationState.empty().pushWide(value);
 
@@ -574,7 +630,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountPutFieldInstance() {
+        void getPopCountPutFieldInstance()
+        {
             SSAValue objectRef = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue val = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction instr = FieldAccessInstruction.createStore("com/test/A", "field", "I", objectRef, val);
@@ -583,7 +640,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountPutFieldStatic() {
+        void getPopCountPutFieldStatic()
+        {
             SSAValue val = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction instr = FieldAccessInstruction.createStaticStore("com/test/A", "CONST", "I", val);
 
@@ -591,7 +649,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountPutFieldInstanceWide() {
+        void getPopCountPutFieldInstanceWide()
+        {
             SSAValue objectRef = new SSAValue(new ReferenceType("com/test/A"), "obj");
             SSAValue val = new SSAValue(PrimitiveType.LONG, "val");
             FieldAccessInstruction instr = FieldAccessInstruction.createStore("com/test/A", "field", "J", objectRef, val);
@@ -600,7 +659,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountPutFieldStaticWide() {
+        void getPopCountPutFieldStaticWide()
+        {
             SSAValue val = new SSAValue(PrimitiveType.LONG, "val");
             FieldAccessInstruction instr = FieldAccessInstruction.createStaticStore("com/test/A", "LONG_CONST", "J", val);
 
@@ -608,13 +668,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== ArrayAccessInstruction Tests (Load) ==========
+    // ArrayAccessInstruction Tests (Load)
 
     @Nested
-    class ArrayAccessInstructionLoadTests {
+    class ArrayAccessInstructionLoadTests
+    {
 
         @Test
-        void applyArrayLoad() {
+        void applyArrayLoad()
+        {
             SimValue arr = SimValue.ofType(new ArrayType(PrimitiveType.INT, 1), null);
             SimValue idx = SimValue.constant(0, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(arr).push(idx);
@@ -630,7 +692,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyArrayLoadWide() {
+        void applyArrayLoadWide()
+        {
             SimValue arr = SimValue.ofType(new ArrayType(PrimitiveType.LONG, 1), null);
             SimValue idx = SimValue.constant(0, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(arr).push(idx);
@@ -646,7 +709,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountArrayLoad() {
+        void getPopCountArrayLoad()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
@@ -656,7 +720,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountArrayLoad() {
+        void getPushCountArrayLoad()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
@@ -666,7 +731,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountArrayLoadWide() {
+        void getPushCountArrayLoadWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.LONG, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
@@ -676,13 +742,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== ArrayAccessInstruction Tests (Store) ==========
+    // ArrayAccessInstruction Tests (Store)
 
     @Nested
-    class ArrayAccessInstructionStoreTests {
+    class ArrayAccessInstructionStoreTests
+    {
 
         @Test
-        void applyArrayStore() {
+        void applyArrayStore()
+        {
             SimValue arr = SimValue.ofType(new ArrayType(PrimitiveType.INT, 1), null);
             SimValue idx = SimValue.constant(0, PrimitiveType.INT, null);
             SimValue val = SimValue.constant(42, PrimitiveType.INT, null);
@@ -699,7 +767,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyArrayStoreWide() {
+        void applyArrayStoreWide()
+        {
             SimValue arr = SimValue.ofType(new ArrayType(PrimitiveType.LONG, 1), null);
             SimValue idx = SimValue.constant(0, PrimitiveType.INT, null);
             SimValue val = SimValue.ofType(PrimitiveType.LONG, null);
@@ -716,7 +785,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountArrayStore() {
+        void getPopCountArrayStore()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
@@ -726,7 +796,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountArrayStoreWide() {
+        void getPopCountArrayStoreWide()
+        {
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.LONG, 1), "arr");
             SSAValue index = new SSAValue(PrimitiveType.INT, "idx");
             SSAValue value = new SSAValue(PrimitiveType.LONG, "val");
@@ -736,13 +807,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== SimpleInstruction Tests (ArrayLength) ==========
+    // SimpleInstruction Tests (ArrayLength)
 
     @Nested
-    class SimpleInstructionArrayLengthTests {
+    class SimpleInstructionArrayLengthTests
+    {
 
         @Test
-        void applyArrayLength() {
+        void applyArrayLength()
+        {
             SimValue arr = SimValue.ofType(new ArrayType(PrimitiveType.INT, 1), null);
             SimulationState state = SimulationState.empty().push(arr);
 
@@ -757,7 +830,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountArrayLength() {
+        void getPopCountArrayLength()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SimpleInstruction instr = SimpleInstruction.createArrayLength(result, array);
@@ -766,7 +840,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountArrayLength() {
+        void getPushCountArrayLength()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SimpleInstruction instr = SimpleInstruction.createArrayLength(result, array);
@@ -775,13 +850,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== NewInstruction Tests ==========
+    // NewInstruction Tests
 
     @Nested
-    class NewInstructionTests {
+    class NewInstructionTests
+    {
 
         @Test
-        void applyNew() {
+        void applyNew()
+        {
             SimulationState state = SimulationState.empty();
 
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "r");
@@ -793,7 +870,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountNew() {
+        void getPopCountNew()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "r");
             NewInstruction instr = new NewInstruction(result, "java/lang/Object");
 
@@ -801,7 +879,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountNew() {
+        void getPushCountNew()
+        {
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "r");
             NewInstruction instr = new NewInstruction(result, "java/lang/Object");
 
@@ -809,13 +888,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== NewArrayInstruction Tests ==========
+    // NewArrayInstruction Tests
 
     @Nested
-    class NewArrayInstructionTests {
+    class NewArrayInstructionTests
+    {
 
         @Test
-        void applyNewArraySingleDimension() {
+        void applyNewArraySingleDimension()
+        {
             SimValue size = SimValue.constant(10, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(size);
 
@@ -829,7 +910,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyNewArrayMultiDimension() {
+        void applyNewArrayMultiDimension()
+        {
             SimValue size1 = SimValue.constant(10, PrimitiveType.INT, null);
             SimValue size2 = SimValue.constant(20, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(size1).push(size2);
@@ -845,7 +927,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountNewArray() {
+        void getPopCountNewArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "r");
             SSAValue dim = new SSAValue(PrimitiveType.INT, "size");
             NewArrayInstruction instr = new NewArrayInstruction(result, PrimitiveType.INT, List.of(dim));
@@ -854,7 +937,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountNewArrayMultiDimension() {
+        void getPopCountNewArrayMultiDimension()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 2), "r");
             SSAValue dim1 = new SSAValue(PrimitiveType.INT, "d1");
             SSAValue dim2 = new SSAValue(PrimitiveType.INT, "d2");
@@ -864,7 +948,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountNewArray() {
+        void getPushCountNewArray()
+        {
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "r");
             SSAValue dim = new SSAValue(PrimitiveType.INT, "size");
             NewArrayInstruction instr = new NewArrayInstruction(result, PrimitiveType.INT, List.of(dim));
@@ -873,13 +958,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== InvokeInstruction Tests ==========
+    // InvokeInstruction Tests
 
     @Nested
-    class InvokeInstructionTests {
+    class InvokeInstructionTests
+    {
 
         @Test
-        void applyInvokeStatic() {
+        void applyInvokeStatic()
+        {
             SSAValue arg = new SSAValue(PrimitiveType.INT, "arg");
             SimValue argVal = SimValue.constant(5, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(argVal);
@@ -895,7 +982,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyInvokeVirtual() {
+        void applyInvokeVirtual()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("java/lang/String"), "str");
             SimValue objVal = SimValue.ofType(new ReferenceType("java/lang/String"), null);
             SimulationState state = SimulationState.empty().push(objVal);
@@ -911,7 +999,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyInvokeVoid() {
+        void applyInvokeVoid()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             SimValue objVal = SimValue.ofType(new ReferenceType("java/lang/Object"), null);
             SimulationState state = SimulationState.empty().push(objVal);
@@ -926,7 +1015,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyInvokeWithMultipleArgs() {
+        void applyInvokeWithMultipleArgs()
+        {
             SSAValue arg1 = new SSAValue(PrimitiveType.INT, "arg1");
             SSAValue arg2 = new SSAValue(PrimitiveType.INT, "arg2");
             SimValue val1 = SimValue.constant(10, PrimitiveType.INT, null);
@@ -944,27 +1034,26 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountInvokeStatic() {
+        void getPopCountInvokeStatic()
+        {
             SSAValue arg = new SSAValue(PrimitiveType.INT, "arg");
-            InvokeInstruction instr = new InvokeInstruction(
-                InvokeType.STATIC, "A", "m", "(I)V", List.of(arg)
-            );
+            InvokeInstruction instr = new InvokeInstruction(InvokeType.STATIC, "A", "m", "(I)V", List.of(arg));
 
             assertEquals(1, StateTransitions.getPopCount(instr));
         }
 
         @Test
-        void getPopCountInvokeVirtual() {
+        void getPopCountInvokeVirtual()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("A"), "obj");
-            InvokeInstruction instr = new InvokeInstruction(
-                InvokeType.VIRTUAL, "A", "m", "()V", List.of(receiver)
-            );
+            InvokeInstruction instr = new InvokeInstruction(InvokeType.VIRTUAL, "A", "m", "()V", List.of(receiver));
 
             assertEquals(1, StateTransitions.getPopCount(instr));
         }
 
         @Test
-        void getPopCountInvokeWithWideArgs() {
+        void getPopCountInvokeWithWideArgs()
+        {
             SSAValue receiver = new SSAValue(new ReferenceType("A"), "obj");
             SSAValue arg1 = new SSAValue(PrimitiveType.LONG, "arg1");
             SSAValue arg2 = new SSAValue(PrimitiveType.INT, "arg2");
@@ -976,42 +1065,41 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountInvokeVoid() {
-            InvokeInstruction instr = new InvokeInstruction(
-                InvokeType.STATIC, "A", "m", "()V", List.of()
-            );
+        void getPushCountInvokeVoid()
+        {
+            InvokeInstruction instr = new InvokeInstruction(InvokeType.STATIC, "A", "m", "()V", List.of());
 
             assertEquals(0, StateTransitions.getPushCount(instr));
         }
 
         @Test
-        void getPushCountInvokeReturnsInt() {
+        void getPushCountInvokeReturnsInt()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
-            InvokeInstruction instr = new InvokeInstruction(
-                result, InvokeType.STATIC, "A", "m", "()I", List.of()
-            );
+            InvokeInstruction instr = new InvokeInstruction(result, InvokeType.STATIC, "A", "m", "()I", List.of());
 
             assertEquals(1, StateTransitions.getPushCount(instr));
         }
 
         @Test
-        void getPushCountInvokeReturnsLong() {
+        void getPushCountInvokeReturnsLong()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "r");
-            InvokeInstruction instr = new InvokeInstruction(
-                result, InvokeType.STATIC, "A", "m", "()J", List.of()
-            );
+            InvokeInstruction instr = new InvokeInstruction(result, InvokeType.STATIC, "A", "m", "()J", List.of());
 
             assertEquals(2, StateTransitions.getPushCount(instr));
         }
     }
 
-    // ========== ReturnInstruction Tests ==========
+    // ReturnInstruction Tests
 
     @Nested
-    class ReturnInstructionTests {
+    class ReturnInstructionTests
+    {
 
         @Test
-        void applyReturnVoid() {
+        void applyReturnVoid()
+        {
             SimulationState state = SimulationState.empty();
             ReturnInstruction instr = new ReturnInstruction(null);
 
@@ -1021,7 +1109,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyReturnValue() {
+        void applyReturnValue()
+        {
             SimValue val = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(val);
             SSAValue returnValue = new SSAValue(PrimitiveType.INT, "ret");
@@ -1029,18 +1118,19 @@ class StateTransitionsTest {
 
             SimulationState newState = StateTransitions.apply(state, instr);
 
-            // Return doesn't modify state
             assertEquals(1, newState.stackDepth());
         }
     }
 
-    // ========== SimpleInstruction Tests (Throw) ==========
+    // SimpleInstruction Tests (Throw)
 
     @Nested
-    class SimpleInstructionThrowTests {
+    class SimpleInstructionThrowTests
+    {
 
         @Test
-        void applyThrow() {
+        void applyThrow()
+        {
             SimValue ex = SimValue.ofType(new ReferenceType("java/lang/Exception"), null);
             SimulationState state = SimulationState.empty().push(ex);
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
@@ -1052,7 +1142,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountThrow() {
+        void getPopCountThrow()
+        {
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction instr = SimpleInstruction.createThrow(exception);
 
@@ -1060,13 +1151,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== BranchInstruction Tests ==========
+    // BranchInstruction Tests
 
     @Nested
-    class BranchInstructionTests {
+    class BranchInstructionTests
+    {
 
         @Test
-        void applyBranchTwoOperands() {
+        void applyBranchTwoOperands()
+        {
             SimValue v1 = SimValue.constant(5, PrimitiveType.INT, null);
             SimValue v2 = SimValue.constant(3, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v1).push(v2);
@@ -1081,7 +1174,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyBranchSingleOperand() {
+        void applyBranchSingleOperand()
+        {
             SimValue v = SimValue.constant(0, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
 
@@ -1094,7 +1188,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountBranchTwoOperands() {
+        void getPopCountBranchTwoOperands()
+        {
             SSAValue left = new SSAValue(PrimitiveType.INT, "left");
             SSAValue right = new SSAValue(PrimitiveType.INT, "right");
             BranchInstruction instr = new BranchInstruction(CompareOp.EQ, left, right, null, null);
@@ -1103,7 +1198,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountBranchSingleOperand() {
+        void getPopCountBranchSingleOperand()
+        {
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             BranchInstruction instr = new BranchInstruction(CompareOp.EQ, operand, null, null);
 
@@ -1111,13 +1207,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== SimpleInstruction Tests (Goto) ==========
+    // SimpleInstruction Tests (Goto)
 
     @Nested
-    class SimpleInstructionGotoTests {
+    class SimpleInstructionGotoTests
+    {
 
         @Test
-        void applyGoto() {
+        void applyGoto()
+        {
             SimValue v = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
             SimpleInstruction instr = SimpleInstruction.createGoto(null);
@@ -1128,13 +1226,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== SwitchInstruction Tests ==========
+    // SwitchInstruction Tests
 
     @Nested
-    class SwitchInstructionTests {
+    class SwitchInstructionTests
+    {
 
         @Test
-        void applySwitch() {
+        void applySwitch()
+        {
             SimValue key = SimValue.constant(1, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(key);
             SSAValue keyVal = new SSAValue(PrimitiveType.INT, "key");
@@ -1146,7 +1246,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountSwitch() {
+        void getPopCountSwitch()
+        {
             SSAValue keyVal = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction instr = new SwitchInstruction(keyVal, null);
 
@@ -1154,13 +1255,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== TypeCheckInstruction Tests (InstanceOf) ==========
+    // TypeCheckInstruction Tests (InstanceOf)
 
     @Nested
-    class TypeCheckInstructionInstanceOfTests {
+    class TypeCheckInstructionInstanceOfTests
+    {
 
         @Test
-        void applyInstanceOf() {
+        void applyInstanceOf()
+        {
             SimValue obj = SimValue.ofType(new ReferenceType("java/lang/Object"), null);
             SimulationState state = SimulationState.empty().push(obj);
 
@@ -1175,7 +1278,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountInstanceOf() {
+        void getPopCountInstanceOf()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instr = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
@@ -1184,7 +1288,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountInstanceOf() {
+        void getPushCountInstanceOf()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instr = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
@@ -1193,13 +1298,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== SimpleInstruction Tests (MonitorEnter) ==========
+    // SimpleInstruction Tests (MonitorEnter)
 
     @Nested
-    class SimpleInstructionMonitorEnterTests {
+    class SimpleInstructionMonitorEnterTests
+    {
 
         @Test
-        void applyMonitorEnter() {
+        void applyMonitorEnter()
+        {
             SimValue obj = SimValue.ofType(new ReferenceType("java/lang/Object"), null);
             SimulationState state = SimulationState.empty().push(obj);
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
@@ -1211,7 +1318,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountMonitorEnter() {
+        void getPopCountMonitorEnter()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction instr = SimpleInstruction.createMonitorEnter(object);
 
@@ -1219,13 +1327,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== SimpleInstruction Tests (MonitorExit) ==========
+    // SimpleInstruction Tests (MonitorExit)
 
     @Nested
-    class SimpleInstructionMonitorExitTests {
+    class SimpleInstructionMonitorExitTests
+    {
 
         @Test
-        void applyMonitorExit() {
+        void applyMonitorExit()
+        {
             SimValue obj = SimValue.ofType(new ReferenceType("java/lang/Object"), null);
             SimulationState state = SimulationState.empty().push(obj);
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
@@ -1237,7 +1347,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountMonitorExit() {
+        void getPopCountMonitorExit()
+        {
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction instr = SimpleInstruction.createMonitorExit(object);
 
@@ -1245,13 +1356,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== PhiInstruction Tests ==========
+    // PhiInstruction Tests
 
     @Nested
-    class PhiInstructionTests {
+    class PhiInstructionTests
+    {
 
         @Test
-        void applyPhi() {
+        void applyPhi()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             PhiInstruction instr = new PhiInstruction(result);
@@ -1262,7 +1375,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void applyPhiWide() {
+        void applyPhiWide()
+        {
             SimulationState state = SimulationState.empty();
             SSAValue result = new SSAValue(PrimitiveType.LONG, "phi");
             PhiInstruction instr = new PhiInstruction(result);
@@ -1273,7 +1387,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountPhi() {
+        void getPushCountPhi()
+        {
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             PhiInstruction instr = new PhiInstruction(result);
 
@@ -1281,7 +1396,8 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountPhiWide() {
+        void getPushCountPhiWide()
+        {
             SSAValue result = new SSAValue(PrimitiveType.LONG, "phi");
             PhiInstruction instr = new PhiInstruction(result);
 
@@ -1289,13 +1405,15 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== CopyInstruction Tests ==========
+    // CopyInstruction Tests
 
     @Nested
-    class CopyInstructionTests {
+    class CopyInstructionTests
+    {
 
         @Test
-        void applyCopy() {
+        void applyCopy()
+        {
             SimValue v = SimValue.constant(42, PrimitiveType.INT, null);
             SimulationState state = SimulationState.empty().push(v);
             SSAValue result = new SSAValue(PrimitiveType.INT, "copy");
@@ -1309,34 +1427,40 @@ class StateTransitionsTest {
         }
     }
 
-    // ========== Unknown Instruction Tests ==========
+    // Unknown Instruction Tests
 
     @Nested
-    class UnknownInstructionTests {
+    class UnknownInstructionTests
+    {
 
         @Test
-        void applyUnknownInstruction() {
+        void applyUnknownInstruction()
+        {
             SimulationState state = SimulationState.empty()
                 .push(SimValue.constant(42, PrimitiveType.INT, null));
 
             // Use a mock instruction that doesn't match any known type
             IRInstruction unknownInstr = new IRInstruction() {
                 @Override
-                public List<Value> getOperands() {
+                public List<Value> getOperands()
+                {
                     return List.of();
                 }
 
                 @Override
-                public void replaceOperand(Value oldValue, Value newValue) {
+                public void replaceOperand(Value oldValue, Value newValue)
+                {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor)
+                {
                     return null;
                 }
 
                 @Override
-                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+                {
                     return null;
                 }
             };
@@ -1349,24 +1473,29 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPopCountUnknown() {
+        void getPopCountUnknown()
+        {
             IRInstruction unknownInstr = new IRInstruction() {
                 @Override
-                public List<Value> getOperands() {
+                public List<Value> getOperands()
+                {
                     return List.of();
                 }
 
                 @Override
-                public void replaceOperand(Value oldValue, Value newValue) {
+                public void replaceOperand(Value oldValue, Value newValue)
+                {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor)
+                {
                     return null;
                 }
 
                 @Override
-                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+                {
                     return null;
                 }
             };
@@ -1375,24 +1504,29 @@ class StateTransitionsTest {
         }
 
         @Test
-        void getPushCountUnknown() {
+        void getPushCountUnknown()
+        {
             IRInstruction unknownInstr = new IRInstruction() {
                 @Override
-                public List<Value> getOperands() {
+                public List<Value> getOperands()
+                {
                     return List.of();
                 }
 
                 @Override
-                public void replaceOperand(Value oldValue, Value newValue) {
+                public void replaceOperand(Value oldValue, Value newValue)
+                {
                 }
 
                 @Override
-                public <T> T accept(com.tonic.analysis.ssa.visitor.IRVisitor<T> visitor) {
+                public <T> T accept(IRVisitor<T> visitor)
+                {
                     return null;
                 }
 
                 @Override
-                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
+                public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+                {
                     return null;
                 }
             };

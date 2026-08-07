@@ -13,38 +13,42 @@ import com.tonic.parser.MethodEntry;
 import java.io.FileInputStream;
 
 /**
- * Demo for the Execution API.
- *
- * <p>Shows how to:
- * <ul>
- *   <li>Configure execution context</li>
- *   <li>Execute methods with concrete values</li>
- *   <li>Use the debug session for stepping</li>
- *   <li>Set breakpoints and inspect state</li>
- *   <li>Handle execution results</li>
- * </ul>
+ * Demo showing the execution API: running methods with concrete values, stepping, and breakpoints.
  */
-public class ExecutionDemo {
+public class ExecutionDemo
+{
 
-    public static void main(String[] args) throws Exception {
-        if (args.length > 0) {
+    /**
+     * Executes methods of the given class file, or runs synthetic examples when none is given.
+     * @param args path of a class file to load and analyze
+     * @throws Exception if a class file cannot be read or execution fails
+     */
+    public static void main(String[] args) throws Exception
+    {
+        if (args.length > 0)
+        {
             ClassPool pool = ClassPool.getDefault();
-            for (String path : args) {
-                try (FileInputStream fis = new FileInputStream(path)) {
+            for (String path : args)
+            {
+                try (FileInputStream fis = new FileInputStream(path))
+                {
                     pool.loadClass(fis);
                 }
             }
 
             ClassFile cf = pool.getClasses().iterator().next();
             analyzeClass(cf, pool);
-        } else {
+        }
+        else
+        {
             System.out.println("Usage: ExecutionDemo <classfile>");
             System.out.println("\nRunning demo with synthetic examples...\n");
             runSyntheticDemo();
         }
     }
 
-    private static void analyzeClass(ClassFile cf, ClassPool pool) {
+    private static void analyzeClass(ClassFile cf, ClassPool pool)
+    {
         System.out.println("=== Executing methods in: " + cf.getClassName() + " ===\n");
 
         HeapManager heap = new SimpleHeapManager();
@@ -63,21 +67,27 @@ public class ExecutionDemo {
 
         BytecodeEngine engine = new BytecodeEngine(ctx);
 
-        for (MethodEntry method : cf.getMethods()) {
-            if (method.getCodeAttribute() == null) {
+        for (MethodEntry method : cf.getMethods())
+        {
+            if (method.getCodeAttribute() == null)
+            {
                 continue;
             }
-            if (method.getName().equals("<clinit>")) {
+            if (method.getName().equals("<clinit>"))
+            {
                 continue;
             }
 
             System.out.println("Method: " + method.getName() + method.getDesc());
             System.out.println("-".repeat(60));
 
-            try {
+            try
+            {
                 BytecodeResult result = engine.execute(method);
                 displayResult(result);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 System.out.println("  Error: " + e.getMessage());
             }
 
@@ -86,30 +96,39 @@ public class ExecutionDemo {
         }
     }
 
-    private static void displayResult(BytecodeResult result) {
+    private static void displayResult(BytecodeResult result)
+    {
         System.out.println("  Status: " + result.getStatus());
         System.out.println("  Instructions: " + result.getInstructionsExecuted());
         System.out.println("  Time: " + (result.getExecutionTimeNanos() / 1_000_000.0) + " ms");
 
-        if (result.isSuccess()) {
+        if (result.isSuccess())
+        {
             ConcreteValue returnValue = result.getReturnValue();
-            if (returnValue != null && !returnValue.isNull()) {
+            if (returnValue != null && !returnValue.isNull())
+            {
                 System.out.println("  Return: " + formatValue(returnValue));
             }
-        } else if (result.hasException()) {
+        }
+        else if (result.hasException())
+        {
             ObjectInstance ex = result.getException();
             System.out.println("  Exception: " + ex.getClassName());
-            if (!result.getStackTrace().isEmpty()) {
+            if (!result.getStackTrace().isEmpty())
+            {
                 System.out.println("  Stack trace:");
-                for (String frame : result.getStackTrace()) {
+                for (String frame : result.getStackTrace())
+                {
                     System.out.println("    " + frame);
                 }
             }
         }
     }
 
-    private static String formatValue(ConcreteValue value) {
-        switch (value.getTag()) {
+    private static String formatValue(ConcreteValue value)
+    {
+        switch (value.getTag())
+        {
             case INT: return "int(" + value.asInt() + ")";
             case LONG: return "long(" + value.asLong() + ")";
             case FLOAT: return "float(" + value.asFloat() + ")";
@@ -122,7 +141,8 @@ public class ExecutionDemo {
         }
     }
 
-    private static void runSyntheticDemo() {
+    private static void runSyntheticDemo()
+    {
         System.out.println("=== Execution API Demo ===\n");
 
         demoConcreteValues();
@@ -131,7 +151,8 @@ public class ExecutionDemo {
         demoDebugSession();
     }
 
-    private static void demoConcreteValues() {
+    private static void demoConcreteValues()
+    {
         System.out.println("--- Demo 1: Concrete Values ---\n");
 
         ConcreteValue intVal = ConcreteValue.intValue(42);
@@ -148,7 +169,8 @@ public class ExecutionDemo {
         System.out.println();
     }
 
-    private static void demoStackOperations() {
+    private static void demoStackOperations()
+    {
         System.out.println("--- Demo 2: Stack Operations ---\n");
 
         ConcreteStack stack = new ConcreteStack(10);
@@ -172,7 +194,8 @@ public class ExecutionDemo {
         System.out.println();
     }
 
-    private static void demoHeapOperations() {
+    private static void demoHeapOperations()
+    {
         System.out.println("--- Demo 3: Heap Operations ---\n");
 
         HeapManager heap = new SimpleHeapManager();
@@ -200,7 +223,8 @@ public class ExecutionDemo {
         System.out.println();
     }
 
-    private static void demoDebugSession() {
+    private static void demoDebugSession()
+    {
         System.out.println("--- Demo 4: Debug Session ---\n");
 
         System.out.println("DebugSession features:");

@@ -7,37 +7,52 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 import java.util.List;
 
 /**
- * Object allocation instruction (NEW).
+ * An uninitialized object allocation (the new opcode, before the constructor call).
  */
-public class NewInstruction extends IRInstruction {
+public class NewInstruction extends IRInstruction
+{
 
     private final String className;
 
-    public NewInstruction(SSAValue result, String className) {
+    /**
+     * Creates an object allocation.
+     * @param result the SSA value receiving the new object reference
+     * @param className the internal name of the class to instantiate
+     */
+    public NewInstruction(SSAValue result, String className)
+    {
         super(result);
         this.className = className;
     }
 
-    public String getClassName() {
+    /**
+     * @return the class name
+     */
+    public String getClassName()
+    {
         return className;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return List.of();
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitNew(this);
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return result + " = new " + className;
     }
 }

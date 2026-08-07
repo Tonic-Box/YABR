@@ -4,7 +4,6 @@ import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.emit.SourceEmitter;
-import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.*;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -13,21 +12,25 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.util.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
 /**
- * Demonstrates the Source-Level AST Layer capabilities.
- * Tests AST node construction, source emission, and IR recovery.
+ * Demo showing the source-level AST layer: node construction, source emission, and IR recovery.
  */
-public class SourceASTDemo {
+public class SourceASTDemo
+{
 
     private static int passCount = 0;
     private static int failCount = 0;
 
-    public static void main(String[] args) {
+    /**
+     * Runs the AST construction, emission, type system, and IR recovery test parts.
+     * @param args unused
+     */
+    public static void main(String[] args)
+    {
         Logger.setLog(false);
 
         System.out.println("================================================================");
@@ -57,12 +60,12 @@ public class SourceASTDemo {
         System.out.println("================================================================");
     }
 
-    // ==================== Part 1: AST Construction ====================
+    // Part 1: AST Construction
 
-    private static void testASTConstruction() {
+    private static void testASTConstruction()
+    {
         section("Part 1: AST Node Construction");
 
-        // Test literal expressions
         test("Integer literal", () -> {
             LiteralExpr lit = LiteralExpr.ofInt(42);
             return lit.getValue().equals(42) && lit.getType() == PrimitiveSourceType.INT;
@@ -84,7 +87,6 @@ public class SourceASTDemo {
             return n.getValue() == null;
         });
 
-        // Test binary expressions
         test("Binary expression construction", () -> {
             Expression left = LiteralExpr.ofInt(10);
             Expression right = LiteralExpr.ofInt(20);
@@ -94,13 +96,11 @@ public class SourceASTDemo {
                     && add.getRight() == right;
         });
 
-        // Test variable reference
         test("Variable reference", () -> {
             VarRefExpr ref = new VarRefExpr("myVar", PrimitiveSourceType.INT, null);
             return ref.getName().equals("myVar");
         });
 
-        // Test method call
         test("Method call expression", () -> {
             Expression receiver = new VarRefExpr("str", new ReferenceSourceType("java/lang/String", List.of()), null);
             MethodCallExpr call = MethodCallExpr.instanceCall(
@@ -109,16 +109,16 @@ public class SourceASTDemo {
             return call.getMethodName().equals("length") && !call.isStatic();
         });
 
-        // Test new expression
         test("New object expression", () -> {
             NewExpr newExpr = new NewExpr("java/util/ArrayList", List.of());
             return newExpr.getClassName().equals("java/util/ArrayList");
         });
     }
 
-    // ==================== Part 2: Expression Emission ====================
+    // Part 2: Expression Emission
 
-    private static void testExpressionEmission() {
+    private static void testExpressionEmission()
+    {
         section("Part 2: Expression Emission");
 
         test("Emit integer literal", () -> {
@@ -205,9 +205,7 @@ public class SourceASTDemo {
         });
 
         test("Emit cast expression", () -> {
-            CastExpr cast = new CastExpr(
-                    PrimitiveSourceType.LONG,
-                    new VarRefExpr("x", PrimitiveSourceType.INT, null));
+            CastExpr cast = new CastExpr(PrimitiveSourceType.LONG, new VarRefExpr("x", PrimitiveSourceType.INT, null));
             String code = SourceEmitter.emit(cast);
             return code.equals("(long) x");
         });
@@ -222,8 +220,7 @@ public class SourceASTDemo {
         });
 
         test("Emit new object", () -> {
-            NewExpr newExpr = new NewExpr("java/lang/StringBuilder",
-                    List.of(LiteralExpr.ofString("init")));
+            NewExpr newExpr = new NewExpr("java/lang/StringBuilder", List.of(LiteralExpr.ofString("init")));
             String code = SourceEmitter.emit(newExpr);
             return code.equals("new StringBuilder(\"init\")");
         });
@@ -235,14 +232,14 @@ public class SourceASTDemo {
         });
     }
 
-    // ==================== Part 3: Statement Emission ====================
+    // Part 3: Statement Emission
 
-    private static void testStatementEmission() {
+    private static void testStatementEmission()
+    {
         section("Part 3: Statement Emission");
 
         test("Emit variable declaration", () -> {
-            VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT, "count", LiteralExpr.ofInt(0));
+            VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "count", LiteralExpr.ofInt(0));
             String code = SourceEmitter.emit(decl);
             return code.trim().equals("int count = 0;");
         });
@@ -344,17 +341,16 @@ public class SourceASTDemo {
         });
     }
 
-    // ==================== Part 4: Type System ====================
+    // Part 4: Type System
 
-    private static void testTypeSystem() {
+    private static void testTypeSystem()
+    {
         section("Part 4: Type System");
 
-        test("Primitive types", () -> {
-            return PrimitiveSourceType.INT.toJavaSource().equals("int")
-                    && PrimitiveSourceType.LONG.toJavaSource().equals("long")
-                    && PrimitiveSourceType.BOOLEAN.toJavaSource().equals("boolean")
-                    && PrimitiveSourceType.DOUBLE.toJavaSource().equals("double");
-        });
+        test("Primitive types", () -> PrimitiveSourceType.INT.toJavaSource().equals("int")
+                && PrimitiveSourceType.LONG.toJavaSource().equals("long")
+                && PrimitiveSourceType.BOOLEAN.toJavaSource().equals("boolean")
+                && PrimitiveSourceType.DOUBLE.toJavaSource().equals("double"));
 
         test("Reference type simple name", () -> {
             ReferenceSourceType ref = new ReferenceSourceType("java/lang/String", List.of());
@@ -371,28 +367,29 @@ public class SourceASTDemo {
             return arr2d.toJavaSource().equals("int[][]");
         });
 
-        test("Void type", () -> {
-            return VoidSourceType.INSTANCE.toJavaSource().equals("void");
-        });
+        test("Void type", () -> VoidSourceType.INSTANCE.toJavaSource().equals("void"));
 
         test("Type from IR type conversion", () -> {
-            // Test the fromIRType static method
-            PrimitiveType irInt = com.tonic.analysis.ssa.type.PrimitiveType.INT;
+            PrimitiveType irInt = PrimitiveType.INT;
             SourceType sourceType = SourceType.fromIRType(irInt);
             return sourceType == PrimitiveSourceType.INT;
         });
     }
 
-    // ==================== Part 5: IR Recovery ====================
+    // Part 5: IR Recovery
 
-    private static void testIRRecovery() {
+    private static void testIRRecovery()
+    {
         section("Part 5: IR Recovery");
 
-        try {
+        try
+        {
             ClassPool classPool = ClassPool.getDefault();
 
-            try (InputStream is = SourceASTDemo.class.getResourceAsStream("ASTTestCases.class")) {
-                if (is == null) {
+            try (InputStream is = SourceASTDemo.class.getResourceAsStream("ASTTestCases.class"))
+            {
+                if (is == null)
+                {
                     System.out.println("  [SKIP] ASTTestCases.class not found - run 'gradlew build' first");
                     return;
                 }
@@ -402,7 +399,6 @@ public class SourceASTDemo {
                 System.out.println("  Methods: " + classFile.getMethods().size());
                 System.out.println();
 
-                // Test recovery of various methods
                 testMethodRecovery(classFile, "simpleArithmetic");
                 testMethodRecovery(classFile, "conditionalLogic");
                 testMethodRecovery(classFile, "whileLoop");
@@ -413,50 +409,54 @@ public class SourceASTDemo {
                 testMethodRecovery(classFile, "bitwiseOps");
                 testMethodRecovery(classFile, "typeCasting");
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             System.out.println("  [ERROR] Failed to load test class: " + e.getMessage());
             failCount++;
         }
     }
 
-    private static void testMethodRecovery(ClassFile classFile, String methodName) {
+    private static void testMethodRecovery(ClassFile classFile, String methodName)
+    {
         test("Recover " + methodName, () -> {
             MethodEntry method = findMethod(classFile, methodName);
-            if (method == null) {
+            if (method == null)
+            {
                 System.out.println("    Method not found: " + methodName);
                 return false;
             }
 
-            // Lift to SSA
             SSA ssa = new SSA(classFile.getConstPool());
             IRMethod irMethod = ssa.lift(method);
 
-            if (irMethod == null || irMethod.getBlocks().isEmpty()) {
+            if (irMethod == null || irMethod.getBlocks().isEmpty())
+            {
                 System.out.println("    Failed to lift to IR");
                 return false;
             }
 
             // Recover source AST
-            MethodRecoverer recoverer = new MethodRecoverer(irMethod, method,
-                    NameRecoveryStrategy.PREFER_DEBUG_INFO);
+            MethodRecoverer recoverer = new MethodRecoverer(irMethod, method, NameRecoveryStrategy.PREFER_DEBUG_INFO);
             BlockStmt body = recoverer.recover();
 
-            if (body == null) {
+            if (body == null)
+            {
                 System.out.println("    Failed to recover AST");
                 return false;
             }
 
-            // Emit to source
             String source = SourceEmitter.emit(body);
 
-            if (source == null || source.isEmpty()) {
+            if (source == null || source.isEmpty())
+            {
                 System.out.println("    Failed to emit source");
                 return false;
             }
 
-            // Print recovered source
             System.out.println("    --- " + methodName + " ---");
-            for (String line : source.split("\n")) {
+            for (String line : source.split("\n"))
+            {
                 System.out.println("    " + line);
             }
             System.out.println();
@@ -465,34 +465,45 @@ public class SourceASTDemo {
         });
     }
 
-    private static MethodEntry findMethod(ClassFile classFile, String name) {
-        for (MethodEntry method : classFile.getMethods()) {
-            if (method.getName().equals(name)) {
+    private static MethodEntry findMethod(ClassFile classFile, String name)
+    {
+        for (MethodEntry method : classFile.getMethods())
+        {
+            if (method.getName().equals(name))
+            {
                 return method;
             }
         }
         return null;
     }
 
-    // ==================== Test Helpers ====================
+    // Test Helpers
 
-    private static void section(String title) {
+    private static void section(String title)
+    {
         System.out.println();
         System.out.println("--- " + title + " ---");
         System.out.println();
     }
 
-    private static void test(String name, TestCase testCase) {
-        try {
+    private static void test(String name, TestCase testCase)
+    {
+        try
+        {
             boolean result = testCase.run();
-            if (result) {
+            if (result)
+            {
                 System.out.println("  [PASS] " + name);
                 passCount++;
-            } else {
+            }
+            else
+            {
                 System.out.println("  [FAIL] " + name);
                 failCount++;
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.out.println("  [FAIL] " + name + " - Exception: " + e.getMessage());
             e.printStackTrace();
             failCount++;
@@ -500,7 +511,13 @@ public class SourceASTDemo {
     }
 
     @FunctionalInterface
-    interface TestCase {
+    interface TestCase
+    {
+        /**
+         * Runs one demo check.
+         * @return true if the check passed
+         * @throws Exception if the check failed with an error, which the runner reports as a failure
+         */
         boolean run() throws Exception;
     }
 }

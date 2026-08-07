@@ -10,32 +10,32 @@ import java.util.*;
 
 /**
  * Block merging optimization.
- * Merges blocks with a single predecessor/successor relationship where:
- * - Block A has exactly one successor (B)
- * - Block B has exactly one predecessor (A)
- * - Block B has no phi instructions
- * - Block A ends with an unconditional goto to B
- *
- * The result combines A and B into a single block.
  */
-public class BlockMerging implements IRTransform {
+public class BlockMerging implements IRTransform
+{
 
     @Override
-    public String getName() {
+    public String getName()
+    {
         return "BlockMerging";
     }
 
     @Override
-    public boolean run(IRMethod method) {
+    public boolean run(IRMethod method)
+    {
         boolean changed = false;
 
         boolean merged;
-        do {
+        do
+        {
             merged = false;
-            for (IRBlock block : new ArrayList<>(method.getBlocks())) {
-                if (canMergeWithSuccessor(method, block)) {
+            for (IRBlock block : new ArrayList<>(method.getBlocks()))
+            {
+                if (canMergeWithSuccessor(method, block))
+                {
                     IRBlock successor = getSingleSuccessor(block);
-                    if (successor != null) {
+                    if (successor != null)
+                    {
                         mergeBlocks(method, block, successor);
                         merged = true;
                         changed = true;
@@ -50,42 +50,51 @@ public class BlockMerging implements IRTransform {
     /**
      * Checks if a block can be merged with its successor.
      */
-    private boolean canMergeWithSuccessor(IRMethod method, IRBlock block) {
+    private boolean canMergeWithSuccessor(IRMethod method, IRBlock block)
+    {
         Set<IRBlock> successors = block.getSuccessors();
-        if (successors.size() != 1) {
+        if (successors.size() != 1)
+        {
             return false;
         }
 
         IRBlock successor = successors.iterator().next();
 
-        if (successor == block) {
+        if (successor == block)
+        {
             return false;
         }
 
         // Never merge the entry block away: it could be merged into its back-edge predecessor, leaving
         // entryBlock dangling and the lowered method empty.
-        if (successor == method.getEntryBlock()) {
+        if (successor == method.getEntryBlock())
+        {
             return false;
         }
 
         // Only merge blocks in exactly the same set of try regions: the exception table cannot express a
         // block that is half-inside a region, and a handler block (the catch target) must never be merged away.
-        if (!sameExceptionRegions(method, block, successor)) {
+        if (!sameExceptionRegions(method, block, successor))
+        {
             return false;
         }
 
-        if (successor.getPredecessors().size() != 1) {
+        if (successor.getPredecessors().size() != 1)
+        {
             return false;
         }
 
-        if (!successor.getPhiInstructions().isEmpty()) {
+        if (!successor.getPhiInstructions().isEmpty())
+        {
             return false;
         }
 
         IRInstruction term = block.getTerminator();
-        if (term instanceof SimpleInstruction) {
+        if (term instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) term;
-            if (simple.getOp() == SimpleOp.GOTO) {
+            if (simple.getOp() == SimpleOp.GOTO)
+            {
                 return simple.getTarget() == successor;
             }
         }
@@ -94,17 +103,21 @@ public class BlockMerging implements IRTransform {
 
     /**
      * True when blocks {@code a} and {@code b} belong to exactly the same set of protected (try) regions and
-     * neither is a handler block — the precondition for merging them without breaking an exception range.
+     * neither is a handler block - the precondition for merging them without breaking an exception range.
      */
-    private static boolean sameExceptionRegions(IRMethod method, IRBlock a, IRBlock b) {
-        for (ExceptionHandler h : method.getExceptionHandlers()) {
-            if (h.getHandlerBlock() == a || h.getHandlerBlock() == b) {
+    private static boolean sameExceptionRegions(IRMethod method, IRBlock a, IRBlock b)
+    {
+        for (ExceptionHandler h : method.getExceptionHandlers())
+        {
+            if (h.getHandlerBlock() == a || h.getHandlerBlock() == b)
+            {
                 return false;
             }
             Set<IRBlock> region = h.getTryBlocks();
             boolean aIn = region != null && region.contains(a);
             boolean bIn = region != null && region.contains(b);
-            if (aIn != bIn) {
+            if (aIn != bIn)
+            {
                 return false;
             }
         }
@@ -114,7 +127,8 @@ public class BlockMerging implements IRTransform {
     /**
      * Gets the single successor of a block.
      */
-    private IRBlock getSingleSuccessor(IRBlock block) {
+    private IRBlock getSingleSuccessor(IRBlock block)
+    {
         Set<IRBlock> successors = block.getSuccessors();
         return successors.size() == 1 ? successors.iterator().next() : null;
     }
@@ -124,27 +138,33 @@ public class BlockMerging implements IRTransform {
      * A's goto is removed and B's instructions are appended to A.
      * A takes over B's successors.
      */
-    private void mergeBlocks(IRMethod method, IRBlock a, IRBlock b) {
+    private void mergeBlocks(IRMethod method, IRBlock a, IRBlock b)
+    {
         IRInstruction gotoInstr = a.getTerminator();
-        if (gotoInstr != null) {
+        if (gotoInstr != null)
+        {
             a.removeInstruction(gotoInstr);
         }
 
-        for (IRInstruction instr : new ArrayList<>(b.getInstructions())) {
+        for (IRInstruction instr : new ArrayList<>(b.getInstructions()))
+        {
             b.removeInstruction(instr);
             a.addInstruction(instr);
         }
 
         a.removeSuccessor(b);
-        for (IRBlock bSucc : new ArrayList<>(b.getSuccessors())) {
+        for (IRBlock bSucc : new ArrayList<>(b.getSuccessors()))
+        {
             a.addSuccessor(bSucc);
 
             bSucc.getPredecessors().remove(b);
             bSucc.getPredecessors().add(a);
 
-            for (PhiInstruction phi : bSucc.getPhiInstructions()) {
+            for (PhiInstruction phi : bSucc.getPhiInstructions())
+            {
                 Value incoming = phi.getIncoming(b);
-                if (incoming != null) {
+                if (incoming != null)
+                {
                     phi.removeIncoming(b);
                     phi.addIncoming(incoming, a);
                 }
@@ -152,7 +172,8 @@ public class BlockMerging implements IRTransform {
         }
 
         IRInstruction newTerm = a.getTerminator();
-        if (newTerm != null) {
+        if (newTerm != null)
+        {
             updateTerminatorTargets(newTerm, b, a);
         }
 
@@ -162,27 +183,39 @@ public class BlockMerging implements IRTransform {
     /**
      * Updates terminator instruction targets to handle merged blocks.
      */
-    private void updateTerminatorTargets(IRInstruction term, IRBlock oldTarget, IRBlock newTarget) {
-        if (term instanceof SimpleInstruction) {
+    private void updateTerminatorTargets(IRInstruction term, IRBlock oldTarget, IRBlock newTarget)
+    {
+        if (term instanceof SimpleInstruction)
+        {
             SimpleInstruction simple = (SimpleInstruction) term;
-            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget) {
+            if (simple.getOp() == SimpleOp.GOTO && simple.getTarget() == oldTarget)
+            {
                 simple.setTarget(newTarget);
             }
-        } else if (term instanceof BranchInstruction) {
+        }
+        else if (term instanceof BranchInstruction)
+        {
             BranchInstruction branch = (BranchInstruction) term;
-            if (branch.getTrueTarget() == oldTarget) {
+            if (branch.getTrueTarget() == oldTarget)
+            {
                 branch.setTrueTarget(newTarget);
             }
-            if (branch.getFalseTarget() == oldTarget) {
+            if (branch.getFalseTarget() == oldTarget)
+            {
                 branch.setFalseTarget(newTarget);
             }
-        } else if (term instanceof SwitchInstruction) {
+        }
+        else if (term instanceof SwitchInstruction)
+        {
             SwitchInstruction switchInstr = (SwitchInstruction) term;
-            if (switchInstr.getDefaultTarget() == oldTarget) {
+            if (switchInstr.getDefaultTarget() == oldTarget)
+            {
                 switchInstr.setDefaultTarget(newTarget);
             }
-            for (Map.Entry<Integer, IRBlock> entry : switchInstr.getCases().entrySet()) {
-                if (entry.getValue() == oldTarget) {
+            for (Map.Entry<Integer, IRBlock> entry : switchInstr.getCases().entrySet())
+            {
+                if (entry.getValue() == oldTarget)
+                {
                     switchInstr.getCases().put(entry.getKey(), newTarget);
                 }
             }

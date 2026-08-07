@@ -18,33 +18,46 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class EliminatorTest {
+class EliminatorTest
+{
+
+    /**
+     * Counts every node in the subtree, so a transform that silently drops a nested body or
+     * expression is visible even when it reports no change.
+     */
+    private static int countNodes(BlockStmt block)
+    {
+        int[] count = {0};
+        block.walk(node -> count[0]++);
+        return count[0];
+    }
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
         SSAValue.resetIdCounter();
     }
 
     @Nested
-    class SideEffectDetectorTests {
+    class SideEffectDetectorTests
+    {
 
         @Nested
-        class DeadStoreEliminatorSideEffectTests {
+        class DeadStoreEliminatorSideEffectTests
+        {
             private DeadStoreEliminator eliminator;
 
             @BeforeEach
-            void setUp() {
+            void setUp()
+            {
                 eliminator = new DeadStoreEliminator();
             }
 
             @Test
-            void literalHasNoSideEffects() {
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    LiteralExpr.ofInt(42)
-                );
+            void literalHasNoSideEffects()
+            {
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(42));
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -65,7 +78,8 @@ class EliminatorTest {
             }
 
             @Test
-            void varRefHasNoSideEffects() {
+            void varRefHasNoSideEffects()
+            {
                 VarDeclStmt decl = new VarDeclStmt(
                     PrimitiveSourceType.INT,
                     "x",
@@ -90,7 +104,8 @@ class EliminatorTest {
             }
 
             @Test
-            void thisExprHasNoSideEffects() {
+            void thisExprHasNoSideEffects()
+            {
                 VarDeclStmt decl = new VarDeclStmt(
                     new ReferenceSourceType("Object"),
                     "x",
@@ -115,7 +130,8 @@ class EliminatorTest {
             }
 
             @Test
-            void superExprHasNoSideEffects() {
+            void superExprHasNoSideEffects()
+            {
                 VarDeclStmt decl = new VarDeclStmt(
                     new ReferenceSourceType("Object"),
                     "x",
@@ -140,7 +156,8 @@ class EliminatorTest {
             }
 
             @Test
-            void classExprHasNoSideEffects() {
+            void classExprHasNoSideEffects()
+            {
                 VarDeclStmt decl = new VarDeclStmt(
                     new ReferenceSourceType("Class"),
                     "x",
@@ -165,18 +182,15 @@ class EliminatorTest {
             }
 
             @Test
-            void lambdaExprHasNoSideEffects() {
+            void lambdaExprHasNoSideEffects()
+            {
                 LambdaExpr lambda = new LambdaExpr(
                     new ArrayList<>(),
                     new BlockStmt(),
                     new ReferenceSourceType("Function")
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ReferenceSourceType("Function"),
-                    "x",
-                    lambda
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ReferenceSourceType("Function"), "x", lambda);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -196,7 +210,8 @@ class EliminatorTest {
             }
 
             @Test
-            void binaryExprWithAssignmentHasSideEffects() {
+            void binaryExprWithAssignmentHasSideEffects()
+            {
                 BinaryExpr assignExpr = new BinaryExpr(
                     BinaryOperator.ASSIGN,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
@@ -204,11 +219,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    assignExpr
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", assignExpr);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -228,7 +239,8 @@ class EliminatorTest {
             }
 
             @Test
-            void binaryExprWithCompoundAssignmentHasSideEffects() {
+            void binaryExprWithCompoundAssignmentHasSideEffects()
+            {
                 BinaryExpr compoundAssign = new BinaryExpr(
                     BinaryOperator.ADD_ASSIGN,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
@@ -236,11 +248,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    compoundAssign
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", compoundAssign);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -260,7 +268,8 @@ class EliminatorTest {
             }
 
             @Test
-            void binaryExprWithoutAssignmentHasNoSideEffects() {
+            void binaryExprWithoutAssignmentHasNoSideEffects()
+            {
                 BinaryExpr addExpr = new BinaryExpr(
                     BinaryOperator.ADD,
                     LiteralExpr.ofInt(5),
@@ -268,11 +277,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    addExpr
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", addExpr);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -292,18 +297,15 @@ class EliminatorTest {
             }
 
             @Test
-            void unaryPreIncrementHasSideEffects() {
+            void unaryPreIncrementHasSideEffects()
+            {
                 UnaryExpr preInc = new UnaryExpr(
                     UnaryOperator.PRE_INC,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    preInc
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", preInc);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -323,18 +325,15 @@ class EliminatorTest {
             }
 
             @Test
-            void unaryPostIncrementHasSideEffects() {
+            void unaryPostIncrementHasSideEffects()
+            {
                 UnaryExpr postInc = new UnaryExpr(
                     UnaryOperator.POST_INC,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    postInc
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", postInc);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -354,18 +353,15 @@ class EliminatorTest {
             }
 
             @Test
-            void unaryPreDecrementHasSideEffects() {
+            void unaryPreDecrementHasSideEffects()
+            {
                 UnaryExpr preDec = new UnaryExpr(
                     UnaryOperator.PRE_DEC,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    preDec
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", preDec);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -385,18 +381,15 @@ class EliminatorTest {
             }
 
             @Test
-            void unaryPostDecrementHasSideEffects() {
+            void unaryPostDecrementHasSideEffects()
+            {
                 UnaryExpr postDec = new UnaryExpr(
                     UnaryOperator.POST_DEC,
                     new VarRefExpr("y", PrimitiveSourceType.INT),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    postDec
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", postDec);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -416,18 +409,11 @@ class EliminatorTest {
             }
 
             @Test
-            void unaryNegateHasNoSideEffects() {
-                UnaryExpr negate = new UnaryExpr(
-                    UnaryOperator.NEG,
-                    LiteralExpr.ofInt(5),
-                    PrimitiveSourceType.INT
-                );
+            void unaryNegateHasNoSideEffects()
+            {
+                UnaryExpr negate = new UnaryExpr(UnaryOperator.NEG, LiteralExpr.ofInt(5), PrimitiveSourceType.INT);
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    negate
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", negate);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -447,7 +433,8 @@ class EliminatorTest {
             }
 
             @Test
-            void ternaryWithoutSideEffectsIsOk() {
+            void ternaryWithoutSideEffectsIsOk()
+            {
                 TernaryExpr ternary = new TernaryExpr(
                     LiteralExpr.ofBoolean(true),
                     LiteralExpr.ofInt(1),
@@ -455,11 +442,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    ternary
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", ternary);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -479,7 +462,8 @@ class EliminatorTest {
             }
 
             @Test
-            void ternaryWithSideEffectInConditionBlocked() {
+            void ternaryWithSideEffectInConditionBlocked()
+            {
                 MethodCallExpr methodCall = new MethodCallExpr(
                     null,
                     "test",
@@ -496,11 +480,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    ternary
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", ternary);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -520,17 +500,11 @@ class EliminatorTest {
             }
 
             @Test
-            void castExprHasNoSideEffects() {
-                CastExpr cast = new CastExpr(
-                    PrimitiveSourceType.DOUBLE,
-                    LiteralExpr.ofInt(5)
-                );
+            void castExprHasNoSideEffects()
+            {
+                CastExpr cast = new CastExpr(PrimitiveSourceType.DOUBLE, LiteralExpr.ofInt(5));
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.DOUBLE,
-                    "x",
-                    cast
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.DOUBLE, "x", cast);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -550,17 +524,14 @@ class EliminatorTest {
             }
 
             @Test
-            void instanceOfExprHasNoSideEffects() {
+            void instanceOfExprHasNoSideEffects()
+            {
                 InstanceOfExpr instanceOf = new InstanceOfExpr(
                     new VarRefExpr("obj", new ReferenceSourceType("Object")),
                     new ReferenceSourceType("String")
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.BOOLEAN,
-                    "x",
-                    instanceOf
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.BOOLEAN, "x", instanceOf);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -580,7 +551,8 @@ class EliminatorTest {
             }
 
             @Test
-            void methodCallHasSideEffects() {
+            void methodCallHasSideEffects()
+            {
                 MethodCallExpr methodCall = new MethodCallExpr(
                     null,
                     "getValue",
@@ -590,11 +562,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    methodCall
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", methodCall);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -614,18 +582,11 @@ class EliminatorTest {
             }
 
             @Test
-            void newExprHasSideEffects() {
-                NewExpr newExpr = new NewExpr(
-                    "java/lang/Object",
-                    new ArrayList<>(),
-                    new ReferenceSourceType("Object")
-                );
+            void newExprHasSideEffects()
+            {
+                NewExpr newExpr = new NewExpr("java/lang/Object", new ArrayList<>(), new ReferenceSourceType("Object"));
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ReferenceSourceType("Object"),
-                    "x",
-                    newExpr
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ReferenceSourceType("Object"), "x", newExpr);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -645,17 +606,14 @@ class EliminatorTest {
             }
 
             @Test
-            void newArrayExprHasSideEffects() {
+            void newArrayExprHasSideEffects()
+            {
                 NewArrayExpr newArray = new NewArrayExpr(
                     PrimitiveSourceType.INT,
                     Collections.singletonList(LiteralExpr.ofInt(10))
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ArraySourceType(PrimitiveSourceType.INT),
-                    "x",
-                    newArray
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ArraySourceType(PrimitiveSourceType.INT), "x", newArray);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -675,7 +633,8 @@ class EliminatorTest {
             }
 
             @Test
-            void fieldAccessWithSimpleReceiverHasNoSideEffects() {
+            void fieldAccessWithSimpleReceiverHasNoSideEffects()
+            {
                 FieldAccessExpr fieldAccess = new FieldAccessExpr(
                     new VarRefExpr("obj", new ReferenceSourceType("Object")),
                     "field",
@@ -684,11 +643,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    fieldAccess
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", fieldAccess);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -708,18 +663,15 @@ class EliminatorTest {
             }
 
             @Test
-            void arrayAccessHasNoSideEffects() {
+            void arrayAccessHasNoSideEffects()
+            {
                 ArrayAccessExpr arrayAccess = new ArrayAccessExpr(
                     new VarRefExpr("arr", new ArraySourceType(PrimitiveSourceType.INT)),
                     LiteralExpr.ofInt(0),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    arrayAccess
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", arrayAccess);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -739,21 +691,14 @@ class EliminatorTest {
             }
 
             @Test
-            void arrayInitExprWithoutSideEffects() {
+            void arrayInitExprWithoutSideEffects()
+            {
                 ArrayInitExpr arrayInit = new ArrayInitExpr(
-                    Arrays.asList(
-                        LiteralExpr.ofInt(1),
-                        LiteralExpr.ofInt(2),
-                        LiteralExpr.ofInt(3)
-                    ),
+                    Arrays.asList(LiteralExpr.ofInt(1), LiteralExpr.ofInt(2), LiteralExpr.ofInt(3)),
                     new ArraySourceType(PrimitiveSourceType.INT)
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ArraySourceType(PrimitiveSourceType.INT),
-                    "x",
-                    arrayInit
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ArraySourceType(PrimitiveSourceType.INT), "x", arrayInit);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -773,7 +718,8 @@ class EliminatorTest {
             }
 
             @Test
-            void arrayInitExprWithSideEffects() {
+            void arrayInitExprWithSideEffects()
+            {
                 MethodCallExpr methodCall = new MethodCallExpr(
                     null,
                     "getValue",
@@ -784,19 +730,11 @@ class EliminatorTest {
                 );
 
                 ArrayInitExpr arrayInit = new ArrayInitExpr(
-                    Arrays.asList(
-                        LiteralExpr.ofInt(1),
-                        methodCall,
-                        LiteralExpr.ofInt(3)
-                    ),
+                    Arrays.asList(LiteralExpr.ofInt(1), methodCall, LiteralExpr.ofInt(3)),
                     new ArraySourceType(PrimitiveSourceType.INT)
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ArraySourceType(PrimitiveSourceType.INT),
-                    "x",
-                    arrayInit
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ArraySourceType(PrimitiveSourceType.INT), "x", arrayInit);
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -817,21 +755,20 @@ class EliminatorTest {
         }
 
         @Nested
-        class DeadVariableEliminatorSideEffectTests {
+        class DeadVariableEliminatorSideEffectTests
+        {
             private DeadVariableEliminator eliminator;
 
             @BeforeEach
-            void setUp() {
+            void setUp()
+            {
                 eliminator = new DeadVariableEliminator();
             }
 
             @Test
-            void removesDeclarationWithLiteralInitializer() {
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "unused",
-                    LiteralExpr.ofInt(42)
-                );
+            void removesDeclarationWithLiteralInitializer()
+            {
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
                 List<Statement> stmts = new ArrayList<>();
                 stmts.add(decl);
@@ -844,7 +781,8 @@ class EliminatorTest {
             }
 
             @Test
-            void preservesMethodCallSideEffect() {
+            void preservesMethodCallSideEffect()
+            {
                 MethodCallExpr methodCall = new MethodCallExpr(
                     null,
                     "compute",
@@ -854,11 +792,7 @@ class EliminatorTest {
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "unused",
-                    methodCall
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", methodCall);
 
                 List<Statement> stmts = new ArrayList<>();
                 stmts.add(decl);
@@ -872,18 +806,11 @@ class EliminatorTest {
             }
 
             @Test
-            void preservesNewExprSideEffect() {
-                NewExpr newExpr = new NewExpr(
-                    "java/lang/Object",
-                    new ArrayList<>(),
-                    new ReferenceSourceType("Object")
-                );
+            void preservesNewExprSideEffect()
+            {
+                NewExpr newExpr = new NewExpr("java/lang/Object", new ArrayList<>(), new ReferenceSourceType("Object"));
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    new ReferenceSourceType("Object"),
-                    "unused",
-                    newExpr
-                );
+                VarDeclStmt decl = new VarDeclStmt(new ReferenceSourceType("Object"), "unused", newExpr);
 
                 List<Statement> stmts = new ArrayList<>();
                 stmts.add(decl);
@@ -897,18 +824,15 @@ class EliminatorTest {
             }
 
             @Test
-            void preservesIncrementSideEffect() {
+            void preservesIncrementSideEffect()
+            {
                 UnaryExpr increment = new UnaryExpr(
                     UnaryOperator.PRE_INC,
                     new VarRefExpr("counter", PrimitiveSourceType.INT),
                     PrimitiveSourceType.INT
                 );
 
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "unused",
-                    increment
-                );
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "unused", increment);
 
                 List<Statement> stmts = new ArrayList<>();
                 stmts.add(decl);
@@ -922,12 +846,9 @@ class EliminatorTest {
             }
 
             @Test
-            void removesUnusedAssignmentWithoutSideEffects() {
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    LiteralExpr.ofInt(0)
-                );
+            void removesUnusedAssignmentWithoutSideEffects()
+            {
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
                 BinaryExpr assign = new BinaryExpr(
                     BinaryOperator.ASSIGN,
@@ -948,12 +869,9 @@ class EliminatorTest {
             }
 
             @Test
-            void preservesAssignmentWithMethodCallSideEffect() {
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    LiteralExpr.ofInt(0)
-                );
+            void preservesAssignmentWithMethodCallSideEffect()
+            {
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
                 MethodCallExpr methodCall = new MethodCallExpr(
                     null,
@@ -984,12 +902,9 @@ class EliminatorTest {
             }
 
             @Test
-            void handlesCompoundAssignment() {
-                VarDeclStmt decl = new VarDeclStmt(
-                    PrimitiveSourceType.INT,
-                    "x",
-                    LiteralExpr.ofInt(0)
-                );
+            void handlesCompoundAssignment()
+            {
+                VarDeclStmt decl = new VarDeclStmt(PrimitiveSourceType.INT, "x", LiteralExpr.ofInt(0));
 
                 BinaryExpr compoundAssign = new BinaryExpr(
                     BinaryOperator.ADD_ASSIGN,
@@ -1003,29 +918,30 @@ class EliminatorTest {
                 stmts.add(new ExprStmt(compoundAssign));
                 BlockStmt block = new BlockStmt(stmts);
 
+                int before = countNodes(block);
                 boolean changed = eliminator.transform(block);
 
-                // Just verify it runs without error(changed);
+                assertFalse(changed, "a compound assignment reads its target, so its store is live");
+                assertEquals(before, countNodes(block), "a live store must not be dropped");
             }
         }
     }
 
     @Nested
-    class DeadStoreEliminatorNestedStructureTests {
+    class DeadStoreEliminatorNestedStructureTests
+    {
         private DeadStoreEliminator eliminator;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             eliminator = new DeadStoreEliminator();
         }
 
         @Test
-        void handleWhileStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleWhileStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1040,25 +956,23 @@ class EliminatorTest {
             whileStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt whileBody = new BlockStmt(whileStmts);
 
-            WhileStmt whileStmt = new WhileStmt(
-                LiteralExpr.ofBoolean(true),
-                whileBody
-            );
+            WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), whileBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(whileStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleDoWhileStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleDoWhileStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1073,25 +987,23 @@ class EliminatorTest {
             doStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt doBody = new BlockStmt(doStmts);
 
-            DoWhileStmt doWhile = new DoWhileStmt(
-                doBody,
-                LiteralExpr.ofBoolean(true)
-            );
+            DoWhileStmt doWhile = new DoWhileStmt(doBody, LiteralExpr.ofBoolean(true));
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(doWhile);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleForStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleForStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1106,27 +1018,23 @@ class EliminatorTest {
             forStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt forBody = new BlockStmt(forStmts);
 
-            ForStmt forStmt = new ForStmt(
-                new ArrayList<>(),
-                LiteralExpr.ofBoolean(true),
-                new ArrayList<>(),
-                forBody
-            );
+            ForStmt forStmt = new ForStmt(new ArrayList<>(), LiteralExpr.ofBoolean(true), new ArrayList<>(), forBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(forStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleForEachStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleForEachStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1151,16 +1059,17 @@ class EliminatorTest {
             stmts.add(forEach);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleTryCatchStmt() {
-            VarDeclStmt tryDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleTryCatchStmt()
+        {
+            VarDeclStmt tryDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr tryAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1175,11 +1084,7 @@ class EliminatorTest {
             tryStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-            VarDeclStmt catchDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "z",
-                LiteralExpr.ofInt(0)
-            );
+            VarDeclStmt catchDecl = new VarDeclStmt(PrimitiveSourceType.INT, "z", LiteralExpr.ofInt(0));
 
             BinaryExpr catchAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1194,31 +1099,25 @@ class EliminatorTest {
             catchStmts.add(new ReturnStmt(new VarRefExpr("z", PrimitiveSourceType.INT)));
             BlockStmt catchBlock = new BlockStmt(catchStmts);
 
-            CatchClause catchClause = CatchClause.of(
-                new ReferenceSourceType("Exception"),
-                "e",
-                catchBlock
-            );
+            CatchClause catchClause = CatchClause.of(new ReferenceSourceType("Exception"), "e", catchBlock);
 
-            TryCatchStmt tryCatch = new TryCatchStmt(
-                tryBlock,
-                Collections.singletonList(catchClause)
-            );
+            TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Collections.singletonList(catchClause));
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleTryCatchWithFinally() {
-            VarDeclStmt finallyDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "w",
-                LiteralExpr.ofInt(0)
-            );
+        void handleTryCatchWithFinally()
+        {
+            VarDeclStmt finallyDecl = new VarDeclStmt(PrimitiveSourceType.INT, "w", LiteralExpr.ofInt(0));
 
             BinaryExpr finallyAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1233,26 +1132,23 @@ class EliminatorTest {
             finallyStmts.add(new ReturnStmt(new VarRefExpr("w", PrimitiveSourceType.INT)));
             BlockStmt finallyBlock = new BlockStmt(finallyStmts);
 
-            TryCatchStmt tryCatch = new TryCatchStmt(
-                new BlockStmt(),
-                new ArrayList<>(),
-                finallyBlock
-            );
+            TryCatchStmt tryCatch = new TryCatchStmt(new BlockStmt(), new ArrayList<>(), finallyBlock);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleSynchronizedStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleSynchronizedStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1267,25 +1163,23 @@ class EliminatorTest {
             syncStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt syncBody = new BlockStmt(syncStmts);
 
-            SynchronizedStmt syncStmt = new SynchronizedStmt(
-                new ThisExpr(new ReferenceSourceType("Object")),
-                syncBody
-            );
+            SynchronizedStmt syncStmt = new SynchronizedStmt(new ThisExpr(new ReferenceSourceType("Object")), syncBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(syncStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleLabeledStmt() {
-            VarDeclStmt innerDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleLabeledStmt()
+        {
+            VarDeclStmt innerDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr innerAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1300,25 +1194,23 @@ class EliminatorTest {
             labeledStmts.add(new ReturnStmt(new VarRefExpr("y", PrimitiveSourceType.INT)));
             BlockStmt labeledBody = new BlockStmt(labeledStmts);
 
-            LabeledStmt labeled = new LabeledStmt(
-                "label",
-                labeledBody
-            );
+            LabeledStmt labeled = new LabeledStmt("label", labeledBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(labeled);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
-        void handleElseBranch() {
-            VarDeclStmt elseDecl = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "y",
-                LiteralExpr.ofInt(0)
-            );
+        void handleElseBranch()
+        {
+            VarDeclStmt elseDecl = new VarDeclStmt(PrimitiveSourceType.INT, "y", LiteralExpr.ofInt(0));
 
             BinaryExpr elseAssign = new BinaryExpr(
                 BinaryOperator.ASSIGN,
@@ -1332,110 +1224,101 @@ class EliminatorTest {
             elseStmts.add(new ExprStmt(elseAssign));
             BlockStmt elseBlock = new BlockStmt(elseStmts);
 
-            IfStmt ifStmt = new IfStmt(
-                LiteralExpr.ofBoolean(true),
-                new BlockStmt(),
-                elseBlock
-            );
+            IfStmt ifStmt = new IfStmt(LiteralExpr.ofBoolean(true), new BlockStmt(), elseBlock);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(ifStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
     }
 
     @Nested
-    class DeadVariableEliminatorNestedStructureTests {
+    class DeadVariableEliminatorNestedStructureTests
+    {
         private DeadVariableEliminator eliminator;
 
         @BeforeEach
-        void setUp() {
+        void setUp()
+        {
             eliminator = new DeadVariableEliminator();
         }
 
         @Test
-        void handleWhileStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleWhileStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> whileStmts = new ArrayList<>();
             whileStmts.add(unused);
             BlockStmt whileBody = new BlockStmt(whileStmts);
 
-            WhileStmt whileStmt = new WhileStmt(
-                LiteralExpr.ofBoolean(true),
-                whileBody
-            );
+            WhileStmt whileStmt = new WhileStmt(LiteralExpr.ofBoolean(true), whileBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(whileStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleDoWhileStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleDoWhileStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> doStmts = new ArrayList<>();
             doStmts.add(unused);
             BlockStmt doBody = new BlockStmt(doStmts);
 
-            DoWhileStmt doWhile = new DoWhileStmt(
-                doBody,
-                LiteralExpr.ofBoolean(true)
-            );
+            DoWhileStmt doWhile = new DoWhileStmt(doBody, LiteralExpr.ofBoolean(true));
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(doWhile);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleForStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleForStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> forStmts = new ArrayList<>();
             forStmts.add(unused);
             BlockStmt forBody = new BlockStmt(forStmts);
 
-            ForStmt forStmt = new ForStmt(
-                new ArrayList<>(),
-                LiteralExpr.ofBoolean(true),
-                new ArrayList<>(),
-                forBody
-            );
+            ForStmt forStmt = new ForStmt(new ArrayList<>(), LiteralExpr.ofBoolean(true), new ArrayList<>(), forBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(forStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleForEachStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleForEachStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> forEachStmts = new ArrayList<>();
             forEachStmts.add(unused);
@@ -1451,41 +1334,31 @@ class EliminatorTest {
             stmts.add(forEach);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleTryCatchStmt() {
-            VarDeclStmt tryUnused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "tryUnused",
-                LiteralExpr.ofInt(1)
-            );
+        void handleTryCatchStmt()
+        {
+            VarDeclStmt tryUnused = new VarDeclStmt(PrimitiveSourceType.INT, "tryUnused", LiteralExpr.ofInt(1));
 
             List<Statement> tryStmts = new ArrayList<>();
             tryStmts.add(tryUnused);
             BlockStmt tryBlock = new BlockStmt(tryStmts);
 
-            VarDeclStmt catchUnused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "catchUnused",
-                LiteralExpr.ofInt(2)
-            );
+            VarDeclStmt catchUnused = new VarDeclStmt(PrimitiveSourceType.INT, "catchUnused", LiteralExpr.ofInt(2));
 
             List<Statement> catchStmts = new ArrayList<>();
             catchStmts.add(catchUnused);
             BlockStmt catchBlock = new BlockStmt(catchStmts);
 
-            CatchClause catchClause = CatchClause.of(
-                new ReferenceSourceType("Exception"),
-                "e",
-                catchBlock
-            );
+            CatchClause catchClause = CatchClause.of(new ReferenceSourceType("Exception"), "e", catchBlock);
 
-            TryCatchStmt tryCatch = new TryCatchStmt(
-                tryBlock,
-                Collections.singletonList(catchClause)
-            );
+            TryCatchStmt tryCatch = new TryCatchStmt(tryBlock, Collections.singletonList(catchClause));
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(tryCatch);
@@ -1497,76 +1370,69 @@ class EliminatorTest {
         }
 
         @Test
-        void handleFinallyBlock() {
-            VarDeclStmt finallyUnused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "finallyUnused",
-                LiteralExpr.ofInt(3)
-            );
+        void handleFinallyBlock()
+        {
+            VarDeclStmt finallyUnused = new VarDeclStmt(PrimitiveSourceType.INT, "finallyUnused", LiteralExpr.ofInt(3));
 
             List<Statement> finallyStmts = new ArrayList<>();
             finallyStmts.add(finallyUnused);
             BlockStmt finallyBlock = new BlockStmt(finallyStmts);
 
-            TryCatchStmt tryCatch = new TryCatchStmt(
-                new BlockStmt(),
-                new ArrayList<>(),
-                finallyBlock
-            );
+            TryCatchStmt tryCatch = new TryCatchStmt(new BlockStmt(), new ArrayList<>(), finallyBlock);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleSynchronizedStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleSynchronizedStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> syncStmts = new ArrayList<>();
             syncStmts.add(unused);
             BlockStmt syncBody = new BlockStmt(syncStmts);
 
-            SynchronizedStmt syncStmt = new SynchronizedStmt(
-                new ThisExpr(new ReferenceSourceType("Object")),
-                syncBody
-            );
+            SynchronizedStmt syncStmt = new SynchronizedStmt(new ThisExpr(new ReferenceSourceType("Object")), syncBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(syncStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
-        void handleLabeledStmt() {
-            VarDeclStmt unused = new VarDeclStmt(
-                PrimitiveSourceType.INT,
-                "unused",
-                LiteralExpr.ofInt(42)
-            );
+        void handleLabeledStmt()
+        {
+            VarDeclStmt unused = new VarDeclStmt(PrimitiveSourceType.INT, "unused", LiteralExpr.ofInt(42));
 
             List<Statement> labeledStmts = new ArrayList<>();
             labeledStmts.add(unused);
             BlockStmt labeledBody = new BlockStmt(labeledStmts);
 
-            LabeledStmt labeled = new LabeledStmt(
-                "label",
-                labeledBody
-            );
+            LabeledStmt labeled = new LabeledStmt("label", labeledBody);
 
             List<Statement> stmts = new ArrayList<>();
             stmts.add(labeled);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
     }
 }

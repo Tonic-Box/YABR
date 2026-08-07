@@ -12,20 +12,24 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Exploratory tests for DominatorTree to identify potential issues.
+ * * Exploratory tests for DominatorTree to identify potential issues.
  */
-class DominatorTreeExploratoryTest {
+class DominatorTreeExploratoryTest
+{
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         IRBlock.resetIdCounter();
     }
 
     @Nested
-    class EntryBlockSelfDomination {
+    class EntryBlockSelfDomination
+    {
 
         @Test
-        void entryBlockImmediateDominatorIsSelf() {
+        void entryBlockImmediateDominatorIsSelf()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -45,7 +49,8 @@ class DominatorTreeExploratoryTest {
         }
 
         @Test
-        void entryBlockDominatesItselfViaAPI() {
+        void entryBlockDominatesItselfViaAPI()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -63,10 +68,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class UnreachableBlockTests {
+    class UnreachableBlockTests
+    {
 
         @Test
-        void unreachableBlockHasNullIdom() {
+        void unreachableBlockHasNullIdom()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock reachable = new IRBlock("reachable");
@@ -98,7 +105,8 @@ class DominatorTreeExploratoryTest {
         }
 
         @Test
-        void dominatesCheckWithUnreachableBlock() {
+        void dominatesCheckWithUnreachableBlock()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock unreachable = new IRBlock("unreachable");
@@ -121,10 +129,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class DominatorTreeChildrenTests {
+    class DominatorTreeChildrenTests
+    {
 
         @Test
-        void checkDominatorTreeChildrenForAllBlocks() {
+        void checkDominatorTreeChildrenForAllBlocks()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
@@ -148,7 +158,8 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Diamond CFG Dominator Analysis ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
                 Set<IRBlock> children = tree.getDominatorTreeChildren(block);
                 System.out.println("Block " + block.getName() + ":");
@@ -170,10 +181,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class LoopDominatorTests {
+    class LoopDominatorTests
+    {
 
         @Test
-        void loopWithBackEdge() {
+        void loopWithBackEdge()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock header = new IRBlock("header");
@@ -196,7 +209,8 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Loop CFG Dominator Analysis ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
                 System.out.println("Block " + block.getName() + ":");
                 System.out.println("  idom: " + (idom != null ? idom.getName() : "null"));
@@ -213,7 +227,8 @@ class DominatorTreeExploratoryTest {
         }
 
         @Test
-        void nestedLoopDominance() {
+        void nestedLoopDominance()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock outerHeader = new IRBlock("outerHeader");
@@ -248,7 +263,8 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Nested Loop CFG Dominator Analysis ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
                 System.out.println("Block " + block.getName() + ": idom=" +
                     (idom != null ? idom.getName() : "null") +
@@ -263,10 +279,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class PostorderConsistencyTests {
+    class PostorderConsistencyTests
+    {
 
         @Test
-        void checkPostorderMaps() {
+        void checkPostorderMaps()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
@@ -290,8 +308,8 @@ class DominatorTreeExploratoryTest {
             System.out.println("IRMethod.getReversePostOrder(): " + method.getReversePostOrder());
             System.out.println("IRMethod.getPostOrder(): " + method.getPostOrder());
 
-            // Check all blocks have postorder entries
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 Integer postorderNum = tree.getPostorder().get(block);
                 System.out.println("Block " + block.getName() + " postorder: " + postorderNum);
             }
@@ -299,10 +317,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class ComplexCFGTests {
+    class ComplexCFGTests
+    {
 
         @Test
-        void multipleExitBlocks() {
+        void multipleExitBlocks()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock b1 = new IRBlock("b1");
@@ -325,10 +345,10 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Multiple Exit Blocks ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
-                System.out.println("Block " + block.getName() + ": idom=" +
-                    (idom != null ? idom.getName() : "null"));
+                System.out.println("Block " + block.getName() + ": idom=" + (idom != null ? idom.getName() : "null"));
             }
 
             // Both exits should have entry as their dominator
@@ -337,7 +357,8 @@ class DominatorTreeExploratoryTest {
         }
 
         @Test
-        void irregularCFGWithMultiplePredecessors() {
+        void irregularCFGWithMultiplePredecessors()
+        {
             // Complex irregular CFG
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
@@ -374,7 +395,8 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Irregular CFG Analysis ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
                 Set<IRBlock> df = tree.getDominanceFrontier(block);
                 System.out.println("Block " + block.getName() + ":");
@@ -395,10 +417,12 @@ class DominatorTreeExploratoryTest {
     }
 
     @Nested
-    class EdgeCaseTests {
+    class EdgeCaseTests
+    {
 
         @Test
-        void singleBlockMethod() {
+        void singleBlockMethod()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             method.addBlock(entry);
@@ -414,7 +438,8 @@ class DominatorTreeExploratoryTest {
         }
 
         @Test
-        void selfLoopBlock() {
+        void selfLoopBlock()
+        {
             IRMethod method = new IRMethod("com/test/Test", "test", "()V", true);
             IRBlock entry = new IRBlock("entry");
             IRBlock selfLoop = new IRBlock("selfLoop");
@@ -434,7 +459,8 @@ class DominatorTreeExploratoryTest {
             tree.compute();
 
             System.out.println("\n=== Self-Loop Block ===");
-            for (IRBlock block : method.getBlocks()) {
+            for (IRBlock block : method.getBlocks())
+            {
                 IRBlock idom = tree.getImmediateDominator(block);
                 System.out.println("Block " + block.getName() + ": idom=" +
                     (idom != null ? idom.getName() : "null") +

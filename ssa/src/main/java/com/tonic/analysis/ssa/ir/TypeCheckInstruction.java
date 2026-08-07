@@ -7,87 +7,140 @@ import com.tonic.analysis.ssa.visitor.IRVisitor;
 
 import java.util.List;
 
-public class TypeCheckInstruction extends IRInstruction {
+/**
+ * A checkcast or instanceof test, distinguished by its {@link TypeCheckOp}.
+ */
+public class TypeCheckInstruction extends IRInstruction
+{
 
     private final TypeCheckOp op;
     private Value operand;
     private final IRType targetType;
 
-    public static TypeCheckInstruction createCast(SSAValue result, Value operand, IRType targetType) {
+    /**
+     * Creates a checkcast.
+     * @param result the SSA value receiving the cast reference
+     * @param operand the reference to cast
+     * @param targetType the type to cast to
+     * @return the cast instruction
+     */
+    public static TypeCheckInstruction createCast(SSAValue result, Value operand, IRType targetType)
+    {
         return new TypeCheckInstruction(TypeCheckOp.CAST, result, operand, targetType);
     }
 
-    public static TypeCheckInstruction createInstanceOf(SSAValue result, Value operand, IRType checkType) {
+    /**
+     * Creates an instanceof test.
+     * @param result the SSA value receiving the boolean result
+     * @param operand the reference to test
+     * @param checkType the type to test against
+     * @return the instanceof instruction
+     */
+    public static TypeCheckInstruction createInstanceOf(SSAValue result, Value operand, IRType checkType)
+    {
         return new TypeCheckInstruction(TypeCheckOp.INSTANCEOF, result, operand, checkType);
     }
 
-    private TypeCheckInstruction(TypeCheckOp op, SSAValue result, Value operand, IRType targetType) {
+    private TypeCheckInstruction(TypeCheckOp op, SSAValue result, Value operand, IRType targetType)
+    {
         super(result);
         this.op = op;
         this.operand = operand;
         this.targetType = targetType;
-        if (operand instanceof SSAValue) {
+        if (operand instanceof SSAValue)
+        {
             ((SSAValue) operand).addUse(this);
         }
     }
 
-    public TypeCheckOp getOp() {
+    /**
+     * @return the op
+     */
+    public TypeCheckOp getOp()
+    {
         return op;
     }
 
-    public Value getOperand() {
+    /**
+     * @return the operand
+     */
+    public Value getOperand()
+    {
         return operand;
     }
 
-    public IRType getTargetType() {
+    /**
+     * @return the target type
+     */
+    public IRType getTargetType()
+    {
         return targetType;
     }
 
-    public boolean isCast() {
+    /**
+     * @return true if this is a checkcast
+     */
+    public boolean isCast()
+    {
         return op == TypeCheckOp.CAST;
     }
 
-    public boolean isInstanceOf() {
+    /**
+     * @return true if this is an instanceof test
+     */
+    public boolean isInstanceOf()
+    {
         return op == TypeCheckOp.INSTANCEOF;
     }
 
     @Override
-    public List<Value> getOperands() {
+    public List<Value> getOperands()
+    {
         return List.of(operand);
     }
 
     @Override
-    public void replaceOperand(Value oldValue, Value newValue) {
-        if (operand.equals(oldValue)) {
-            if (operand instanceof SSAValue) {
+    public void replaceOperand(Value oldValue, Value newValue)
+    {
+        if (operand.equals(oldValue))
+        {
+            if (operand instanceof SSAValue)
+            {
                 ((SSAValue) operand).removeUse(this);
             }
             operand = newValue;
-            if (newValue instanceof SSAValue) {
+            if (newValue instanceof SSAValue)
+            {
                 ((SSAValue) newValue).addUse(this);
             }
         }
     }
 
     @Override
-    public <T> T accept(IRVisitor<T> visitor) {
+    public <T> T accept(IRVisitor<T> visitor)
+    {
         return visitor.visitTypeCheck(this);
     }
 
     @Override
-    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands) {
-        if (newOperands.isEmpty()) {
+    public IRInstruction copyWithNewOperands(SSAValue newResult, List<Value> newOperands)
+    {
+        if (newOperands.isEmpty())
+        {
             return null;
         }
-        if (op == TypeCheckOp.CAST) {
+        if (op == TypeCheckOp.CAST)
+        {
             return createCast(newResult, newOperands.get(0), targetType);
         }
         return createInstanceOf(newResult, newOperands.get(0), targetType);
     }
 
     @Override
-    public String toString() {
-        if (op == TypeCheckOp.CAST) {
+    public String toString()
+    {
+        if (op == TypeCheckOp.CAST)
+        {
             return result + " = (" + targetType + ") " + operand;
         }
         return result + " = " + operand + " instanceof " + targetType;
