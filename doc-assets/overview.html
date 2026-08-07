@@ -1,0 +1,51 @@
+<html>
+<body>
+
+Bytecode analysis and decompilation toolkit built around a round trip: a class file parses into an
+editable model, lifts into an SSA intermediate representation, recovers into a Java syntax tree, and
+lowers back to verifiable bytecode.
+
+<p>
+Each layer is usable on its own. Read and patch instructions without ever building the IR, lift to
+SSA to run optimisation passes, or take the whole path to source and back.
+</p>
+
+<h2>Layers</h2>
+
+<dl>
+
+<dt><b>Class Files</b></dt>
+<dd>The parsed class file: constant pool, members, attributes, and the pool of classes they resolve
+through. Everything above this reads and writes through it.</dd>
+
+<dt><b>Bytecode</b></dt>
+<dd>One type per JVM instruction, a code writer for structural edits, StackMapTable frame
+computation, and fluent builders for new classes.</dd>
+
+<dt><b>SSA IR</b></dt>
+<dd>Bytecode lifted into single static assignment form over a control flow graph, with the analyses
+and optimisation passes that run on it, and lowering back to bytecode.</dd>
+
+<dt><b>Decompiler</b></dt>
+<dd>Recovery of a Java syntax tree from the IR, the transforms that turn it into idiomatic source,
+the emitter that renders it, and the parser and lowerer that take source back down.</dd>
+
+<dt><b>Analyses</b></dt>
+<dd>Graphs over the IR: call graph, code property graph, program and system dependence graphs with
+slicing, taint tracking, data flow, cross-references, fingerprinting and similarity.</dd>
+
+<dt><b>Execution</b></dt>
+<dd>Running bytecode three ways: a concrete interpreter with debugging, abstract simulation with a
+points-to heap and escape analysis, and abstract execution for def-use links. Also instrumentation
+weaving and the bytecode verifier.</dd>
+
+<dt><b>Query</b></dt>
+<dd>A query language over a class pool, from parsing through planning to evaluation.</dd>
+
+<dt><b>Renaming</b></dt>
+<dd>Hierarchy-aware renaming of classes, fields and methods, with descriptor and signature rewriting.</dd>
+
+</dl>
+
+</body>
+</html>

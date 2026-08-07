@@ -35,6 +35,12 @@
     catch(err) {
     }
 //-->
+var data = {"i0":2,"i1":32,"i2":16,"i3":2,"i4":16,"i5":16,"i6":16,"i7":16,"i8":16,"i9":16,"i10":16,"i11":32,"i12":32,"i13":32,"i14":32,"i15":32,"i16":32,"i17":32,"i18":32,"i19":32,"i20":32,"i21":32,"i22":16,"i23":16,"i24":2,"i25":16,"i26":16,"i27":2,"i28":32,"i29":32,"i30":32,"i31":32,"i32":32,"i33":16,"i34":16,"i35":16,"i36":16,"i37":16,"i38":16,"i39":16,"i40":16,"i41":64,"i42":64,"i43":64,"i44":64,"i45":64,"i46":64,"i47":64,"i48":64,"i49":64,"i50":16,"i51":32,"i52":32,"i53":32,"i54":32,"i55":32,"i56":32,"i57":32,"i58":8,"i59":8,"i60":8,"i61":8,"i62":8,"i63":8,"i64":8,"i65":8,"i66":8,"i67":8,"i68":8,"i69":8,"i70":8,"i71":8,"i72":8,"i73":8,"i74":8,"i75":8,"i76":4,"i77":4,"i78":4,"i79":4,"i80":4,"i81":4,"i82":4,"i83":4,"i84":4,"i85":4,"i86":4,"i87":4,"i88":4,"i89":16,"i90":32,"i91":32,"i92":32,"i93":32,"i94":32,"i95":2,"i96":16,"i97":2,"i98":1,"i99":1,"i100":1,"i101":1,"i102":1,"i103":1,"i104":1,"i105":1,"i106":1,"i107":1,"i108":1,"i109":128,"i110":128,"i111":128,"i112":128,"i113":128,"i114":128,"i115":1,"i116":1};
+var tabs = {65535:["t0","All Packages"],1:["t1","Class Files"],2:["t2","Bytecode"],4:["t4","SSA IR"],8:["t8","Decompiler"],16:["t16","Analyses"],32:["t32","Execution"],64:["t64","Query"],128:["t128","Renaming"]};
+var altColor = "altColor";
+var rowColor = "rowColor";
+var tableTab = "tableTab";
+var activeTableTab = "activeTableTab";
 var pathtoroot = "./";
 var useModuleDirectories = true;
 loadScripts(document, 'script');</script>
@@ -104,8 +110,55 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <h1 class="title">YABR 1.0.1</h1>
 </div>
 <div class="contentContainer">
+<div class="block">Bytecode analysis and decompilation toolkit built around a round trip: a class file parses into an
+editable model, lifts into an SSA intermediate representation, recovers into a Java syntax tree, and
+lowers back to verifiable bytecode.
+
+<p>
+Each layer is usable on its own. Read and patch instructions without ever building the IR, lift to
+SSA to run optimisation passes, or take the whole path to source and back.
+</p>
+
+<h2>Layers</h2>
+
+<dl>
+
+<dt><b>Class Files</b></dt>
+<dd>The parsed class file: constant pool, members, attributes, and the pool of classes they resolve
+through. Everything above this reads and writes through it.</dd>
+
+<dt><b>Bytecode</b></dt>
+<dd>One type per JVM instruction, a code writer for structural edits, StackMapTable frame
+computation, and fluent builders for new classes.</dd>
+
+<dt><b>SSA IR</b></dt>
+<dd>Bytecode lifted into single static assignment form over a control flow graph, with the analyses
+and optimisation passes that run on it, and lowering back to bytecode.</dd>
+
+<dt><b>Decompiler</b></dt>
+<dd>Recovery of a Java syntax tree from the IR, the transforms that turn it into idiomatic source,
+the emitter that renders it, and the parser and lowerer that take source back down.</dd>
+
+<dt><b>Analyses</b></dt>
+<dd>Graphs over the IR: call graph, code property graph, program and system dependence graphs with
+slicing, taint tracking, data flow, cross-references, fingerprinting and similarity.</dd>
+
+<dt><b>Execution</b></dt>
+<dd>Running bytecode three ways: a concrete interpreter with debugging, abstract simulation with a
+points-to heap and escape analysis, and abstract execution for def-use links. Also instrumentation
+weaving and the bytecode verifier.</dd>
+
+<dt><b>Query</b></dt>
+<dd>A query language over a class pool, from parsing through planning to evaluation.</dd>
+
+<dt><b>Renaming</b></dt>
+<dd>Hierarchy-aware renaming of classes, fields and methods, with descriptor and signature rewriting.</dd>
+
+</dl></div>
+</div>
+<div class="contentContainer">
 <table class="overviewSummary">
-<caption><span>Packages</span><span class="tabEnd">&nbsp;</span></caption>
+<caption><span id="t0" class="activeTableTab"><span>All Packages</span><span class="tabEnd">&nbsp;</span></span><span id="t1" class="tableTab"><span><a href="javascript:show(1);">Class Files</a></span><span class="tabEnd">&nbsp;</span></span><span id="t2" class="tableTab"><span><a href="javascript:show(2);">Bytecode</a></span><span class="tabEnd">&nbsp;</span></span><span id="t4" class="tableTab"><span><a href="javascript:show(4);">SSA IR</a></span><span class="tabEnd">&nbsp;</span></span><span id="t8" class="tableTab"><span><a href="javascript:show(8);">Decompiler</a></span><span class="tabEnd">&nbsp;</span></span><span id="t16" class="tableTab"><span><a href="javascript:show(16);">Analyses</a></span><span class="tabEnd">&nbsp;</span></span><span id="t32" class="tableTab"><span><a href="javascript:show(32);">Execution</a></span><span class="tabEnd">&nbsp;</span></span><span id="t64" class="tableTab"><span><a href="javascript:show(64);">Query</a></span><span class="tabEnd">&nbsp;</span></span><span id="t128" class="tableTab"><span><a href="javascript:show(128);">Renaming</a></span><span class="tabEnd">&nbsp;</span></span></caption>
 <tr>
 <th class="colFirst" scope="col">Package</th>
 <th class="colLast" scope="col">Description</th>

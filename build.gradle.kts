@@ -67,7 +67,24 @@ tasks.register<Javadoc>("docSite") {
         docTitle = "YABR ${project(":core").version}"
         encoding = "UTF-8"
         charSet = "UTF-8"
+        overview = file("doc-assets/overview.html").path
         links("https://docs.oracle.com/en/java/javase/11/docs/api/")
+
+        // Grouped by module. Patterns are exact prefixes rather than one com.tonic.analysis* catch-all,
+        // because six modules share that prefix and javadoc would fold them into a single group.
+        group("Class Files", "com.tonic.parser*", "com.tonic.type", "com.tonic.util", "com.tonic.exception")
+        group("Bytecode", "com.tonic.analysis", "com.tonic.analysis.common", "com.tonic.analysis.frame",
+            "com.tonic.analysis.instruction", "com.tonic.analysis.visitor", "com.tonic.builder")
+        group("SSA IR", "com.tonic.analysis.ssa*")
+        group("Decompiler", "com.tonic.analysis.source*")
+        group("Analyses", "com.tonic.analysis.callgraph", "com.tonic.analysis.cpg*",
+            "com.tonic.analysis.dataflow", "com.tonic.analysis.dependency", "com.tonic.analysis.fingerprint*",
+            "com.tonic.analysis.graph*", "com.tonic.analysis.pattern", "com.tonic.analysis.pdg*",
+            "com.tonic.analysis.similarity", "com.tonic.analysis.typeinference", "com.tonic.analysis.xref")
+        group("Execution", "com.tonic.analysis.absexec", "com.tonic.analysis.execution*",
+            "com.tonic.analysis.instrumentation*", "com.tonic.analysis.simulation*", "com.tonic.analysis.verifier*")
+        group("Query", "com.tonic.analysis.query*")
+        group("Renaming", "com.tonic.renamer*")
     }
 
     doFirst {
