@@ -3722,12 +3722,13 @@ not permitted.)</div>
 <li class="blockList">
 <h4>fromCode</h4>
 <pre class="methodSignature">public static&nbsp;<a href="Opcode.html" title="enum in com.tonic.util">Opcode</a>&nbsp;fromCode&#8203;(int&nbsp;code)</pre>
-<div class="block">Retrieves the Opcode enum constant corresponding to the specified bytecode value.</div>
+<div class="block">Retrieves the Opcode enum constant corresponding to the specified bytecode value. Indexes a
+ lookup table, so this is safe to call once per instruction on a dispatch path.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>code</code> - the bytecode value</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
-<dd>the corresponding Opcode, or UNKNOWN if not found</dd>
+<dd>the corresponding Opcode, or UNKNOWN if the value names no opcode</dd>
 </dl>
 </li>
 </ul>

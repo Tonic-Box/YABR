@@ -190,8 +190,8 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#isArrayLoadValid(com.tonic.analysis.frame.VerificationType,com.tonic.analysis.frame.VerificationType)">isArrayLoadValid</a></span>&#8203;(<a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;arrayType,
                 <a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;expectedElement)</code></th>
 <td class="colLast">
-<div class="block">Checks an array load, which only requires the array operand to be a reference;
- the element type is not currently constrained.</div>
+<div class="block">Checks an array load: the operand must be a reference, and when its element type is known it
+ must satisfy what the load opcode expects.</div>
 </td>
 </tr>
 <tr id="i1" class="rowColor">
@@ -242,8 +242,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#isReceiverValid(com.tonic.analysis.frame.VerificationType,java.lang.String)">isReceiverValid</a></span>&#8203;(<a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;receiver,
                <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;expectedOwner)</code></th>
 <td class="colLast">
-<div class="block">Checks an invocation receiver, accepting null and uninitialized references;
- the owner is not currently constrained.</div>
+<div class="block">Checks an invocation receiver, accepting null and uninitialized references.</div>
 </td>
 </tr>
 <tr id="i10" class="altColor">
@@ -334,14 +333,15 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <h4>isArrayLoadValid</h4>
 <pre class="methodSignature">public&nbsp;boolean&nbsp;isArrayLoadValid&#8203;(<a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;arrayType,
                                 <a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;expectedElement)</pre>
-<div class="block">Checks an array load, which only requires the array operand to be a reference;
- the element type is not currently constrained.</div>
+<div class="block">Checks an array load: the operand must be a reference, and when its element type is known it
+ must satisfy what the load opcode expects. An operand whose element type cannot be read is
+ accepted, so an unresolvable type never fails verification.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>arrayType</code> - the type of the array operand</dd>
-<dd><code>expectedElement</code> - the element type the load opcode expects</dd>
+<dd><code>expectedElement</code> - the element type the load opcode expects, or null to check only the operand</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
-<dd>true if the array operand is a reference</dd>
+<dd>true if the load is allowed</dd>
 </dl>
 </li>
 </ul>
@@ -353,14 +353,15 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <h4>isReceiverValid</h4>
 <pre class="methodSignature">public&nbsp;boolean&nbsp;isReceiverValid&#8203;(<a href="../../frame/VerificationType.html" title="class in com.tonic.analysis.frame">VerificationType</a>&nbsp;receiver,
                                <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;expectedOwner)</pre>
-<div class="block">Checks an invocation receiver, accepting null and uninitialized references;
- the owner is not currently constrained.</div>
+<div class="block">Checks an invocation receiver, accepting null and uninitialized references. A receiver of known
+ class is required to be the owner or a subclass of it; an interface owner is not constrained,
+ matching the verifier's own treatment of interface calls, and an unresolvable owner is accepted.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>receiver</code> - the type on the stack in receiver position</dd>
-<dd><code>expectedOwner</code> - internal name of the class declaring the callee</dd>
+<dd><code>expectedOwner</code> - internal name of the class declaring the callee, or null to check only the receiver</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
-<dd>true if the receiver is a reference</dd>
+<dd>true if the receiver is allowed</dd>
 </dl>
 </li>
 </ul>

@@ -1660,10 +1660,6 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dd>
 <div class="block">Records a fresh object at an allocation site, replacing any object already recorded there.</div>
 </dd>
-<dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/heap/SimHeap.html#allocateAndGetRef(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.ssa.type.IRType,java.util.function.Function)">allocateAndGetRef(AllocationSite, IRType, Function&lt;AllocationSite, SimValue&gt;)</a></span> - Method in class com.tonic.analysis.simulation.heap.<a href="com/tonic/analysis/simulation/heap/SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></dt>
-<dd>
-<div class="block">Allocates an object and builds the reference value pointing at it.</div>
-</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/heap/SimHeap.html#allocateArray(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.ssa.type.IRType,com.tonic.analysis.simulation.state.SimValue)">allocateArray(AllocationSite, IRType, SimValue)</a></span> - Method in class com.tonic.analysis.simulation.heap.<a href="com/tonic/analysis/simulation/heap/SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></dt>
 <dd>
 <div class="block">Records a fresh array at an allocation site, replacing any array already recorded there.</div>
@@ -2733,6 +2729,10 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dt><a href="com/tonic/analysis/source/ast/validation/ASTValidator.ValidationResult.html" title="class in com.tonic.analysis.source.ast.validation"><span class="typeNameLink">ASTValidator.ValidationResult</span></a> - Class in <a href="com/tonic/analysis/source/ast/validation/package-summary.html">com.tonic.analysis.source.ast.validation</a></dt>
 <dd>
 <div class="block">Immutable outcome of a validation run, holding all reported issues.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/tonic/util/InstructionLength.html#at(byte%5B%5D,int)">at(byte[], int)</a></span> - Static method in class com.tonic.util.<a href="com/tonic/util/InstructionLength.html" title="class in com.tonic.util">InstructionLength</a></dt>
+<dd>
+<div class="block">The encoded length of the instruction at an offset, including its opcode byte.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/parser/TokenType.html#AT">AT</a></span> - com.tonic.analysis.source.parser.<a href="com/tonic/analysis/source/parser/TokenType.html" title="enum in com.tonic.analysis.source.parser">TokenType</a></dt>
 <dd>
@@ -8719,11 +8719,11 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <div class="block">Runs a query on the service's worker thread; a parse failure completes the future with an error result
  rather than exceptionally.</div>
 </dd>
-<dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html#executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue%5B%5D)">executeConcat(InvokeDynamicInfo, ConcreteValue[])</a></span> - Method in class com.tonic.analysis.execution.invoke.<a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html" title="class in com.tonic.analysis.execution.invoke">StringConcatHandler</a></dt>
+<dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html#executeConcat(com.tonic.analysis.execution.state.ConcreteValue%5B%5D)">executeConcat(ConcreteValue[])</a></span> - Method in class com.tonic.analysis.execution.invoke.<a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html" title="class in com.tonic.analysis.execution.invoke">StringConcatHandler</a></dt>
 <dd>
 <div class="block">Concatenates the stack arguments in order for a recipe-less call site.</div>
 </dd>
-<dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html#executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue%5B%5D,java.lang.String,java.lang.Object%5B%5D)">executeConcat(InvokeDynamicInfo, ConcreteValue[], String, Object[])</a></span> - Method in class com.tonic.analysis.execution.invoke.<a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html" title="class in com.tonic.analysis.execution.invoke">StringConcatHandler</a></dt>
+<dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html#executeConcat(com.tonic.analysis.execution.state.ConcreteValue%5B%5D,java.lang.String,java.lang.Object%5B%5D)">executeConcat(ConcreteValue[], String, Object[])</a></span> - Method in class com.tonic.analysis.execution.invoke.<a href="com/tonic/analysis/execution/invoke/StringConcatHandler.html" title="class in com.tonic.analysis.execution.invoke">StringConcatHandler</a></dt>
 <dd>
 <div class="block">Builds the concatenated string, expanding the recipe's argument and constant markers in order.</div>
 </dd>
@@ -10246,7 +10246,7 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/core/SimulationContext.html#forClass(com.tonic.parser.ClassFile)">forClass(ClassFile)</a></span> - Static method in class com.tonic.analysis.simulation.core.<a href="com/tonic/analysis/simulation/core/SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a></dt>
 <dd>
-<div class="block">Creates a context for simulating methods in a class, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating methods in a class, backed by the pool it was loaded from.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/heap/SimValueBuilder.html#forClass(java.lang.String)">forClass(String)</a></span> - Static method in class com.tonic.analysis.simulation.heap.<a href="com/tonic/analysis/simulation/heap/SimValueBuilder.html" title="class in com.tonic.analysis.simulation.heap">SimValueBuilder</a></dt>
 <dd>
@@ -10418,7 +10418,7 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/core/SimulationContext.html#forMethod(com.tonic.parser.MethodEntry)">forMethod(MethodEntry)</a></span> - Static method in class com.tonic.analysis.simulation.core.<a href="com/tonic/analysis/simulation/core/SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a></dt>
 <dd>
-<div class="block">Creates a context for simulating a single method, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating a single method, backed by the pool its class was loaded from.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/state/ConcreteLocals.html#forMethod(com.tonic.parser.MethodEntry,com.tonic.analysis.execution.state.ConcreteValue%5B%5D)">forMethod(MethodEntry, ConcreteValue[])</a></span> - Static method in class com.tonic.analysis.execution.state.<a href="com/tonic/analysis/execution/state/ConcreteLocals.html" title="class in com.tonic.analysis.execution.state">ConcreteLocals</a></dt>
 <dd>
@@ -16778,6 +16778,10 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/ast/decl/ClassDecl.html#getStaticInitializers()">getStaticInitializers()</a></span> - Method in class com.tonic.analysis.source.ast.decl.<a href="com/tonic/analysis/source/ast/decl/ClassDecl.html" title="class in com.tonic.analysis.source.ast.decl">ClassDecl</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/tonic/analysis/simulation/heap/SimHeap.html#getStaticRoots()">getStaticRoots()</a></span> - Method in class com.tonic.analysis.simulation.heap.<a href="com/tonic/analysis/simulation/heap/SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></dt>
+<dd>
+<div class="block">The allocation sites any static field may point at.</div>
+</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/core/BytecodeResult.html#getStatus()">getStatus()</a></span> - Method in class com.tonic.analysis.execution.core.<a href="com/tonic/analysis/execution/core/BytecodeResult.html" title="class in com.tonic.analysis.execution.core">BytecodeResult</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/debug/DebugState.html#getStatus()">getStatus()</a></span> - Method in class com.tonic.analysis.execution.debug.<a href="com/tonic/analysis/execution/debug/DebugState.html" title="class in com.tonic.analysis.execution.debug">DebugState</a></dt>
@@ -19402,6 +19406,8 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/ControlFlowContext.html#innermostLoopExit()">innermostLoopExit()</a></span> - Method in class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/ControlFlowContext.html" title="class in com.tonic.analysis.source.recovery">ControlFlowContext</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/ControlFlowContext.html#innermostLoopHeader()">innermostLoopHeader()</a></span> - Method in class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/ControlFlowContext.html" title="class in com.tonic.analysis.source.recovery">ControlFlowContext</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/ControlFlowContext.html#innermostLoopLatch()">innermostLoopLatch()</a></span> - Method in class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/ControlFlowContext.html" title="class in com.tonic.analysis.source.recovery">ControlFlowContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/ControlFlowContext.html#innermostSwitchMerge()">innermostSwitchMerge()</a></span> - Method in class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/ControlFlowContext.html" title="class in com.tonic.analysis.source.recovery">ControlFlowContext</a></dt>
@@ -19857,6 +19863,11 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dt><a href="com/tonic/analysis/execution/debug/InstructionInterceptor.html" title="interface in com.tonic.analysis.execution.debug"><span class="typeNameLink">InstructionInterceptor</span></a> - Interface in <a href="com/tonic/analysis/execution/debug/package-summary.html">com.tonic.analysis.execution.debug</a></dt>
 <dd>
 <div class="block">Debugger hook invoked around each interpreted instruction, method entry and exit, and thrown exception.</div>
+</dd>
+<dt><a href="com/tonic/util/InstructionLength.html" title="class in com.tonic.util"><span class="typeNameLink">InstructionLength</span></a> - Class in <a href="com/tonic/util/package-summary.html">com.tonic.util</a></dt>
+<dd>
+<div class="block">Encoded length of a single instruction in a raw bytecode array, for scanners that walk code without
+ parsing it into instruction objects.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/core/BytecodeResult.html#instructionLimit(long)">instructionLimit(long)</a></span> - Static method in class com.tonic.analysis.execution.core.<a href="com/tonic/analysis/execution/core/BytecodeResult.html" title="class in com.tonic.analysis.execution.core">BytecodeResult</a></dt>
 <dd>
@@ -20673,8 +20684,8 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dd>&nbsp;</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/verifier/type/TypeConstraint.html#isArrayLoadValid(com.tonic.analysis.frame.VerificationType,com.tonic.analysis.frame.VerificationType)">isArrayLoadValid(VerificationType, VerificationType)</a></span> - Method in class com.tonic.analysis.verifier.type.<a href="com/tonic/analysis/verifier/type/TypeConstraint.html" title="class in com.tonic.analysis.verifier.type">TypeConstraint</a></dt>
 <dd>
-<div class="block">Checks an array load, which only requires the array operand to be a reference;
- the element type is not currently constrained.</div>
+<div class="block">Checks an array load: the operand must be a reference, and when its element type is known it
+ must satisfy what the load opcode expects.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/execution/resolve/ClassResolver.html#isAssignableFrom(java.lang.String,java.lang.String)">isAssignableFrom(String, String)</a></span> - Method in class com.tonic.analysis.execution.resolve.<a href="com/tonic/analysis/execution/resolve/ClassResolver.html" title="class in com.tonic.analysis.execution.resolve">ClassResolver</a></dt>
 <dd>
@@ -21635,8 +21646,7 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/verifier/type/TypeConstraint.html#isReceiverValid(com.tonic.analysis.frame.VerificationType,java.lang.String)">isReceiverValid(VerificationType, String)</a></span> - Method in class com.tonic.analysis.verifier.type.<a href="com/tonic/analysis/verifier/type/TypeConstraint.html" title="class in com.tonic.analysis.verifier.type">TypeConstraint</a></dt>
 <dd>
-<div class="block">Checks an invocation receiver, accepting null and uninitialized references;
- the owner is not currently constrained.</div>
+<div class="block">Checks an invocation receiver, accepting null and uninitialized references.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/BootstrapFamilies.html#isRecord(java.lang.String,java.lang.String)">isRecord(String, String)</a></span> - Static method in class com.tonic.analysis.<a href="com/tonic/analysis/BootstrapFamilies.html" title="class in com.tonic.analysis">BootstrapFamilies</a></dt>
 <dd>
@@ -28981,7 +28991,9 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
  arguments, loop init and update entries and the like.</div>
 </dd>
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/ast/NodeList.html#remove(java.lang.Object)">remove(Object)</a></span> - Method in class com.tonic.analysis.source.ast.<a href="com/tonic/analysis/source/ast/NodeList.html" title="class in com.tonic.analysis.source.ast">NodeList</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Removes a specific node, matching by identity rather than by equals as <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html?is-external=true" title="class or interface in java.util" class="externalLink"><code>List</code></a> specifies.</div>
+</dd>
 <dt><span class="memberNameLink"><a href="com/tonic/parser/ClassPool.html#remove(java.lang.String)">remove(String)</a></span> - Method in class com.tonic.parser.<a href="com/tonic/parser/ClassPool.html" title="class in com.tonic.parser">ClassPool</a></dt>
 <dd>
 <div class="block">Removes a ClassFile from the pool by internal name.</div>
@@ -32231,6 +32243,11 @@ $('.navPadding').css('padding-top', $('.fixedNav').css("height"));
 <dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/SlotVariablePartition.html#%3Cinit%3E(com.tonic.analysis.ssa.cfg.IRMethod,java.util.function.IntFunction,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver)">SlotVariablePartition(IRMethod, IntFunction&lt;String&gt;, SlotVariablePartition.ScopeNameResolver, SlotVariablePartition.ScopeNameResolver)</a></span> - Constructor for class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/SlotVariablePartition.html" title="class in com.tonic.analysis.source.recovery">SlotVariablePartition</a></dt>
 <dd>
 <div class="block">As the three-argument form, with a dedicated resolver for STORE offsets.</div>
+</dd>
+<dt><span class="memberNameLink"><a href="com/tonic/analysis/source/recovery/SlotVariablePartition.html#%3Cinit%3E(com.tonic.analysis.ssa.cfg.IRMethod,java.util.function.IntFunction,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver)">SlotVariablePartition(IRMethod, IntFunction&lt;String&gt;, SlotVariablePartition.ScopeNameResolver, SlotVariablePartition.ScopeNameResolver, SlotVariablePartition.ScopeNameResolver)</a></span> - Constructor for class com.tonic.analysis.source.recovery.<a href="com/tonic/analysis/source/recovery/SlotVariablePartition.html" title="class in com.tonic.analysis.source.recovery">SlotVariablePartition</a></dt>
+<dd>
+<div class="block">As the four-argument form, with a resolver for the declared descriptor in scope, so two components
+ cannot share a debug name unless they share a type.</div>
 </dd>
 <dt><a href="com/tonic/analysis/source/recovery/SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery"><span class="typeNameLink">SlotVariablePartition.ScopeNameResolver</span></a> - Interface in <a href="com/tonic/analysis/source/recovery/package-summary.html">com.tonic.analysis.source.recovery</a></dt>
 <dd>

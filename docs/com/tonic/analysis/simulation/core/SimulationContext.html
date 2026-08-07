@@ -199,14 +199,14 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <td class="colFirst"><code>static <a href="SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#forClass(com.tonic.parser.ClassFile)">forClass</a></span>&#8203;(<a href="../../../parser/ClassFile.html" title="class in com.tonic.parser">ClassFile</a>&nbsp;classFile)</code></th>
 <td class="colLast">
-<div class="block">Creates a context for simulating methods in a class, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating methods in a class, backed by the pool it was loaded from.</div>
 </td>
 </tr>
 <tr id="i2" class="altColor">
 <td class="colFirst"><code>static <a href="SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#forMethod(com.tonic.parser.MethodEntry)">forMethod</a></span>&#8203;(<a href="../../../parser/MethodEntry.html" title="class in com.tonic.parser">MethodEntry</a>&nbsp;method)</code></th>
 <td class="colLast">
-<div class="block">Creates a context for simulating a single method, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating a single method, backed by the pool its class was loaded from.</div>
 </td>
 </tr>
 <tr id="i3" class="rowColor">
@@ -346,12 +346,12 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <li class="blockList">
 <h4>forMethod</h4>
 <pre class="methodSignature">public static&nbsp;<a href="SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a>&nbsp;forMethod&#8203;(<a href="../../../parser/MethodEntry.html" title="class in com.tonic.parser">MethodEntry</a>&nbsp;method)</pre>
-<div class="block">Creates a context for simulating a single method, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating a single method, backed by the pool its class was loaded from.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>method</code> - the method to simulate</dd>
+<dd><code>method</code> - the method to simulate, may be null</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
-<dd>a new context with default settings</dd>
+<dd>a new context resolving through that method's pool</dd>
 </dl>
 </li>
 </ul>
@@ -362,12 +362,12 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <li class="blockList">
 <h4>forClass</h4>
 <pre class="methodSignature">public static&nbsp;<a href="SimulationContext.html" title="class in com.tonic.analysis.simulation.core">SimulationContext</a>&nbsp;forClass&#8203;(<a href="../../../parser/ClassFile.html" title="class in com.tonic.parser">ClassFile</a>&nbsp;classFile)</pre>
-<div class="block">Creates a context for simulating methods in a class, backed by the default class pool.</div>
+<div class="block">Creates a context for simulating methods in a class, backed by the pool it was loaded from.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>classFile</code> - the class whose methods will be simulated</dd>
+<dd><code>classFile</code> - the class whose methods will be simulated, may be null</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
-<dd>a new context with default settings</dd>
+<dd>a new context resolving through that class's pool</dd>
 </dl>
 </li>
 </ul>

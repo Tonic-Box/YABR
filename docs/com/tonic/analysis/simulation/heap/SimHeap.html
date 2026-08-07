@@ -194,15 +194,6 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 </td>
 </tr>
 <tr id="i1" class="rowColor">
-<td class="colFirst"><code><a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a></code></td>
-<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#allocateAndGetRef(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.ssa.type.IRType,java.util.function.Function)">allocateAndGetRef</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
-                 <a href="../../ssa/type/IRType.html" title="interface in com.tonic.analysis.ssa.type">IRType</a>&nbsp;type,
-                 <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/function/Function.html?is-external=true" title="class or interface in java.util.function" class="externalLink">Function</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>,&#8203;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;&nbsp;refFactory)</code></th>
-<td class="colLast">
-<div class="block">Allocates an object and builds the reference value pointing at it.</div>
-</td>
-</tr>
-<tr id="i2" class="altColor">
 <td class="colFirst"><code><a href="SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#allocateArray(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.ssa.type.IRType,com.tonic.analysis.simulation.state.SimValue)">allocateArray</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
              <a href="../../ssa/type/IRType.html" title="interface in com.tonic.analysis.ssa.type">IRType</a>&nbsp;elementType,
@@ -211,7 +202,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Records a fresh array at an allocation site, replacing any array already recorded there.</div>
 </td>
 </tr>
-<tr id="i3" class="rowColor">
+<tr id="i2" class="altColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#arrayLoad(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.simulation.state.SimValue)">arrayLoad</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
          <a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&nbsp;index)</code></th>
@@ -219,7 +210,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Reads every value an element of one array may hold.</div>
 </td>
 </tr>
-<tr id="i4" class="altColor">
+<tr id="i3" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#arrayLoadForRef(java.util.Set,com.tonic.analysis.simulation.state.SimValue)">arrayLoadForRef</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;&nbsp;sites,
                <a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&nbsp;index)</code></th>
@@ -227,7 +218,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Reads an element across every array a reference may point to.</div>
 </td>
 </tr>
-<tr id="i5" class="rowColor">
+<tr id="i4" class="altColor">
 <td class="colFirst"><code><a href="SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#arrayStore(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.simulation.state.SimValue,com.tonic.analysis.simulation.state.SimValue)">arrayStore</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
           <a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&nbsp;index,
@@ -236,7 +227,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Adds a value to an element of one array; no-op if nothing was allocated at the site.</div>
 </td>
 </tr>
-<tr id="i6" class="altColor">
+<tr id="i5" class="rowColor">
 <td class="colFirst"><code><a href="SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#arrayStoreForRef(java.util.Set,com.tonic.analysis.simulation.state.SimValue,com.tonic.analysis.simulation.state.SimValue)">arrayStoreForRef</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;&nbsp;sites,
                 <a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&nbsp;index,
@@ -245,37 +236,37 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Weakly updates an element across every array a reference may point to.</div>
 </td>
 </tr>
-<tr id="i7" class="rowColor">
+<tr id="i6" class="altColor">
 <td class="colFirst"><code><a href="SimHeap.html" title="class in com.tonic.analysis.simulation.heap">SimHeap</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#copy()">copy</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i8" class="altColor">
+<tr id="i7" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getAllArraySites()">getAllArraySites</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i9" class="rowColor">
+<tr id="i8" class="altColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getAllObjectSites()">getAllObjectSites</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i10" class="altColor">
+<tr id="i9" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getAllSites()">getAllSites</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i11" class="rowColor">
+<tr id="i10" class="altColor">
 <td class="colFirst"><code><a href="SimArray.html" title="class in com.tonic.analysis.simulation.heap">SimArray</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getArray(com.tonic.analysis.simulation.heap.AllocationSite)">getArray</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site)</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i12" class="altColor">
+<tr id="i11" class="rowColor">
 <td class="colFirst"><code>int</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getArrayCount()">getArrayCount</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i13" class="rowColor">
+<tr id="i12" class="altColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getField(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.simulation.heap.FieldKey)">getField</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
         <a href="FieldKey.html" title="class in com.tonic.analysis.simulation.heap">FieldKey</a>&nbsp;field)</code></th>
@@ -283,7 +274,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Reads every value a field of one object may hold.</div>
 </td>
 </tr>
-<tr id="i14" class="altColor">
+<tr id="i13" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getFieldForRef(java.util.Set,com.tonic.analysis.simulation.heap.FieldKey)">getFieldForRef</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;&nbsp;sites,
               <a href="FieldKey.html" title="class in com.tonic.analysis.simulation.heap">FieldKey</a>&nbsp;field)</code></th>
@@ -291,25 +282,32 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">Reads a field across every object a reference may point to.</div>
 </td>
 </tr>
-<tr id="i15" class="rowColor">
+<tr id="i14" class="altColor">
 <td class="colFirst"><code><a href="HeapMode.html" title="enum in com.tonic.analysis.simulation.heap">HeapMode</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getMode()">getMode</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i16" class="altColor">
+<tr id="i15" class="rowColor">
 <td class="colFirst"><code><a href="SimObject.html" title="class in com.tonic.analysis.simulation.heap">SimObject</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getObject(com.tonic.analysis.simulation.heap.AllocationSite)">getObject</a></span>&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site)</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i17" class="rowColor">
+<tr id="i16" class="altColor">
 <td class="colFirst"><code>int</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getObjectCount()">getObjectCount</a></span>()</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr id="i18" class="altColor">
+<tr id="i17" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;</code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getStatic(com.tonic.analysis.simulation.heap.FieldKey)">getStatic</a></span>&#8203;(<a href="FieldKey.html" title="class in com.tonic.analysis.simulation.heap">FieldKey</a>&nbsp;field)</code></th>
 <td class="colLast">&nbsp;</td>
+</tr>
+<tr id="i18" class="altColor">
+<td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;</code></td>
+<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#getStaticRoots()">getStaticRoots</a></span>()</code></th>
+<td class="colLast">
+<div class="block">The allocation sites any static field may point at.</div>
+</td>
 </tr>
 <tr id="i19" class="rowColor">
 <td class="colFirst"><code>boolean</code></td>
@@ -466,26 +464,6 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <dd><code>site</code> - the allocating instruction</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
 <dd>this heap in MUTABLE mode, otherwise a copy holding the new object</dd>
-</dl>
-</li>
-</ul>
-<a id="allocateAndGetRef(com.tonic.analysis.simulation.heap.AllocationSite,com.tonic.analysis.ssa.type.IRType,java.util.function.Function)">
-<!--   -->
-</a>
-<ul class="blockList">
-<li class="blockList">
-<h4>allocateAndGetRef</h4>
-<pre class="methodSignature">public&nbsp;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&nbsp;allocateAndGetRef&#8203;(<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&nbsp;site,
-                                  <a href="../../ssa/type/IRType.html" title="interface in com.tonic.analysis.ssa.type">IRType</a>&nbsp;type,
-                                  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/function/Function.html?is-external=true" title="class or interface in java.util.function" class="externalLink">Function</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>,&#8203;<a href="../state/SimValue.html" title="class in com.tonic.analysis.simulation.state">SimValue</a>&gt;&nbsp;refFactory)</pre>
-<div class="block">Allocates an object and builds the reference value pointing at it.</div>
-<dl>
-<dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>site</code> - the allocating instruction</dd>
-<dd><code>type</code> - the allocated type, unused</dd>
-<dd><code>refFactory</code> - builds the reference value for the site</dd>
-<dt><span class="returnLabel">Returns:</span></dt>
-<dd>the reference value</dd>
 </dl>
 </li>
 </ul>
@@ -751,6 +729,21 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <dd><code>field</code> - the static field to read</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
 <dd>an unmodifiable view of the values a static field may hold, empty if it was never written</dd>
+</dl>
+</li>
+</ul>
+<a id="getStaticRoots()">
+<!--   -->
+</a>
+<ul class="blockList">
+<li class="blockList">
+<h4>getStaticRoots</h4>
+<pre class="methodSignature">public&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html?is-external=true" title="class or interface in java.util" class="externalLink">Set</a>&lt;<a href="AllocationSite.html" title="class in com.tonic.analysis.simulation.heap">AllocationSite</a>&gt;&nbsp;getStaticRoots()</pre>
+<div class="block">The allocation sites any static field may point at. A static is a global root, so everything these
+ sites reach is reachable from outside its allocating method.</div>
+<dl>
+<dt><span class="returnLabel">Returns:</span></dt>
+<dd>the sites referenced by static fields, empty if none were ever written</dd>
 </dl>
 </li>
 </ul>

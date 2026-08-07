@@ -203,6 +203,17 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="block">As the three-argument form, with a dedicated resolver for STORE offsets.</div>
 </td>
 </tr>
+<tr class="altColor">
+<th class="colConstructorName" scope="row"><code><span class="memberNameLink"><a href="#%3Cinit%3E(com.tonic.analysis.ssa.cfg.IRMethod,java.util.function.IntFunction,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver)">SlotVariablePartition</a></span>&#8203;(<a href="../../ssa/cfg/IRMethod.html" title="class in com.tonic.analysis.ssa.cfg">IRMethod</a>&nbsp;method,
+                     <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/function/IntFunction.html?is-external=true" title="class or interface in java.util.function" class="externalLink">IntFunction</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&gt;&nbsp;baseNameForSlot,
+                     <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;scopeNameResolver,
+                     <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;storeNameResolver,
+                     <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;scopeDescriptorResolver)</code></th>
+<td class="colLast">
+<div class="block">As the four-argument form, with a resolver for the declared descriptor in scope, so two components
+ cannot share a debug name unless they share a type.</div>
+</td>
+</tr>
 </table>
 </li>
 </ul>
@@ -281,7 +292,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <a id="&lt;init&gt;(com.tonic.analysis.ssa.cfg.IRMethod,java.util.function.IntFunction,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver)">
 <!--   -->
 </a>
-<ul class="blockListLast">
+<ul class="blockList">
 <li class="blockList">
 <h4>SlotVariablePartition</h4>
 <pre>public&nbsp;SlotVariablePartition&#8203;(<a href="../../ssa/cfg/IRMethod.html" title="class in com.tonic.analysis.ssa.cfg">IRMethod</a>&nbsp;method,
@@ -295,6 +306,29 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <dd><code>baseNameForSlot</code> - supplies the fallback name for a slot with no scope name</dd>
 <dd><code>scopeNameResolver</code> - resolves the declared name in scope at a load offset, may be null</dd>
 <dd><code>storeNameResolver</code> - resolves the declared name in scope at a store offset, may be null</dd>
+</dl>
+</li>
+</ul>
+<a id="&lt;init&gt;(com.tonic.analysis.ssa.cfg.IRMethod,java.util.function.IntFunction,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver,com.tonic.analysis.source.recovery.SlotVariablePartition.ScopeNameResolver)">
+<!--   -->
+</a>
+<ul class="blockListLast">
+<li class="blockList">
+<h4>SlotVariablePartition</h4>
+<pre>public&nbsp;SlotVariablePartition&#8203;(<a href="../../ssa/cfg/IRMethod.html" title="class in com.tonic.analysis.ssa.cfg">IRMethod</a>&nbsp;method,
+                             <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/function/IntFunction.html?is-external=true" title="class or interface in java.util.function" class="externalLink">IntFunction</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&gt;&nbsp;baseNameForSlot,
+                             <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;scopeNameResolver,
+                             <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;storeNameResolver,
+                             <a href="SlotVariablePartition.ScopeNameResolver.html" title="interface in com.tonic.analysis.source.recovery">SlotVariablePartition.ScopeNameResolver</a>&nbsp;scopeDescriptorResolver)</pre>
+<div class="block">As the four-argument form, with a resolver for the declared descriptor in scope, so two components
+ cannot share a debug name unless they share a type.</div>
+<dl>
+<dt><span class="paramLabel">Parameters:</span></dt>
+<dd><code>method</code> - the method to analyze</dd>
+<dd><code>baseNameForSlot</code> - supplies the fallback name for a slot with no scope name</dd>
+<dd><code>scopeNameResolver</code> - resolves the declared name in scope at a load offset, may be null</dd>
+<dd><code>storeNameResolver</code> - resolves the declared name in scope at a store offset, may be null</dd>
+<dd><code>scopeDescriptorResolver</code> - resolves the declared descriptor in scope at an offset, may be null</dd>
 </dl>
 </li>
 </ul>

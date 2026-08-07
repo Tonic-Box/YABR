@@ -227,16 +227,14 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 </tr>
 <tr id="i2" class="altColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a></code></td>
-<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue%5B%5D)">executeConcat</a></span>&#8203;(<a href="../dispatch/InvokeDynamicInfo.html" title="class in com.tonic.analysis.execution.dispatch">InvokeDynamicInfo</a>&nbsp;info,
-             <a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs)</code></th>
+<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#executeConcat(com.tonic.analysis.execution.state.ConcreteValue%5B%5D)">executeConcat</a></span>&#8203;(<a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs)</code></th>
 <td class="colLast">
 <div class="block">Concatenates the stack arguments in order for a recipe-less call site.</div>
 </td>
 </tr>
 <tr id="i3" class="rowColor">
 <td class="colFirst"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a></code></td>
-<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue%5B%5D,java.lang.String,java.lang.Object%5B%5D)">executeConcat</a></span>&#8203;(<a href="../dispatch/InvokeDynamicInfo.html" title="class in com.tonic.analysis.execution.dispatch">InvokeDynamicInfo</a>&nbsp;info,
-             <a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs,
+<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#executeConcat(com.tonic.analysis.execution.state.ConcreteValue%5B%5D,java.lang.String,java.lang.Object%5B%5D)">executeConcat</a></span>&#8203;(<a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs,
              <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;recipe,
              <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a>[]&nbsp;constants)</code></th>
 <td class="colLast">
@@ -350,20 +348,18 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <!--   -->
 </a>
 <h3>Method Detail</h3>
-<a id="executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue[],java.lang.String,java.lang.Object[])">
+<a id="executeConcat(com.tonic.analysis.execution.state.ConcreteValue[],java.lang.String,java.lang.Object[])">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>executeConcat</h4>
-<pre class="methodSignature">public&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;executeConcat&#8203;(<a href="../dispatch/InvokeDynamicInfo.html" title="class in com.tonic.analysis.execution.dispatch">InvokeDynamicInfo</a>&nbsp;info,
-                            <a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs,
+<pre class="methodSignature">public&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;executeConcat&#8203;(<a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs,
                             <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;recipe,
                             <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a>[]&nbsp;constants)</pre>
 <div class="block">Builds the concatenated string, expanding the recipe's argument and constant markers in order.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>info</code> - the invokedynamic call site information</dd>
 <dd><code>stackArgs</code> - the dynamic argument values popped from the stack</dd>
 <dd><code>recipe</code> - the concat recipe, or null or empty for plain concatenation</dd>
 <dd><code>constants</code> - the bootstrap constant arguments, may be null</dd>
@@ -372,18 +368,16 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 </dl>
 </li>
 </ul>
-<a id="executeConcat(com.tonic.analysis.execution.dispatch.InvokeDynamicInfo,com.tonic.analysis.execution.state.ConcreteValue[])">
+<a id="executeConcat(com.tonic.analysis.execution.state.ConcreteValue[])">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>executeConcat</h4>
-<pre class="methodSignature">public&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;executeConcat&#8203;(<a href="../dispatch/InvokeDynamicInfo.html" title="class in com.tonic.analysis.execution.dispatch">InvokeDynamicInfo</a>&nbsp;info,
-                            <a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs)</pre>
+<pre class="methodSignature">public&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html?is-external=true" title="class or interface in java.lang" class="externalLink">String</a>&nbsp;executeConcat&#8203;(<a href="../state/ConcreteValue.html" title="class in com.tonic.analysis.execution.state">ConcreteValue</a>[]&nbsp;stackArgs)</pre>
 <div class="block">Concatenates the stack arguments in order for a recipe-less call site.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>info</code> - the invokedynamic call site information</dd>
 <dd><code>stackArgs</code> - the dynamic argument values popped from the stack</dd>
 <dt><span class="returnLabel">Returns:</span></dt>
 <dd>the concatenated string</dd>
