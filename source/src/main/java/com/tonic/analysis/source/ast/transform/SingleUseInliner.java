@@ -168,6 +168,10 @@ public class SingleUseInliner implements ASTTransform
                     {
                         continue;
                     }
+                    if (initReadsClobberedVariable(stmts, i, usage.usageStmtIndex, init))
+                    {
+                        continue;
+                    }
                     if (tryInline(stmts, i, usage.usageStmtIndex, varName, init))
                     {
                         changed = true;
@@ -334,6 +338,86 @@ public class SingleUseInliner implements ASTTransform
         UsageCounter counter = new UsageCounter(varName);
         expr.accept(counter);
         return counter.count > 0;
+    }
+
+    /**
+     * Whether the initializer reads a variable that is reassigned between the declaration and the use.
+     * Inlining would move the read past that write and hand the use the new value - the shape a captured
+     * post-increment takes ({@code t = i; i++; f(t)}), where folding {@code t} back yields {@code f(i)}.
+     */
+    private boolean initReadsClobberedVariable(List<Statement> stmts, int declIndex, int useIndex, Expression init)
+    {
+        Set<String> reads = new HashSet<>();
+        collectVariableReads(init, reads);
+        if (reads.isEmpty())
+        {
+            return false;
+        }
+        for (int j = declIndex + 1; j < useIndex; j++)
+        {
+            Set<String> writes = new HashSet<>();
+            collectVariableWrites(stmts.get(j), writes);
+            for (String written : writes)
+            {
+                if (reads.contains(written))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Adds every variable name the expression reads.
+     */
+    private void collectVariableReads(Expression expr, Set<String> out)
+    {
+        if (expr == null)
+        {
+            return;
+        }
+        expr.walk(node -> {
+            if (node instanceof VarRefExpr)
+            {
+                out.add(((VarRefExpr) node).getName());
+            }
+        });
+    }
+
+    /**
+     * Adds every variable name the statement assigns, increments or redeclares.
+     */
+    private void collectVariableWrites(Statement stmt, Set<String> out)
+    {
+        if (stmt == null)
+        {
+            return;
+        }
+        stmt.walk(node -> {
+            if (node instanceof VarDeclStmt)
+            {
+                out.add(((VarDeclStmt) node).getName());
+            }
+            else if (node instanceof BinaryExpr)
+            {
+                BinaryExpr bin = (BinaryExpr) node;
+                if (bin.getOperator() != null && bin.getOperator().name().endsWith("ASSIGN")
+                        && bin.getLeft() instanceof VarRefExpr)
+                {
+                    out.add(((VarRefExpr) bin.getLeft()).getName());
+                }
+            }
+            else if (node instanceof UnaryExpr)
+            {
+                UnaryExpr un = (UnaryExpr) node;
+                if (un.getOperand() instanceof VarRefExpr && un.getOperator() != null
+                        && un.getOperator().name().contains("CREMENT"))
+                {
+                    out.add(((VarRefExpr) un.getOperand()).getName());
+                }
+            }
+        });
     }
 
     private boolean tryInline(List<Statement> stmts, int declIndex, int useIndex, String varName, Expression init)

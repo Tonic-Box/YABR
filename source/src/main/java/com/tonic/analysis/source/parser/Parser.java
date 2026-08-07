@@ -1266,6 +1266,7 @@ public class Parser
     private boolean isEnhancedFor()
     {
         int depth = 0;
+        int pendingTernaries = 0;
         Lexer tempLexer = new Lexer(source.substring(lexer.currentPosition().getOffset() - current.getText().length()));
         Token t = tempLexer.nextToken();
 
@@ -1277,9 +1278,19 @@ public class Parser
                 depth--;
                 if (depth < 0) break;
             }
+            if (t.getType() == TokenType.QUESTION && depth == 0)
+            {
+                pendingTernaries++;
+            }
             if (t.getType() == TokenType.COLON && depth == 0)
             {
-                return true;
+                // A ternary in the initializer (`for (int m = c ? 1 : 0; ...)`) puts a colon here that
+                // belongs to its own `?`, not to an enhanced for.
+                if (pendingTernaries == 0)
+                {
+                    return true;
+                }
+                pendingTernaries--;
             }
             t = tempLexer.nextToken();
         }

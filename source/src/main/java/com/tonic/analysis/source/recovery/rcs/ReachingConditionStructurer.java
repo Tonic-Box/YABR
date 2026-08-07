@@ -939,9 +939,14 @@ public final class ReachingConditionStructurer
                     // because another path completes the region normally without reaching it - the same
                     // predicate emitSharedTail applies. Without this mirror the guard's impure atom is
                     // never cached and the rendered guard would re-evaluate (or lose) the side effect.
-                    if (!reachedByFallThrough(c, b) || regionCompletesNormallySkipping(c, b))
+                    // An impure atom the emitter renders as a full if-then-else needs it too: uncached, the
+                    // emitter's only other option is a temp declared ahead of the whole guard, which runs
+                    // the atom on paths the short-circuit would have skipped.
+                    if (!reachedByFallThrough(c, b) || regionCompletesNormallySkipping(c, b)
+                            || rendersImpureIte(guard.bdd, new HashSet<>())
+                            || guardHasUnstableAtom(guard, c))
                     {
-                        requireGuardPure(guard);
+                        requireGuardPure(guard, c);
                     }
                     // A rendered guard must stay bounded. The CSE emitter is linear in BDD size whenever
                     // the shared subgraph is hoistable; only a shared but non-hoistable (throwing) subgraph
@@ -1594,6 +1599,11 @@ public final class ReachingConditionStructurer
             }
         }
     }
+
+
+
+
+
 
     /**
      * True when {@code block}'s branch condition has no side effect, so it is safe to re-emit inside a shared-tail
@@ -2961,7 +2971,8 @@ public final class ReachingConditionStructurer
         {
             return body;
         }
-        if (last && endsTerminal(body) && !regionCompletesNormallySkipping(shared, dominator))
+        if (last && endsTerminal(body) && !regionCompletesNormallySkipping(shared, dominator)
+                && !subtreeHandsBackSkipping(shared, dominator))
         {
             // The final terminal tail catches every path that did not already return or throw; guarding
             // it would leave a syntactic fall-through off the end of a value-returning method. This holds
@@ -2983,10 +2994,36 @@ public final class ReachingConditionStructurer
     }
 
     /**
-     * True when some region block under {@code dominator} completes the region NORMALLY - a normal edge to a
-     * region stop block that is NOT an enclosing loop/switch jump target - on a path that does not reach {@code
-     * tail}.
+     * True when a path under {@code dominator} leaves its subtree for another region block without passing
+     * through {@code tail}. That path completes the subtree normally, so the tail is not the catch-all for
+     * everything that did not already return or throw and still needs its guard - the second term of
+     * {@code A && (B || C)} hands back to the continuation exactly this way.
      */
+    private boolean subtreeHandsBackSkipping(IRBlock tail, IRBlock dominator)
+    {
+        for (IRBlock b : region)
+        {
+            if (b == tail || (b != dominator && !dom.dominates(dominator, b)))
+            {
+                continue;
+            }
+            for (Map.Entry<IRBlock, EdgeType> e : b.getSuccessorEdgeTypes().entrySet())
+            {
+                IRBlock s = e.getKey();
+                if (e.getValue() != EdgeType.NORMAL || s == tail || !region.contains(s)
+                        || s == dominator || dom.dominates(dominator, s))
+                {
+                    continue;
+                }
+                if (!reachWithin(s, dominator).contains(tail))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean regionCompletesNormallySkipping(IRBlock tail, IRBlock dominator)
     {
         if (regionStopBlocks.isEmpty())
@@ -3128,7 +3165,7 @@ public final class ReachingConditionStructurer
     /**
      * Caches every side-effecting condition a guard references.
      */
-    private void requireGuardPure(BoolFormula guard)
+    private void requireGuardPure(BoolFormula guard, IRBlock tail)
     {
         LoopAnalysis loops = context.getLoopAnalysis();
         // Only the BDD's support matters: guards render exclusively from the (reduced) BDD, so an atom
@@ -3137,7 +3174,18 @@ public final class ReachingConditionStructurer
         for (int atom : bddSupport(guard.bdd, new HashSet<>()))
         {
             IRBlock block = blockOfAtom.get(atom);
-            if (pureConditionBlock.contains(block) || cachedConditions.containsKey(block))
+            if (cachedConditions.containsKey(block))
+            {
+                continue;
+            }
+            // A pure atom may still be UNSTABLE: its condition reads a local written between the test and
+            // this guard (`captured`, set by the very arm the guard complements). Re-rendered there it
+            // answers for the later value, so it needs the same one-evaluation temp an impure atom gets.
+            // A pure atom may still be UNSTABLE: its condition reads a local written between the test and
+            // this guard (`captured`, set by the very arm the guard complements). Re-rendered there it
+            // answers for the later value, so it needs the same one-evaluation temp an impure atom gets.
+            if (pureConditionBlock.contains(block)
+                    && !slotWrittenBetween(block, conditionSlotsOf(block), tail))
             {
                 continue;
             }
@@ -3146,6 +3194,148 @@ public final class ReachingConditionStructurer
                 throw new BailToLegacy();
             }
             cachedConditions.put(block, "guard" + guardTempCounter++);
+        }
+    }
+
+    /**
+     * Whether some impure atom in {@code n} sits at a node the emitter renders as a full if-then-else,
+     * where it would owe both polarities of the condition and so cannot be re-evaluated in place.
+     */
+    private boolean rendersImpureIte(Bdd n, Set<Bdd> seen)
+    {
+        if (n.isTerminal() || !seen.add(n))
+        {
+            return false;
+        }
+        Bdd one = formulas.bddOne();
+        Bdd zero = formulas.bddZero();
+        boolean fullIte = n.low != zero && n.high != zero && n.low != one && n.high != one;
+        if (fullIte && !pureConditionBlock.contains(blockOfAtom.get(n.var)))
+        {
+            return true;
+        }
+        return rendersImpureIte(n.low, seen) || rendersImpureIte(n.high, seen);
+    }
+
+
+
+
+    /**
+     * Whether the guard tests a pure atom whose local is written outside the guarded body, so re-rendering
+     * it at the guard reads a later value than the atom's own test saw.
+     */
+    private boolean guardHasUnstableAtom(BoolFormula guard, IRBlock tail)
+    {
+        for (int atom : bddSupport(guard.bdd, new HashSet<>()))
+        {
+            IRBlock block = blockOfAtom.get(atom);
+            if (!pureConditionBlock.contains(block))
+            {
+                continue;
+            }
+            Set<Integer> slots = conditionSlotsOf(block);
+            if (!slots.isEmpty() && slotWrittenBetween(block, slots, tail))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a region block outside the guarded body writes one of {@code slots}.
+     */
+    private boolean slotWrittenBetween(IRBlock atom, Set<Integer> slots, IRBlock tail)
+    {
+        Deque<IRBlock> work = new ArrayDeque<>(atom.getSuccessors());
+        Set<IRBlock> seen = new HashSet<>();
+        seen.add(atom);
+        while (!work.isEmpty())
+        {
+            IRBlock b = work.poll();
+            // Reachable FROM the atom (a write before it is what the atom already tested), and outside the
+            // guarded body (a write there runs after the guard has decided).
+            if (!region.contains(b) || !seen.add(b) || b == tail || dom.dominates(tail, b))
+            {
+                continue;
+            }
+            for (IRInstruction i : b.getInstructions())
+            {
+                if (i instanceof StoreLocalInstruction
+                        && slots.contains(((StoreLocalInstruction) i).getLocalIndex()))
+                {
+                    return true;
+                }
+            }
+            work.addAll(b.getSuccessors());
+        }
+        return false;
+    }
+
+    /**
+     * The local slots {@code block}'s branch condition reads.
+     */
+    private Set<Integer> conditionSlotsOf(IRBlock block)
+    {
+        Set<Integer> slots = new HashSet<>();
+        IRInstruction term = block.getTerminator();
+        if (term instanceof BranchInstruction)
+        {
+            collectConditionSlots(((BranchInstruction) term).getLeft(), slots, new HashSet<>());
+            collectConditionSlots(((BranchInstruction) term).getRight(), slots, new HashSet<>());
+        }
+        return slots;
+    }
+
+    private void collectConditionSlots(Value value, Set<Integer> into, Set<Value> seen)
+    {
+        if (!(value instanceof SSAValue) || !seen.add(value))
+        {
+            return;
+        }
+        IRInstruction def = ((SSAValue) value).getDefinition();
+        if (def == null)
+        {
+            return;
+        }
+        if (def instanceof LoadLocalInstruction)
+        {
+            into.add(((LoadLocalInstruction) def).getLocalIndex());
+            return;
+        }
+        if (def instanceof PhiInstruction)
+        {
+            int slot = slotOfSsaName(((SSAValue) value).getName());
+            if (slot >= 0)
+            {
+                into.add(slot);
+            }
+            return;
+        }
+        for (Value operand : def.getOperands())
+        {
+            collectConditionSlots(operand, into, seen);
+        }
+    }
+
+    /**
+     * The local slot an SSA value's {@code v<slot>_<version>} name encodes, or -1.
+     */
+    private int slotOfSsaName(String name)
+    {
+        if (name == null || !name.startsWith("v"))
+        {
+            return -1;
+        }
+        int underscore = name.indexOf('_');
+        String digits = underscore >= 0 ? name.substring(1, underscore) : name.substring(1);
+        try
+        {
+            return Integer.parseInt(digits);
+        }
+        catch (NumberFormatException ignored)
+        {
+            return -1;
         }
     }
 
@@ -3412,14 +3602,19 @@ public final class ReachingConditionStructurer
             {
                 return disj(guardCondition(block, true), emitNode(n.high));
             }
-            // The full if-then-else renders this atom's condition TWICE (as `cond` and `!cond`). When
-            // that condition has a side effect (a method call) and is not already hoisted into a temp,
-            // evaluate it once into a boolean temp here so the two references do not double-run it - the
-            // guard's caching pass does not fire for every rendered arm, so the emitter must be
-            // self-sufficient.
+            // The full if-then-else renders this atom's condition TWICE (as `cond` and `!cond`). A
+            // side-effecting condition must therefore be evaluated once into a temp. That temp is declared
+            // ahead of the whole guard, so it is only sound where the atom cannot throw there: the guard
+            // reaches it unconditionally, on paths the original short-circuit would have skipped, and its
+            // operands need not exist (`checkFunctions(provider, caps, indices, names)` with the arrays
+            // built only under the other arm). An atom that can throw is declined, not speculated.
             if (bridge.conditionInlinesSideEffect(block) && !cachedConditions.containsKey(block)
                     && !iteHoist.containsKey(block))
             {
+                if (!exceptionFreeConditionBlock.contains(block))
+                {
+                    throw new BailToLegacy();
+                }
                 String name = "cse" + (guardTempCounter++);
                 decls.add(new VarDeclStmt(PrimitiveSourceType.BOOLEAN, name, guardCondition(block, false)));
                 iteHoist.put(block, name);
@@ -3624,7 +3819,41 @@ public final class ReachingConditionStructurer
             out.add(new ContinueStmt());
             return out;
         }
-        return tailInline(target);
+        List<Statement> tail = tailInline(target);
+        if (tail != null)
+        {
+            return tail;
+        }
+        if (leavesLoopWhereHeaderAlreadyDoes(from, target))
+        {
+            // An inner edge to the very block the loop's own header test exits to. The loop excluded that
+            // terminal from its break targets, so nothing lands there and the edge would carry no exit at
+            // all - the loop spins. The terminal follows the loop, so a plain break reaches it.
+            List<Statement> out = new ArrayList<>(bridge.lowerPhisOnEdge(from, target));
+            out.add(new BreakStmt());
+            return out;
+        }
+        return null;
+    }
+
+    /**
+     * Whether {@code target} is a terminal the enclosing loop's own header test also exits to, so the loop
+     * ends there and this inner edge is a {@code break}.
+     */
+    private boolean leavesLoopWhereHeaderAlreadyDoes(IRBlock from, IRBlock target)
+    {
+        IRBlock header = context.innermostLoopHeader();
+        if (header == null || header == from || !isTerminalBlock(target)
+                || !(header.getTerminator() instanceof BranchInstruction))
+        {
+            return false;
+        }
+        LoopAnalysis loops = context.getLoopAnalysis();
+        if (loops == null || loops.getLoop(header) == null || !loops.getLoop(header).getBlocks().contains(from))
+        {
+            return false;
+        }
+        return header.getSuccessors().contains(target) && !loops.getLoop(header).getBlocks().contains(target);
     }
 
     /**

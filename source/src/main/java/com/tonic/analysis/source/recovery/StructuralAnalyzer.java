@@ -677,21 +677,11 @@ public class StructuralAnalyzer
     }
 
     /**
-     * Detects a short-circuit compound condition (`A &amp;&amp; B`, `A || B`, or any mix, e.g. {@code (A || B) &&
-     * C}) guarding an if/else.
+     * Grows the condition region from {@code header} over condition-only successors whose predecessors are
+     * all inside it, optionally refusing any step that would leave more than two exits.
      */
-    private RegionInfo detectCompoundCondition(IRBlock header)
+    private Set<IRBlock> growConditionRegion(IRBlock header, boolean bounded)
     {
-        if (!(header.getTerminator() instanceof BranchInstruction))
-        {
-            return null;
-        }
-        // Grow the condition region: absorb a two-way-branch, condition-only successor whose every
-        // predecessor is already inside the region, but only while the region still decides between at
-        // most two exits. A block reached as the shared short-circuit target of several condition blocks
-        // is the guard body (one of the two exits), not a condition continuation - absorbing it would
-        // explode the exit set. Bounding growth by the exit count keeps genuine terms (e.g. the `C` of
-        // `(A || B) && C`, reached from two blocks but still two-exit) while stopping at the body.
         Set<IRBlock> region = new LinkedHashSet<>();
         region.add(header);
         boolean grew = true;
@@ -712,7 +702,7 @@ public class StructuralAnalyzer
                     }
                     Set<IRBlock> trial = new LinkedHashSet<>(region);
                     trial.add(s);
-                    if (countExits(trial) <= 2)
+                    if (!bounded || countExits(trial) <= 2)
                     {
                         region.add(s);
                         grew = true;
@@ -720,12 +710,14 @@ public class StructuralAnalyzer
                 }
             }
         }
-        if (region.size() < 2)
-        {
-            return null; // a single condition - the standard if recovery handles it
-        }
+        return region;
+    }
 
-        // The condition must decide between exactly two exits (then-entry and else-entry).
+    /**
+     * The blocks a condition region branches to from outside itself.
+     */
+    private Set<IRBlock> conditionRegionExits(Set<IRBlock> region)
+    {
         Set<IRBlock> exits = new LinkedHashSet<>();
         for (IRBlock b : region)
         {
@@ -737,6 +729,32 @@ public class StructuralAnalyzer
                 }
             }
         }
+        return exits;
+    }
+
+    private RegionInfo detectCompoundCondition(IRBlock header)
+    {
+        if (!(header.getTerminator() instanceof BranchInstruction))
+        {
+            return null;
+        }
+        // Grow the condition region: absorb a two-way-branch, condition-only successor whose every
+        // predecessor is already inside the region, but only while the region still decides between at
+        // most two exits. A block reached as the shared short-circuit target of several condition blocks
+        // is the guard body (one of the two exits), not a condition continuation - absorbing it would
+        // explode the exit set. Bounding growth by the exit count keeps genuine terms (e.g. the `C` of
+        // `(A || B) && C`, reached from two blocks but still two-exit) while stopping at the body.
+        // The per-step bound stops at the body, but it also blocks a region that only becomes two-exit once
+        // a later term is absorbed: the `B` of `A && (B || C)` exposes C as a third exit until C joins too.
+        // Retry unbounded when the bounded region is not a valid condition; the exit count and
+        // reconstructibility below still decide, so the relaxed growth cannot admit a body.
+        Set<IRBlock> region = growConditionRegion(header, true);
+        Set<IRBlock> exits = conditionRegionExits(region);
+        if (region.size() < 2)
+        {
+            return null; // a single condition - the standard if recovery handles it
+        }
+        // The condition must decide between exactly two exits (then-entry and else-entry).
         if (exits.size() != 2)
         {
             return null;

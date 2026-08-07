@@ -1235,6 +1235,13 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 {
                     result.addAll(recoverRegionHandoff(continuation, new HashSet<>()));
                 }
+                else if (continuation != null)
+                {
+                    // A continuation another path already emitted (a guard arm that returned the shared
+                    // tail early) leaves this path with nothing after the region, so the method falls off
+                    // its end. A return block is pure, so re-emit it here rather than lose it.
+                    result.addAll(processedReturnStatements(continuation));
+                }
             }
         }
         else
@@ -7113,9 +7120,18 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 // the range's fall-through, so the closure would then cascade over the rest of the
                 // method and leave the exit scan nothing to settle on. Past that first hand-off the
                 // copies' own interior flow cascades normally.
-                if (b.getBytecodeOffset() >= endOff && seed.containsAll(b.getPredecessors())
+                // Past the window's end the family owns only its own scaffolding: what its handlers
+                // dominate, what repeats its handler body, and - once the cascade is inside a copy - that
+                // copy's interior. A block that OPENS ANOTHER CONSTRUCT out there is not scaffolding but
+                // the join: absorbing it takes the continuation with it, and the join scan is left with
+                // nothing to settle on, so the statements after the try are silently dropped. An inlined
+                // copy carries its own nested try along, so a family whose handler DUPLICATES one already
+                // inside the window is still this construct's, not a new one.
+                if (b.getBytecodeOffset() >= endOff
                         && !dominatedByAny(familyHandlers, b, context.getDominatorTree())
-                        && !repeatsFamilyHandlerBody(b, familyHandlers))
+                        && !repeatsFamilyHandlerBody(b, familyHandlers)
+                        && (seed.containsAll(b.getPredecessors()) || opensUnduplicatedFamily(b, closure)
+                                || mergesFamilyExits(b, closure)))
                 {
                     continue;
                 }
@@ -7165,6 +7181,100 @@ public class StatementRecoverer implements RegionRecoveryBridge
         for (IRBlock root : roots)
         {
             if (dt.dominates(root, block))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code block} is where the family's scaffolding hands back to normal control flow: several
+     * scaffolding paths merge into it. The scaffolding itself is a single-predecessor chain, so a merge of
+     * family paths that carries no handler evidence of its own is the construct's continuation.
+     */
+    private boolean mergesFamilyExits(IRBlock block, Set<IRBlock> closure)
+    {
+        Set<IRBlock> preds = block.getPredecessors();
+        return preds.size() > 1 && closure.containsAll(preds);
+    }
+
+    /**
+     * Whether {@code block} begins the protected range of a handler whose body appears nowhere in
+     * {@code inWindow} - a construct of its own rather than the nested try an inlined copy carries along.
+     */
+    private boolean opensUnduplicatedFamily(IRBlock block, Set<IRBlock> inWindow)
+    {
+        for (ExceptionHandler eh : context.getIrMethod().getExceptionHandlers())
+        {
+            if (eh.getTryStart() != block || eh.getHandlerBlock() == null)
+            {
+                continue;
+            }
+            // An empty handler (nothing but the caught-exception bind and a jump) is evidence of nothing:
+            // it looks the same wherever it appears, so it cannot show the range belongs to a new
+            // construct. Only a handler with a body can.
+            if (!hasHandlerBody(eh.getHandlerBlock()))
+            {
+                continue;
+            }
+            if (!duplicatesHandlerInWindow(eh.getHandlerBlock(), inWindow))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether {@code handler} does anything beyond binding the caught exception and jumping away. An empty
+     * catch looks identical wherever it appears, so it is evidence of nothing.
+     */
+    private boolean hasHandlerBody(IRBlock handler)
+    {
+        IRInstruction terminator = handler.getTerminator();
+        for (IRInstruction instruction : handlerBodyTemplate(handler))
+        {
+            if (instruction != terminator)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether some block already in the window opens with the same instructions as {@code handler}, which
+     * is what an inlined copy's own nested handler looks like.
+     */
+    private boolean duplicatesHandlerInWindow(IRBlock handler, Set<IRBlock> inWindow)
+    {
+        List<IRInstruction> body = handlerBodyTemplate(handler);
+        if (body.isEmpty())
+        {
+            return false;
+        }
+        for (IRBlock candidate : inWindow)
+        {
+            if (candidate == handler)
+            {
+                continue;
+            }
+            List<IRInstruction> other = handlerBodyTemplate(candidate);
+            if (other.size() < body.size())
+            {
+                continue;
+            }
+            boolean match = true;
+            for (int i = 0; i < body.size(); i++)
+            {
+                if (!sameFinallyInstr(body.get(i), other.get(i)))
+                {
+                    match = false;
+                    break;
+                }
+            }
+            if (match)
             {
                 return true;
             }
@@ -7512,13 +7622,15 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 }
                 List<SourceType> unifyFrom = (hasReference && !primitiveTypes.isEmpty()) ? primitiveTypes : types;
                 SourceType unifiedType = typeRecoverer.computeCommonType(unifyFrom);
-                // Prefer the LocalVariableTable's declared narrow-primitive type over int-widening: a
-                // char/byte/short/boolean local stored through int-shaped bytecode (e.g. a synthetic `= 0`
-                // init) otherwise widens to `int`, losing the declared type and drifting from javac.
-                String narrow = localSlotLvtNarrow.get(slotName);
-                if (narrow != null && !"CONFLICT".equals(narrow) && unifiedType == PrimitiveSourceType.INT)
+                // Prefer the LocalVariableTable's declared type across the int category, in both
+                // directions. A char/byte/short/boolean local stored through int-shaped bytecode (e.g. a
+                // synthetic `= 0` init) otherwise widens to `int`, losing the declared type; and an int
+                // whose only stores are the constants 0 and 1 (`M == 1 ? 1 : 0`) otherwise narrows to
+                // `boolean`, which no longer compares or increments.
+                String declared = localSlotLvtNarrow.get(slotName);
+                if (declared != null && !"CONFLICT".equals(declared) && isIntCategory(unifiedType))
                 {
-                    unifiedType = typeRecoverer.recoverType(narrow);
+                    unifiedType = typeRecoverer.recoverType(declared);
                 }
                 localSlotUnifiedTypes.put(slotName, unifiedType);
             }
@@ -7638,7 +7750,28 @@ public class StatementRecoverer implements RegionRecoveryBridge
         {
             desc = ctx.debugDescriptorAt(slot, offset);
         }
-        return desc != null && desc.length() == 1 && "ZBCS".indexOf(desc.charAt(0)) >= 0 ? desc : null;
+        return desc != null && desc.length() == 1 && "ZBCSI".indexOf(desc.charAt(0)) >= 0 ? desc : null;
+    }
+
+    /**
+     * Whether {@code instr} sits inside a loop, so a declaration hoisted above the loop does not re-run
+     * with it.
+     */
+    private boolean constInstrInsideLoop(IRInstruction instr)
+    {
+        LoopAnalysis loops = context.getLoopAnalysis();
+        return loops != null && instr.getBlock() != null && loops.isInLoop(instr.getBlock());
+    }
+
+    /**
+     * Whether {@code type} is one of the primitives the JVM represents as an int, which the bytecode alone
+     * cannot tell apart.
+     */
+    private boolean isIntCategory(SourceType type)
+    {
+        return type == PrimitiveSourceType.INT || type == PrimitiveSourceType.BOOLEAN
+                || type == PrimitiveSourceType.BYTE || type == PrimitiveSourceType.CHAR
+                || type == PrimitiveSourceType.SHORT;
     }
 
     /**
@@ -7650,6 +7783,24 @@ public class StatementRecoverer implements RegionRecoveryBridge
     public SourceType getLocalSlotUnifiedType(String slotName)
     {
         return localSlotUnifiedTypes.get(slotName);
+    }
+
+    /**
+     * Whether {@code value} already stands for a source variable of its own - a merge with a partition name
+     * other than {@code name}. The binding below exists for a value with no home of its own; taking one that
+     * HAS a home severs its store/load web, and the variable it belonged to stops being written: the counter
+     * behind `planeCounter != 6 ? planeCounter : bound.getCheckPlane()` would be renamed to the ternary's
+     * variable and the loop would never advance.
+     */
+    private boolean bindingWouldStealVariable(SSAValue value, String name)
+    {
+        IRInstruction def = value.getDefinition();
+        if (!(def instanceof PhiInstruction))
+        {
+            return false;
+        }
+        String own = partitionName(def);
+        return own != null && !own.equals(name);
     }
 
     /**
@@ -7798,7 +7949,8 @@ public class StatementRecoverer implements RegionRecoveryBridge
             Value dominating = findDominatingOperand(phi);
             if (dominating instanceof SSAValue && !isSafeEntryInit(dominating)
                     && entryDominatesPhi(dominating, phi)
-                    && !context.getExpressionContext().isMaterialized((SSAValue) dominating))
+                    && !context.getExpressionContext().isMaterialized((SSAValue) dominating)
+                    && !bindingWouldStealVariable((SSAValue) dominating, name))
             {
                 SSAValue dominatingValue = (SSAValue) dominating;
                 context.getExpressionContext().setVariableName(dominatingValue, name);
@@ -9109,6 +9261,28 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
+     * Re-walks a continuation another path already consumed, clearing the marks over its subtree so the
+     * walk runs instead of reporting the region as done. The marks are restored by the walk itself.
+     */
+    private List<Statement> reemitProcessedContinuation(IRBlock after, Set<IRBlock> stopBlocks)
+    {
+        Set<IRBlock> subtree = new HashSet<>();
+        Deque<IRBlock> work = new ArrayDeque<>();
+        work.add(after);
+        while (!work.isEmpty())
+        {
+            IRBlock b = work.poll();
+            if (b == null || stopBlocks.contains(b) || !subtree.add(b))
+            {
+                continue;
+            }
+            work.addAll(b.getSuccessors());
+        }
+        context.getProcessedBlocks().removeAll(subtree);
+        return recoverRegionHandoff(after, stopBlocks);
+    }
+
+    /**
      * Whether {@code b} is a bare goto pad whose single successor dominates it - a loop latch pad.
      */
     private boolean isLatchPad(IRBlock b, DominatorTree dt)
@@ -9336,6 +9510,15 @@ public class StatementRecoverer implements RegionRecoveryBridge
                     // emits nothing for a processed region, which would drop the fall-through's return
                     // entirely; a return terminator is idempotent, so re-emit its recovered statements.
                     out.addAll(context.getStatements(after));
+                }
+                else if (context.isProcessed(after) && after.getPredecessors().size() > 1)
+                {
+                    // The same convergence, but the shared continuation is a whole tail rather than a lone
+                    // return: an arm took it inside itself and ended there, so nothing follows the try and
+                    // the fall-through runs off the end (`runLoop` losing its `glfwPollEvents()`). Only the
+                    // block's OWN statements are stored, so re-walk the tail; the copies sit on disjoint
+                    // paths, exactly as the return case above.
+                    out.addAll(reemitProcessedContinuation(after, stopBlocks));
                 }
                 else
                 {
@@ -11782,6 +11965,22 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
+     * How many instructions consume a constructed object, not counting the constructor call itself.
+     */
+    private int countConstructedConsumers(SSAValue constructed, IRInstruction constructorCall)
+    {
+        int consumers = 0;
+        for (IRInstruction use : constructed.getUses())
+        {
+            if (use != constructorCall)
+            {
+                consumers++;
+            }
+        }
+        return consumers;
+    }
+
+    /**
      * The incremented pre-value {@code x} of a {@code slot = x +/- constant} store, else null.
      */
     private SSAValue incrementPreValue(StoreLocalInstruction store)
@@ -11947,6 +12146,18 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 if (result != null)
                 {
                     Expression expr = exprRecoverer.recover(arrayAccess);
+                    // An arm of a value merge whose contribution is an element read owes the merge a copy:
+                    // the structured path has no lowerPhisOnEdge step, and caching the expression alone
+                    // leaves the merge variable holding whatever the other arm wrote (`w = w < 1 ? 1 : w`
+                    // collapses to `w = 0; if (w < 1) w = 1;`).
+                    if (isSingleUsePhiOperand(result))
+                    {
+                        Statement phiCopy = phiCopyForDeclaredMerge(result, expr);
+                        if (phiCopy != null)
+                        {
+                            return phiCopy;
+                        }
+                    }
                     context.getExpressionContext().cacheExpression(result, expr);
                 }
                 return null;
@@ -11997,6 +12208,19 @@ public class StatementRecoverer implements RegionRecoveryBridge
                                     SourceType type = expr.getType();
                                     VarRefExpr target = new VarRefExpr(phiVarName, type, targetPhi.getResult());
                                     return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN, target, expr, type));
+                                }
+                            }
+                            // One allocation shared by several consumers (javac's dup_x1 for
+                            // `f(this.x = new T())`) must stay ONE object: caching the expression renders a
+                            // fresh `new` at every use, so the field and the argument end up holding
+                            // different instances. Bind it to a temporary the consumers read instead.
+                            if (newResult != null && !usedByStore && targetPhi == null
+                                    && countConstructedConsumers(newResult, invoke) > 1)
+                            {
+                                Statement bound = materializeIntoTemporary(newResult, expr, "tmp" + newResult.getId());
+                                if (bound != null)
+                                {
+                                    return bound;
                                 }
                             }
                             if (newResult != null)
@@ -12282,6 +12506,18 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 // re-recovering the instruction (which would create duplicate new expressions)
                 context.getExpressionContext().markMaterialized(loadLocal.getResult());
                 Expression value = exprRecoverer.recover(loadLocal);
+                // An arm of a value merge whose contribution is another variable's current value owes the
+                // merge a copy: the structured path has no lowerPhisOnEdge step, so without it the merge
+                // variable and the read variable collapse into one and the reader clobbers the writer
+                // (`planeId = planeCounter != 6 ? planeCounter : check` losing the loop counter).
+                if (isSingleUsePhiOperand(loadLocal.getResult()))
+                {
+                    Statement phiCopy = phiCopyForDeclaredMerge(loadLocal.getResult(), value);
+                    if (phiCopy != null)
+                    {
+                        return phiCopy;
+                    }
+                }
                 context.getExpressionContext().cacheExpression(loadLocal.getResult(), value);
             }
             return null;
@@ -12383,7 +12619,12 @@ public class StatementRecoverer implements RegionRecoveryBridge
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
                         }
-                        if (!handlerRead && isDefaultValue(value))
+                        // Folding the arm into the declaration's default only stands where the declaration
+                        // runs as often as the arm does. Inside a loop it does not: the declaration is
+                        // hoisted out, so the arm that re-seeds the variable each iteration
+                        // (`for (int m = M == 1 ? 1 : 0; ...)`) would be silently dropped and the variable
+                        // would carry the previous iteration's value.
+                        if (!handlerRead && isDefaultValue(value) && !constInstrInsideLoop(constInstr))
                         {
                             context.getExpressionContext().cacheExpression(result, value);
                             return null;
@@ -12676,6 +12917,17 @@ public class StatementRecoverer implements RegionRecoveryBridge
             if (value instanceof VarRefExpr)
             {
                 VarRefExpr varRef = (VarRefExpr) value;
+                // A merge feeding another merge renders under the CONSUMING phi's variable, which is this
+                // store's target: `clone = obj` then reads as `clone = clone` and is elided as an identity
+                // store, leaving the target holding its declaration's default. The source merge has a
+                // variable of its own - name it, and the copy stands.
+                String sourceName = storedPhiOwnName(store);
+                if (sourceName != null && !sourceName.equals(name) && name.equals(varRef.getName()))
+                {
+                    varRef = new VarRefExpr(sourceName, varRef.getType());
+                    return new ExprStmt(new BinaryExpr(BinaryOperator.ASSIGN,
+                            new VarRefExpr(name, type, null), varRef, type));
+                }
                 if (name.equals(varRef.getName()))
                 {
                     return null;
@@ -13270,6 +13522,13 @@ public class StatementRecoverer implements RegionRecoveryBridge
             return null;
         }
         SourceType type = getLocalSlotUnifiedType(phiVarName);
+        // The phi of a REUSED slot carries the other occupant's name and type; a copy into it is the same
+        // fiction the edge-copy emitters refuse (`minors = extName` with minors an int[]). The value's own
+        // store still emits its real assignment under the right name.
+        if (!copyTypeCompatible(type, value))
+        {
+            return null;
+        }
         if (type == null)
         {
             type = expr.getType();
@@ -14061,6 +14320,16 @@ public class StatementRecoverer implements RegionRecoveryBridge
         {
             return true;
         }
+        // An array and a class are the same kind of pun a primitive and a reference are: only Object spans
+        // both, so a slot that held `int[]` cannot take a String without one.
+        boolean targetArray = target instanceof ArraySourceType;
+        boolean inArray = in instanceof ArraySourceType;
+        if (targetArray != inArray)
+        {
+            SourceType other = targetArray ? in : target;
+            return other instanceof ReferenceSourceType
+                    && "java/lang/Object".equals(((ReferenceSourceType) other).getInternalName());
+        }
         if (!(target instanceof ReferenceSourceType) || !(in instanceof ReferenceSourceType))
         {
             return true;
@@ -14487,11 +14756,55 @@ public class StatementRecoverer implements RegionRecoveryBridge
             return false;
         }
         BranchInstruction branch = (BranchInstruction) terminator;
+        // The inline-throw check answers what happens where the operand is rendered, and it reads inlining
+        // decisions this pass has not made yet. A hoist moves the atom OUT of its short-circuit position, so
+        // it must also refuse a condition whose value is computed by a call: the arguments a guard skipped
+        // may not exist on the path that now evaluates it.
+        if (conditionComputedByCall(branch))
+        {
+            return false;
+        }
         if (branch.getLeft() != null && exprRecoverer.operandMayThrowInline(branch.getLeft()))
         {
             return false;
         }
         return branch.getRight() == null || !exprRecoverer.operandMayThrowInline(branch.getRight());
+    }
+
+    /**
+     * Whether either side of {@code branch} is produced by a call, an allocation, or an operand chain
+     * reaching one.
+     */
+    private boolean conditionComputedByCall(BranchInstruction branch)
+    {
+        return valueComputedByCall(branch.getLeft(), new HashSet<>())
+                || valueComputedByCall(branch.getRight(), new HashSet<>());
+    }
+
+    private boolean valueComputedByCall(Value value, Set<Value> seen)
+    {
+        if (!(value instanceof SSAValue) || !seen.add(value))
+        {
+            return false;
+        }
+        IRInstruction def = ((SSAValue) value).getDefinition();
+        if (def == null)
+        {
+            return false;
+        }
+        if (def instanceof InvokeInstruction || def instanceof NewInstruction
+                || def instanceof NewArrayInstruction)
+        {
+            return true;
+        }
+        for (Value operand : def.getOperands())
+        {
+            if (valueComputedByCall(operand, seen))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -15185,7 +15498,57 @@ public class StatementRecoverer implements RegionRecoveryBridge
                 return false;
             }
         }
-        return true;
+        return !phiUsedAsNumber(phi.getResult(), new HashSet<>());
+    }
+
+    /**
+     * Whether some reader of {@code result} only makes sense on a number: arithmetic, an ordered
+     * comparison, or an array index. {@code M == 1 ? 1 : 0} merges the same constants a boolean would, so
+     * the merge alone cannot tell the two apart - the readers can. A merge feeding another merge (the
+     * ternary that seeds a loop counter) is followed through, since the reader is the one downstream.
+     */
+    private boolean phiUsedAsNumber(SSAValue result, Set<SSAValue> seen)
+    {
+        if (result == null || !seen.add(result))
+        {
+            return false;
+        }
+        for (IRInstruction use : result.getUses())
+        {
+            if (use instanceof PhiInstruction || use instanceof CopyInstruction)
+            {
+                if (phiUsedAsNumber(use.getResult(), seen))
+                {
+                    return true;
+                }
+                continue;
+            }
+            if (use instanceof BinaryOpInstruction)
+            {
+                BinaryOp op = ((BinaryOpInstruction) use).getOp();
+                if (op != BinaryOp.AND && op != BinaryOp.OR && op != BinaryOp.XOR)
+                {
+                    return true;
+                }
+            }
+            else if (use instanceof BranchInstruction)
+            {
+                CompareOp condition = ((BranchInstruction) use).getCondition();
+                if (condition == CompareOp.LT || condition == CompareOp.LE
+                        || condition == CompareOp.GT || condition == CompareOp.GE
+                        || condition == CompareOp.IFLT || condition == CompareOp.IFLE
+                        || condition == CompareOp.IFGT || condition == CompareOp.IFGE)
+                {
+                    return true;
+                }
+            }
+            else if (use instanceof ArrayAccessInstruction
+                    && ((ArrayAccessInstruction) use).getIndex() == result)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -15497,6 +15860,13 @@ public class StatementRecoverer implements RegionRecoveryBridge
 
         SSAValue phiResult = phi.getResult();
         SourceType type = typeRecoverer.recoverType(phiResult);
+        // Arms of 0 and 1 read as a boolean merge, and a boolean ternary folds to its bare condition. Where
+        // a reader treats the merge as a number that fold is a miscompile (`int m = M == 1`), so the
+        // readers decide the type here too.
+        if (type == PrimitiveSourceType.BOOLEAN && phiUsedAsNumber(phiResult, new HashSet<>()))
+        {
+            type = PrimitiveSourceType.INT;
+        }
 
         TernaryExpr ternaryExpr = new TernaryExpr(condition, thenExpr, elseExpr, type);
 
@@ -15589,9 +15959,24 @@ public class StatementRecoverer implements RegionRecoveryBridge
     }
 
     /**
-     * Resolves a local load/store/phi to its source-variable name via the reaching-definition
-     * slot partition, or null when the partition could not place the instruction.
+     * The variable the phi feeding {@code store} carries in its own right, when that phi is declared under
+     * a name of its own.
      */
+    private String storedPhiOwnName(StoreLocalInstruction store)
+    {
+        if (!(store.getValue() instanceof SSAValue))
+        {
+            return null;
+        }
+        IRInstruction def = ((SSAValue) store.getValue()).getDefinition();
+        if (!(def instanceof PhiInstruction))
+        {
+            return null;
+        }
+        String own = partitionName(def);
+        return own != null && context.getExpressionContext().isDeclared(own) ? own : null;
+    }
+
     private String partitionName(IRInstruction instr)
     {
         SlotVariablePartition partition = context.getExpressionContext().getSlotPartition();

@@ -654,6 +654,15 @@ public class ControlFlowSimplifier implements ASTTransform
     }
 
     /**
+     * Whether {@code type} is a primitive other than boolean, so a {@code cond ? 1 : 0} carrying it is a
+     * number rather than a boolean's int form.
+     */
+    private boolean isNonBooleanPrimitive(SourceType type)
+    {
+        return type != null && type.isPrimitive() && type != PrimitiveSourceType.BOOLEAN;
+    }
+
+    /**
      * Folds a boolean short-circuit that javac materializes as an int-carrying ternary back into {@code &&}/{@code
      * ||}.
      */
@@ -735,10 +744,15 @@ public class ControlFlowSimplifier implements ASTTransform
                 return thenExpr;
             }
 
-            Expression shortCircuit = foldBooleanShortCircuit(cond, thenExpr, elseExpr);
-            if (shortCircuit != null)
+            // Only a ternary that IS a boolean may collapse to its condition. `M == 1 ? 1 : 0` typed int is
+            // a number the readers compare and increment, and folding it hands them a boolean instead.
+            if (!isNonBooleanPrimitive(ternary.getType()))
             {
-                return shortCircuit;
+                Expression shortCircuit = foldBooleanShortCircuit(cond, thenExpr, elseExpr);
+                if (shortCircuit != null)
+                {
+                    return shortCircuit;
+                }
             }
 
             if (cond != ternary.getCondition() || thenExpr != ternary.getThenExpr()

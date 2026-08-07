@@ -483,6 +483,15 @@ public class ControlFlowContext
     }
 
     /**
+     * @return the header of the innermost enclosing loop, or null when no loop encloses
+     */
+    public IRBlock innermostLoopHeader()
+    {
+        LoopFrame f = loopStack.peek();
+        return f == null ? null : f.header;
+    }
+
+    /**
      * @return the {@code for}-update latch of the innermost enclosing loop, or null when none
      *         encloses or it is not a counted loop
      */
