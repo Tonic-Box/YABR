@@ -3,7 +3,6 @@ package com.tonic.analysis.source.editor;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
-import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.editor.handler.ArrayAccessHandler;
 import com.tonic.analysis.source.editor.matcher.ExprMatcher;
 import com.tonic.analysis.source.editor.matcher.StmtMatcher;
@@ -240,9 +239,7 @@ class ASTEditorTest
         BlockStmt body = factory.block(returnStmt);
 
         ASTEditor editor = new ASTEditor(body);
-        editor.onReturn((ctx, ret) -> {
-            return Replacement.with(factory.returnStmt(factory.intLiteral(10)));
-        });
+        editor.onReturn((ctx, ret) -> Replacement.with(factory.returnStmt(factory.intLiteral(10))));
         editor.apply();
 
         ReturnStmt newReturn = (ReturnStmt) body.getStatements().get(0);

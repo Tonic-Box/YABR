@@ -91,10 +91,7 @@ public class ASTPrinter implements SourceVisitor<Void>
 
     private void appendIndent()
     {
-        for (int i = 0; i < indentLevel; i++)
-        {
-            output.append(indentString);
-        }
+        output.append(String.valueOf(indentString).repeat(Math.max(0, indentLevel)));
     }
 
     private void appendLine(String text)

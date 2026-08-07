@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.CatchClause;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
@@ -18,9 +17,7 @@ import com.tonic.testutil.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -87,8 +84,7 @@ class TryRegionTest
             assertNotNull(body);
             TryCatchStmt tryCatch = findTryCatch(body);
             assertNotNull(tryCatch, "Expected a try-catch statement");
-            assertTrue(tryCatch.getCatches().size() >= 1,
-                "Expected at least one catch clause for same-region handlers");
+            assertFalse(tryCatch.getCatches().isEmpty(), "Expected at least one catch clause for same-region handlers");
         }
 
         @Test

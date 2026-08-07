@@ -1,6 +1,5 @@
 package com.tonic.analysis.execution.debug;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,7 +67,7 @@ public final class DebugState
         this.instructionCount = builder.instructionCount;
         this.hitBreakpoint = builder.hitBreakpoint;
         this.callStack = builder.callStack != null ?
-            Collections.unmodifiableList(new ArrayList<>(builder.callStack)) :
+                List.copyOf(builder.callStack) :
             Collections.emptyList();
         this.locals = builder.locals;
         this.operandStack = builder.operandStack;

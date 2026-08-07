@@ -421,7 +421,7 @@ public class IRBuilder
     public IRBuilder copy(String source, String result)
     {
         Value src = get(source);
-        SSAValue res = new SSAValue(src instanceof SSAValue ? ((SSAValue) src).getType() : PrimitiveType.INT, result);
+        SSAValue res = new SSAValue(src instanceof SSAValue ? src.getType() : PrimitiveType.INT, result);
         values.put(result, res);
 
         CopyInstruction inst = new CopyInstruction(res, src);

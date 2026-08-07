@@ -5,8 +5,6 @@ import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

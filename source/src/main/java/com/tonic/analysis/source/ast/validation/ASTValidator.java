@@ -206,8 +206,7 @@ public final class ASTValidator
         boolean aNumeric = isNumericType(aStr);
         boolean bNumeric = isNumericType(bStr);
         if (aNumeric && bNumeric) return true;
-        if (!aNumeric && !bNumeric) return true;
-        return false;
+        return !aNumeric && !bNumeric;
     }
 
     private boolean isNumericType(String type)

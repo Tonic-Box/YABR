@@ -1,7 +1,6 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.state.ConcreteLocals;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

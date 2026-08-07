@@ -161,19 +161,16 @@ public class JarDecompiler
             return;
         }
 
-        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+        Files.walkFileTree(dir, new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
-            {
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(Path d, IOException exc) throws IOException
-            {
-                if (!d.equals(dir))
-                {
+            public FileVisitResult postVisitDirectory(Path d, IOException exc) throws IOException {
+                if (!d.equals(dir)) {
                     Files.delete(d);
                 }
                 return FileVisitResult.CONTINUE;
@@ -205,9 +202,9 @@ public class JarDecompiler
         boolean optimize = false;
         for (int i = 2; i < args.length; i++)
         {
-            if ("--optimize".equals(args[i]))
-            {
+            if ("--optimize".equals(args[i])) {
                 optimize = true;
+                break;
             }
         }
 

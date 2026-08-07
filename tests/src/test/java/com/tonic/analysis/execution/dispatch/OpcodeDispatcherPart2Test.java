@@ -45,8 +45,8 @@ class OpcodeDispatcherPart2Test
     private static class SimpleStackFrame
     {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
         public SimpleStackFrame(ConcreteStack stack, ConcreteLocals locals)
@@ -108,7 +108,7 @@ class OpcodeDispatcherPart2Test
         switch (opcode)
         {
             case 0x85:
-                stack.pushLong((long) stack.popInt());
+                stack.pushLong(stack.popInt());
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
@@ -118,7 +118,7 @@ class OpcodeDispatcherPart2Test
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
             case 0x87:
-                stack.pushDouble((double) stack.popInt());
+                stack.pushDouble(stack.popInt());
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
@@ -148,7 +148,7 @@ class OpcodeDispatcherPart2Test
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
             case 0x8D:
-                stack.pushDouble((double) stack.popFloat());
+                stack.pushDouble(stack.popFloat());
                 frame.advancePC(instr.getLength());
                 return OpcodeDispatcher.DispatchResult.CONTINUE;
 
@@ -221,7 +221,7 @@ class OpcodeDispatcherPart2Test
         stack.pushInt(Integer.MAX_VALUE);
         SimpleInstruction instr = new SimpleInstruction(0x85, 0, 1);
         dispatchSimple(instr);
-        assertEquals((long) Integer.MAX_VALUE, stack.popLong());
+        assertEquals(Integer.MAX_VALUE, stack.popLong());
     }
 
     @Test
@@ -595,7 +595,7 @@ class OpcodeDispatcherPart2Test
         SimpleInstruction instr = new SimpleInstruction(0x90, 0, 1);
         dispatchSimple(instr);
         float result = stack.popFloat();
-        assertNotEquals(1.23456789123456789, (double) result);
+        assertNotEquals(1.23456789123456789, result);
     }
 
     @Test

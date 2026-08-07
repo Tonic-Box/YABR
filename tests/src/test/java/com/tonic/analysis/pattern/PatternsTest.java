@@ -674,7 +674,7 @@ class PatternsTest
             bc.finalizeBytecode();
 
             buildIR();
-            assertTrue(!irMethod.getBlocks().isEmpty());
+            assertFalse(irMethod.getBlocks().isEmpty());
         }
 
         @Test

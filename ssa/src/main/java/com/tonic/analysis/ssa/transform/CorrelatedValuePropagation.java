@@ -176,11 +176,6 @@ public class CorrelatedValuePropagation implements IRTransform
             case IFNE:
                 return isTrueEdge ? null : ValueRange.equalTo(0);
 
-            case IFNULL:
-            case IFNONNULL:
-            case ACMPEQ:
-            case ACMPNE:
-                return null;
             default:
                 return null;
         }

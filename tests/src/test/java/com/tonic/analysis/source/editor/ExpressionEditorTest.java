@@ -427,9 +427,7 @@ class ExpressionEditorTest
         BlockStmt body = factory.block(stmt);
 
         ExpressionEditor editor = new ExpressionEditor(body, "test", "()V", "com/example/Test");
-        editor.onCast((ctx, c) -> {
-            return Replacement.with(c.getExpression());
-        });
+        editor.onCast((ctx, c) -> Replacement.with(c.getExpression()));
         editor.apply();
 
         Expression result = ((ExprStmt) body.getStatements().get(0)).getExpression();

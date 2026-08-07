@@ -2,7 +2,6 @@ package com.tonic.analysis.simulation.query;
 
 import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
-import com.tonic.analysis.simulation.core.StateSnapshot;
 import com.tonic.analysis.simulation.state.LocalState;
 import com.tonic.analysis.simulation.state.StackState;
 import com.tonic.analysis.ssa.cfg.IRBlock;
@@ -10,8 +9,6 @@ import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.ReturnInstruction;
 import com.tonic.analysis.ssa.ir.SimpleInstruction;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -97,9 +94,9 @@ class PathQueryTest
 
         IRBlock block = method.getBlocks().get(0);
 
-        assertFalse(query.canReach((IRBlock) null, block));
-        assertFalse(query.canReach(block, (IRBlock) null));
-        assertFalse(query.canReach((IRBlock) null, (IRBlock) null));
+        assertFalse(query.canReach(null, block));
+        assertFalse(query.canReach(block, null));
+        assertFalse(query.canReach(null, (IRBlock) null));
     }
 
     @Test
@@ -538,7 +535,7 @@ class PathQueryTest
     void wasVisitedReturnsFalseForUnvisitedBlocks()
     {
         IRMethod method = createMethodWithLinearCFG();
-        List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
+        List<IRBlock> visited = Collections.singletonList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
         PathQuery query = PathQuery.from(result);
 
@@ -579,16 +576,14 @@ class PathQueryTest
 
         Set<IRBlock> visited = query.getVisitedBlocks();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            visited.add(new IRBlock("illegal"));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> visited.add(new IRBlock("illegal")));
     }
 
     @Test
     void getUnvisitedBlocksReturnsBlocksNotVisited()
     {
         IRMethod method = createMethodWithLinearCFG();
-        List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
+        List<IRBlock> visited = Collections.singletonList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
         PathQuery query = PathQuery.from(result);
 
@@ -795,7 +790,7 @@ class PathQueryTest
     void toStringIncludesVisitedCount()
     {
         IRMethod method = createMethodWithLinearCFG();
-        List<IRBlock> visited = Arrays.asList(method.getBlocks().get(0));
+        List<IRBlock> visited = Collections.singletonList(method.getBlocks().get(0));
         SimulationResult result = createSimulationResult(method, visited);
         PathQuery query = PathQuery.from(result);
 

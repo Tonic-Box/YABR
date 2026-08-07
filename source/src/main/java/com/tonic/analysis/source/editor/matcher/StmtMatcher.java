@@ -42,7 +42,7 @@ public class StmtMatcher
      */
     public static StmtMatcher ofType(Class<? extends Statement> type)
     {
-        return new StmtMatcher(stmt -> type.isInstance(stmt), "ofType(" + type.getSimpleName() + ")");
+        return new StmtMatcher(type::isInstance, "ofType(" + type.getSimpleName() + ")");
     }
 
     /**

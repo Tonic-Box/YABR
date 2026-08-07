@@ -5,6 +5,8 @@ import com.tonic.analysis.source.ast.stmt.BlockStmt;
 import com.tonic.analysis.source.ast.stmt.ReturnStmt;
 import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
+import com.tonic.analysis.source.ast.type.ReferenceSourceType;
+import com.tonic.analysis.source.ast.type.SourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,62 @@ class NodeListTest
     }
 
     @Nested
+    class IdentityMatchingTests
+    {
+
+        private NodeList<SourceType> listOfEqualTypes(ReferenceSourceType first, ReferenceSourceType second)
+        {
+            assertEquals(first, second, "the fixture needs two equal but distinct nodes");
+            assertNotSame(first, second);
+
+            NodeList<SourceType> list = new NodeList<>(owner);
+            list.add(first);
+            list.add(second);
+            return list;
+        }
+
+        @Test
+        void removeDetachesTheGivenInstanceNotAnEqualSibling()
+        {
+            ReferenceSourceType first = new ReferenceSourceType("java/lang/String");
+            ReferenceSourceType second = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = listOfEqualTypes(first, second);
+
+            assertTrue(list.remove(second));
+
+            assertEquals(1, list.size());
+            assertSame(first, list.get(0), "the instance that was not asked for must survive");
+        }
+
+        @Test
+        void replaceSwapsTheGivenInstanceNotAnEqualSibling()
+        {
+            ReferenceSourceType first = new ReferenceSourceType("java/lang/String");
+            ReferenceSourceType second = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = listOfEqualTypes(first, second);
+
+            ReferenceSourceType replacement = new ReferenceSourceType("java/lang/Integer");
+            list.replace(second, replacement);
+
+            assertSame(first, list.get(0), "the equal sibling at index 0 must be left alone");
+            assertSame(replacement, list.get(1));
+        }
+
+        @Test
+        void removingAnEqualButAbsentInstanceChangesNothing()
+        {
+            ReferenceSourceType present = new ReferenceSourceType("java/lang/String");
+            NodeList<SourceType> list = new NodeList<>(owner);
+            list.add(present);
+
+            assertFalse(list.remove(new ReferenceSourceType("java/lang/String")),
+                "an equal node this list does not hold must not be removable");
+            assertEquals(1, list.size());
+            assertSame(present, list.get(0));
+        }
+    }
+
+    @Nested
     class ConstructorTests
     {
 
@@ -39,15 +97,28 @@ class NodeListTest
 
             assertSame(owner, list.getOwner());
             assertTrue(list.isEmpty());
+
+            ReturnStmt added = new ReturnStmt();
+            list.add(added);
+
+            assertEquals(1, list.size());
+            assertSame(owner, added.getParent(), "the constructed owner must parent later additions");
         }
 
         @Test
         void constructorWithOwnerAndCapacity()
         {
-            NodeList<Statement> list = new NodeList<>(owner, 10);
+            NodeList<Statement> list = new NodeList<>(owner, 1);
 
             assertSame(owner, list.getOwner());
-            assertTrue(list.isEmpty());
+            assertTrue(list.isEmpty(), "a capacity hint must not pre-populate the list");
+
+            for (int i = 0; i < 4; i++)
+            {
+                list.add(new ReturnStmt());
+            }
+
+            assertEquals(4, list.size(), "the capacity hint must not cap how many elements fit");
         }
 
         @Test
@@ -162,7 +233,7 @@ class NodeListTest
             ReturnStmt stmt2 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2));
 
-            nodeList.removeAll(Arrays.asList(stmt1));
+            nodeList.removeAll(List.of(stmt1));
 
             assertNull(stmt1.getParent());
             assertSame(owner, stmt2.getParent());
@@ -176,7 +247,7 @@ class NodeListTest
             ReturnStmt stmt3 = new ReturnStmt();
             nodeList.addAll(Arrays.asList(stmt1, stmt2, stmt3));
 
-            nodeList.retainAll(Arrays.asList(stmt2));
+            nodeList.retainAll(List.of(stmt2));
 
             assertNull(stmt1.getParent());
             assertSame(owner, stmt2.getParent());

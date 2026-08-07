@@ -133,7 +133,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "dst is null");
                 }
-                ArrayInstance dst = (ArrayInstance) args[0].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[0], "dst");
                 int dstBegin = args[1].asInt();
                 int dstCoder = args[2].asInt();
 
@@ -249,7 +249,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Input array is null");
                 }
-                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance inputArray = HandlerArgs.requireArray(args[0], "inputArray");
                 byte[] input = new byte[inputArray.getLength()];
                 for (int i = 0; i < input.length; i++)
                 {
@@ -270,7 +270,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Input array is null");
                 }
-                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance inputArray = HandlerArgs.requireArray(args[0], "inputArray");
                 byte[] input = new byte[inputArray.getLength()];
                 for (int i = 0; i < input.length; i++)
                 {
@@ -291,7 +291,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Input array is null");
                 }
-                ArrayInstance inputArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance inputArray = HandlerArgs.requireArray(args[0], "inputArray");
                 byte[] input = new byte[inputArray.getLength()];
                 for (int i = 0; i < input.length; i++)
                 {
@@ -415,7 +415,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Null byte array");
                 }
-                ArrayInstance byteArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance byteArray = HandlerArgs.requireArray(args[0], "byteArray");
                 byte[] bytes = new byte[byteArray.getLength()];
                 for (int i = 0; i < bytes.length; i++)
                 {
@@ -437,7 +437,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Null byte array");
                 }
-                ArrayInstance byteArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance byteArray = HandlerArgs.requireArray(args[0], "byteArray");
                 String charset = ctx.getHeapManager().extractString(args[1].asReference());
                 byte[] bytes = new byte[byteArray.getLength()];
                 for (int i = 0; i < bytes.length; i++)
@@ -467,7 +467,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Null char array");
                 }
-                ArrayInstance srcArray = (ArrayInstance) args[0].asReference();
+                ArrayInstance srcArray = HandlerArgs.requireArray(args[0], "srcArray");
                 int len = srcArray.getLength();
                 char[] chars = new char[len];
                 for (int i = 0; i < len; i++)
@@ -588,9 +588,9 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "inflate null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcOff = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dstOff = args[3].asInt();
                 int len = args[4].asInt();
                 for (int i = 0; i < len; i++)
@@ -608,10 +608,10 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "inflate null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcOff = args[1].asInt();
                 int srcLen = args[2].asInt();
-                ArrayInstance dst = (ArrayInstance) args[3].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[3], "dst");
                 int dstOff = args[4].asInt();
                 for (int i = 0; i < srcLen; i++)
                 {
@@ -628,7 +628,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "putChar null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 int index = args[1].asInt();
                 int c = args[2].asInt();
                 arr.setByte(index * 2, (byte) (c & 0xFF));
@@ -642,7 +642,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "getChar null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 int index = args[1].asInt();
                 int lo = arr.getByte(index * 2) & 0xFF;
                 int hi = arr.getByte(index * 2 + 1) & 0xFF;
@@ -666,7 +666,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "newString null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int off = args[1].asInt();
                 int len = args[2].asInt();
                 byte[] bytes = new byte[len];
@@ -700,7 +700,7 @@ public final class StringHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 int i = args[0].asInt();
                 int index = args[1].asInt();
-                ArrayInstance buf = (ArrayInstance) args[2].asReference();
+                ArrayInstance buf = HandlerArgs.requireArray(args[2], "buf");
                 String s = Integer.toString(i);
                 for (int j = 0; j < s.length(); j++)
                 {
@@ -895,7 +895,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     return ConcreteValue.intValue(0);
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 int off = args[1].asInt();
                 int len = args[2].asInt();
                 for (int i = 0; i < len; i++)
@@ -914,7 +914,7 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     return ConcreteValue.intValue(0);
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 int off = args[1].asInt();
                 int len = args[2].asInt();
                 int count = 0;
@@ -940,9 +940,9 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     return ConcreteValue.intValue(0);
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int sp = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dp = args[3].asInt();
                 int len = args[4].asInt();
                 int i = 0;
@@ -966,9 +966,9 @@ public final class StringHandlers implements NativeHandlerProvider
                 {
                     return ConcreteValue.intValue(0);
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int sp = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dp = args[3].asInt();
                 int len = args[4].asInt();
                 int i = 0;

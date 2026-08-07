@@ -153,9 +153,7 @@ class AllocationListenerTest
 
         Map<String, Integer> byType = listener.getAllocationsByType();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            byType.put("Ljava/lang/Object;", 5);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> byType.put("Ljava/lang/Object;", 5));
     }
 
     @Test
@@ -217,9 +215,7 @@ class AllocationListenerTest
 
         List<AllocationListener.AllocationSite> sites = listener.getAllocationSites();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            sites.add(null);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> sites.add(null));
     }
 
     @Test

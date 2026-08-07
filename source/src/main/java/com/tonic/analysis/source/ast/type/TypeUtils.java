@@ -231,11 +231,6 @@ public final class TypeUtils
             return numericPromotion((PrimitiveSourceType) a, (PrimitiveSourceType) b);
         }
 
-        if (isReference(a) && isReference(b))
-        {
-            return ReferenceSourceType.OBJECT;
-        }
-
         return ReferenceSourceType.OBJECT;
     }
 
@@ -295,8 +290,9 @@ public final class TypeUtils
         switch (type.getKind())
         {
             case BYTE: return 1;
-            case SHORT: return 2;
-            case CHAR: return 2;
+            case SHORT:
+            case CHAR:
+                return 2;
             case INT: return 3;
             case LONG: return 4;
             case FLOAT: return 5;

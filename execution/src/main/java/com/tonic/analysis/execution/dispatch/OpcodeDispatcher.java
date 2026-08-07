@@ -126,318 +126,318 @@ public final class OpcodeDispatcher
         ConcreteStack stack = frame.getStack();
         ConcreteLocals locals = frame.getLocals();
 
-        switch (opcode)
+        switch (Opcode.fromCode(opcode))
         {
-            case 0x00:
+            case NOP:
                 return dispatchNop(frame, instruction);
 
-            case 0x01:
+            case ACONST_NULL:
                 return dispatchAConstNull(frame, stack, instruction);
 
-            case 0x02: case 0x03: case 0x04: case 0x05:
-            case 0x06: case 0x07: case 0x08:
+            case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2:
+            case ICONST_3: case ICONST_4: case ICONST_5:
                 return dispatchIConst(frame, stack, instruction, opcode);
 
-            case 0x09: case 0x0A:
+            case LCONST_0: case LCONST_1:
                 return dispatchLConst(frame, stack, instruction, opcode);
 
-            case 0x0B: case 0x0C: case 0x0D:
+            case FCONST_0: case FCONST_1: case FCONST_2:
                 return dispatchFConst(frame, stack, instruction, opcode);
 
-            case 0x0E: case 0x0F:
+            case DCONST_0: case DCONST_1:
                 return dispatchDConst(frame, stack, instruction, opcode);
 
-            case 0x10:
+            case BIPUSH:
                 return dispatchBipush(frame, stack, (BipushInstruction) instruction);
 
-            case 0x11:
+            case SIPUSH:
                 return dispatchSipush(frame, stack, (SipushInstruction) instruction);
 
-            case 0x12:
+            case LDC:
                 return dispatchLdc(frame, stack, context, (LdcInstruction) instruction);
 
-            case 0x13:
+            case LDC_W:
                 return dispatchLdcW(frame, stack, context, (LdcWInstruction) instruction);
 
-            case 0x14:
+            case LDC2_W:
                 return dispatchLdc2W(frame, stack, context, (Ldc2WInstruction) instruction);
 
-            case 0x15:
+            case ILOAD:
                 return dispatchILoad(frame, stack, locals, (ILoadInstruction) instruction);
 
-            case 0x16:
+            case LLOAD:
                 return dispatchLLoad(frame, stack, locals, (LLoadInstruction) instruction);
 
-            case 0x17:
+            case FLOAD:
                 return dispatchFLoad(frame, stack, locals, (FLoadInstruction) instruction);
 
-            case 0x18:
+            case DLOAD:
                 return dispatchDLoad(frame, stack, locals, (DLoadInstruction) instruction);
 
-            case 0x19:
+            case ALOAD:
                 return dispatchALoad(frame, stack, locals, (ALoadInstruction) instruction);
 
-            case 0x1A: case 0x1B: case 0x1C: case 0x1D:
+            case ILOAD_0: case ILOAD_1: case ILOAD_2: case ILOAD_3:
                 return dispatchILoadN(frame, stack, locals, instruction, opcode);
 
-            case 0x1E: case 0x1F: case 0x20: case 0x21:
+            case LLOAD_0: case LLOAD_1: case LLOAD_2: case LLOAD_3:
                 return dispatchLLoadN(frame, stack, locals, instruction, opcode);
 
-            case 0x22: case 0x23: case 0x24: case 0x25:
+            case FLOAD_0: case FLOAD_1: case FLOAD_2: case FLOAD_3:
                 return dispatchFLoadN(frame, stack, locals, instruction, opcode);
 
-            case 0x26: case 0x27: case 0x28: case 0x29:
+            case DLOAD_0: case DLOAD_1: case DLOAD_2: case DLOAD_3:
                 return dispatchDLoadN(frame, stack, locals, instruction, opcode);
 
-            case 0x2A: case 0x2B: case 0x2C: case 0x2D:
+            case ALOAD_0: case ALOAD_1: case ALOAD_2: case ALOAD_3:
                 return dispatchALoadN(frame, stack, locals, instruction, opcode);
 
-            case 0x2E:
+            case IALOAD:
                 return dispatchIALoad(frame, stack, context, instruction);
 
-            case 0x2F:
+            case LALOAD:
                 return dispatchLALoad(frame, stack, context, instruction);
 
-            case 0x30:
+            case FALOAD:
                 return dispatchFALoad(frame, stack, context, instruction);
 
-            case 0x31:
+            case DALOAD:
                 return dispatchDALoad(frame, stack, context, instruction);
 
-            case 0x32:
+            case AALOAD:
                 return dispatchAALoad(frame, stack, context, instruction);
 
-            case 0x33:
+            case BALOAD:
                 return dispatchBALoad(frame, stack, context, instruction);
 
-            case 0x34:
+            case CALOAD:
                 return dispatchCALoad(frame, stack, context, instruction);
 
-            case 0x35:
+            case SALOAD:
                 return dispatchSALoad(frame, stack, context, instruction);
 
-            case 0x36:
+            case ISTORE:
                 return dispatchIStore(frame, stack, locals, (IStoreInstruction) instruction);
 
-            case 0x37:
+            case LSTORE:
                 return dispatchLStore(frame, stack, locals, (LStoreInstruction) instruction);
 
-            case 0x38:
+            case FSTORE:
                 return dispatchFStore(frame, stack, locals, (FStoreInstruction) instruction);
 
-            case 0x39:
+            case DSTORE:
                 return dispatchDStore(frame, stack, locals, (DStoreInstruction) instruction);
 
-            case 0x3A:
+            case ASTORE:
                 return dispatchAStore(frame, stack, locals, (AStoreInstruction) instruction);
 
-            case 0x3B: case 0x3C: case 0x3D: case 0x3E:
+            case ISTORE_0: case ISTORE_1: case ISTORE_2: case ISTORE_3:
                 return dispatchIStoreN(frame, stack, locals, instruction, opcode);
 
-            case 0x3F: case 0x40: case 0x41: case 0x42:
+            case LSTORE_0: case LSTORE_1: case LSTORE_2: case LSTORE_3:
                 return dispatchLStoreN(frame, stack, locals, instruction, opcode);
 
-            case 0x43: case 0x44: case 0x45: case 0x46:
+            case FSTORE_0: case FSTORE_1: case FSTORE_2: case FSTORE_3:
                 return dispatchFStoreN(frame, stack, locals, instruction, opcode);
 
-            case 0x47: case 0x48: case 0x49: case 0x4A:
+            case DSTORE_0: case DSTORE_1: case DSTORE_2: case DSTORE_3:
                 return dispatchDStoreN(frame, stack, locals, instruction, opcode);
 
-            case 0x4B: case 0x4C: case 0x4D: case 0x4E:
+            case ASTORE_0: case ASTORE_1: case ASTORE_2: case ASTORE_3:
                 return dispatchAStoreN(frame, stack, locals, instruction, opcode);
 
-            case 0x4F:
+            case IASTORE:
                 return dispatchIAStore(frame, stack, context, instruction);
 
-            case 0x50:
+            case LASTORE:
                 return dispatchLAStore(frame, stack, context, instruction);
 
-            case 0x51:
+            case FASTORE:
                 return dispatchFAStore(frame, stack, context, instruction);
 
-            case 0x52:
+            case DASTORE:
                 return dispatchDAStore(frame, stack, context, instruction);
 
-            case 0x53:
+            case AASTORE:
                 return dispatchAAStore(frame, stack, context, instruction);
 
-            case 0x54:
+            case BASTORE:
                 return dispatchBAStore(frame, stack, context, instruction);
 
-            case 0x55:
+            case CASTORE:
                 return dispatchCAStore(frame, stack, context, instruction);
 
-            case 0x56:
+            case SASTORE:
                 return dispatchSAStore(frame, stack, context, instruction);
 
-            case 0x57:
+            case POP:
                 return dispatchPop(frame, stack, instruction);
 
-            case 0x58:
+            case POP2:
                 return dispatchPop2(frame, stack, instruction);
 
-            case 0x59:
+            case DUP:
                 return dispatchDup(frame, stack, instruction);
 
-            case 0x5A:
+            case DUP_X1:
                 return dispatchDupX1(frame, stack, instruction);
 
-            case 0x5B:
+            case DUP_X2:
                 return dispatchDupX2(frame, stack, instruction);
 
-            case 0x5C:
+            case DUP2:
                 return dispatchDup2(frame, stack, instruction);
 
-            case 0x5D:
+            case DUP2_X1:
                 return dispatchDup2X1(frame, stack, instruction);
 
-            case 0x5E:
+            case DUP2_X2:
                 return dispatchDup2X2(frame, stack, instruction);
 
-            case 0x5F:
+            case SWAP:
                 return dispatchSwap(frame, stack, instruction);
 
-            case 0x60: case 0x61: case 0x62: case 0x63:
-            case 0x64: case 0x65: case 0x66: case 0x67:
-            case 0x68: case 0x69: case 0x6A: case 0x6B:
-            case 0x6C: case 0x6D: case 0x6E: case 0x6F:
-            case 0x70: case 0x71: case 0x72: case 0x73:
+            case IADD: case LADD: case FADD: case DADD:
+            case ISUB: case LSUB: case FSUB: case DSUB:
+            case IMUL: case LMUL: case FMUL: case DMUL:
+            case IDIV: case LDIV: case FDIV: case DDIV:
+            case IREM: case LREM: case FREM: case DREM:
                 return dispatchArithmetic(frame, stack, (ArithmeticInstruction) instruction);
 
-            case 0x74:
+            case INEG:
                 return dispatchINeg(frame, stack, instruction);
 
-            case 0x75:
+            case LNEG:
                 return dispatchLNeg(frame, stack, instruction);
 
-            case 0x76:
+            case FNEG:
                 return dispatchFNeg(frame, stack, instruction);
 
-            case 0x77:
+            case DNEG:
                 return dispatchDNeg(frame, stack, instruction);
 
-            case 0x78: case 0x79: case 0x7A: case 0x7B:
-            case 0x7C: case 0x7D:
+            case ISHL: case LSHL: case ISHR: case LSHR:
+            case IUSHR: case LUSHR:
                 return dispatchShift(frame, stack, (ArithmeticShiftInstruction) instruction);
 
-            case 0x7E:
+            case IAND:
                 return dispatchIAnd(frame, stack, instruction);
 
-            case 0x7F:
+            case LAND:
                 return dispatchLAnd(frame, stack, instruction);
 
-            case 0x80:
+            case IOR:
                 return dispatchIOr(frame, stack, instruction);
 
-            case 0x81:
+            case LOR:
                 return dispatchLOr(frame, stack, instruction);
 
-            case 0x82:
+            case IXOR:
                 return dispatchIXor(frame, stack, instruction);
 
-            case 0x83:
+            case LXOR:
                 return dispatchLXor(frame, stack, instruction);
 
-            case 0x84:
+            case IINC:
                 return dispatchIInc(frame, locals, (IIncInstruction) instruction);
 
-            case 0x85:
+            case I2L:
                 return dispatchI2L(frame, stack, instruction);
 
-            case 0x86: case 0x87:
-            case 0x88: case 0x89: case 0x8A:
-            case 0x8B: case 0x8C: case 0x8D:
-            case 0x8E: case 0x8F: case 0x90:
+            case I2F: case I2D:
+            case L2I: case L2F: case L2D:
+            case F2I: case F2L: case F2D:
+            case D2I: case D2L: case D2F:
                 return dispatchConversion(frame, stack, (ConversionInstruction) instruction);
 
-            case 0x91: case 0x92: case 0x93:
+            case I2B: case I2C: case I2S:
                 return dispatchNarrowingConversion(frame, stack, (NarrowingConversionInstruction) instruction);
 
-            case 0x94: case 0x95: case 0x96: case 0x97: case 0x98:
+            case LCMP: case FCMPL: case FCMPG: case DCMPL: case DCMPG:
                 return dispatchCompare(frame, stack, (CompareInstruction) instruction);
 
-            case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9E:
-            case 0x9F: case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4:
-            case 0xA5: case 0xA6:
-            case 0xC6: case 0xC7:
+            case IFEQ: case IFNE: case IFLT: case IFGE: case IFGT: case IFLE:
+            case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT: case IF_ICMPGE: case IF_ICMPGT: case IF_ICMPLE:
+            case IF_ACMPEQ: case IF_ACMPNE:
+            case IFNULL: case IFNONNULL:
                 return dispatchConditionalBranch(frame, stack, context, (ConditionalBranchInstruction) instruction);
 
-            case 0xA7:
+            case GOTO:
                 return dispatchGoto(context, (GotoInstruction) instruction);
 
-            case 0xA8:
+            case JSR:
                 throw new UnsupportedOperationException("jsr is not supported (legacy)");
 
-            case 0xA9:
+            case RET:
                 throw new UnsupportedOperationException("ret is not supported (legacy)");
 
-            case 0xAA:
+            case TABLESWITCH:
                 return dispatchTableSwitch(stack, context, (TableSwitchInstruction) instruction);
 
-            case 0xAB:
+            case LOOKUPSWITCH:
                 return dispatchLookupSwitch(stack, context, (LookupSwitchInstruction) instruction);
 
-            case 0xAC: case 0xAD: case 0xAE: case 0xAF: case 0xB0: case 0xB1:
+            case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN_:
                 return dispatchReturn();
 
-            case 0xB2: case 0xB4:
+            case GETSTATIC: case GETFIELD:
                 return dispatchGetField(context, (GetFieldInstruction) instruction);
 
-            case 0xB3: case 0xB5:
+            case PUTSTATIC: case PUTFIELD:
                 return dispatchPutField(context, (PutFieldInstruction) instruction);
 
-            case 0xB6:
+            case INVOKEVIRTUAL:
                 return dispatchInvokeVirtual(context, (InvokeVirtualInstruction) instruction);
 
-            case 0xB7:
+            case INVOKESPECIAL:
                 return dispatchInvokeSpecial(context, (InvokeSpecialInstruction) instruction);
 
-            case 0xB8:
+            case INVOKESTATIC:
                 return dispatchInvokeStatic(context, (InvokeStaticInstruction) instruction);
 
-            case 0xB9:
+            case INVOKEINTERFACE:
                 return dispatchInvokeInterface(context, (InvokeInterfaceInstruction) instruction);
 
-            case 0xBA:
+            case INVOKEDYNAMIC:
                 return dispatchInvokeDynamic(context, (InvokeDynamicInstruction) instruction);
 
-            case 0xBB:
+            case NEW:
                 return dispatchNew(context, (NewObjectInstruction) instruction);
 
-            case 0xBC:
+            case NEWARRAY:
                 return dispatchNewArray(stack, context, (NewPrimitiveArrayInstruction) instruction);
 
-            case 0xBD:
+            case ANEWARRAY:
                 return dispatchANewArray(stack, context, (ANewArrayInstruction) instruction);
 
-            case 0xBE:
+            case ARRAYLENGTH:
                 return dispatchArrayLength(frame, stack, instruction);
 
-            case 0xBF:
+            case ATHROW:
                 return dispatchAThrow();
 
-            case 0xC0:
+            case CHECKCAST:
                 return dispatchCheckCast(frame, stack, context, (CheckCastInstruction) instruction);
 
-            case 0xC1:
+            case INSTANCEOF:
                 return dispatchInstanceOf(frame, stack, context, (InstanceOfInstruction) instruction);
 
-            case 0xC2:
+            case MONITORENTER:
                 return dispatchMonitorEnter(frame, stack, instruction);
 
-            case 0xC3:
+            case MONITOREXIT:
                 return dispatchMonitorExit(frame, stack, instruction);
 
-            case 0xC4:
+            case WIDE:
                 return dispatchWide(frame, stack, locals, (WideInstruction) instruction);
 
-            case 0xC5:
+            case MULTIANEWARRAY:
                 return dispatchMultiANewArray(stack, context, (MultiANewArrayInstruction) instruction);
 
-            case 0xC8:
+            case GOTO_W:
                 return dispatchGotoW(context, (GotoInstruction) instruction);
 
-            case 0xC9:
+            case JSR_W:
                 throw new UnsupportedOperationException("jsr_w is not supported (legacy)");
 
             default:

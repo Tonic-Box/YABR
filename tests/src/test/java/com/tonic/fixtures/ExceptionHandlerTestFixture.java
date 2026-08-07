@@ -179,18 +179,11 @@ public class ExceptionHandlerTestFixture
     {
         try
         {
-            try
+            if (value < 0)
             {
-                if (value < 0)
-                {
-                    throw new RuntimeException();
-                }
-                return value;
+                throw new RuntimeException();
             }
-            catch (RuntimeException e)
-            {
-                throw e;
-            }
+            return value;
         }
         catch (Exception e)
         {

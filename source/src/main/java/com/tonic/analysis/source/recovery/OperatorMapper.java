@@ -6,6 +6,8 @@ import com.tonic.analysis.ssa.ir.BinaryOp;
 import com.tonic.analysis.ssa.ir.CompareOp;
 import com.tonic.analysis.ssa.ir.UnaryOp;
 
+import java.util.Objects;
+
 /**
  * Maps IR operators to source-level operators.
  */
@@ -28,6 +30,11 @@ public final class OperatorMapper
             case ADD:
                 return BinaryOperator.ADD;
             case SUB:
+            case LCMP:
+            case FCMPL:
+            case FCMPG:
+            case DCMPL:
+            case DCMPG:
                 return BinaryOperator.SUB;
             case MUL:
                 return BinaryOperator.MUL;
@@ -46,13 +53,7 @@ public final class OperatorMapper
             case OR:
                 return BinaryOperator.BOR;
             case XOR:
-                return BinaryOperator.BXOR;
-            case LCMP:
-            case FCMPL:
-            case FCMPG:
-            case DCMPL:
-            case DCMPG:
-                return BinaryOperator.SUB; // Placeholder
+                return BinaryOperator.BXOR;// Placeholder
             default:
                 throw new IllegalArgumentException("Unknown binary operator: " + op);
         }
@@ -70,10 +71,12 @@ public final class OperatorMapper
             case EQ:
             case IFEQ:
             case ACMPEQ:
+            case IFNULL:
                 return BinaryOperator.EQ;
             case NE:
             case IFNE:
             case ACMPNE:
+            case IFNONNULL:
                 return BinaryOperator.NE;
             case LT:
             case IFLT:
@@ -87,10 +90,6 @@ public final class OperatorMapper
             case LE:
             case IFLE:
                 return BinaryOperator.LE;
-            case IFNULL:
-                return BinaryOperator.EQ;
-            case IFNONNULL:
-                return BinaryOperator.NE;
             default:
                 throw new IllegalArgumentException("Unknown compare operator: " + op);
         }
@@ -138,29 +137,10 @@ public final class OperatorMapper
      */
     public static UnaryOperator mapUnaryOp(UnaryOp op)
     {
-        switch (op)
-        {
-            case NEG:
-                return UnaryOperator.NEG;
-            case I2L:
-            case I2F:
-            case I2D:
-            case L2I:
-            case L2F:
-            case L2D:
-            case F2I:
-            case F2L:
-            case F2D:
-            case D2I:
-            case D2L:
-            case D2F:
-            case I2B:
-            case I2C:
-            case I2S:
-                return null;
-            default:
-                return null;
+        if (Objects.requireNonNull(op) == UnaryOp.NEG) {
+            return UnaryOperator.NEG;
         }
+        return null;
     }
 
     /**
@@ -184,29 +164,21 @@ public final class OperatorMapper
         switch (op)
         {
             case I2L:
-                return "J";
-            case I2F:
-                return "F";
-            case I2D:
-                return "D";
-            case L2I:
-                return "I";
-            case L2F:
-                return "F";
-            case L2D:
-                return "D";
-            case F2I:
-                return "I";
             case F2L:
-                return "J";
-            case F2D:
-                return "D";
-            case D2I:
-                return "I";
             case D2L:
                 return "J";
+            case I2F:
+            case L2F:
             case D2F:
                 return "F";
+            case I2D:
+            case L2D:
+            case F2D:
+                return "D";
+            case L2I:
+            case F2I:
+            case D2I:
+                return "I";
             case I2B:
                 return "B";
             case I2C:

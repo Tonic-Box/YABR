@@ -34,8 +34,8 @@ public final class TypeState
      */
     public TypeState(List<VerificationType> locals, List<VerificationType> stack)
     {
-        this.locals = Collections.unmodifiableList(new ArrayList<>(locals));
-        this.stack = Collections.unmodifiableList(new ArrayList<>(stack));
+        this.locals = List.copyOf(locals);
+        this.stack = List.copyOf(stack);
     }
 
     /**

@@ -110,7 +110,7 @@ class MethodRecovererTest
         BlockStmt body = recoverer.recover();
 
         assertNotNull(body);
-        assertTrue(body.getStatements().size() >= 1);
+        assertFalse(body.getStatements().isEmpty());
     }
 
     // Arithmetic Operations Tests
@@ -223,7 +223,7 @@ class MethodRecovererTest
         BlockStmt body = recoverer.recover();
 
         assertNotNull(body);
-        assertTrue(body.getStatements().size() >= 1);
+        assertFalse(body.getStatements().isEmpty());
     }
 
     @Test
@@ -374,7 +374,7 @@ class MethodRecovererTest
         BlockStmt body = recoverer.recover();
 
         assertNotNull(body);
-        assertTrue(body.getStatements().size() >= 1);
+        assertTrue(!body.getStatements().isEmpty());
     }
 
     @Test

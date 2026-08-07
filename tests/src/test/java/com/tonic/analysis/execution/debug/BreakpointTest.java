@@ -1,12 +1,8 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -198,7 +194,7 @@ class BreakpointTest
     void testMatchesStackFrameNullFrame()
     {
         Breakpoint bp = new Breakpoint("com/test/Foo", "method", "(II)V", 10);
-        assertFalse(bp.matches((StackFrame) null));
+        assertFalse(bp.matches(null));
     }
 
     @Test

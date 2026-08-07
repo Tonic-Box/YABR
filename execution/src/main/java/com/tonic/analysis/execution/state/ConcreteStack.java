@@ -381,10 +381,7 @@ public final class ConcreteStack
     public List<ConcreteValue> snapshot()
     {
         List<ConcreteValue> result = new ArrayList<>(top);
-        for (int i = 0; i < top; i++)
-        {
-            result.add(stack[i]);
-        }
+        result.addAll(Arrays.asList(stack).subList(0, top));
         return Collections.unmodifiableList(result);
     }
 

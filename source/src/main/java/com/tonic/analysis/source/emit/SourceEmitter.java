@@ -1716,7 +1716,7 @@ public class SourceEmitter implements SourceVisitor<Void>
         {
             Object va = ((LiteralExpr) a).getValue();
             Object vb = ((LiteralExpr) b).getValue();
-            return va == null ? vb == null : va.equals(vb);
+            return Objects.equals(va, vb);
         }
         return false;
     }

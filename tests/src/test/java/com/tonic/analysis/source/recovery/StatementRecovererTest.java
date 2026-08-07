@@ -170,7 +170,7 @@ class StatementRecovererTest
             BlockStmt body = recoverer.recoverMethod();
 
             assertNotNull(body);
-            assertTrue(!body.getStatements().isEmpty());
+            assertFalse(body.getStatements().isEmpty());
         }
 
         @Test

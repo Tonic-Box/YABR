@@ -2256,6 +2256,8 @@ public class ClassDecompiler
             case 'B': // byte
             case 'S': // short
             case 'I': // int
+
+            case 'D': // double
                 return formatConstantValue((Integer) value);
 
             case 'J': // long
@@ -2263,9 +2265,6 @@ public class ClassDecompiler
 
             case 'F': // float
                 return formatConstantValue((Integer) value) + "f";
-
-            case 'D': // double
-                return formatConstantValue((Integer) value);
 
             case 'C': // char
                 return formatCharConstant((Integer) value);

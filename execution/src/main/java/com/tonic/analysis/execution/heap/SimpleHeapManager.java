@@ -188,26 +188,26 @@ public class SimpleHeapManager implements HeapManager
         }
 
         int length = byteArray.getLength();
+        char[] chars;
         if (coder == 0)
         {
-            char[] chars = new char[length];
+            chars = new char[length];
             for (int i = 0; i < length; i++)
             {
                 chars[i] = (char) (byteArray.getByte(i) & 0xFF);
             }
-            return new String(chars);
         }
         else
         {
-            char[] chars = new char[length / 2];
+            chars = new char[length / 2];
             for (int i = 0; i < chars.length; i++)
             {
                 int lo = byteArray.getByte(i * 2) & 0xFF;
                 int hi = byteArray.getByte(i * 2 + 1) & 0xFF;
                 chars[i] = (char) (lo | (hi << 8));
             }
-            return new String(chars);
         }
+        return new String(chars);
     }
 
     @Override

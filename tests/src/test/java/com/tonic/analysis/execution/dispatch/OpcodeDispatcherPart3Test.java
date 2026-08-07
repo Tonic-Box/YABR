@@ -48,8 +48,8 @@ class OpcodeDispatcherPart3Test
     private static class TestStackFrame
     {
         private Instruction currentInstruction;
-        private ConcreteStack stack;
-        private ConcreteLocals locals;
+        private final ConcreteStack stack;
+        private final ConcreteLocals locals;
         private int pc;
 
         public TestStackFrame(ConcreteStack stack, ConcreteLocals locals)

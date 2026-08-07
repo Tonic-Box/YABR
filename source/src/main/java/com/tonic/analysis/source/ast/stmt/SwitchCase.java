@@ -29,7 +29,7 @@ public final class SwitchCase
      */
     public SwitchCase(List<Integer> labels, boolean isDefault, List<Statement> statements)
     {
-        this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
+        this.labels = labels != null ? List.copyOf(labels) : Collections.emptyList();
         this.expressionLabels = Collections.emptyList();
         this.isDefault = isDefault;
         // The statement list is mutable: the AST transforms (dead-store/redundant-assignment elimination,
@@ -48,8 +48,8 @@ public final class SwitchCase
      */
     public SwitchCase(List<Integer> labels, List<Expression> expressionLabels, boolean isDefault, List<Statement> statements)
     {
-        this.labels = labels != null ? Collections.unmodifiableList(new ArrayList<>(labels)) : Collections.emptyList();
-        this.expressionLabels = expressionLabels != null ? Collections.unmodifiableList(new ArrayList<>(expressionLabels)) : Collections.emptyList();
+        this.labels = labels != null ? List.copyOf(labels) : Collections.emptyList();
+        this.expressionLabels = expressionLabels != null ? List.copyOf(expressionLabels) : Collections.emptyList();
         this.isDefault = isDefault;
         this.statements = statements != null ? new ArrayList<>(statements) : new ArrayList<>();
     }

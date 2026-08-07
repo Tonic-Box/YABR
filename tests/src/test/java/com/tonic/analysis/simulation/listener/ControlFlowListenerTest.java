@@ -3,8 +3,6 @@ package com.tonic.analysis.simulation.listener;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.value.SSAValue;
-import com.tonic.analysis.ssa.value.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -357,9 +355,7 @@ class ControlFlowListenerTest
 
         List<IRBlock> sequence = trackingListener.getBlockSequence();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            sequence.clear();
-        });
+        assertThrows(UnsupportedOperationException.class, sequence::clear);
     }
 
     @Test

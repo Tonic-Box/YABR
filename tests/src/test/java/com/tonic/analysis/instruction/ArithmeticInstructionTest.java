@@ -397,9 +397,7 @@ class ArithmeticInstructionTest
         @Test
         void throwsExceptionForInvalidOpcode()
         {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new ArithmeticInstruction(0x00, 0);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new ArithmeticInstruction(0x00, 0));
 
             assertTrue(exception.getMessage().contains("Invalid Arithmetic opcode"));
         }

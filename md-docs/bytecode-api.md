@@ -463,6 +463,33 @@ if (insn instanceof InvokeInsn call)
 ```
 `invokedynamic` (`InvokeDynamicInstruction`) is intentionally excluded - it has no owning class.
 
+### Scanning raw bytecode
+
+`InstructionFactory.parse(code, constPool)` decodes a method body into `Instruction` objects. When you
+only need to walk code without materialising instructions, `com.tonic.util.InstructionLength` gives the
+encoded length of the instruction at an offset:
+
+```java
+import com.tonic.util.InstructionLength;
+
+int i = 0;
+while (i < code.length)
+{
+    int opcode = Byte.toUnsignedInt(code[i]);
+    // inspect the opcode here
+    int length = InstructionLength.at(code, i);
+    i += length > 0 ? length : 1;
+}
+```
+
+Fixed-length instructions derive from `Opcode.getOperandCount()`, so the only forms spelled out are
+`tableswitch`, `lookupswitch` and `wide`. A truncated or malformed instruction returns `-1` rather than
+a guessed length - always guard the advance, or a non-positive result stalls the loop.
+
+`com.tonic.util.Opcode` is the single source of opcode facts: `Opcode.fromCode(int)` resolves a byte to
+its constant through a lookup table, and `getCode()`/`getMnemonic()`/`getOperandCount()` describe it.
+Prefer switching on `Opcode.fromCode(opcode)` over raw hex case labels.
+
 ## Stack Frame Computation
 
 After modifying bytecode, you may need to recompute StackMapTable frames:

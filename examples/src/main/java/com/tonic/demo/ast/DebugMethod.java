@@ -103,11 +103,7 @@ public class DebugMethod
             System.out.println("  Is loop header: " + loops.isLoopHeader(block));
             if (loops.isLoopHeader(block))
             {
-                var loop = loops.getLoops().stream().filter(l -> l.getHeader() == block).findFirst().orElse(null);
-                if (loop != null)
-                {
-                    System.out.println("  Loop blocks: " + loop.getBlocks().stream().map(b -> String.valueOf(b.getId())).collect(java.util.stream.Collectors.toList()));
-                }
+                loops.getLoops().stream().filter(l -> l.getHeader() == block).findFirst().ifPresent(loop -> System.out.println("  Loop blocks: " + loop.getBlocks().stream().map(b -> String.valueOf(b.getId())).collect(java.util.stream.Collectors.toList())));
             }
             System.out.println("  Instructions:");
             for (IRInstruction instr : block.getInstructions())

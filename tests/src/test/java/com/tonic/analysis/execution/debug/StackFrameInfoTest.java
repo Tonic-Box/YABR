@@ -1,7 +1,6 @@
 package com.tonic.analysis.execution.debug;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

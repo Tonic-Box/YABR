@@ -21,8 +21,8 @@ public final class SimulationResult
     private SimulationResult(Builder builder)
     {
         this.method = builder.method;
-        this.blockStates = Collections.unmodifiableMap(new HashMap<>(builder.blockStates));
-        this.allStates = Collections.unmodifiableList(new ArrayList<>(builder.allStates));
+        this.blockStates = Map.copyOf(builder.blockStates);
+        this.allStates = List.copyOf(builder.allStates);
         this.totalInstructions = builder.totalInstructions;
         this.maxStackDepth = builder.maxStackDepth;
         this.simulationTimeNanos = builder.simulationTimeNanos;

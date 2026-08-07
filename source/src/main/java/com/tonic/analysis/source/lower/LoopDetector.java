@@ -1,10 +1,12 @@
 package com.tonic.analysis.source.lower;
 
+import com.tonic.analysis.source.ast.expr.LambdaExpr;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
 
 /**
- * Visitor that detects whether an AST contains any loop statement.
+ * Visitor that detects whether an AST contains any loop statement of its own, excluding the bodies
+ * of nested lambdas.
  */
 class LoopDetector extends AbstractSourceVisitor<Boolean>
 {
@@ -14,7 +16,7 @@ class LoopDetector extends AbstractSourceVisitor<Boolean>
     /**
      * Scans a body for loop statements.
      * @param body the block to scan
-     * @return true if a while, do-while, for, or for-each loop is present
+     * @return true if a while, do-while, for, or for-each loop is present outside any lambda body
      */
     public boolean visit(BlockStmt body)
     {
@@ -112,7 +114,7 @@ class LoopDetector extends AbstractSourceVisitor<Boolean>
                 if (foundLoop) return true;
             }
         }
-        return foundLoop;
+        return false;
     }
 
     @Override
@@ -128,6 +130,18 @@ class LoopDetector extends AbstractSourceVisitor<Boolean>
     {
         if (foundLoop) return true;
         stmt.getBody().accept(this);
+        return foundLoop;
+    }
+
+    /**
+     * Stops the walk at a lambda, whose body lowers to a separate synthetic method: a loop in there
+     * belongs to that method, not to the one being scanned.
+     * @param expr the lambda whose body is skipped
+     * @return whether a loop was already found before reaching the lambda
+     */
+    @Override
+    public Boolean visitLambda(LambdaExpr expr)
+    {
         return foundLoop;
     }
 }

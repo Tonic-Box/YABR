@@ -37,13 +37,10 @@ public class ConstantFolding implements IRTransform
         {
             List<IRInstruction> instructions = new ArrayList<>(block.getInstructions());
 
-            for (int i = 0; i < instructions.size(); i++)
-            {
-                IRInstruction instr = instructions.get(i);
+            for (IRInstruction instr : instructions) {
                 Constant folded = tryFold(instr);
 
-                if (folded != null && instr.getResult() != null)
-                {
+                if (folded != null && instr.getResult() != null) {
                     SSAValue result = instr.getResult();
                     ConstantInstruction constInstr = new ConstantInstruction(result, folded);
                     constInstr.setBlock(block);

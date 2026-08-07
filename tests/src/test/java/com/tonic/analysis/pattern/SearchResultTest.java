@@ -3,7 +3,6 @@ package com.tonic.analysis.pattern;
 import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
-import com.tonic.analysis.ssa.value.Value;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;
@@ -49,7 +48,7 @@ class SearchResultTest
             "java/lang/Object",
             "toString",
             "()Ljava/lang/String;",
-            Collections.<Value>emptyList()
+            Collections.emptyList()
         );
     }
 

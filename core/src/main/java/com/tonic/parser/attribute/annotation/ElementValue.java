@@ -63,7 +63,8 @@ public class ElementValue
             case 'S':
             case 'Z':
             case 's':
-            {
+
+            case 'c': {
                 int constValueIndex = (Integer) value;
                 dos.writeShort(constValueIndex);
                 break;
@@ -74,13 +75,6 @@ public class ElementValue
                 EnumConst enumConst = (EnumConst) value;
                 dos.writeShort(enumConst.getTypeNameIndex());
                 dos.writeShort(enumConst.getConstNameIndex());
-                break;
-            }
-
-            case 'c':
-            {
-                int classInfoIndex = (Integer) value;
-                dos.writeShort(classInfoIndex);
                 break;
             }
 
@@ -126,15 +120,13 @@ public class ElementValue
             case 'S':
             case 'Z':
             case 's':
+
+            case 'c':
                 size += 2;
                 break;
 
             case 'e':
                 size += 4;
-                break;
-
-            case 'c':
-                size += 2;
                 break;
 
             case '@':
@@ -181,6 +173,7 @@ public class ElementValue
             case 'S':
             case 'Z':
             case 's':
+            case 'c':
                 int constValueIndex = classFile.readUnsignedShort();
                 return new ElementValue(tag, constValueIndex);
 
@@ -188,10 +181,6 @@ public class ElementValue
                 int typeNameIndex = classFile.readUnsignedShort();
                 int constNameIndex = classFile.readUnsignedShort();
                 return new ElementValue(tag, new EnumConst(constPool, typeNameIndex, constNameIndex));
-
-            case 'c':
-                int classInfoIndex = classFile.readUnsignedShort();
-                return new ElementValue(tag, classInfoIndex);
 
             case '@':
                 Annotation annotation = Annotation.readAnnotation(classFile, constPool);

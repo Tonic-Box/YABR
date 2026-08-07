@@ -119,12 +119,7 @@ public class FrameComparator
             return true;
         }
 
-        if (declared instanceof VerificationType.ObjectType && computed instanceof VerificationType.ObjectType)
-        {
-            return true;
-        }
-
-        return false;
+        return declared instanceof VerificationType.ObjectType && computed instanceof VerificationType.ObjectType;
     }
 
     private boolean isReferenceType(VerificationType type)

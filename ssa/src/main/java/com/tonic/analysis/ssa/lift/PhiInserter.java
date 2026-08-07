@@ -35,7 +35,7 @@ public class PhiInserter
     public void insertPhis(IRMethod method)
     {
         collectVariableDefinitions(method);
-        insertPhiFunctions(method);
+        insertPhiFunctions();
     }
 
     private void collectVariableDefinitions(IRMethod method)
@@ -63,7 +63,7 @@ public class PhiInserter
         }
     }
 
-    private void insertPhiFunctions(IRMethod method)
+    private void insertPhiFunctions()
     {
         Set<IRBlock> dominanceFrontiers = dominatorTree.getDominanceFrontiers();
 

@@ -48,12 +48,6 @@ public class SignatureRemapper
                     pos = remapTypeArguments(sig, pos + 1, out);
                     break;
 
-                case '>':
-                    // End of type arguments
-                    out.append(c);
-                    pos++;
-                    break;
-
                 case 'L':
                     // Class type
                     pos = remapClassType(sig, pos, out);
@@ -62,51 +56,7 @@ public class SignatureRemapper
                 case 'T':
                     // Type variable reference
                     pos = remapTypeVariable(sig, pos, out);
-                    break;
-
-                case '[':
-                    // Array type
-                    out.append(c);
-                    pos++;
-                    break;
-
-                case '+':
-                case '-':
-                case '*':
-                    // Wildcard indicators: append and continue. '+'/'-' (bounded) are followed by a
-                    // type that the next iteration remaps; '*' (unbounded) stands alone.
-                    out.append(c);
-                    pos++;
-                    break;
-
-                case '(':
-                case ')':
-                case ';':
-                case ':':
-                    // Delimiters
-                    out.append(c);
-                    pos++;
-                    break;
-
-                case 'B':
-                case 'C':
-                case 'D':
-                case 'F':
-                case 'I':
-                case 'J':
-                case 'S':
-                case 'Z':
-                case 'V':
-                    // Primitive types and void
-                    out.append(c);
-                    pos++;
-                    break;
-
-                case '^':
-                    // Exception type in throws clause
-                    out.append(c);
-                    pos++;
-                    break;
+                    break;// Wildcard indicators: append and continue. '+'/'-' (bounded) are followed by a
 
                 default:
                     // Identifier character (part of type parameter name, etc.)

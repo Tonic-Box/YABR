@@ -4,12 +4,13 @@ import com.tonic.analysis.fingerprint.features.Level0Features;
 import com.tonic.analysis.fingerprint.features.Level1Features;
 import com.tonic.analysis.fingerprint.features.Level2Features;
 import com.tonic.parser.ClassFile;
-import com.tonic.parser.ClassPool;
 import com.tonic.parser.ConstPool;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.attribute.table.ExceptionTableEntry;
 import com.tonic.parser.constpool.*;
+import com.tonic.util.InstructionLength;
+import com.tonic.util.Opcode;
 
 import java.util.*;
 
@@ -38,8 +39,8 @@ public class FingerprintBuilder
         String methodId = buildMethodId(method, classFile);
 
         Level0Features l0 = extractLevel0(method, classFile);
-        Level1Features l1 = extractLevel1(method, classFile);
-        Level2Features l2 = extractLevel2(method, classFile);
+        Level1Features l1 = extractLevel1(method);
+        Level2Features l2 = extractLevel2(method);
 
         return new MethodFingerprint(methodId, l0, l1, l2);
     }
@@ -75,7 +76,7 @@ public class FingerprintBuilder
             if (bytecode != null && classFile != null)
             {
                 ConstPool cp = classFile.getConstPool();
-                extractLevel0FromBytecode(bytecode, cp, externalCalls, fieldAccesses, instantiatedTypes, new int[]{0});
+                extractLevel0FromBytecode(bytecode, cp, externalCalls, fieldAccesses, instantiatedTypes);
                 monitorCount = countMonitorOps(bytecode);
             }
         }
@@ -85,22 +86,22 @@ public class FingerprintBuilder
                 externalCalls, fieldAccesses, instantiatedTypes);
     }
 
-    private void extractLevel0FromBytecode(byte[] bytecode, ConstPool cp, Set<String> externalCalls, Set<String> fieldAccesses, Set<String> instantiatedTypes, int[] monitorCountHolder)
+    private void extractLevel0FromBytecode(byte[] bytecode, ConstPool cp, Set<String> externalCalls, Set<String> fieldAccesses, Set<String> instantiatedTypes)
     {
         int i = 0;
         while (i < bytecode.length)
         {
             int op = Byte.toUnsignedInt(bytecode[i]);
-            int len = getInstructionLength(op, i, bytecode);
+            int len = InstructionLength.at(bytecode, i);
             if (len <= 0)
             {
                 i++;
                 continue;
             }
 
-            switch (op)
+            switch (Opcode.fromCode(op))
             {
-                case 0xB2: case 0xB3: case 0xB4: case 0xB5:
+                case GETSTATIC: case PUTSTATIC: case GETFIELD: case PUTFIELD:
                     if (i + 2 < bytecode.length)
                     {
                         int idx = readUnsignedShort(bytecode, i + 1);
@@ -112,7 +113,7 @@ public class FingerprintBuilder
                     }
                     break;
 
-                case 0xB6: case 0xB7: case 0xB8:
+                case INVOKEVIRTUAL: case INVOKESPECIAL: case INVOKESTATIC:
                     if (i + 2 < bytecode.length)
                     {
                         int idx = readUnsignedShort(bytecode, i + 1);
@@ -124,7 +125,7 @@ public class FingerprintBuilder
                     }
                     break;
 
-                case 0xB9:
+                case INVOKEINTERFACE:
                     if (i + 2 < bytecode.length)
                     {
                         int idx = readUnsignedShort(bytecode, i + 1);
@@ -136,7 +137,7 @@ public class FingerprintBuilder
                     }
                     break;
 
-                case 0xBB:
+                case NEW:
                     if (i + 2 < bytecode.length)
                     {
                         int idx = readUnsignedShort(bytecode, i + 1);
@@ -167,7 +168,7 @@ public class FingerprintBuilder
         return count;
     }
 
-    private Level1Features extractLevel1(MethodEntry method, ClassFile classFile)
+    private Level1Features extractLevel1(MethodEntry method)
     {
         CodeAttribute code = method.getCodeAttribute();
         if (code == null)
@@ -190,7 +191,7 @@ public class FingerprintBuilder
             while (i < bytecode.length)
             {
                 int op = Byte.toUnsignedInt(bytecode[i]);
-                int len = getInstructionLength(op, i, bytecode);
+                int len = InstructionLength.at(bytecode, i);
                 if (len <= 0)
                 {
                     i++;
@@ -217,7 +218,7 @@ public class FingerprintBuilder
                 branchTypes, arithmeticOps, invokeTypes, arrayFlags);
     }
 
-    private Level2Features extractLevel2(MethodEntry method, ClassFile classFile)
+    private Level2Features extractLevel2(MethodEntry method)
     {
         CodeAttribute code = method.getCodeAttribute();
         if (code == null)
@@ -239,7 +240,7 @@ public class FingerprintBuilder
             while (i < bytecode.length)
             {
                 int op = Byte.toUnsignedInt(bytecode[i]);
-                int len = getInstructionLength(op, i, bytecode);
+                int len = InstructionLength.at(bytecode, i);
                 if (len <= 0)
                 {
                     i++;
@@ -342,13 +343,13 @@ public class FingerprintBuilder
 
     private void categorizeInvokeOp(int op, Map<String, Integer> invokes)
     {
-        switch (op)
+        switch (Opcode.fromCode(op))
         {
-            case 0xB6: invokes.merge("virtual", 1, Integer::sum); break;
-            case 0xB7: invokes.merge("special", 1, Integer::sum); break;
-            case 0xB8: invokes.merge("static", 1, Integer::sum); break;
-            case 0xB9: invokes.merge("interface", 1, Integer::sum); break;
-            case 0xBA: invokes.merge("dynamic", 1, Integer::sum); break;
+            case INVOKEVIRTUAL: invokes.merge("virtual", 1, Integer::sum); break;
+            case INVOKESPECIAL: invokes.merge("special", 1, Integer::sum); break;
+            case INVOKESTATIC: invokes.merge("static", 1, Integer::sum); break;
+            case INVOKEINTERFACE: invokes.merge("interface", 1, Integer::sum); break;
+            case INVOKEDYNAMIC: invokes.merge("dynamic", 1, Integer::sum); break;
         }
     }
 
@@ -389,7 +390,7 @@ public class FingerprintBuilder
         while (i < bytecode.length)
         {
             int op = Byte.toUnsignedInt(bytecode[i]);
-            int len = getInstructionLength(op, i, bytecode);
+            int len = InstructionLength.at(bytecode, i);
             if (len <= 0)
             {
                 i++;
@@ -484,101 +485,4 @@ public class FingerprintBuilder
                (bytecode[offset + 3] & 0xFF);
     }
 
-    private int getInstructionLength(int opcode, int offset, byte[] bytecode)
-    {
-        switch (opcode)
-        {
-            case 0x00: case 0x01: case 0x02: case 0x03: case 0x04:
-            case 0x05: case 0x06: case 0x07: case 0x08: case 0x09:
-            case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0E:
-            case 0x0F: return 1;
-            case 0x10: return 2;
-            case 0x11: return 3;
-            case 0x12: return 2;
-            case 0x13: case 0x14: return 3;
-            case 0x15: case 0x16: case 0x17: case 0x18: case 0x19: return 2;
-            case 0x1A: case 0x1B: case 0x1C: case 0x1D:
-            case 0x1E: case 0x1F: case 0x20: case 0x21:
-            case 0x22: case 0x23: case 0x24: case 0x25:
-            case 0x26: case 0x27: case 0x28: case 0x29:
-            case 0x2A: case 0x2B: case 0x2C: case 0x2D:
-            case 0x2E: case 0x2F: case 0x30: case 0x31:
-            case 0x32: case 0x33: case 0x34: case 0x35: return 1;
-            case 0x36: case 0x37: case 0x38: case 0x39: case 0x3A: return 2;
-            case 0x3B: case 0x3C: case 0x3D: case 0x3E:
-            case 0x3F: case 0x40: case 0x41: case 0x42:
-            case 0x43: case 0x44: case 0x45: case 0x46:
-            case 0x47: case 0x48: case 0x49: case 0x4A:
-            case 0x4B: case 0x4C: case 0x4D: case 0x4E:
-            case 0x4F: case 0x50: case 0x51: case 0x52:
-            case 0x53: case 0x54: case 0x55: case 0x56:
-            case 0x57: case 0x58: case 0x59: case 0x5A:
-            case 0x5B: case 0x5C: case 0x5D: case 0x5E:
-            case 0x5F: return 1;
-            case 0x60: case 0x61: case 0x62: case 0x63:
-            case 0x64: case 0x65: case 0x66: case 0x67:
-            case 0x68: case 0x69: case 0x6A: case 0x6B:
-            case 0x6C: case 0x6D: case 0x6E: case 0x6F:
-            case 0x70: case 0x71: case 0x72: case 0x73:
-            case 0x74: case 0x75: case 0x76: case 0x77:
-            case 0x78: case 0x79: case 0x7A: case 0x7B:
-            case 0x7C: case 0x7D: case 0x7E: case 0x7F:
-            case 0x80: case 0x81: case 0x82: case 0x83: return 1;
-            case 0x84: return 3;
-            case 0x85: case 0x86: case 0x87: case 0x88:
-            case 0x89: case 0x8A: case 0x8B: case 0x8C:
-            case 0x8D: case 0x8E: case 0x8F: case 0x90:
-            case 0x91: case 0x92: case 0x93: case 0x94:
-            case 0x95: case 0x96: case 0x97: case 0x98: return 1;
-            case 0x99: case 0x9A: case 0x9B: case 0x9C:
-            case 0x9D: case 0x9E: case 0x9F: case 0xA0:
-            case 0xA1: case 0xA2: case 0xA3: case 0xA4:
-            case 0xA5: case 0xA6: return 3;
-            case 0xA7: return 3;
-            case 0xA8: return 3;
-            case 0xA9: return 2;
-            case 0xAA:
-            {
-                int padding = (4 - ((offset + 1) % 4)) % 4;
-                int baseOffset = offset + 1 + padding;
-                if (baseOffset + 12 > bytecode.length) return -1;
-                int low = readInt(bytecode, baseOffset + 4);
-                int high = readInt(bytecode, baseOffset + 8);
-                if (low > high) return -1;
-                return 1 + padding + 12 + (high - low + 1) * 4;
-            }
-            case 0xAB:
-            {
-                int padding = (4 - ((offset + 1) % 4)) % 4;
-                int baseOffset = offset + 1 + padding;
-                if (baseOffset + 8 > bytecode.length) return -1;
-                int npairs = readInt(bytecode, baseOffset + 4);
-                if (npairs < 0) return -1;
-                return 1 + padding + 8 + npairs * 8;
-            }
-            case 0xAC: case 0xAD: case 0xAE: case 0xAF:
-            case 0xB0: case 0xB1: return 1;
-            case 0xB2: case 0xB3: case 0xB4: case 0xB5: return 3;
-            case 0xB6: case 0xB7: case 0xB8: return 3;
-            case 0xB9: return 5;
-            case 0xBA: return 5;
-            case 0xBB: return 3;
-            case 0xBC: return 2;
-            case 0xBD: return 3;
-            case 0xBE: case 0xBF: return 1;
-            case 0xC0: case 0xC1: return 3;
-            case 0xC2: case 0xC3: return 1;
-            case 0xC4:
-            {
-                if (offset + 1 >= bytecode.length) return -1;
-                int wideOpcode = Byte.toUnsignedInt(bytecode[offset + 1]);
-                if (wideOpcode == IINC.getCode()) return 6;
-                return 4;
-            }
-            case 0xC5: return 4;
-            case 0xC6: case 0xC7: return 3;
-            case 0xC8: case 0xC9: return 5;
-            default: return 1;
-        }
-    }
 }

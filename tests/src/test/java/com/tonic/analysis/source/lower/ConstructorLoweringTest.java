@@ -107,7 +107,7 @@ class ConstructorLoweringTest
                 "test/Norm", "x", "I", "(I)V");
         int put = asm.indexOf("putfield");
         int sup = asm.indexOf("invokespecial");
-        assertTrue(put >= 0 && sup >= 0 && sup < put, "a normal field init must follow super():\n" + asm);
+        assertTrue(sup >= 0 && sup < put, "a normal field init must follow super():\n" + asm);
     }
 
     private String lowerCtorAndDisassemble(String source, String internalName, String fieldName, String fieldDesc, String ctorDesc) throws Exception

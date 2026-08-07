@@ -409,9 +409,14 @@ class CodeWriterTest
         MethodEntry method = classFile.createNewMethod(access, "testComputeFrames", "V");
 
         CodeWriter cw = new CodeWriter(method);
-        cw.computeFrames();
+        cw.appendInstruction(new MethodReturnInstruction(0xB1, 0));
+        cw.write();
+        assertDoesNotThrow(cw::computeFrames);
 
-        assertTrue(true);
+        assertNotNull(method.getCodeAttribute(),
+            "computing frames must leave the method its code");
+        assertTrue(method.getCodeAttribute().getCode().length > 0,
+            "computing frames must not empty the code array");
     }
 
     @Test
@@ -421,9 +426,14 @@ class CodeWriterTest
         MethodEntry method = classFile.createNewMethod(access, "testForceComputeFrames", "V");
 
         CodeWriter cw = new CodeWriter(method);
-        cw.forceComputeFrames();
+        cw.appendInstruction(new MethodReturnInstruction(0xB1, 0));
+        cw.write();
+        assertDoesNotThrow(cw::forceComputeFrames);
 
-        assertTrue(true);
+        assertNotNull(method.getCodeAttribute(),
+            "computing frames must leave the method its code");
+        assertTrue(method.getCodeAttribute().getCode().length > 0,
+            "computing frames must not empty the code array");
     }
 
     @Test
@@ -760,16 +770,6 @@ class CodeWriterTest
             assertTrue(cw.isModified());
         }
 
-        @Test
-        void createInvokeDynamic() throws IOException
-        {
-            int access = new AccessBuilder().setPublic().setStatic().build();
-            MethodEntry method = classFile.createNewMethod(access, "testInvokeDynamic", "V");
-
-            CodeWriter cw = new CodeWriter(method);
-
-            assertTrue(true);
-        }
     }
 
     @Nested
@@ -1109,9 +1109,7 @@ class CodeWriterTest
             MethodEntry method = classFile.createNewMethod(access, "testInvalidInsert", "V");
             CodeWriter cw = new CodeWriter(method);
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                cw.insertInstruction(9999, new NopInstruction(0x00, 9999));
-            });
+            assertThrows(IllegalArgumentException.class, () -> cw.insertInstruction(9999, new NopInstruction(0x00, 9999)));
         }
 
         @Test

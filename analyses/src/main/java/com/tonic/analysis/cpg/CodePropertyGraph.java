@@ -101,15 +101,7 @@ public class CodePropertyGraph
         nodes.remove(node.getId());
         index.remove(node);
 
-        Iterator<CPGEdge> it = edges.iterator();
-        while (it.hasNext())
-        {
-            CPGEdge edge = it.next();
-            if (edge.getSource().equals(node) || edge.getTarget().equals(node))
-            {
-                it.remove();
-            }
-        }
+        edges.removeIf(edge -> edge.getSource().equals(node) || edge.getTarget().equals(node));
     }
 
     /**

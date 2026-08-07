@@ -52,9 +52,7 @@ class InvocationResultTest
     @Test
     void testPushFrameWithNull()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            InvocationResult.pushFrame(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> InvocationResult.pushFrame(null));
     }
 
     @Test
@@ -110,9 +108,7 @@ class InvocationResultTest
     @Test
     void testExceptionWithNull()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            InvocationResult.exception(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> InvocationResult.exception(null));
     }
 
     @Test

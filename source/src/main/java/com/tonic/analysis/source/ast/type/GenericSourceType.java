@@ -3,9 +3,6 @@ package com.tonic.analysis.source.ast.type;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -29,9 +26,7 @@ public final class GenericSourceType implements SourceType
     public GenericSourceType(ReferenceSourceType rawType, List<SourceType> typeArguments)
     {
         this.rawType = Objects.requireNonNull(rawType, "rawType cannot be null");
-        this.typeArguments = Collections.unmodifiableList(
-            new ArrayList<>(Objects.requireNonNull(typeArguments, "typeArguments cannot be null"))
-        );
+        this.typeArguments = List.copyOf(Objects.requireNonNull(typeArguments, "typeArguments cannot be null"));
     }
 
     /**

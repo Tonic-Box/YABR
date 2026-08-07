@@ -8,7 +8,7 @@ public class ASTTestCases
 
     // Simple field for field access tests
     private int counter = 0;
-    private static String staticField = "hello";
+    private static final String staticField = "hello";
 
     /**
      * Simple arithmetic method for expression recovery.
@@ -236,8 +236,7 @@ public class ASTTestCases
      */
     public long typeCasting(int i, double d)
     {
-        long l = (long) i;
         int fromDouble = (int) d;
-        return l + fromDouble;
+        return (long) i + fromDouble;
     }
 }

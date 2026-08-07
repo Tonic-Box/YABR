@@ -72,8 +72,8 @@ class VerificationTypeTest
         {
             assertNotEquals(VerificationType.INTEGER, VerificationType.FLOAT);
             assertNotEquals(VerificationType.LONG, VerificationType.DOUBLE);
-            assertFalse(VerificationType.INTEGER.equals(VerificationType.FLOAT));
-            assertFalse(VerificationType.LONG.equals(VerificationType.DOUBLE));
+            assertNotEquals(VerificationType.INTEGER, VerificationType.FLOAT);
+            assertNotEquals(VerificationType.LONG, VerificationType.DOUBLE);
         }
 
         @Test

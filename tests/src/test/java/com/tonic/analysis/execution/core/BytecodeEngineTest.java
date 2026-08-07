@@ -53,9 +53,7 @@ class BytecodeEngineTest
     @Test
     void testEngineRejectsNullContext()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeEngine(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeEngine(null));
     }
 
     @Test

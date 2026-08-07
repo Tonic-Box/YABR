@@ -620,8 +620,6 @@ public final class DebugSession
     {
         switch (state)
         {
-            case IDLE:
-                return DebugState.Status.IDLE;
             case RUNNING:
                 return DebugState.Status.RUNNING;
             case PAUSED:

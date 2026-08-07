@@ -2,9 +2,7 @@ package com.tonic.parser.attribute;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ConstPool;
-import com.tonic.parser.MemberEntry;
 import com.tonic.parser.MethodEntry;
-import com.tonic.parser.constpool.Utf8Item;
 import com.tonic.testutil.BytecodeBuilder;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

@@ -4,7 +4,6 @@ import com.tonic.analysis.source.emit.SourceEmitterConfig;
 import com.tonic.analysis.source.recovery.NameRecoveryStrategy;
 import com.tonic.analysis.ssa.transform.IRTransform;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -24,7 +23,7 @@ public class DecompilerConfig
     private DecompilerConfig(Builder builder)
     {
         this.emitterConfig = builder.emitterConfig;
-        this.additionalTransforms = Collections.unmodifiableList(new ArrayList<>(builder.transforms));
+        this.additionalTransforms = List.copyOf(builder.transforms);
         this.nameRecoveryStrategy = builder.nameRecoveryStrategy;
     }
 

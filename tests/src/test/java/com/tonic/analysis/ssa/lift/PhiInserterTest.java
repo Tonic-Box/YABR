@@ -5,7 +5,6 @@ import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.PhiInstruction;
 import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
-import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -211,8 +210,8 @@ class PhiInserterTest
 
         // Verify: phi at lmerge (immediate dominance frontier)
         // and phi at merge (transitive dominance frontier)
-        assertTrue(lmerge.getPhiInstructions().size() >= 1, "Phi at inner merge");
-        assertTrue(merge.getPhiInstructions().size() >= 1, "Phi at outer merge");
+        assertFalse(lmerge.getPhiInstructions().isEmpty(), "Phi at inner merge");
+        assertFalse(merge.getPhiInstructions().isEmpty(), "Phi at outer merge");
     }
 
     // Multiple Definitions Tests
@@ -420,14 +419,14 @@ class PhiInserterTest
         phiInserter.insertPhis(method);
 
         // Verify: phi at loop header (dominance frontier of body)
-        assertTrue(header.getPhiInstructions().size() >= 1, "Phi at loop header");
+        assertFalse(header.getPhiInstructions().isEmpty(), "Phi at loop header");
 
         boolean hasLoopPhi = false;
         for (PhiInstruction phi : header.getPhiInstructions())
         {
-            if (phi.getResult().getName().equals("phi_0"))
-            {
+            if (phi.getResult().getName().equals("phi_0")) {
                 hasLoopPhi = true;
+                break;
             }
         }
         assertTrue(hasLoopPhi, "Should have phi for loop variable");
@@ -469,7 +468,7 @@ class PhiInserterTest
         phiInserter = new PhiInserter(dominatorTree);
         phiInserter.insertPhis(method);
 
-        assertTrue(header.getPhiInstructions().size() >= 1, "Phi at loop header");
+        assertFalse(header.getPhiInstructions().isEmpty(), "Phi at loop header");
     }
 
     // Edge Cases

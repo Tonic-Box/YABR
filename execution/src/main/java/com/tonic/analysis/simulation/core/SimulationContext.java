@@ -34,29 +34,34 @@ public final class SimulationContext
     // Factory Methods
 
     /**
-     * Creates a context for simulating a single method, backed by the default class pool.
-     * @param method the method to simulate
-     * @return a new context with default settings
+     * Creates a context for simulating a single method, backed by the pool its class was loaded from.
+     * @param method the method to simulate, may be null
+     * @return a new context resolving through that method's pool
      */
     public static SimulationContext forMethod(MethodEntry method)
     {
-        ClassPool pool = ClassPool.getDefault();
-        return new Builder()
-            .classPool(pool)
-            .build();
+        return forPool(poolOf(method == null ? null : method.getClassFile()));
     }
 
     /**
-     * Creates a context for simulating methods in a class, backed by the default class pool.
-     * @param classFile the class whose methods will be simulated
-     * @return a new context with default settings
+     * Creates a context for simulating methods in a class, backed by the pool it was loaded from.
+     * @param classFile the class whose methods will be simulated, may be null
+     * @return a new context resolving through that class's pool
      */
     public static SimulationContext forClass(ClassFile classFile)
     {
-        ClassPool pool = ClassPool.getDefault();
-        return new Builder()
-            .classPool(pool)
-            .build();
+        return forPool(poolOf(classFile));
+    }
+
+    /**
+     * The pool a class was loaded from, falling back to the default pool for a class built in memory.
+     * @param classFile the class to take the pool from, may be null
+     * @return the class's own pool, or the default pool
+     */
+    private static ClassPool poolOf(ClassFile classFile)
+    {
+        ClassPool pool = classFile == null ? null : classFile.getClassPool();
+        return pool != null ? pool : ClassPool.getDefault();
     }
 
     /**

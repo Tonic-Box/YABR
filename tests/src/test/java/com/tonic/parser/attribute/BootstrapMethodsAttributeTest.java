@@ -100,7 +100,7 @@ class BootstrapMethodsAttributeTest
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
             attr.addBootstrapMethod(2, Arrays.asList(20, 30));
             attr.addBootstrapMethod(3, new ArrayList<>());
 
@@ -144,7 +144,7 @@ class BootstrapMethodsAttributeTest
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
             attr.addBootstrapMethod(1, Arrays.asList(10, 20));
-            attr.addBootstrapMethod(2, Arrays.asList(30));
+            attr.addBootstrapMethod(2, List.of(30));
 
             List<BootstrapMethod> methods = attr.getBootstrapMethods();
             assertEquals(2, methods.size());
@@ -203,7 +203,7 @@ class BootstrapMethodsAttributeTest
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
             attr.addBootstrapMethod(2, Arrays.asList(20, 30));
             attr.updateLength();
 
@@ -265,7 +265,7 @@ class BootstrapMethodsAttributeTest
 
             int handle1 = constPool.addMethodHandle(6, 1);
             int handle2 = constPool.addMethodHandle(6, 2);
-            attr.addBootstrapMethod(handle1, Arrays.asList(10));
+            attr.addBootstrapMethod(handle1, List.of(10));
             attr.addBootstrapMethod(handle2, Arrays.asList(20, 30, 40));
             original.getClassAttributes().add(attr);
 
@@ -327,7 +327,7 @@ class BootstrapMethodsAttributeTest
             ConstPool constPool = cf.getConstPool();
             BootstrapMethodsAttribute attr = new BootstrapMethodsAttribute(constPool);
 
-            attr.addBootstrapMethod(1, Arrays.asList(10));
+            attr.addBootstrapMethod(1, List.of(10));
 
             String str = attr.toString();
             assertNotNull(str);
@@ -391,7 +391,7 @@ class BootstrapMethodsAttributeTest
 
             for (int i = 0; i < 50; i++)
             {
-                attr.addBootstrapMethod(i, Arrays.asList(i * 10));
+                attr.addBootstrapMethod(i, List.of(i * 10));
             }
 
             assertEquals(50, attr.getBootstrapMethods().size());

@@ -58,9 +58,7 @@ class BytecodeResultTest
     @Test
     void testExceptionRequiresNonNull()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            BytecodeResult.exception(null, null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> BytecodeResult.exception(null, null));
     }
 
     @Test
@@ -138,9 +136,7 @@ class BytecodeResultTest
         BytecodeResult result = BytecodeResult.exception(ex, trace);
 
         List<String> retrievedTrace = result.getStackTrace();
-        assertThrows(UnsupportedOperationException.class, () -> {
-            retrievedTrace.add("line3");
-        });
+        assertThrows(UnsupportedOperationException.class, () -> retrievedTrace.add("line3"));
     }
 
     @Test

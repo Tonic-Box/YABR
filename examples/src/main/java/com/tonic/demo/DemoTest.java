@@ -2,9 +2,6 @@ package com.tonic.demo;
 
 import com.tonic.analysis.source.ast.ASTUtils;
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.ExprStmt;
-import com.tonic.analysis.source.ast.stmt.IfStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.recovery.MethodRecoverer;
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRMethod;
@@ -44,9 +41,7 @@ public class DemoTest
             IRMethod irMethod = ssa.lift(main);
             BlockStmt body = MethodRecoverer.recoverMethod(irMethod, main);
 
-            ASTUtils.forEachStatement(body, stmt -> {
-                System.out.println("[" + stmt.getClass().getName() + "] " + stmt.toString());
-            });
+            ASTUtils.forEachStatement(body, stmt -> System.out.println("[" + stmt.getClass().getName() + "] " + stmt));
         }
     }
 }

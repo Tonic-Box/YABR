@@ -646,7 +646,7 @@ class FrameGeneratorTest
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0, "Loop should require frame entries");
+            assertFalse(frames.isEmpty(), "Loop should require frame entries");
         }
 
         @Test

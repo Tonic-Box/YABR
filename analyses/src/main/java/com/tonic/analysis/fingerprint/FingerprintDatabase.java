@@ -174,7 +174,6 @@ public class FingerprintDatabase
     {
         switch (level)
         {
-            case ULTRA_STABLE: return level0Index;
             case STABLE: return level1Index;
             case DETAILED: return level2Index;
             default: return level0Index;

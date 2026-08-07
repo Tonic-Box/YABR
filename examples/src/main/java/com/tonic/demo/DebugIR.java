@@ -5,7 +5,6 @@ import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.IRInstruction;
-import com.tonic.analysis.ssa.ir.StoreLocalInstruction;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;

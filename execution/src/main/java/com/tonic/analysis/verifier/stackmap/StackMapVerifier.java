@@ -215,7 +215,7 @@ public class StackMapVerifier
                 currentOffset = currentOffset + offsetDelta + 1;
             }
 
-            updateFrameState(frame, currentLocals, currentStack, constPool);
+            updateFrameState(frame, currentLocals, currentStack);
 
             TypeState state = new TypeState(new ArrayList<>(currentLocals), new ArrayList<>(currentStack));
             frames.put(currentOffset, state);
@@ -237,28 +237,28 @@ public class StackMapVerifier
         }
         else if (frame instanceof SameLocals1StackItemFrameExtended)
         {
-            return ((SameLocals1StackItemFrameExtended) frame).getOffsetDelta();
+            return frame.getOffsetDelta();
         }
         else if (frame instanceof ChopFrame)
         {
-            return ((ChopFrame) frame).getOffsetDelta();
+            return frame.getOffsetDelta();
         }
         else if (frame instanceof SameFrameExtended)
         {
-            return ((SameFrameExtended) frame).getOffsetDelta();
+            return frame.getOffsetDelta();
         }
         else if (frame instanceof AppendFrame)
         {
-            return ((AppendFrame) frame).getOffsetDelta();
+            return frame.getOffsetDelta();
         }
         else if (frame instanceof FullFrame)
         {
-            return ((FullFrame) frame).getOffsetDelta();
+            return frame.getOffsetDelta();
         }
         return 0;
     }
 
-    private void updateFrameState(StackMapFrame frame, List<VerificationType> locals, List<VerificationType> stack, ConstPool constPool)
+    private void updateFrameState(StackMapFrame frame, List<VerificationType> locals, List<VerificationType> stack)
     {
         if (frame instanceof SameFrame)
         {
@@ -268,13 +268,13 @@ public class StackMapVerifier
         {
             SameLocals1StackItemFrame slsif = (SameLocals1StackItemFrame) frame;
             stack.clear();
-            stack.add(convertVerificationTypeInfo(slsif.getStack(), constPool));
+            stack.add(convertVerificationTypeInfo(slsif.getStack()));
         }
         else if (frame instanceof SameLocals1StackItemFrameExtended)
         {
             SameLocals1StackItemFrameExtended ext = (SameLocals1StackItemFrameExtended) frame;
             stack.clear();
-            stack.add(convertVerificationTypeInfo(ext.getStack(), constPool));
+            stack.add(convertVerificationTypeInfo(ext.getStack()));
         }
         else if (frame instanceof ChopFrame)
         {
@@ -295,7 +295,7 @@ public class StackMapVerifier
             AppendFrame append = (AppendFrame) frame;
             for (VerificationTypeInfo info : append.getLocals())
             {
-                locals.add(convertVerificationTypeInfo(info, constPool));
+                locals.add(convertVerificationTypeInfo(info));
             }
             stack.clear();
         }
@@ -305,17 +305,17 @@ public class StackMapVerifier
             locals.clear();
             for (VerificationTypeInfo info : full.getLocals())
             {
-                locals.add(convertVerificationTypeInfo(info, constPool));
+                locals.add(convertVerificationTypeInfo(info));
             }
             stack.clear();
             for (VerificationTypeInfo info : full.getStack())
             {
-                stack.add(convertVerificationTypeInfo(info, constPool));
+                stack.add(convertVerificationTypeInfo(info));
             }
         }
     }
 
-    private VerificationType convertVerificationTypeInfo(VerificationTypeInfo info, ConstPool constPool)
+    private VerificationType convertVerificationTypeInfo(VerificationTypeInfo info)
     {
         if (info == null)
         {
@@ -325,7 +325,6 @@ public class StackMapVerifier
         int tag = info.getTag();
         switch (tag)
         {
-            case 0: return VerificationType.TOP;
             case 1: return VerificationType.INTEGER;
             case 2: return VerificationType.FLOAT;
             case 3: return VerificationType.DOUBLE;
@@ -380,11 +379,11 @@ public class StackMapVerifier
 
                     for (VerificationTypeInfo info : full.getLocals())
                     {
-                        locals.add(convertVerificationTypeInfo(info, constPool));
+                        locals.add(convertVerificationTypeInfo(info));
                     }
                     for (VerificationTypeInfo info : full.getStack())
                     {
-                        stack.add(convertVerificationTypeInfo(info, constPool));
+                        stack.add(convertVerificationTypeInfo(info));
                     }
 
                     result.put(currentOffset, new TypeState(locals, stack));

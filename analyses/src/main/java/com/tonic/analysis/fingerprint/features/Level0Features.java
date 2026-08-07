@@ -67,10 +67,7 @@ public class Level0Features implements FeatureVector
                 i++;
             }
             StringBuilder sb = new StringBuilder();
-            for (int d = 0; d < dims; d++)
-            {
-                sb.append('A');
-            }
+            sb.append("A".repeat(Math.max(0, dims)));
             if (i < desc.length())
             {
                 char baseType = desc.charAt(i);
@@ -98,11 +95,6 @@ public class Level0Features implements FeatureVector
         if (first == 'V')
         {
             return "V";
-        }
-
-        if (isPrimitive(first))
-        {
-            return "P";
         }
 
         return "P";
@@ -213,7 +205,7 @@ public class Level0Features implements FeatureVector
         score += jaccard(fieldAccessTargets, other.fieldAccessTargets) * 1.5;
         weight += 1.5;
 
-        score += jaccard(instantiatedTypes, other.instantiatedTypes) * 1.0;
+        score += jaccard(instantiatedTypes, other.instantiatedTypes);
         weight += 1.0;
 
         return score / weight;

@@ -2,8 +2,6 @@ package com.tonic.analysis.execution.core;
 
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteValue;
-
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,7 +57,7 @@ public final class BytecodeResult
         this.exception = exception;
         this.instructionsExecuted = instructionsExecuted;
         this.executionTimeNanos = executionTimeNanos;
-        this.stackTrace = stackTrace == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(stackTrace));
+        this.stackTrace = stackTrace == null ? Collections.emptyList() : List.copyOf(stackTrace);
     }
 
     /**

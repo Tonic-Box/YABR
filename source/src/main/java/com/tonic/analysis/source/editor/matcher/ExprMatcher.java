@@ -218,7 +218,7 @@ public class ExprMatcher
      */
     public static ExprMatcher ofType(Class<? extends Expression> type)
     {
-        return new ExprMatcher(expr -> type.isInstance(expr), "ofType(" + type.getSimpleName() + ")");
+        return new ExprMatcher(type::isInstance, "ofType(" + type.getSimpleName() + ")");
     }
 
     /**

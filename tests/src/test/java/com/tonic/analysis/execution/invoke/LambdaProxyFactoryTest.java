@@ -67,7 +67,8 @@ class LambdaProxyFactoryTest
             ObjectInstance proxy = factory.createProxy(info, capturedArgs);
 
             assertNotNull(proxy);
-            assertTrue(proxy.getClassName().startsWith("$Lambda$"));
+            assertTrue(proxy.getClassName().startsWith("java/util/function/Runnable$$Lambda$"),
+                "the proxy names the functional interface its call site yields, got " + proxy.getClassName());
         }
 
         @Test

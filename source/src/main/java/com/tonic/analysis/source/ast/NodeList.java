@@ -117,16 +117,40 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
         return removed;
     }
 
+    /**
+     * Removes a specific node, matching by identity rather than by equals as {@link List} specifies.
+     * Types compare by value, so a list such as the type arguments of {@code Map<String, String>}
+     * holds equal entries that an equals-based search cannot tell apart.
+     * @param o the node instance to remove
+     * @return true if the instance was present
+     */
     @Override
     public boolean remove(Object o)
     {
-        int index = backing.indexOf(o);
+        int index = indexOfNode(o);
         if (index >= 0)
         {
             remove(index);
             return true;
         }
         return false;
+    }
+
+    /**
+     * Locates a node by identity.
+     * @param node the node instance to look for
+     * @return its index, or -1 if this list does not hold that instance
+     */
+    private int indexOfNode(Object node)
+    {
+        for (int i = 0; i < backing.size(); i++)
+        {
+            if (backing.get(i) == node)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -301,13 +325,14 @@ public class NodeList<T extends ASTNode> extends AbstractList<T> implements Rand
     }
 
     /**
-     * Swaps one node for another in place, doing nothing if the old node is absent.
-     * @param oldNode the node to replace
+     * Swaps one node for another in place, doing nothing if the old node is absent. The old node is
+     * matched by identity, so a value-equal sibling is never swapped by mistake.
+     * @param oldNode the node instance to replace
      * @param newNode the replacement
      */
     public void replace(T oldNode, T newNode)
     {
-        int index = indexOf(oldNode);
+        int index = indexOfNode(oldNode);
         if (index >= 0)
         {
             set(index, newNode);

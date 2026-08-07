@@ -3,6 +3,8 @@ package com.tonic.analysis.ssa.value;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 
+import java.util.Objects;
+
 /**
  * Represents a string constant.
  */
@@ -75,7 +77,7 @@ public final class StringConstant extends Constant
         if (this == o) return true;
         if (!(o instanceof StringConstant)) return false;
         StringConstant that = (StringConstant) o;
-        return value != null ? value.equals(that.value) : that.value == null;
+        return Objects.equals(value, that.value);
     }
 
     @Override

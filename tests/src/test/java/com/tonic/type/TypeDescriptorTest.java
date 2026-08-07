@@ -333,33 +333,25 @@ class TypeDescriptorTest
         @Test
         void parseNullThrowsException()
         {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse(null);
-            });
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse(null));
         }
 
         @Test
         void parseEmptyStringThrowsException()
         {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("");
-            });
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse(""));
         }
 
         @Test
         void parseInvalidDescriptorThrowsException()
         {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("X");
-            });
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse("X"));
         }
 
         @Test
         void parseInvalidCharacterThrowsException()
         {
-            assertThrows(IllegalArgumentException.class, () -> {
-                TypeDescriptor.parse("@");
-            });
+            assertThrows(IllegalArgumentException.class, () -> TypeDescriptor.parse("@"));
         }
     }
 
@@ -371,43 +363,33 @@ class TypeDescriptorTest
         void getLoadOpcodeForMethodThrowsException()
         {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getLoadOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getLoadOpcode);
         }
 
         @Test
         void getLoadOpcodeForVoidThrowsException()
         {
-            assertThrows(IllegalStateException.class, () -> {
-                TypeDescriptor.VOID_TYPE.getLoadOpcode();
-            });
+            assertThrows(IllegalStateException.class, TypeDescriptor.VOID_TYPE::getLoadOpcode);
         }
 
         @Test
         void getStoreOpcodeForMethodThrowsException()
         {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getStoreOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getStoreOpcode);
         }
 
         @Test
         void getStoreOpcodeForVoidThrowsException()
         {
-            assertThrows(IllegalStateException.class, () -> {
-                TypeDescriptor.VOID_TYPE.getStoreOpcode();
-            });
+            assertThrows(IllegalStateException.class, TypeDescriptor.VOID_TYPE::getStoreOpcode);
         }
 
         @Test
         void getReturnOpcodeForMethodThrowsException()
         {
             TypeDescriptor td = TypeDescriptor.parse("()V");
-            assertThrows(IllegalStateException.class, () -> {
-                td.getReturnOpcode();
-            });
+            assertThrows(IllegalStateException.class, td::getReturnOpcode);
         }
     }
 

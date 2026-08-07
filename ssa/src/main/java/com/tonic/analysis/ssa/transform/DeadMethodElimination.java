@@ -5,6 +5,7 @@ import com.tonic.parser.ClassFile;
 import com.tonic.parser.MethodEntry;
 import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.parser.constpool.*;
+import com.tonic.util.InstructionLength;
 
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -80,7 +81,8 @@ public class DeadMethodElimination implements ClassTransform
                     }
                 }
 
-                i += getInstructionLength(opcode, bytecode, i);
+                int length = InstructionLength.at(bytecode, i);
+                i += length > 0 ? length : 1;
             }
         }
 
@@ -287,60 +289,4 @@ public class DeadMethodElimination implements ClassTransform
         return null;
     }
 
-    /**
-     * Gets the length of a bytecode instruction.
-     */
-    private int getInstructionLength(int opcode, byte[] bytecode, int offset)
-    {
-        if (opcode == WIDE.getCode())
-        {
-            int nextOpcode = bytecode[offset + 1] & 0xFF;
-            if (nextOpcode == IINC.getCode())
-            {
-                return 6;
-            }
-            return 4;
-        }
-
-        if (opcode == TABLESWITCH.getCode())
-        {
-            int padding = (4 - ((offset + 1) % 4)) % 4;
-            int base = offset + 1 + padding;
-            int low = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)
-                    | ((bytecode[base + 6] & 0xFF) << 8) | (bytecode[base + 7] & 0xFF);
-            int high = ((bytecode[base + 8] & 0xFF) << 24) | ((bytecode[base + 9] & 0xFF) << 16)
-                    | ((bytecode[base + 10] & 0xFF) << 8) | (bytecode[base + 11] & 0xFF);
-            return 1 + padding + 12 + (high - low + 1) * 4;
-        }
-
-        if (opcode == LOOKUPSWITCH.getCode())
-        {
-            int padding = (4 - ((offset + 1) % 4)) % 4;
-            int base = offset + 1 + padding;
-            int npairs = ((bytecode[base + 4] & 0xFF) << 24) | ((bytecode[base + 5] & 0xFF) << 16)
-                    | ((bytecode[base + 6] & 0xFF) << 8) | (bytecode[base + 7] & 0xFF);
-            return 1 + padding + 8 + npairs * 8;
-        }
-
-        return INSTRUCTION_LENGTHS[opcode];
-    }
-
-    private static final int[] INSTRUCTION_LENGTHS = {
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x00-0x0F
-            2, 3, 2, 3, 3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, // 0x10-0x1F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x20-0x2F
-            1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, // 0x30-0x3F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x40-0x4F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x50-0x5F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x60-0x6F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x70-0x7F
-            1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x80-0x8F
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, // 0x90-0x9F
-            3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0, 0, 1, 1, 1, 1, // 0xA0-0xAF (AA/AB handled specially)
-            1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 3, 2, 3, 1, 1, 3, // 0xB0-0xBF
-            3, 1, 1, 0, 4, 3, 3, 5, 5, 1, 1, 1, 1, 1, 1, 1, // 0xC0-0xCF (C4 handled specially)
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xD0-0xDF
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xE0-0xEF
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1  // 0xF0-0xFF
-    };
 }

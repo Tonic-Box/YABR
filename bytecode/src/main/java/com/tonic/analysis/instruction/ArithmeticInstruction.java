@@ -196,19 +196,17 @@ public class ArithmeticInstruction extends Instruction
             case IMUL:
             case IDIV:
             case IREM:
-                return -1;
-            case LADD:
-            case LSUB:
-            case LMUL:
-            case LDIV:
-            case LREM:
-                return -2;
             case FADD:
             case FSUB:
             case FMUL:
             case FDIV:
             case FREM:
                 return -1;
+            case LADD:
+            case LSUB:
+            case LMUL:
+            case LDIV:
+            case LREM:
             case DADD:
             case DSUB:
             case DMUL:

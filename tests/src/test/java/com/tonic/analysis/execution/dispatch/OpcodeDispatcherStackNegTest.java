@@ -623,7 +623,7 @@ class OpcodeDispatcherStackNegTest
             BytecodeResult result = execute(method, ConcreteValue.intValue(Integer.MAX_VALUE));
 
             assertTrue(result.isSuccess());
-            assertEquals((long) Integer.MAX_VALUE, result.getReturnValue().asLong());
+            assertEquals(Integer.MAX_VALUE, result.getReturnValue().asLong());
         }
 
         @Test
@@ -640,7 +640,7 @@ class OpcodeDispatcherStackNegTest
             BytecodeResult result = execute(method, ConcreteValue.intValue(Integer.MIN_VALUE));
 
             assertTrue(result.isSuccess());
-            assertEquals((long) Integer.MIN_VALUE, result.getReturnValue().asLong());
+            assertEquals(Integer.MIN_VALUE, result.getReturnValue().asLong());
         }
     }
 }

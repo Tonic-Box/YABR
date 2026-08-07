@@ -243,10 +243,6 @@ public class CPGDOTExporter extends DOTExporter<CodePropertyGraph>
         {
             case METHOD:
                 return "house";
-            case BLOCK:
-                return "box";
-            case INSTRUCTION:
-                return "box";
             case CALL_SITE:
                 return "ellipse";
             default:

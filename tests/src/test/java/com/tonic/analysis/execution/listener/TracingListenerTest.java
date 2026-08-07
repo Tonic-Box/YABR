@@ -10,8 +10,6 @@ import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -204,9 +202,7 @@ class TracingListenerTest
     {
         List<TraceEvent> events = listener.getEvents();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            events.add(TraceEvent.executionStart("test"));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> events.add(TraceEvent.executionStart("test")));
     }
 
     @Test

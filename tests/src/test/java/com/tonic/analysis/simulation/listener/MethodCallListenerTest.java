@@ -1,10 +1,8 @@
 package com.tonic.analysis.simulation.listener;
 
 import com.tonic.analysis.simulation.core.SimulationState;
-import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.InvokeInstruction;
 import com.tonic.analysis.ssa.ir.InvokeType;
-import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.analysis.ssa.value.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -399,9 +397,7 @@ class MethodCallListenerTest
 
         List<MethodCallListener.CallSite> sequence = sequenceListener.getCallSequence();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            sequence.clear();
-        });
+        assertThrows(UnsupportedOperationException.class, sequence::clear);
     }
 
     private InvokeInstruction createInvoke(InvokeType type, String owner, String name, String descriptor)

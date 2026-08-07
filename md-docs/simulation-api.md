@@ -462,6 +462,11 @@ For cross-method analysis, use `InterProceduralEngine`:
 SimulationContext ctx = SimulationContext.forPool(classPool)
     .withMaxCallDepth(3);  // follow calls up to 3 levels; callees are resolved from the pool
 
+// forMethod and forClass take the pool their argument was loaded from, so a class parsed into a
+// private pool resolves its callees there rather than through the process-wide default:
+SimulationContext fromClass = SimulationContext.forClass(classFile);
+SimulationContext fromMethod = SimulationContext.forMethod(method);
+
 InterProceduralEngine engine = new InterProceduralEngine(ctx);
 engine.addListener(new MethodCallListener());
 
@@ -659,8 +664,8 @@ EscapeAnalyzer.EscapeState state = analyzer.analyze(site);
 switch (state)
 {
     case NO_ESCAPE -> // Method-local, safe for stack allocation
-    case ARG_ESCAPE -> // Escapes via argument (may-escape)
-    case GLOBAL_ESCAPE -> // Stored in static/heap, definitely escapes
+    case GLOBAL_ESCAPE -> // Marked escaped, held by a static, or reachable from either
+    case ARG_ESCAPE -> // Declared but never reported by this analyzer
 }
 
 // Batch queries
@@ -674,7 +679,16 @@ boolean defEscapes = analyzer.definitelyEscapes(site);
 // Reachability from escaped objects
 Set<AllocationSite> reachable = analyzer.getReachableFrom(rootSite);
 boolean isReachable = analyzer.isReachableFrom(source, target);
+
+// The sites any static field points at, the other root the analyzer walks from
+Set<AllocationSite> staticRoots = heap.getStaticRoots();
 ```
+
+A site escapes globally when the heap marked it escaped, a static field points at it, or it is
+reachable through fields or array elements from either of those roots. `ARG_ESCAPE` is part of the
+enum but is never returned, so a switch only needs the other two states. Results follow the heap at
+each query: in `MUTABLE` mode a later write is visible to an analyzer built beforehand, while in
+`IMMUTABLE` mode a write produces a new heap that the existing analyzer does not see.
 
 ### Constructor Analysis
 

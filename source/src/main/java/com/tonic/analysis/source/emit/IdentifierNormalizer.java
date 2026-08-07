@@ -50,8 +50,6 @@ public class IdentifierNormalizer
 
         switch (mode)
         {
-            case RAW:
-                return identifier;
             case UNICODE_ESCAPE:
                 return escapeToUnicode(identifier);
             case SEMANTIC_RENAME:
@@ -75,8 +73,6 @@ public class IdentifierNormalizer
 
         switch (mode)
         {
-            case RAW:
-                return internalName;
             case UNICODE_ESCAPE:
                 // Escape each part of the class name separately, preserve slashes/dots
                 return escapeClassNameParts(internalName);

@@ -13,9 +13,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -26,9 +24,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * scaffolding) that the aged application-jar corpora cannot exercise. Every fixture executes a
  * deterministic {@code static int check()} twice - once from the original bytecode, once from the
  * decompile-recompile round trip - and the two values must agree, so the assertion is semantic
- * rather than textual. Fixtures reproducing a DOCUMENTED pre-existing defect are listed in
- * {@link #KNOWN_BROKEN}: the harness asserts they still fail (a silent fix or a new break of the
- * documentation both surface) without failing the suite.
+ * rather than textual. The burn-in backlog is empty: every fixture is expected to round-trip, and
+ * a failure is a regression rather than a documented defect.
  */
 class StressCorpusTest
 {
@@ -44,13 +41,6 @@ class StressCorpusTest
             this.source = source;
         }
     }
-
-    /**
-     * Fixtures whose round trip is known-wrong today, tagged by observed failure kind; the whole set is
-     * the modern-javac burn-in backlog (stress-corpus-findings memory note). The harness asserts each
-     * still fails, so a silent fix or a new regression of the documentation both surface.
-     */
-    private static final Set<String> KNOWN_BROKEN = new LinkedHashSet<>();
 
     private static final List<Fixture> FIXTURES = List.of(
         new Fixture("SDoWhileTryZoo", "public class SDoWhileTryZoo {\n"
@@ -843,7 +833,6 @@ class StressCorpusTest
         String d1 = ClassDecompiler.decompile(cf);
         assertFalse(d1.contains("Failed to decompile"), f.name + " must decompile every method:\n" + d1);
 
-        boolean expectBroken = KNOWN_BROKEN.contains(f.name);
         Object roundTripped;
         try
         {
@@ -853,17 +842,7 @@ class StressCorpusTest
         }
         catch (Throwable t)
         {
-            if (expectBroken)
-            {
-                return;
-            }
             throw new AssertionError(f.name + " round trip failed to load/run: " + t + "\n" + d1, t);
-        }
-        if (expectBroken)
-        {
-            assertNotEquals(original, roundTripped, f.name + " is documented KNOWN_BROKEN but now round-trips equal (" + original
-                    + ") - promote it to a passing fixture and update the memory notes");
-            return;
         }
         assertEquals(original, roundTripped, f.name + " original and round-tripped check() must agree:\n" + d1);
     }

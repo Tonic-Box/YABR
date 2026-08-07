@@ -87,17 +87,6 @@ public final class InvokeDynamicInfo
             char c = descriptor.charAt(i);
             switch (c)
             {
-                case 'J':
-                case 'D':
-                case 'I':
-                case 'F':
-                case 'B':
-                case 'C':
-                case 'S':
-                case 'Z':
-                    count++;
-                    i++;
-                    break;
                 case 'L':
                     count++;
                     while (i < descriptor.length() && descriptor.charAt(i) != ';')

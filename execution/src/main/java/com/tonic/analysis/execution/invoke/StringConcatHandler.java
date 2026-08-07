@@ -14,13 +14,12 @@ public final class StringConcatHandler
 
     /**
      * Builds the concatenated string, expanding the recipe's argument and constant markers in order.
-     * @param info the invokedynamic call site information
      * @param stackArgs the dynamic argument values popped from the stack
      * @param recipe the concat recipe, or null or empty for plain concatenation
      * @param constants the bootstrap constant arguments, may be null
      * @return the concatenated string
      */
-    public String executeConcat(InvokeDynamicInfo info, ConcreteValue[] stackArgs, String recipe, Object[] constants)
+    public String executeConcat(ConcreteValue[] stackArgs, String recipe, Object[] constants)
     {
         if (recipe == null || recipe.isEmpty())
         {
@@ -58,11 +57,10 @@ public final class StringConcatHandler
 
     /**
      * Concatenates the stack arguments in order for a recipe-less call site.
-     * @param info the invokedynamic call site information
      * @param stackArgs the dynamic argument values popped from the stack
      * @return the concatenated string
      */
-    public String executeConcat(InvokeDynamicInfo info, ConcreteValue[] stackArgs)
+    public String executeConcat(ConcreteValue[] stackArgs)
     {
         return buildSimpleConcat(stackArgs);
     }
@@ -111,11 +109,6 @@ public final class StringConcatHandler
             char c = descriptor.charAt(i);
             switch (c)
             {
-                case 'J':
-                case 'D':
-                    count++;
-                    i++;
-                    break;
                 case 'L':
                     count++;
                     while (i < descriptor.length() && descriptor.charAt(i) != ';')

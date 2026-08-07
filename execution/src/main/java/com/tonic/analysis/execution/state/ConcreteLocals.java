@@ -2,8 +2,6 @@ package com.tonic.analysis.execution.state;
 
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.parser.MethodEntry;
-
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -229,7 +227,7 @@ public final class ConcreteLocals
             throw new IllegalArgumentException("Method cannot be null");
         }
 
-        int maxLocals = 0;
+        int maxLocals;
         if (method.getCodeAttribute() != null)
         {
             maxLocals = method.getCodeAttribute().getMaxLocals();

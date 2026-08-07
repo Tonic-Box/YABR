@@ -17,7 +17,7 @@ public final class CallStackState
 
     private CallStackState(List<CallFrame> frames)
     {
-        this.frames = Collections.unmodifiableList(new ArrayList<>(frames));
+        this.frames = List.copyOf(frames);
     }
 
     /**

@@ -241,7 +241,7 @@ class ASTLowererTest
         );
 
         assertNotNull(irMethod);
-        assertTrue(!irMethod.getEntryBlock().getInstructions().isEmpty());
+        assertFalse(irMethod.getEntryBlock().getInstructions().isEmpty());
     }
 
     // Expression Lowering Tests

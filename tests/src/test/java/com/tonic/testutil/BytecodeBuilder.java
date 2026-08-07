@@ -89,8 +89,8 @@ public class BytecodeBuilder
      */
     public static class BootstrapMethodDef
     {
-        int methodHandleIndex;
-        List<Integer> arguments;
+        final int methodHandleIndex;
+        final List<Integer> arguments;
 
         BootstrapMethodDef(int methodHandleIndex, List<Integer> arguments)
         {

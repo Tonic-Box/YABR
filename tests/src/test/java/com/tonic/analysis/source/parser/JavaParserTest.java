@@ -858,7 +858,7 @@ class JavaParserTest
     {
         private MethodDecl method(CompilationUnit cu)
         {
-            return ((ClassDecl) cu.getTypes().get(0)).getMethods().get(0);
+            return cu.getTypes().get(0).getMethods().get(0);
         }
 
         @Test

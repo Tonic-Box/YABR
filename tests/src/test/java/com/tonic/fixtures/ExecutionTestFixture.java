@@ -93,8 +93,7 @@ public class ExecutionTestFixture
         int sum = i + (int) l;
         long product = l * i;
         float fResult = f + (float) sum;
-        double dResult = d + fResult + product;
-        return dResult;
+        return d + fResult + product;
     }
 
     public static int bitwiseMagic(int a, int b)

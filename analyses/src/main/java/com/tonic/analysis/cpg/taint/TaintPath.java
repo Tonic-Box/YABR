@@ -23,7 +23,7 @@ public class TaintPath
         this.sink = sink;
         this.sourceNode = sourceNode;
         this.sinkNode = sinkNode;
-        this.path = Collections.unmodifiableList(new ArrayList<>(path));
+        this.path = List.copyOf(path);
         this.sanitizers = new LinkedHashSet<>();
     }
 

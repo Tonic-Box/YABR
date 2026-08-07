@@ -2,10 +2,6 @@ package com.tonic.analysis.ssa.transform;
 
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -112,7 +108,7 @@ class MethodInliningTest
         transform.run(classFile, ssa);
 
         // ClassFile auto-creates default constructor + clinit, so expect at least 1 method
-        assertTrue(classFile.getMethods().size() >= 1);
+        assertFalse(classFile.getMethods().isEmpty());
     }
 
     @Test

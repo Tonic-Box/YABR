@@ -2,9 +2,7 @@ package com.tonic.analysis.source.ast;
 
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
-import com.tonic.analysis.source.ast.type.*;
 import com.tonic.analysis.source.visitor.AbstractSourceVisitor;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;

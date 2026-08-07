@@ -26,6 +26,22 @@ import static org.junit.jupiter.api.Assertions.*;
 class StackSchedulerTest
 {
 
+    /**
+     * The position of the first scheduled instruction of {@code type}, or -1 when there is none.
+     */
+    private static int indexOfType(List<StackScheduler.ScheduledInstruction> schedule,
+            StackScheduler.ScheduleType type)
+    {
+        for (int i = 0; i < schedule.size(); i++)
+        {
+            if (schedule.get(i).getType() == type)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @BeforeEach
     void setUp()
     {
@@ -79,7 +95,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0, "Schedule should contain instructions");
+            assertFalse(schedule.isEmpty(), "Schedule should contain instructions");
         }
 
         @Test
@@ -129,7 +145,7 @@ class StackSchedulerTest
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
             // Should have at least the return instruction
-            assertTrue(schedule.size() >= 1);
+            assertFalse(schedule.isEmpty());
         }
     }
 
@@ -168,7 +184,8 @@ class StackSchedulerTest
                 .count();
 
             // Should have LOADs for operands that were stored
-            assertTrue(loadCount >= 0, "Should emit LOAD instructions for stored values");
+            assertTrue(loadCount >= 1,
+                "an operand buried by a later definition must be reloaded, not left on the stack");
         }
 
         @Test
@@ -234,7 +251,8 @@ class StackSchedulerTest
                 .filter(si -> si.getType() == StackScheduler.ScheduleType.LOAD)
                 .count();
 
-            assertTrue(loadCount >= 0, "Multiple uses should produce LOADs");
+            assertTrue(loadCount >= 2,
+                "each reuse of a value past its first consumer must reload it");
         }
     }
 
@@ -273,7 +291,8 @@ class StackSchedulerTest
                 .count();
 
             // Values used multiple times should be stored
-            assertTrue(storeCount >= 0, "Should emit STORE for multiply-used values");
+            assertTrue(storeCount >= 1,
+                "a value read more than once must be spilled to a local");
         }
 
         @Test
@@ -366,7 +385,7 @@ class StackSchedulerTest
             assertNotNull(schedule);
 
             // The schedule should be optimized for immediate use
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
 
         @Test
@@ -397,8 +416,13 @@ class StackSchedulerTest
             long storeCount = schedule.stream()
                 .filter(si -> si.getType() == StackScheduler.ScheduleType.STORE)
                 .count();
+            long loadCount = schedule.stream()
+                .filter(si -> si.getType() == StackScheduler.ScheduleType.LOAD)
+                .count();
 
-            assertTrue(storeCount >= 0, "Non-immediate uses should produce STOREs");
+            assertTrue(loadCount >= 2, "both operands of the add are buried and must be reloaded");
+            assertTrue(storeCount >= loadCount,
+                "every reload needs a spill behind it; a LOAD with no STORE reads an undefined local");
         }
 
         @Test
@@ -426,7 +450,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
@@ -463,7 +487,7 @@ class StackSchedulerTest
             // Long values should be counted as 2 stack slots
             int maxStack = scheduler.getMaxStack();
             // With two longs potentially on stack, max should account for 2-slot types
-            assertTrue(maxStack >= 0, "Max stack should account for long (2-slot) values");
+            assertTrue(maxStack >= 2, "a long occupies two stack slots");
         }
 
         @Test
@@ -492,7 +516,7 @@ class StackSchedulerTest
             scheduler.schedule();
 
             int maxStack = scheduler.getMaxStack();
-            assertTrue(maxStack >= 0, "Max stack should account for double (2-slot) values");
+            assertTrue(maxStack >= 2, "a double occupies two stack slots");
         }
 
         @Test
@@ -518,9 +542,17 @@ class StackSchedulerTest
             StackScheduler scheduler = new StackScheduler(method, regAlloc);
             scheduler.schedule();
 
-            int maxStack = scheduler.getMaxStack();
-            // Should correctly account for mixed slot sizes
-            assertTrue(maxStack >= 0);
+            // The long is spilled, so it never shares the stack with the int being returned; what the
+            // two-slot width must change is the LOCAL numbering - the value after a long cannot sit
+            // in the next index, or the two halves of the long are overwritten.
+            List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
+            List<Integer> storeSlots = schedule.stream()
+                .filter(si -> si.getType() == StackScheduler.ScheduleType.STORE)
+                .map(si -> ((StoreLocalInstruction) si.getInstruction()).getLocalIndex())
+                .collect(java.util.stream.Collectors.toList());
+            assertEquals(3, storeSlots.size(), "each of the three constants is spilled");
+            assertTrue(storeSlots.get(2) - storeSlots.get(1) >= 2,
+                "a long reserves two local slots, so the next value skips one: " + storeSlots);
         }
 
         @Test
@@ -584,7 +616,11 @@ class StackSchedulerTest
                 .anyMatch(si -> si.getType() == StackScheduler.ScheduleType.LOAD);
 
             // May or may not have loads depending on optimization
-            assertTrue(hasLoad || !hasLoad, "Schedule should handle LOAD type correctly");
+            assertTrue(hasLoad, "the operand buried by the second constant must be reloaded");
+            int firstStore = indexOfType(schedule, StackScheduler.ScheduleType.STORE);
+            int firstLoad = indexOfType(schedule, StackScheduler.ScheduleType.LOAD);
+            assertTrue(firstStore >= 0 && firstLoad > firstStore,
+                "the reload must follow the spill it reads");
         }
 
         @Test
@@ -614,7 +650,7 @@ class StackSchedulerTest
                 .anyMatch(si -> si.getType() == StackScheduler.ScheduleType.STORE);
 
             // May or may not have stores depending on optimization
-            assertTrue(hasStore || !hasStore, "Schedule should handle STORE type correctly");
+            assertTrue(hasStore, "the operand buried by the second constant must be spilled");
         }
 
         @Test
@@ -727,7 +763,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
 
         @Test
@@ -832,7 +868,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
@@ -861,8 +897,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            // Empty block should produce empty or minimal schedule
-            assertTrue(schedule.size() >= 0);
+            assertTrue(schedule.isEmpty(), "an empty block schedules nothing");
         }
 
         @Test
@@ -922,7 +957,7 @@ class StackSchedulerTest
 
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
             assertTrue(scheduler.getMaxStack() > 0, "Deep nesting should increase max stack");
         }
 
@@ -959,7 +994,7 @@ class StackSchedulerTest
             List<StackScheduler.ScheduledInstruction> schedule = scheduler.getSchedule();
             assertNotNull(schedule);
             // Parameters should be loaded from their slots
-            assertTrue(schedule.size() > 0);
+            assertFalse(schedule.isEmpty());
         }
     }
 
@@ -1029,7 +1064,7 @@ class StackSchedulerTest
             int maxStack = scheduler.getMaxStack();
 
             // Max stack should be reasonable
-            assertTrue(maxStack >= 0, "Max stack should be non-negative");
+            assertTrue(maxStack >= 1, "a method that returns a computed value needs stack space");
             assertTrue(maxStack < 100, "Max stack should be reasonable for small method");
         }
     }

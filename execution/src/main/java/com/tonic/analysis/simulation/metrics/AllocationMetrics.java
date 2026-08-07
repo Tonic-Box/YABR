@@ -20,7 +20,7 @@ public class AllocationMetrics
     {
         this.objectCount = objectCount;
         this.arrayCount = arrayCount;
-        this.allocationsByType = Collections.unmodifiableMap(new HashMap<>(allocationsByType));
+        this.allocationsByType = Map.copyOf(allocationsByType);
     }
 
     /**

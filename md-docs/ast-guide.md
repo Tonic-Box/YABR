@@ -1003,6 +1003,11 @@ statements.set(0, replacementStmt);
 statements.clear();
 ```
 
+`remove(Object)` and `replace(old, new)` match by identity rather than by `equals` as `List`
+specifies. Types compare by value, so a list such as the type arguments of `Map<String, String>`
+holds equal entries that an equals-based search cannot tell apart; identity guarantees the instance
+you passed is the one that leaves the list.
+
 NodeList is used internally by:
 - `BlockStmt.statements`
 - `ForStmt.init` and `ForStmt.update`

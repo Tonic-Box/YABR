@@ -381,13 +381,9 @@ public final class StateTransitions
             case ARRAYLENGTH:
                 return state.pop().push(SimValue.ofType(PrimitiveType.INT, instr));
             case MONITORENTER:
-                return state.pop();
             case MONITOREXIT:
-                return state.pop();
             case ATHROW:
                 return state.pop();
-            case GOTO:
-                return state;
             default:
                 return state;
         }

@@ -124,7 +124,7 @@ class ClassBuilderTest
                 .interfaces("java/lang/Runnable")
                 .build();
 
-            assertTrue(cf.getInterfaces().size() >= 1);
+            assertTrue(!cf.getInterfaces().isEmpty());
         }
     }
 
@@ -333,7 +333,7 @@ class ClassBuilderTest
             ClassFile cf = ClassBuilder.create("com/test/NoInterfacesTest")
                 .build();
 
-            assertTrue(cf.getInterfaces().isEmpty() || cf.getInterfaces().size() == 0);
+            assertTrue(cf.getInterfaces().isEmpty());
         }
 
         @Test

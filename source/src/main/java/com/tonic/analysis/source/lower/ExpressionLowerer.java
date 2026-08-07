@@ -79,15 +79,13 @@ public class ExpressionLowerer
                 if (effectiveAnd)
                 {
                     lowerCondition(bin.getLeft(), evalRight, falseTarget, negate);
-                    ctx.setCurrentBlock(evalRight);
-                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
                 }
                 else
                 {
                     lowerCondition(bin.getLeft(), trueTarget, evalRight, negate);
-                    ctx.setCurrentBlock(evalRight);
-                    lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
                 }
+                ctx.setCurrentBlock(evalRight);
+                lowerCondition(bin.getRight(), trueTarget, falseTarget, negate);
                 return;
             }
         }

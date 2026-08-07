@@ -125,7 +125,6 @@ public class PatternSwitchDesugar implements ASTTransform
                     stmts.addAll(i, repl);
                     i += repl.size() - 1;
                     changed = true;
-                    continue;
                 }
             }
         }
@@ -168,7 +167,8 @@ public class PatternSwitchDesugar implements ASTTransform
         {
             if (arm.isRecordDeconstruction())
             {
-                if (recordAccessorNames(arm.getPatternType()) == null)
+                List<String> accessors = recordAccessorNames(arm.getPatternType());
+                if (accessors == null || accessors.size() < arm.getDeconstructionComponents().size())
                 {
                     return false;
                 }

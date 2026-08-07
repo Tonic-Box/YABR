@@ -164,9 +164,7 @@ class CompositeListenerTest
         composite.add(listener1);
         List<SimulationListener> listeners = composite.getListeners();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listeners.add(listener2);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listeners.add(listener2));
     }
 
     @Test

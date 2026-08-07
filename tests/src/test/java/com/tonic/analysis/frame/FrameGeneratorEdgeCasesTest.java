@@ -158,7 +158,7 @@ class FrameGeneratorEdgeCasesTest
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0);
+            assertFalse(frames.isEmpty());
         }
 
         @Test
@@ -190,7 +190,7 @@ class FrameGeneratorEdgeCasesTest
             List<StackMapFrame> frames = generator.computeFrames(method);
 
             assertNotNull(frames);
-            assertTrue(frames.size() > 0);
+            assertFalse(frames.isEmpty());
         }
 
         @Test

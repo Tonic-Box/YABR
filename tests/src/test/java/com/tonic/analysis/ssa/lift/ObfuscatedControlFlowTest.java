@@ -1,9 +1,7 @@
 package com.tonic.analysis.ssa.lift;
 
 import com.tonic.analysis.ssa.SSA;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.IRInstruction;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import com.tonic.parser.MethodEntry;

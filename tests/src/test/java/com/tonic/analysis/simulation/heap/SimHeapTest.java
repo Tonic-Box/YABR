@@ -751,6 +751,254 @@ class SimHeapTest
         }
 
         @Test
+        void staticFieldTargetEscapes()
+        {
+            SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+            AllocationSite site = AllocationSite.of("com/example/Singleton", 1, "<clinit>()V");
+            heap.allocate(site);
+
+            EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+            assertEquals(EscapeAnalyzer.EscapeState.NO_ESCAPE, analyzer.analyze(site),
+                "the allocation is still local before the static write");
+
+            FieldKey staticField = FieldKey.of("com/example/Singleton", "INSTANCE", "Lcom/example/Singleton;");
+            heap.putStatic(staticField, SimValue.ofAllocation(site,
+                IRType.fromDescriptor("Lcom/example/Singleton;"), null));
+
+            assertEquals(EscapeAnalyzer.EscapeState.GLOBAL_ESCAPE, analyzer.analyze(site),
+                "a static field is a global root, so what it points at escapes");
+        }
+
+        @Test
+        void objectReachableFromAStaticEscapes()
+        {
+            SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+            AllocationSite held = AllocationSite.of("Holder", 1, "<clinit>()V");
+            AllocationSite inner = AllocationSite.of("Inner", 2, "<clinit>()V");
+            AllocationSite unrelated = AllocationSite.of("Unrelated", 3, "m");
+
+            heap.allocate(held);
+            heap.allocate(inner);
+            heap.allocate(unrelated);
+
+            FieldKey link = FieldKey.of("Holder", "inner", "LInner;");
+            heap.putField(held, link, SimValue.ofAllocation(inner, IRType.fromDescriptor("LInner;"), null));
+
+            FieldKey staticField = FieldKey.of("Holder", "HELD", "LHolder;");
+            heap.putStatic(staticField, SimValue.ofAllocation(held, IRType.fromDescriptor("LHolder;"), null));
+
+            EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+            assertEquals(EscapeAnalyzer.EscapeState.GLOBAL_ESCAPE, analyzer.analyze(held),
+                "the site the static names escapes");
+            assertEquals(EscapeAnalyzer.EscapeState.GLOBAL_ESCAPE, analyzer.analyze(inner),
+                "escape through a static is transitive, not just the field's direct target");
+            assertEquals(EscapeAnalyzer.EscapeState.NO_ESCAPE, analyzer.analyze(unrelated),
+                "a site no static reaches stays local");
+        }
+
+        @Test
+        void staticFieldTargetIsReportedByTheSetQueries()
+        {
+            SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+            AllocationSite held = AllocationSite.of("Held", 1, "<clinit>()V");
+            AllocationSite local = AllocationSite.of("Local", 2, "m");
+            heap.allocate(held);
+            heap.allocate(local);
+
+            FieldKey staticField = FieldKey.of("Held", "INSTANCE", "LHeld;");
+            heap.putStatic(staticField, SimValue.ofAllocation(held, IRType.fromDescriptor("LHeld;"), null));
+
+            EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+
+            assertTrue(analyzer.getEscaping().contains(held));
+            assertFalse(analyzer.getNonEscaping().contains(held),
+                "a statically held site must never be offered as a stack-allocation candidate");
+            assertTrue(analyzer.getNonEscaping().contains(local));
+            assertTrue(analyzer.definitelyEscapes(held));
+        }
+
+        @Test
+        void aStaticHoldingAnUnrelatedValueDoesNotEscapeEverything()
+        {
+            SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+
+            AllocationSite held = AllocationSite.of("Held", 1, "<clinit>()V");
+            AllocationSite local = AllocationSite.of("Local", 2, "m");
+            heap.allocate(held);
+            heap.allocate(local);
+
+            FieldKey staticField = FieldKey.of("Held", "INSTANCE", "LHeld;");
+            heap.putStatic(staticField, SimValue.ofAllocation(held, IRType.fromDescriptor("LHeld;"), null));
+
+            EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+            assertEquals(EscapeAnalyzer.EscapeState.NO_ESCAPE, analyzer.analyze(local),
+                "writing one static must not classify unrelated allocations as escaping");
+        }
+
+        @Test
+        void anImmutableHeapsStaticWriteEscapesOnlyInTheCopy()
+        {
+            SimHeap heap = new SimHeap(HeapMode.IMMUTABLE);
+            AllocationSite site = AllocationSite.of("Held", 1, "<clinit>()V");
+            heap = heap.allocate(site);
+
+            FieldKey staticField = FieldKey.of("Held", "INSTANCE", "LHeld;");
+            SimHeap withStatic = heap.putStatic(staticField, SimValue.ofAllocation(site,
+                IRType.fromDescriptor("LHeld;"), null));
+
+            assertEquals(EscapeAnalyzer.EscapeState.NO_ESCAPE, new EscapeAnalyzer(heap).analyze(site),
+                "the pre-write heap never held the static, so its view stays local");
+            assertEquals(EscapeAnalyzer.EscapeState.GLOBAL_ESCAPE, new EscapeAnalyzer(withStatic).analyze(site),
+                "the copy carrying the static write must classify the site as escaping");
+        }
+
+        @Test
+        void randomHeapsAgreeWithABruteForceClassification()
+        {
+            for (long seed = 0; seed < 300; seed++)
+            {
+                SimHeap heap = randomHeap(new Random(seed));
+                EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+                Set<AllocationSite> expectedEscaping = bruteForceEscaping(heap, analyzer);
+
+                for (AllocationSite site : heap.getAllSites())
+                {
+                    EscapeAnalyzer.EscapeState expected = expectedEscaping.contains(site)
+                        ? EscapeAnalyzer.EscapeState.GLOBAL_ESCAPE
+                        : EscapeAnalyzer.EscapeState.NO_ESCAPE;
+                    assertEquals(expected, analyzer.analyze(site),
+                        "seed " + seed + " disagreed on " + site);
+                }
+
+                assertEquals(expectedEscaping, analyzer.getEscaping(),
+                    "seed " + seed + " escaping set");
+
+                Set<AllocationSite> expectedLocal = new HashSet<>(heap.getAllSites());
+                expectedLocal.removeAll(expectedEscaping);
+                assertEquals(expectedLocal, analyzer.getNonEscaping(),
+                    "seed " + seed + " non-escaping set");
+            }
+        }
+
+        @Test
+        void theSetQueriesAgreeWithPerSiteClassification()
+        {
+            for (long seed = 1000; seed < 1100; seed++)
+            {
+                SimHeap heap = randomHeap(new Random(seed));
+                EscapeAnalyzer analyzer = new EscapeAnalyzer(heap);
+
+                Set<AllocationSite> escaping = analyzer.getEscaping();
+                Set<AllocationSite> nonEscaping = analyzer.getNonEscaping();
+
+                for (AllocationSite site : heap.getAllSites())
+                {
+                    boolean escapes = analyzer.analyze(site) != EscapeAnalyzer.EscapeState.NO_ESCAPE;
+                    assertEquals(escapes, escaping.contains(site),
+                        "seed " + seed + ": getEscaping disagreed with analyze on " + site);
+                    assertEquals(escapes, analyzer.mayEscape(site));
+                    assertNotEquals(escaping.contains(site), nonEscaping.contains(site),
+                        "seed " + seed + ": the two sets must partition the heap");
+                }
+
+                assertEquals(heap.getAllSites().size(), escaping.size() + nonEscaping.size(),
+                    "seed " + seed + ": every site belongs to exactly one set");
+            }
+        }
+
+        /**
+         * Classifies every site the naive way: one single-source walk per global root, unioned by
+         * disjunction. Independent of the analyzer's combined-root walk, so it is a real oracle for it.
+         */
+        private Set<AllocationSite> bruteForceEscaping(SimHeap heap, EscapeAnalyzer analyzer)
+        {
+            Set<AllocationSite> escaping = new HashSet<>();
+            for (AllocationSite site : heap.getAllSites())
+            {
+                if (heap.hasEscaped(site))
+                {
+                    escaping.add(site);
+                }
+            }
+
+            List<AllocationSite> roots = new ArrayList<>(escaping);
+            roots.addAll(heap.getStaticRoots());
+
+            for (AllocationSite root : roots)
+            {
+                Set<AllocationSite> reachable = analyzer.getReachableFrom(root);
+                for (AllocationSite site : heap.getAllSites())
+                {
+                    if (reachable.contains(site))
+                    {
+                        escaping.add(site);
+                    }
+                }
+            }
+            return escaping;
+        }
+
+        /**
+         * Builds a random object/array graph with random escape marks and static writes, so the
+         * generated heaps cover empty-root, all-escaped, cyclic and disconnected shapes.
+         */
+        private SimHeap randomHeap(Random random)
+        {
+            SimHeap heap = new SimHeap(HeapMode.MUTABLE);
+            IRType ref = IRType.fromDescriptor("Ljava/lang/Object;");
+            IRType intType = IRType.fromDescriptor("I");
+
+            int count = 4 + random.nextInt(9);
+            List<AllocationSite> sites = new ArrayList<>();
+            for (int i = 0; i < count; i++)
+            {
+                AllocationSite site = AllocationSite.of("Node" + i, i, "m()V");
+                sites.add(site);
+                if (random.nextBoolean())
+                {
+                    heap.allocate(site);
+                }
+                else
+                {
+                    heap.allocateArray(site, ref, SimValue.constant(4, intType, null));
+                }
+            }
+
+            int edges = random.nextInt(count * 2);
+            for (int i = 0; i < edges; i++)
+            {
+                AllocationSite from = sites.get(random.nextInt(count));
+                AllocationSite to = sites.get(random.nextInt(count));
+                SimValue target = SimValue.ofAllocation(to, ref, null);
+                if (heap.hasArray(from))
+                {
+                    heap.arrayStore(from, SimValue.constant(i % 4, intType, null), target);
+                }
+                else
+                {
+                    heap.putField(from, FieldKey.of("Node", "f" + (i % 3), "Ljava/lang/Object;"), target);
+                }
+            }
+
+            for (AllocationSite site : sites)
+            {
+                if (random.nextInt(6) == 0)
+                {
+                    heap.markEscaped(site);
+                }
+                if (random.nextInt(6) == 0)
+                {
+                    heap.putStatic(FieldKey.of("Globals", "g" + random.nextInt(3), "Ljava/lang/Object;"),
+                        SimValue.ofAllocation(site, ref, null));
+                }
+            }
+            return heap;
+        }
+
+        @Test
         void testGetNonEscaping()
         {
             SimHeap heap = new SimHeap(HeapMode.MUTABLE);

@@ -67,19 +67,6 @@ public final class SimHeap
     }
 
     /**
-     * Allocates an object and builds the reference value pointing at it.
-     * @param site the allocating instruction
-     * @param type the allocated type, unused
-     * @param refFactory builds the reference value for the site
-     * @return the reference value
-     */
-    public SimValue allocateAndGetRef(AllocationSite site, IRType type, java.util.function.Function<AllocationSite, SimValue> refFactory)
-    {
-        allocate(site);
-        return refFactory.apply(site);
-    }
-
-    /**
      * Records a fresh array at an allocation site, replacing any array already recorded there.
      * @param site the allocating instruction
      * @param elementType the component type
@@ -405,6 +392,24 @@ public final class SimHeap
     {
         Set<SimValue> values = staticFields.get(field);
         return values != null ? Collections.unmodifiableSet(values) : Collections.emptySet();
+    }
+
+    /**
+     * The allocation sites any static field may point at. A static is a global root, so everything these
+     * sites reach is reachable from outside its allocating method.
+     * @return the sites referenced by static fields, empty if none were ever written
+     */
+    public Set<AllocationSite> getStaticRoots()
+    {
+        Set<AllocationSite> roots = new HashSet<>();
+        for (Set<SimValue> values : staticFields.values())
+        {
+            for (SimValue value : values)
+            {
+                roots.addAll(value.getPointsTo());
+            }
+        }
+        return roots;
     }
 
     /**

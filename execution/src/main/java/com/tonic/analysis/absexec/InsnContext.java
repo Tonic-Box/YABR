@@ -2,6 +2,8 @@ package com.tonic.analysis.absexec;
 
 import com.tonic.analysis.instruction.Instruction;
 
+import static com.tonic.util.Opcode.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -132,18 +134,20 @@ public final class InsnContext
     public InsnContext resolve()
     {
         int op = insn.getOpcode();
-        // putfield (0xB5) / putstatic (0xB3): the value being set is pops[0].
-        if (op == 0xB5 || op == 0xB3)
+        // the value being set is pops[0]
+        if (op == PUTFIELD.getCode() || op == PUTSTATIC.getCode())
         {
             return pops.isEmpty() ? this : pops.get(0).getPushed().resolve();
         }
         // stores (istore..astore incl _n forms): pops[0] is the stored value.
-        if ((op >= 0x36 && op <= 0x3A) || (op >= 0x3B && op <= 0x4E))
+        if ((op >= ISTORE.getCode() && op <= ASTORE.getCode())
+                || (op >= ISTORE_0.getCode() && op <= ASTORE_3.getCode()))
         {
             return pops.isEmpty() ? this : pops.get(0).getPushed().resolve();
         }
         // loads (iload..aload incl _n forms): follow the local's storing instruction.
-        if ((op >= 0x15 && op <= 0x19) || (op >= 0x1A && op <= 0x2D))
+        if ((op >= ILOAD.getCode() && op <= ALOAD.getCode())
+                || (op >= ILOAD_0.getCode() && op <= ALOAD_3.getCode()))
         {
             if (reads.isEmpty())
             {

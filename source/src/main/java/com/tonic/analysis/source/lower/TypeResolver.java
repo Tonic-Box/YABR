@@ -702,6 +702,12 @@ public class TypeResolver
                     if (argTypes.size() == 1) return PrimitiveSourceType.CHAR;
                     break;
                 case "substring":
+                case "toLowerCase":
+                case "toUpperCase":
+                case "trim":
+                case "concat":
+                case "replace":
+                case "valueOf":
                     return ReferenceSourceType.STRING;
                 case "equals":
                 case "equalsIgnoreCase":
@@ -710,13 +716,6 @@ public class TypeResolver
                 case "contains":
                 case "isEmpty":
                     return PrimitiveSourceType.BOOLEAN;
-                case "toLowerCase":
-                case "toUpperCase":
-                case "trim":
-                case "concat":
-                case "replace":
-                case "valueOf":
-                    return ReferenceSourceType.STRING;
                 case "indexOf":
                 case "lastIndexOf":
                 case "compareTo":

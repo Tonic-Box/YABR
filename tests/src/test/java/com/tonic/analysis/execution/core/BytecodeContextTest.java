@@ -117,11 +117,9 @@ class BytecodeContextTest
     {
         ClassResolver resolver = mock(ClassResolver.class);
 
-        assertThrows(IllegalStateException.class, () -> {
-            new BytecodeContext.Builder()
-                .classResolver(resolver)
-                .build();
-        });
+        assertThrows(IllegalStateException.class, () -> new BytecodeContext.Builder()
+            .classResolver(resolver)
+            .build());
     }
 
     @Test
@@ -129,51 +127,39 @@ class BytecodeContextTest
     {
         HeapManager heap = mock(HeapManager.class);
 
-        assertThrows(IllegalStateException.class, () -> {
-            new BytecodeContext.Builder()
-                .heapManager(heap)
-                .build();
-        });
+        assertThrows(IllegalStateException.class, () -> new BytecodeContext.Builder()
+            .heapManager(heap)
+            .build());
     }
 
     @Test
     void testBuilderRejectsNullMode()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().mode(null);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().mode(null));
     }
 
     @Test
     void testBuilderRejectsNegativeMaxCallDepth()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxCallDepth(-1);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxCallDepth(-1));
     }
 
     @Test
     void testBuilderRejectsZeroMaxCallDepth()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxCallDepth(0);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxCallDepth(0));
     }
 
     @Test
     void testBuilderRejectsNegativeMaxInstructions()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxInstructions(-1);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxInstructions(-1));
     }
 
     @Test
     void testBuilderRejectsZeroMaxInstructions()
     {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new BytecodeContext.Builder().maxInstructions(0);
-        });
+        assertThrows(IllegalArgumentException.class, () -> new BytecodeContext.Builder().maxInstructions(0));
     }
 
     @Test
@@ -228,14 +214,18 @@ class BytecodeContextTest
     void testBuilderAcceptsNullHeapManagerBeforeBuild()
     {
         BytecodeContext.Builder builder = new BytecodeContext.Builder();
-        builder.heapManager(null);
+
+        assertDoesNotThrow(() -> builder.heapManager(null),
+            "the builder must defer null rejection to build(), not reject on the setter");
     }
 
     @Test
     void testBuilderAcceptsNullClassResolverBeforeBuild()
     {
         BytecodeContext.Builder builder = new BytecodeContext.Builder();
-        builder.classResolver(null);
+
+        assertDoesNotThrow(() -> builder.classResolver(null),
+            "the builder must defer null rejection to build(), not reject on the setter");
     }
 
     @Test

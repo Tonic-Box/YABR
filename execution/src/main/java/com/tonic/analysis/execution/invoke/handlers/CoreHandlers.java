@@ -2,7 +2,6 @@ package com.tonic.analysis.execution.invoke.handlers;
 
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.analysis.execution.invoke.NativeContext;
 import com.tonic.analysis.execution.invoke.NativeException;
 import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;

@@ -1,7 +1,6 @@
 package com.tonic.analysis.execution.invoke.handlers;
 
 import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
@@ -38,7 +37,7 @@ public final class SecurityHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 if (args != null && args.length > 0 && !args[0].isNull())
                 {
-                    ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                    ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                     java.security.SecureRandom secureRandom = new java.security.SecureRandom();
                     byte[] bytes = new byte[arr.getLength()];
                     secureRandom.nextBytes(bytes);

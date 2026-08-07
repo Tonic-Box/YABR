@@ -3,9 +3,6 @@ package com.tonic.analysis.source.ast.type;
 import com.tonic.analysis.source.visitor.SourceVisitor;
 import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.ReferenceType;
-
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -30,7 +27,7 @@ public final class UnionSourceType implements SourceType
         {
             throw new IllegalArgumentException("Union type requires at least 2 alternatives");
         }
-        this.alternatives = Collections.unmodifiableList(new ArrayList<>(alternatives));
+        this.alternatives = List.copyOf(alternatives);
     }
 
     /**

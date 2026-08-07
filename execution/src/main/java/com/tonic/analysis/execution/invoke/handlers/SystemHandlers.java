@@ -289,7 +289,7 @@ public final class SystemHandlers implements NativeHandlerProvider
                     Object val = src.get(srcPos + i);
                     if (val instanceof ConcreteValue)
                     {
-                        dest.set(destPos + i, (ConcreteValue) val);
+                        dest.set(destPos + i, val);
                     }
                     else
                     {

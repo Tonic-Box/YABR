@@ -428,8 +428,6 @@ public class TypeRecoverer
 
         switch (descriptor.charAt(0))
         {
-            case 'V':
-                return VoidSourceType.INSTANCE;
             case 'Z':
                 return PrimitiveSourceType.BOOLEAN;
             case 'B':

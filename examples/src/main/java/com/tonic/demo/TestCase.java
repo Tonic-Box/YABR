@@ -17,7 +17,7 @@ public class TestCase implements MouseListener
     protected static String fieldTest = "Test string";
 
     // A regular instance field
-    private int instanceField;
+    private final int instanceField;
 
     /**
      * Initializes the instance field from the class constant.

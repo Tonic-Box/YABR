@@ -2,7 +2,6 @@ package com.tonic.analysis.source.emit;
 
 import com.tonic.analysis.source.ast.expr.ArrayAccessExpr;
 import com.tonic.analysis.source.ast.expr.CastExpr;
-import com.tonic.analysis.source.ast.expr.Expression;
 import com.tonic.analysis.source.ast.expr.InstanceOfExpr;
 import com.tonic.analysis.source.ast.expr.MethodCallExpr;
 import com.tonic.analysis.source.ast.expr.UnaryExpr;

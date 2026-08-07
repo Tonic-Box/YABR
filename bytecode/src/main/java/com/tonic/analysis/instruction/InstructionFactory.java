@@ -49,41 +49,41 @@ public final class InstructionFactory
      */
     public static Instruction createInstruction(int opcode, int offset, byte[] bytecode, ConstPool constPool)
     {
-        switch (opcode)
+        switch (Opcode.fromCode(opcode))
         {
-            case 0x00:
+            case NOP:
                 return new NopInstruction(opcode, offset);
 
-            case 0x01:
+            case ACONST_NULL:
                 return new AConstNullInstruction(opcode, offset);
 
-            case 0x02:
-            case 0x03:
-            case 0x04:
-            case 0x05:
-            case 0x06:
-            case 0x07:
-            case 0x08:
+            case ICONST_M1:
+            case ICONST_0:
+            case ICONST_1:
+            case ICONST_2:
+            case ICONST_3:
+            case ICONST_4:
+            case ICONST_5:
                 int iconstValue = (opcode == ICONST_M1.getCode()) ? -1 : (opcode - ICONST_0.getCode());
                 return new IConstInstruction(opcode, offset, iconstValue);
 
-            case 0x09:
-            case 0x0A:
+            case LCONST_0:
+            case LCONST_1:
                 long lconstValue = (opcode == LCONST_0.getCode()) ? 0L : 1L;
                 return new LConstInstruction(opcode, offset, lconstValue);
 
-            case 0x0B:
-            case 0x0C:
-            case 0x0D:
+            case FCONST_0:
+            case FCONST_1:
+            case FCONST_2:
                 float fconstValue = (opcode == FCONST_0.getCode()) ? 0.0f : ((opcode == FCONST_1.getCode()) ? 1.0f : 2.0f);
                 return new FConstInstruction(opcode, offset, fconstValue);
 
-            case 0x0E:
-            case 0x0F:
+            case DCONST_0:
+            case DCONST_1:
                 double dconstValue = (opcode == DCONST_0.getCode()) ? 0.0 : 1.0;
                 return new DConstInstruction(opcode, offset, dconstValue);
 
-            case 0x10:
+            case BIPUSH:
                 if (offset + 1 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -91,7 +91,7 @@ public final class InstructionFactory
                 byte bipushValue = bytecode[offset + 1];
                 return new BipushInstruction(opcode, offset, bipushValue);
 
-            case 0x11:
+            case SIPUSH:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -99,7 +99,7 @@ public final class InstructionFactory
                 short sipushValue = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
                 return new SipushInstruction(opcode, offset, sipushValue);
 
-            case 0x12:
+            case LDC:
                 if (offset + 1 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -107,7 +107,7 @@ public final class InstructionFactory
                 int ldcIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
                 return new LdcInstruction(constPool, opcode, offset, ldcIndex);
 
-            case 0x13:
+            case LDC_W:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -115,7 +115,7 @@ public final class InstructionFactory
                 int ldcWIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new LdcWInstruction(constPool, opcode, offset, ldcWIndex);
 
-            case 0x14:
+            case LDC2_W:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -123,210 +123,210 @@ public final class InstructionFactory
                 int ldc2WIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new Ldc2WInstruction(constPool, opcode, offset, ldc2WIndex);
 
-            case 0x15:
-            case 0x16:
-            case 0x17:
-            case 0x18:
-            case 0x19:
-                return createLoadInstruction(opcode, offset, bytecode, getLoadInstructionName(opcode));
+            case ILOAD:
+            case LLOAD:
+            case FLOAD:
+            case DLOAD:
+            case ALOAD:
+                return createLoadInstruction(opcode, offset, bytecode);
 
-            case 0x1A:
-            case 0x1B:
-            case 0x1C:
-            case 0x1D:
-                int iloadIndex = opcode - 0x1A;
+            case ILOAD_0:
+            case ILOAD_1:
+            case ILOAD_2:
+            case ILOAD_3:
+                int iloadIndex = opcode - ILOAD_0.getCode();
                 return new ILoadInstruction(opcode, offset, iloadIndex);
 
-            case 0x1E:
-            case 0x1F:
-            case 0x20:
-            case 0x21:
-                int lloadIndex = opcode - 0x1E;
+            case LLOAD_0:
+            case LLOAD_1:
+            case LLOAD_2:
+            case LLOAD_3:
+                int lloadIndex = opcode - LLOAD_0.getCode();
                 return new LLoadInstruction(opcode, offset, lloadIndex);
 
-            case 0x22:
-            case 0x23:
-            case 0x24:
-            case 0x25:
-                int floadIndex = opcode - 0x22;
+            case FLOAD_0:
+            case FLOAD_1:
+            case FLOAD_2:
+            case FLOAD_3:
+                int floadIndex = opcode - FLOAD_0.getCode();
                 return new FLoadInstruction(opcode, offset, floadIndex);
 
-            case 0x26:
-            case 0x27:
-            case 0x28:
-            case 0x29:
-                int dloadIndex = opcode - 0x26;
+            case DLOAD_0:
+            case DLOAD_1:
+            case DLOAD_2:
+            case DLOAD_3:
+                int dloadIndex = opcode - DLOAD_0.getCode();
                 return new DLoadInstruction(opcode, offset, dloadIndex);
 
-            case 0x2A:
-            case 0x2B:
-            case 0x2C:
-            case 0x2D:
-                int aloadIndex = opcode - 0x2A;
+            case ALOAD_0:
+            case ALOAD_1:
+            case ALOAD_2:
+            case ALOAD_3:
+                int aloadIndex = opcode - ALOAD_0.getCode();
                 return new ALoadInstruction(opcode, offset, aloadIndex);
 
-            case 0x2E:
+            case IALOAD:
                 return new IALoadInstruction(opcode, offset);
 
-            case 0x2F:
+            case LALOAD:
                 return new LALoadInstruction(opcode, offset);
 
-            case 0x30:
+            case FALOAD:
                 return new FALoadInstruction(opcode, offset);
 
-            case 0x31:
+            case DALOAD:
                 return new DALoadInstruction(opcode, offset);
 
-            case 0x32:
+            case AALOAD:
                 return new AALoadInstruction(opcode, offset);
 
-            case 0x33:
+            case BALOAD:
                 return new BALOADInstruction(opcode, offset);
 
-            case 0x34:
+            case CALOAD:
                 return new CALoadInstruction(opcode, offset);
 
-            case 0x35:
+            case SALOAD:
                 return new SALoadInstruction(opcode, offset);
 
-            case 0x36:
-            case 0x37:
-            case 0x38:
-            case 0x39:
-            case 0x3A:
-                return createStoreInstruction(opcode, offset, bytecode, getStoreInstructionName(opcode));
+            case ISTORE:
+            case LSTORE:
+            case FSTORE:
+            case DSTORE:
+            case ASTORE:
+                return createStoreInstruction(opcode, offset, bytecode);
 
-            case 0x3B:
-            case 0x3C:
-            case 0x3D:
-            case 0x3E:
-                int istoreIndex = opcode - 0x3B;
+            case ISTORE_0:
+            case ISTORE_1:
+            case ISTORE_2:
+            case ISTORE_3:
+                int istoreIndex = opcode - ISTORE_0.getCode();
                 return new IStoreInstruction(opcode, offset, istoreIndex);
 
-            case 0x3F:
-            case 0x40:
-            case 0x41:
-            case 0x42:
-                int lstoreIndex = opcode - 0x3F;
+            case LSTORE_0:
+            case LSTORE_1:
+            case LSTORE_2:
+            case LSTORE_3:
+                int lstoreIndex = opcode - LSTORE_0.getCode();
                 return new LStoreInstruction(opcode, offset, lstoreIndex);
 
-            case 0x43:
-            case 0x44:
-            case 0x45:
-            case 0x46:
-                int fstoreIndex = opcode - 0x43;
+            case FSTORE_0:
+            case FSTORE_1:
+            case FSTORE_2:
+            case FSTORE_3:
+                int fstoreIndex = opcode - FSTORE_0.getCode();
                 return new FStoreInstruction(opcode, offset, fstoreIndex);
 
-            case 0x47:
-            case 0x48:
-            case 0x49:
-            case 0x4A:
-                int dstoreIndex = opcode - 0x47;
+            case DSTORE_0:
+            case DSTORE_1:
+            case DSTORE_2:
+            case DSTORE_3:
+                int dstoreIndex = opcode - DSTORE_0.getCode();
                 return new DStoreInstruction(opcode, offset, dstoreIndex);
 
-            case 0x4B:
-            case 0x4C:
-            case 0x4D:
-            case 0x4E:
-                int astoreIndex = opcode - 0x4B;
+            case ASTORE_0:
+            case ASTORE_1:
+            case ASTORE_2:
+            case ASTORE_3:
+                int astoreIndex = opcode - ASTORE_0.getCode();
                 return new AStoreInstruction(opcode, offset, astoreIndex);
 
-            case 0x4F:
+            case IASTORE:
                 return new IAStoreInstruction(opcode, offset);
 
-            case 0x50:
+            case LASTORE:
                 return new LAStoreInstruction(opcode, offset);
 
-            case 0x51:
+            case FASTORE:
                 return new FAStoreInstruction(opcode, offset);
 
-            case 0x52:
+            case DASTORE:
                 return new DAStoreInstruction(opcode, offset);
 
-            case 0x53:
+            case AASTORE:
                 return new AAStoreInstruction(opcode, offset);
 
-            case 0x54:
+            case BASTORE:
                 return new BAStoreInstruction(opcode, offset);
 
-            case 0x55:
+            case CASTORE:
                 return new CAStoreInstruction(opcode, offset);
 
-            case 0x56:
+            case SASTORE:
                 return new SAStoreInstruction(opcode, offset);
 
-            case 0x57:
+            case POP:
                 return new PopInstruction(opcode, offset);
 
-            case 0x58:
+            case POP2:
                 return new Pop2Instruction(opcode, offset);
 
-            case 0x59:
-            case 0x5A:
-            case 0x5B:
-            case 0x5C:
-            case 0x5D:
-            case 0x5E:
+            case DUP:
+            case DUP_X1:
+            case DUP_X2:
+            case DUP2:
+            case DUP2_X1:
+            case DUP2_X2:
                 return new DupInstruction(opcode, offset);
 
-            case 0x5F:
+            case SWAP:
                 return new SwapInstruction(opcode, offset);
 
-            case 0x60:
-            case 0x61:
-            case 0x62:
-            case 0x63:
-            case 0x64:
-            case 0x65:
-            case 0x66:
-            case 0x67:
-            case 0x68:
-            case 0x69:
-            case 0x6A:
-            case 0x6B:
-            case 0x6C:
-            case 0x6D:
-            case 0x6E:
-            case 0x6F:
-            case 0x70:
-            case 0x71:
-            case 0x72:
-            case 0x73:
+            case IADD:
+            case LADD:
+            case FADD:
+            case DADD:
+            case ISUB:
+            case LSUB:
+            case FSUB:
+            case DSUB:
+            case IMUL:
+            case LMUL:
+            case FMUL:
+            case DMUL:
+            case IDIV:
+            case LDIV:
+            case FDIV:
+            case DDIV:
+            case IREM:
+            case LREM:
+            case FREM:
+            case DREM:
                 return new ArithmeticInstruction(opcode, offset);
 
-            case 0x74:
+            case INEG:
                 return new INegInstruction(opcode, offset);
 
-            case 0x75:
+            case LNEG:
                 return new LNegInstruction(opcode, offset);
 
-            case 0x76:
+            case FNEG:
                 return new FNegInstruction(opcode, offset);
 
-            case 0x77:
+            case DNEG:
                 return new DNegInstruction(opcode, offset);
 
-            case 0x78:
-            case 0x79:
-            case 0x7A:
-            case 0x7B:
-            case 0x7C:
-            case 0x7D:
+            case ISHL:
+            case LSHL:
+            case ISHR:
+            case LSHR:
+            case IUSHR:
+            case LUSHR:
                 return new ArithmeticShiftInstruction(opcode, offset);
 
-            case 0x7E:
-            case 0x7F:
+            case IAND:
+            case LAND:
                 return new IAndInstruction(opcode, offset);
 
-            case 0x80:
-            case 0x81:
+            case IOR:
+            case LOR:
                 return new IOrInstruction(opcode, offset);
 
-            case 0x82:
-            case 0x83:
+            case IXOR:
+            case LXOR:
                 return new IXorInstruction(opcode, offset);
 
-            case 0x84:
+            case IINC:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -335,48 +335,51 @@ public final class InstructionFactory
                 int iincConst = bytecode[offset + 2];
                 return new IIncInstruction(opcode, offset, iincVarIndex, iincConst);
 
-            case 0x85:
+            case I2L:
                 return new I2LInstruction(opcode, offset);
 
-            case 0x86:
-            case 0x87:
-            case 0x88:
-            case 0x89:
-            case 0x8A:
-            case 0x8B:
-            case 0x8C:
-            case 0x8D:
-            case 0x8E:
-            case 0x8F:
-            case 0x90:
+            case I2F:
+            case I2D:
+            case L2I:
+            case L2F:
+            case L2D:
+            case F2I:
+            case F2L:
+            case F2D:
+            case D2I:
+            case D2L:
+            case D2F:
                 return new ConversionInstruction(opcode, offset);
 
-            case 0x91:
-            case 0x92:
-            case 0x93:
+            case I2B:
+            case I2C:
+            case I2S:
                 return new NarrowingConversionInstruction(opcode, offset);
 
-            case 0x94:
-            case 0x95:
-            case 0x96:
-            case 0x97:
-            case 0x98:
+            case LCMP:
+            case FCMPL:
+            case FCMPG:
+            case DCMPL:
+            case DCMPG:
                 return new CompareInstruction(opcode, offset);
 
-            case 0x99:
-            case 0x9A:
-            case 0x9B:
-            case 0x9C:
-            case 0x9D:
-            case 0x9E:
-            case 0x9F:
-            case 0xA0:
-            case 0xA1:
-            case 0xA2:
-            case 0xA3:
-            case 0xA4:
-            case 0xA5:
-            case 0xA6:
+            case IFEQ:
+            case IFNE:
+            case IFLT:
+            case IFGE:
+            case IFGT:
+            case IFLE:
+            case IF_ICMPEQ:
+            case IF_ICMPNE:
+            case IF_ICMPLT:
+            case IF_ICMPGE:
+            case IF_ICMPGT:
+            case IF_ICMPLE:
+            case IF_ACMPEQ:
+            case IF_ACMPNE:
+
+            case IFNULL:
+            case IFNONNULL:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -384,15 +387,15 @@ public final class InstructionFactory
                 short branchOffsetCond = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
                 return new ConditionalBranchInstruction(opcode, offset, branchOffsetCond);
 
-            case 0xA7:
-            case 0xC8:
+            case GOTO:
+            case GOTO_W:
                 return parseGotoInstruction(opcode, offset, bytecode);
 
-            case 0xA8:
-            case 0xC9:
+            case JSR:
+            case JSR_W:
                 return parseJsrInstruction(opcode, offset, bytecode);
 
-            case 0xA9:
+            case RET:
                 if (offset + 1 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -400,12 +403,12 @@ public final class InstructionFactory
                 int retVarIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
                 return new RetInstruction(opcode, offset, retVarIndex);
 
-            case 0xB6:
-            case 0xB7:
-            case 0xB8:
+            case INVOKEVIRTUAL:
+            case INVOKESPECIAL:
+            case INVOKESTATIC:
                 return parseInvokeInstruction(opcode, offset, bytecode, constPool);
 
-            case 0xB9:
+            case INVOKEINTERFACE:
                 if (offset + 4 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -414,7 +417,7 @@ public final class InstructionFactory
                 int count = Byte.toUnsignedInt(bytecode[offset + 3]);
                 return new InvokeInterfaceInstruction(constPool, opcode, offset, invokeInterfaceIndex, count);
 
-            case 0xBA:
+            case INVOKEDYNAMIC:
                 if (offset + 4 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -422,8 +425,8 @@ public final class InstructionFactory
                 int invokedynamicCpIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new InvokeDynamicInstruction(constPool, opcode, offset, invokedynamicCpIndex);
 
-            case 0xB2:
-            case 0xB4:
+            case GETSTATIC:
+            case GETFIELD:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -431,8 +434,8 @@ public final class InstructionFactory
                 int fieldRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new GetFieldInstruction(constPool, opcode, offset, fieldRefIndex);
 
-            case 0xB3:
-            case 0xB5:
+            case PUTSTATIC:
+            case PUTFIELD:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -440,7 +443,7 @@ public final class InstructionFactory
                 int putFieldRefIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new PutFieldInstruction(constPool, opcode, offset, putFieldRefIndex);
 
-            case 0xBB:
+            case NEW:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -448,7 +451,7 @@ public final class InstructionFactory
                 int newClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new NewObjectInstruction(constPool, opcode, offset, newClassIndex);
 
-            case 0xBC:
+            case NEWARRAY:
                 if (offset + 1 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -456,7 +459,7 @@ public final class InstructionFactory
                 int newarrayTypeCode = Byte.toUnsignedInt(bytecode[offset + 1]);
                 return new NewPrimitiveArrayInstruction(opcode, offset, newarrayTypeCode, 1);
 
-            case 0xBD:
+            case ANEWARRAY:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -464,13 +467,13 @@ public final class InstructionFactory
                 int anewarrayClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new ANewArrayInstruction(constPool, opcode, offset, anewarrayClassIndex, 2);
 
-            case 0xBE:
+            case ARRAYLENGTH:
                 return new ArrayLengthInstruction(opcode, offset);
 
-            case 0xBF:
+            case ATHROW:
                 return new ATHROWInstruction(opcode, offset);
 
-            case 0xC0:
+            case CHECKCAST:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -478,7 +481,7 @@ public final class InstructionFactory
                 int typeIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new CheckCastInstruction(constPool, opcode, offset, typeIndex);
 
-            case 0xC5:
+            case MULTIANEWARRAY:
                 if (offset + 3 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -487,24 +490,24 @@ public final class InstructionFactory
                 int dimensions = Byte.toUnsignedInt(bytecode[offset + 3]);
                 return new MultiANewArrayInstruction(constPool, opcode, offset, multianewarrayClassIndex, dimensions);
 
-            case 0xAB:
+            case LOOKUPSWITCH:
                 return parseLookupSwitchInstruction(opcode, offset, bytecode);
 
-            case 0xAA:
+            case TABLESWITCH:
                 return parseTableSwitchInstruction(opcode, offset, bytecode);
 
-            case 0xC4:
+            case WIDE:
                 return parseWideInstruction(opcode, offset, bytecode);
 
-            case 0xAC:
-            case 0xAD:
-            case 0xAE:
-            case 0xAF:
-            case 0xB0:
-            case 0xB1:
+            case IRETURN:
+            case LRETURN:
+            case FRETURN:
+            case DRETURN:
+            case ARETURN:
+            case RETURN_:
                 return new MethodReturnInstruction(opcode, offset);
 
-            case 0xC1:
+            case INSTANCEOF:
                 if (offset + 2 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -512,20 +515,11 @@ public final class InstructionFactory
                 int instanceOfClassIndex = ((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF);
                 return new InstanceOfInstruction(constPool, opcode, offset, instanceOfClassIndex);
 
-            case 0xC3:
+            case MONITOREXIT:
                 return new MonitorExitInstruction(opcode, offset);
 
-            case 0xC2:
+            case MONITORENTER:
                 return new MonitorEnterInstruction(opcode, offset);
-
-            case 0xC6:
-            case 0xC7:
-                if (offset + 2 >= bytecode.length)
-                {
-                    return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
-                }
-                short branchOffsetNull = (short) (((bytecode[offset + 1] & 0xFF) << 8) | (bytecode[offset + 2] & 0xFF));
-                return new ConditionalBranchInstruction(opcode, offset, branchOffsetNull);
 
             default:
                 return new UnknownInstruction(opcode, offset, 1);
@@ -533,98 +527,64 @@ public final class InstructionFactory
     }
 
     /**
-     * Helper method to get the instruction name based on opcode.
-     * @param opcode The opcode.
-     * @return The name of the load instruction.
+     * Decodes a wide-index load, reading its one-byte local index.
+     * @param opcode the load opcode
+     * @param offset the bytecode offset
+     * @param bytecode the entire bytecode array
+     * @return the load instruction, or UnknownInstruction if the operand is truncated
      */
-    private static String getLoadInstructionName(int opcode)
+    private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode)
     {
-        if (opcode == ILOAD.getCode()) return "ILOAD";
-        if (opcode == LLOAD.getCode()) return "LLOAD";
-        if (opcode == FLOAD.getCode()) return "FLOAD";
-        if (opcode == DLOAD.getCode()) return "DLOAD";
-        if (opcode == ALOAD.getCode()) return "ALOAD";
-        return "UNKNOWN_LOAD";
-    }
-
-    /**
-     * Helper method to get the instruction name based on opcode.
-     * @param opcode The opcode.
-     * @return The name of the store instruction.
-     */
-    private static String getStoreInstructionName(int opcode)
-    {
-        if (opcode == ISTORE.getCode()) return "ISTORE";
-        if (opcode == LSTORE.getCode()) return "LSTORE";
-        if (opcode == FSTORE.getCode()) return "FSTORE";
-        if (opcode == DSTORE.getCode()) return "DSTORE";
-        if (opcode == ASTORE.getCode()) return "ASTORE";
-        return "UNKNOWN_STORE";
-    }
-
-    /**
-     * Helper method to create Load Instructions.
-     * @param opcode           The opcode of the load instruction.
-     * @param offset           The bytecode offset.
-     * @param bytecode         The entire bytecode array.
-     * @param instructionName  The name of the instruction (e.g., "ILOAD").
-     * @return A LoadInstruction instance or UnknownInstruction if malformed.
-     */
-    private static Instruction createLoadInstruction(int opcode, int offset, byte[] bytecode, String instructionName)
-    {
-        int operandBytes = 1;
-        if (offset + operandBytes >= bytecode.length)
+        if (offset + 1 >= bytecode.length)
         {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
         int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-        switch (instructionName)
+        switch (Opcode.fromCode(opcode))
         {
-            case "ILOAD":
+            case ILOAD:
                 return new ILoadInstruction(opcode, offset, varIndex);
-            case "LLOAD":
+            case LLOAD:
                 return new LLoadInstruction(opcode, offset, varIndex);
-            case "FLOAD":
+            case FLOAD:
                 return new FLoadInstruction(opcode, offset, varIndex);
-            case "DLOAD":
+            case DLOAD:
                 return new DLoadInstruction(opcode, offset, varIndex);
-            case "ALOAD":
+            case ALOAD:
                 return new ALoadInstruction(opcode, offset, varIndex);
             default:
-                return new UnknownInstruction(opcode, offset, operandBytes + 1);
+                return new UnknownInstruction(opcode, offset, 2);
         }
     }
 
     /**
-     * Helper method to create Store Instructions.
-     * @param opcode           The opcode of the store instruction.
-     * @param offset           The bytecode offset.
-     * @param bytecode         The entire bytecode array.
-     * @param instructionName  The name of the instruction (e.g., "ISTORE").
-     * @return A StoreInstruction instance or UnknownInstruction if malformed.
+     * Decodes a store, reading its one-byte local index.
+     * @param opcode the store opcode
+     * @param offset the bytecode offset
+     * @param bytecode the entire bytecode array
+     * @return the store instruction, or UnknownInstruction if the operand is truncated
      */
-    private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode, String instructionName)
+    private static Instruction createStoreInstruction(int opcode, int offset, byte[] bytecode)
     {
-        int operandBytes = 1;
-        if (offset + operandBytes >= bytecode.length)
+        if (offset + 1 >= bytecode.length)
         {
             return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
         }
         int varIndex = Byte.toUnsignedInt(bytecode[offset + 1]);
-        switch (instructionName)
+        switch (Opcode.fromCode(opcode))
         {
-            case "ISTORE":
+            case ISTORE:
                 return new IStoreInstruction(opcode, offset, varIndex);
-            case "LSTORE":
+            case LSTORE:
                 return new LStoreInstruction(opcode, offset, varIndex);
-            case "FSTORE":
+            case FSTORE:
                 return new FStoreInstruction(opcode, offset, varIndex);
-            case "DSTORE":
+            case DSTORE:
                 return new DStoreInstruction(opcode, offset, varIndex);
-            case "ASTORE":
+            case ASTORE:
                 return new AStoreInstruction(opcode, offset, varIndex);
             default:
-                return new UnknownInstruction(opcode, offset, operandBytes + 1);
+                return new UnknownInstruction(opcode, offset, 2);
         }
     }
 
@@ -857,13 +817,21 @@ public final class InstructionFactory
 
         int modifiedOpcodeCode = Byte.toUnsignedInt(bytecode[offset + 1]);
 
-        switch (modifiedOpcodeCode)
+        switch (Opcode.fromCode(modifiedOpcodeCode))
         {
-            case 0x15:
-            case 0x16:
-            case 0x17:
-            case 0x18:
-            case 0x19:
+            case ILOAD:
+            case LLOAD:
+            case FLOAD:
+            case DLOAD:
+            case ALOAD:
+
+            case ISTORE:
+            case LSTORE:
+            case FSTORE:
+            case DSTORE:
+            case ASTORE:
+
+            case RET:
                 if (offset + 3 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
@@ -871,19 +839,7 @@ public final class InstructionFactory
                 int varIndexLoad = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
                 return new WideInstruction(opcode, offset, Opcode.fromCode(modifiedOpcodeCode), varIndexLoad);
 
-            case 0x36:
-            case 0x37:
-            case 0x38:
-            case 0x39:
-            case 0x3A:
-                if (offset + 3 >= bytecode.length)
-                {
-                    return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);
-                }
-                int varIndexStore = ((bytecode[offset + 2] & 0xFF) << 8) | (bytecode[offset + 3] & 0xFF);
-                return new WideInstruction(opcode, offset, Opcode.fromCode(modifiedOpcodeCode), varIndexStore);
-
-            case 0x84:
+            case IINC:
                 if (offset + 5 >= bytecode.length)
                 {
                     return new UnknownInstruction(opcode, offset, bytecode.length - offset, bytecode);

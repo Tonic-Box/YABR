@@ -366,7 +366,7 @@ final class FunctionLifter
         }
 
         // unary / conversion (sext, trunc, zext, sitofp, fptosi, fpext, fptrunc, fneg, sub 0)
-        UnaryOp uop = tryParseUnaryOp(rhs, result);
+        UnaryOp uop = tryParseUnaryOp(rhs);
         if (uop != null)
         {
             return buildUnaryInstr(result, uop, rhs);
@@ -628,7 +628,7 @@ final class FunctionLifter
         }
     }
 
-    private static UnaryOp tryParseUnaryOp(String rhs, SSAValue result)
+    private static UnaryOp tryParseUnaryOp(String rhs)
     {
         String op = rhs.trim().split("\\s+")[0];
         switch (op)

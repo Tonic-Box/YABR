@@ -1,6 +1,5 @@
 package com.tonic.fixtures;
 
-import java.util.Iterator;
 import java.util.List;
 
 public class SwitchSharedTail
@@ -27,11 +26,7 @@ public class SwitchSharedTail
             cleanup();
             return;
         }
-        Iterator<Object> it = src.iterator();
-        while (it.hasNext())
-        {
-            out.add(it.next());
-        }
+        out.addAll(src);
         out.add(t);
     }
 

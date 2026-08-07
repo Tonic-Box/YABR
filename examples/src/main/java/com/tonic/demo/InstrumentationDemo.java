@@ -201,7 +201,7 @@ public class InstrumentationDemo
     // Sample fields and methods for instrumentation demo
     private int counter;
     private String name;
-    private int[] values = new int[10];
+    private final int[] values = new int[10];
 
     /**
      * Mutates the sample fields so instrumentation hooks have reads and writes to intercept.
@@ -212,7 +212,7 @@ public class InstrumentationDemo
         this.name = input;
         this.counter++;
         values[0] = counter;
-        System.out.println("Sample: " + name);
+        System.out.println("Sample: " + name + " (values[0]=" + values[0] + ")");
     }
 
     /**

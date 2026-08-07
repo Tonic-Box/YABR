@@ -23,14 +23,9 @@ public class PatternSearchDemo
     {
         ClassPool pool = ClassPool.getDefault();
 
-        if (args.length > 0)
-        {
-            for (String path : args)
-            {
-                try (FileInputStream fis = new FileInputStream(path))
-                {
-                    pool.loadClass(fis);
-                }
+        for (String path : args) {
+            try (FileInputStream fis = new FileInputStream(path)) {
+                pool.loadClass(fis);
             }
         }
 

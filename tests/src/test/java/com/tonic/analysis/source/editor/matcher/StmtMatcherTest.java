@@ -890,9 +890,7 @@ class StmtMatcherTest
         @DisplayName("custom() throws NullPointerException for null predicate")
         void customThrowsForNullPredicate()
         {
-            assertThrows(NullPointerException.class, () -> {
-                StmtMatcher.custom(null);
-            });
+            assertThrows(NullPointerException.class, () -> StmtMatcher.custom(null));
         }
     }
 

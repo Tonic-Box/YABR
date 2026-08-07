@@ -678,9 +678,9 @@ class AbstractStateTest
             AbstractState state1 = new AbstractState();
             AbstractState state2 = new AbstractState();
 
-            IllegalStateException ex1 = assertThrows(IllegalStateException.class, () -> state1.pop());
+            IllegalStateException ex1 = assertThrows(IllegalStateException.class, state1::pop);
 
-            IllegalStateException ex2 = assertThrows(IllegalStateException.class, () -> state2.pop());
+            IllegalStateException ex2 = assertThrows(IllegalStateException.class, state2::pop);
 
             assertTrue(ex1.getMessage().contains("block_A"));
             assertTrue(ex1.getMessage().contains("99"));

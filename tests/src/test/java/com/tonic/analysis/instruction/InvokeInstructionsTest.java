@@ -63,9 +63,7 @@ class InvokeInstructionsTest
         {
             int methodIndex = setupMethodRef("java/lang/String", "substring", "(I)Ljava/lang/String;");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeVirtualInstruction(constPool, 0xB7, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeVirtualInstruction(constPool, 0xB7, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeVirtualInstruction"));
         }
@@ -220,9 +218,7 @@ class InvokeInstructionsTest
         {
             int methodIndex = setupMethodRef("java/lang/Math", "max", "(II)I");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeStaticInstruction(constPool, 0xB6, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeStaticInstruction(constPool, 0xB6, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeStaticInstruction"));
         }
@@ -338,9 +334,7 @@ class InvokeInstructionsTest
         {
             int methodIndex = setupMethodRef("java/lang/Object", "<init>", "()V");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeSpecialInstruction(constPool, 0xB8, 0, methodIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeSpecialInstruction(constPool, 0xB8, 0, methodIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeSpecialInstruction"));
         }
@@ -477,9 +471,7 @@ class InvokeInstructionsTest
         {
             int methodIndex = setupInterfaceRef("java/util/List", "size", "()I");
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeInterfaceInstruction(constPool, 0xB8, 0, methodIndex, 1);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeInterfaceInstruction(constPool, 0xB8, 0, methodIndex, 1));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeInterfaceInstruction"));
         }
@@ -619,9 +611,7 @@ class InvokeInstructionsTest
         {
             int cpIndex = setupInvokeDynamic("apply", "()Ljava/util/function/Function;", 0);
 
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new InvokeDynamicInstruction(constPool, 0xB8, 0, cpIndex);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new InvokeDynamicInstruction(constPool, 0xB8, 0, cpIndex));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for InvokeDynamicInstruction"));
         }

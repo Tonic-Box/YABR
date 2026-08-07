@@ -513,7 +513,7 @@ class CallGraphTest
 
         CallGraph graph = CallGraph.build(pool);
 
-        Set<MethodReference> methods = graph.findMethods(node -> node.isInPool());
+        Set<MethodReference> methods = graph.findMethods(CallGraphNode::isInPool);
 
         assertNotNull(methods);
     }

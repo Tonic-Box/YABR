@@ -123,7 +123,7 @@ public class MethodReference
      */
     private String parseDescriptorForDisplay()
     {
-        if (descriptor == null || descriptor.isEmpty() || !descriptor.startsWith("("))
+        if (descriptor.isEmpty() || !descriptor.startsWith("("))
         {
             return "()";
         }

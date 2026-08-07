@@ -1,5 +1,7 @@
 package com.tonic.util;
 
+import java.util.Arrays;
+
 /**
  * Enum representing all JVM opcodes as per Java 11 Specification.
  */
@@ -911,20 +913,34 @@ public enum Opcode
         return operandCount;
     }
 
+    private static final Opcode[] BY_CODE = buildLookup();
+
+    private static Opcode[] buildLookup()
+    {
+        Opcode[] table = new Opcode[256];
+        Arrays.fill(table, UNKNOWN);
+        for (Opcode opcode : Opcode.values())
+        {
+            if (opcode.code >= 0 && opcode.code < table.length)
+            {
+                table[opcode.code] = opcode;
+            }
+        }
+        return table;
+    }
+
     /**
-     * Retrieves the Opcode enum constant corresponding to the specified bytecode value.
+     * Retrieves the Opcode enum constant corresponding to the specified bytecode value. Indexes a
+     * lookup table, so this is safe to call once per instruction on a dispatch path.
      * @param code the bytecode value
-     * @return the corresponding Opcode, or UNKNOWN if not found
+     * @return the corresponding Opcode, or UNKNOWN if the value names no opcode
      */
     public static Opcode fromCode(int code)
     {
-        for (Opcode opcode : Opcode.values())
+        if (code < 0 || code >= BY_CODE.length)
         {
-            if (opcode.code == code)
-            {
-                return opcode;
-            }
+            return UNKNOWN;
         }
-        return UNKNOWN;
+        return BY_CODE[code];
     }
 }

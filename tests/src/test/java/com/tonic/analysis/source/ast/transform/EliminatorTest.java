@@ -21,6 +21,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class EliminatorTest
 {
 
+    /**
+     * Counts every node in the subtree, so a transform that silently drops a nested body or
+     * expression is visible even when it reports no change.
+     */
+    private static int countNodes(BlockStmt block)
+    {
+        int[] count = {0};
+        block.walk(node -> count[0]++);
+        return count[0];
+    }
+
     @BeforeEach
     void setUp()
     {
@@ -907,9 +918,11 @@ class EliminatorTest
                 stmts.add(new ExprStmt(compoundAssign));
                 BlockStmt block = new BlockStmt(stmts);
 
+                int before = countNodes(block);
                 boolean changed = eliminator.transform(block);
 
-                // Just verify it runs without error(changed);
+                assertFalse(changed, "a compound assignment reads its target, so its store is live");
+                assertEquals(before, countNodes(block), "a live store must not be dropped");
             }
         }
     }
@@ -949,7 +962,11 @@ class EliminatorTest
             stmts.add(whileStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -976,7 +993,11 @@ class EliminatorTest
             stmts.add(doWhile);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1003,7 +1024,11 @@ class EliminatorTest
             stmts.add(forStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1034,7 +1059,11 @@ class EliminatorTest
             stmts.add(forEach);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1078,7 +1107,11 @@ class EliminatorTest
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1105,7 +1138,11 @@ class EliminatorTest
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1132,7 +1169,11 @@ class EliminatorTest
             stmts.add(syncStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1159,7 +1200,11 @@ class EliminatorTest
             stmts.add(labeled);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
 
         @Test
@@ -1185,7 +1230,11 @@ class EliminatorTest
             stmts.add(ifStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertEquals(before, countNodes(block),
+                "nothing here is dead, so recursing into this construct must not drop a node");
         }
     }
 
@@ -1215,7 +1264,11 @@ class EliminatorTest
             stmts.add(whileStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1233,7 +1286,11 @@ class EliminatorTest
             stmts.add(doWhile);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1251,7 +1308,11 @@ class EliminatorTest
             stmts.add(forStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1273,7 +1334,11 @@ class EliminatorTest
             stmts.add(forEach);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1319,7 +1384,11 @@ class EliminatorTest
             stmts.add(tryCatch);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1337,7 +1406,11 @@ class EliminatorTest
             stmts.add(syncStmt);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
 
         @Test
@@ -1355,7 +1428,11 @@ class EliminatorTest
             stmts.add(labeled);
             BlockStmt block = new BlockStmt(stmts);
 
+            int before = countNodes(block);
             eliminator.transform(block);
+
+            assertTrue(countNodes(block) < before,
+                "the eliminator must recurse into this construct and remove the unused variable");
         }
     }
 }

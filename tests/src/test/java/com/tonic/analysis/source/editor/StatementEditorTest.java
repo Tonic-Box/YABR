@@ -8,10 +8,8 @@ import com.tonic.analysis.source.editor.matcher.StmtMatcher;
 import com.tonic.analysis.source.editor.util.ASTFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -309,7 +307,7 @@ class StatementEditorTest
     {
         TryCatchStmt tryCatch = new TryCatchStmt(
             factory.block(),
-            Arrays.asList(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
+                List.of(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
             null
         );
         BlockStmt body = factory.block(tryCatch);
@@ -483,7 +481,7 @@ class StatementEditorTest
     {
         TryCatchStmt tryCatch = new TryCatchStmt(
             factory.block(),
-            Arrays.asList(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
+                List.of(CatchClause.of(new ReferenceSourceType("java/lang/Exception"), "e", factory.block())),
             null
         );
         BlockStmt body = factory.block(tryCatch);
@@ -499,7 +497,7 @@ class StatementEditorTest
     {
         SwitchStmt switchStmt = new SwitchStmt(
             factory.intLiteral(1),
-            Arrays.asList(SwitchCase.of(1, Arrays.asList(factory.returnVoid())))
+                List.of(SwitchCase.of(1, Collections.singletonList(factory.returnVoid())))
         );
         BlockStmt body = factory.block(switchStmt);
 

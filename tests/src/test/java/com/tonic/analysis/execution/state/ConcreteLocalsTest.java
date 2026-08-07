@@ -1,12 +1,8 @@
 package com.tonic.analysis.execution.state;
 
 import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.parser.MethodEntry;
-import com.tonic.parser.attribute.CodeAttribute;
 import org.junit.jupiter.api.Test;
-
 import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConcreteLocalsTest

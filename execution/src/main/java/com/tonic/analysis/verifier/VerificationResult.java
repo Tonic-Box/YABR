@@ -1,7 +1,6 @@
 package com.tonic.analysis.verifier;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,8 +19,8 @@ public final class VerificationResult
     private VerificationResult(boolean valid, List<VerificationError> errors, List<VerificationError> warnings, String className, String methodName)
     {
         this.valid = valid;
-        this.errors = Collections.unmodifiableList(new ArrayList<>(errors));
-        this.warnings = Collections.unmodifiableList(new ArrayList<>(warnings));
+        this.errors = List.copyOf(errors);
+        this.warnings = List.copyOf(warnings);
         this.className = className;
         this.methodName = methodName;
     }

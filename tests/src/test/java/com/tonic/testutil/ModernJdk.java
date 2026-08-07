@@ -45,7 +45,9 @@ public final class ModernJdk
     public static Path jdkHome(int major)
     {
         String envOverride = System.getenv("JDK" + major + "_HOME");
-        if (envOverride != null && hasJavac(Paths.get(envOverride))) return Paths.get(envOverride);
+        if (envOverride != null) {
+            if (hasJavac(Paths.get(envOverride))) return Paths.get(envOverride);
+        }
         for (Path root : ROOTS)
         {
             if (!Files.isDirectory(root)) continue;

@@ -1,11 +1,7 @@
 package com.tonic.analysis.simulation.listener;
 
 import com.tonic.analysis.simulation.core.SimulationResult;
-import com.tonic.analysis.simulation.core.SimulationState;
-import com.tonic.analysis.simulation.state.SimValue;
-import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
 
 /**
  * No-op base implementation of every simulation listener callback.

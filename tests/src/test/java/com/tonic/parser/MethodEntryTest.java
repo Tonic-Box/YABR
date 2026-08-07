@@ -1,7 +1,6 @@
 package com.tonic.parser;
 import com.tonic.analysis.ClassFactory;
 
-import com.tonic.parser.attribute.CodeAttribute;
 import com.tonic.testutil.TestClassLoader;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
@@ -10,9 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 

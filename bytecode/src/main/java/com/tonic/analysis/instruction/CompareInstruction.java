@@ -127,7 +127,6 @@ public class CompareInstruction extends Instruction
             case LCMP:
             case DCMPL:
             case DCMPG:
-                return -1;
             case FCMPL:
             case FCMPG:
                 return -1;

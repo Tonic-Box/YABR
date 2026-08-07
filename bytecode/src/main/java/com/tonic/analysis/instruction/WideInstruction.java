@@ -115,9 +115,6 @@ public class WideInstruction extends Instruction implements LocalVarInstruction
             case LSTORE:
             case DSTORE:
                 return -2;
-            case IINC:
-            case RET:
-                return 0;
             default:
                 return 0;
         }

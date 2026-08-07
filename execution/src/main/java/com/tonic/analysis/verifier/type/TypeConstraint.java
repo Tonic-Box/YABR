@@ -3,6 +3,7 @@ package com.tonic.analysis.verifier.type;
 import com.tonic.analysis.frame.VerificationType;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
+import com.tonic.type.AccessFlags;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -66,23 +67,80 @@ public class TypeConstraint
     }
 
     /**
-     * Checks an array load, which only requires the array operand to be a reference;
-     * the element type is not currently constrained.
+     * Checks an array load: the operand must be a reference, and when its element type is known it
+     * must satisfy what the load opcode expects. An operand whose element type cannot be read is
+     * accepted, so an unresolvable type never fails verification.
      * @param arrayType the type of the array operand
-     * @param expectedElement the element type the load opcode expects
-     * @return true if the array operand is a reference
+     * @param expectedElement the element type the load opcode expects, or null to check only the operand
+     * @return true if the load is allowed
      */
     public boolean isArrayLoadValid(VerificationType arrayType, VerificationType expectedElement)
     {
-        return isReferenceType(arrayType);
+        if (!isReferenceType(arrayType))
+        {
+            return false;
+        }
+
+        if (expectedElement == null || arrayType.equals(VerificationType.NULL))
+        {
+            return true;
+        }
+
+        VerificationType element = arrayElementType(arrayType);
+        return element == null || isAssignableTo(element, expectedElement);
     }
 
     /**
-     * Checks an invocation receiver, accepting null and uninitialized references;
-     * the owner is not currently constrained.
+     * The element type named by an array operand's descriptor.
+     * @param arrayType the array operand's type
+     * @return the element type, or null if the operand does not name an array
+     */
+    private VerificationType arrayElementType(VerificationType arrayType)
+    {
+        if (!(arrayType instanceof VerificationType.ObjectType))
+        {
+            return null;
+        }
+
+        String name = ((VerificationType.ObjectType) arrayType).getClassName();
+        if (name == null || name.length() < 2 || name.charAt(0) != '[')
+        {
+            return null;
+        }
+
+        String element = name.substring(1);
+        switch (element.charAt(0))
+        {
+            case 'Z':
+            case 'B':
+            case 'C':
+            case 'S':
+            case 'I':
+                return VerificationType.INTEGER;
+            case 'J':
+                return VerificationType.LONG;
+            case 'F':
+                return VerificationType.FLOAT;
+            case 'D':
+                return VerificationType.DOUBLE;
+            case '[':
+                return VerificationType.object(element, 0);
+            case 'L':
+                return element.endsWith(";")
+                        ? VerificationType.object(element.substring(1, element.length() - 1), 0)
+                        : null;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Checks an invocation receiver, accepting null and uninitialized references. A receiver of known
+     * class is required to be the owner or a subclass of it; an interface owner is not constrained,
+     * matching the verifier's own treatment of interface calls, and an unresolvable owner is accepted.
      * @param receiver the type on the stack in receiver position
-     * @param expectedOwner internal name of the class declaring the callee
-     * @return true if the receiver is a reference
+     * @param expectedOwner internal name of the class declaring the callee, or null to check only the receiver
+     * @return true if the receiver is allowed
      */
     public boolean isReceiverValid(VerificationType receiver, String expectedOwner)
     {
@@ -101,7 +159,34 @@ public class TypeConstraint
             return true;
         }
 
-        return isReferenceType(receiver);
+        if (!isReferenceType(receiver))
+        {
+            return false;
+        }
+
+        if (expectedOwner == null || classPool == null || !(receiver instanceof VerificationType.ObjectType))
+        {
+            return true;
+        }
+
+        String receiverName = ((VerificationType.ObjectType) receiver).getClassName();
+        if (receiverName == null || receiverName.startsWith("[") || isInterfaceOwner(expectedOwner))
+        {
+            return true;
+        }
+
+        return isSubclassOf(receiverName, expectedOwner);
+    }
+
+    /**
+     * Whether an owner names an interface, treating an unresolvable owner as one so it stays unconstrained.
+     * @param owner internal name of the declaring class
+     * @return true if the owner is an interface or cannot be resolved
+     */
+    private boolean isInterfaceOwner(String owner)
+    {
+        ClassFile cf = classPool.get(owner);
+        return cf == null || (cf.getAccess() & AccessFlags.ACC_INTERFACE) != 0;
     }
 
     /**

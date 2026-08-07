@@ -61,8 +61,6 @@ public class MethodReturnInstruction extends Instruction
             case LRETURN:
             case DRETURN:
                 return -2;
-            case RETURN:
-                return 0;
             default:
                 return 0;
         }

@@ -114,7 +114,7 @@ class DescriptorUtilTest
         @Test
         void categorizeNullString()
         {
-            assertNull(DescriptorUtil.categorize((String) null));
+            assertNull(DescriptorUtil.categorize(null));
         }
 
         @Test

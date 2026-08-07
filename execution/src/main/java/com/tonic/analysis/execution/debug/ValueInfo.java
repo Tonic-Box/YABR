@@ -46,7 +46,7 @@ public final class ValueInfo
                 return String.valueOf(value.asDouble());
             case REFERENCE:
                 ObjectInstance ref = value.asReference();
-                return ref.toString();
+                return ref == null ? "null" : ref.toString();
             case NULL:
                 return "null";
             case RETURN_ADDRESS:
@@ -70,8 +70,6 @@ public final class ValueInfo
                 return value.asDouble();
             case REFERENCE:
                 return value.asReference();
-            case NULL:
-                return null;
             case RETURN_ADDRESS:
                 return value.asReturnAddress();
             default:

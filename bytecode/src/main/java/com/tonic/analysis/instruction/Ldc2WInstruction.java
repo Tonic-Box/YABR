@@ -119,7 +119,7 @@ public class Ldc2WInstruction extends Instruction
         Item<?> item = constPool.getItem(cpIndex);
         if (item instanceof LongItem)
         {
-            return String.valueOf(((LongItem) item).getValue()) + "L";
+            return ((LongItem) item).getValue() + "L";
         }
         else if (item instanceof DoubleItem)
         {

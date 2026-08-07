@@ -248,8 +248,6 @@ public class MethodInlining implements ClassTransform
         List<SSAValue> parameters = clonedCallee.getParameters();
         Map<SSAValue, SSAValue> valueMapping = cloner.getValueMapping();
 
-        Set<SSAValue> replacedParams = new HashSet<>();
-
         IRBlock entryBlock = clonedCallee.getEntryBlock();
         List<IRInstruction> copies = new ArrayList<>();
 
@@ -268,7 +266,6 @@ public class MethodInlining implements ClassTransform
             {
                 SSAValue argSSA = (SSAValue) arg;
                 clonedParam.replaceAllUsesWith(argSSA);
-                replacedParams.add(clonedParam);
             }
             else
             {

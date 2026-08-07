@@ -62,7 +62,7 @@ public final class ZipHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "CRC32.updateBytes null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[1].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[1], "arr");
                 int off = args[2].asInt();
                 int len = args[3].asInt();
                 byte[] bytes = new byte[len];
@@ -118,7 +118,7 @@ public final class ZipHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Adler32.updateBytes null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[1].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[1], "arr");
                 int off = args[2].asInt();
                 int len = args[3].asInt();
                 byte[] bytes = new byte[len];

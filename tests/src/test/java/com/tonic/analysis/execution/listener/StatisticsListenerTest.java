@@ -4,7 +4,6 @@ import com.tonic.analysis.execution.frame.StackFrame;
 import com.tonic.analysis.execution.heap.ArrayInstance;
 import com.tonic.analysis.execution.heap.ObjectInstance;
 import com.tonic.analysis.execution.state.ConcreteStack;
-import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.BeforeEach;
@@ -267,9 +266,7 @@ class StatisticsListenerTest
 
         listener.afterInstruction(frame, instr);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listener.getOpcodeCount().put(0x99, 999L);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listener.getOpcodeCount().put(0x99, 999L));
     }
 
     @Test
@@ -283,9 +280,7 @@ class StatisticsListenerTest
 
         listener.onMethodCall(frame, method, null);
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listener.getMethodCallCount().put("Fake.method()V", 999L);
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listener.getMethodCallCount().put("Fake.method()V", 999L));
     }
 
     @Test

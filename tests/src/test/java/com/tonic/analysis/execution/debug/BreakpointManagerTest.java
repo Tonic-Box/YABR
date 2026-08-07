@@ -141,15 +141,21 @@ class BreakpointManagerTest
     @Test
     void testEnableDisableWithNullKey()
     {
-        manager.enableBreakpoint(null);
-        manager.disableBreakpoint(null);
+        assertDoesNotThrow(() -> manager.enableBreakpoint(null));
+        assertDoesNotThrow(() -> manager.disableBreakpoint(null));
+
+        assertFalse(manager.hasBreakpoints(),
+            "a null key must not create a breakpoint");
     }
 
     @Test
     void testEnableDisableNonExistent()
     {
-        manager.enableBreakpoint("nonexistent");
-        manager.disableBreakpoint("nonexistent");
+        assertDoesNotThrow(() -> manager.enableBreakpoint("nonexistent"));
+        assertDoesNotThrow(() -> manager.disableBreakpoint("nonexistent"));
+
+        assertFalse(manager.hasBreakpoints(),
+            "toggling an unknown key must not create a breakpoint");
     }
 
     @Test

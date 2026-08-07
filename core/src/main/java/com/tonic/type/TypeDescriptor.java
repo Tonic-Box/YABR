@@ -1,8 +1,6 @@
 package com.tonic.type;
 
 import com.tonic.util.DescriptorUtil;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -62,13 +60,8 @@ public class TypeDescriptor
      */
     public static TypeDescriptor forArray(TypeDescriptor element, int dimensions)
     {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < dimensions; i++)
-        {
-            sb.append('[');
-        }
-        sb.append(element.descriptor);
-        return new TypeDescriptor(sb.toString(), ARRAY);
+        String sb = "[".repeat(Math.max(0, dimensions)) + element.descriptor;
+        return new TypeDescriptor(sb, ARRAY);
     }
 
     /**

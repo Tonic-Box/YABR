@@ -1,8 +1,6 @@
 package com.tonic.analysis.source.ast.stmt;
 
 import com.tonic.analysis.source.ast.type.SourceType;
-
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -31,7 +29,7 @@ public final class CatchClause
         {
             throw new IllegalArgumentException("Must have at least one exception type");
         }
-        this.exceptionTypes = Collections.unmodifiableList(new ArrayList<>(exceptionTypes));
+        this.exceptionTypes = List.copyOf(exceptionTypes);
         this.variableName = Objects.requireNonNull(variableName, "variableName cannot be null");
         this.body = Objects.requireNonNull(body, "body cannot be null");
     }

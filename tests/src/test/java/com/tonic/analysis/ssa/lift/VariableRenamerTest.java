@@ -4,7 +4,6 @@ import com.tonic.analysis.ssa.analysis.DominatorTree;
 import com.tonic.analysis.ssa.cfg.IRBlock;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.IRType;
 import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.value.SSAValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -293,7 +292,7 @@ class VariableRenamerTest
         VariableRenamer renamer = new VariableRenamer(domTree);
         renamer.rename(method);
 
-        assertTrue(newValue.getUses().size() > 0);
+        assertFalse(newValue.getUses().isEmpty());
     }
 
     @Test
@@ -359,8 +358,8 @@ class VariableRenamerTest
         renamer.rename(method);
 
         // Both values should have uses
-        assertTrue(value1.getUses().size() > 0);
-        assertTrue(value2.getUses().size() > 0);
+        assertFalse(value1.getUses().isEmpty());
+        assertFalse(value2.getUses().isEmpty());
     }
 
     @Test
@@ -390,7 +389,7 @@ class VariableRenamerTest
         renamer.rename(method);
 
         // Only v3 (last store) should be used by the load
-        assertTrue(v3.getUses().size() > 0);
+        assertFalse(v3.getUses().isEmpty());
     }
 
     // Dominator Tree Traversal Tests
@@ -426,7 +425,7 @@ class VariableRenamerTest
         renamer.rename(method);
 
         // Child should use parent's value
-        assertTrue(value.getUses().size() > 0);
+        assertFalse(value.getUses().isEmpty());
     }
 
     @Test
@@ -510,7 +509,7 @@ class VariableRenamerTest
         VariableRenamer renamer = new VariableRenamer(domTree);
         renamer.rename(method);
 
-        assertTrue(v2.getUses().size() > 0);
+        assertFalse(v2.getUses().isEmpty());
     }
 
     // Phi Incoming Values Tests
@@ -624,7 +623,7 @@ class VariableRenamerTest
         renamer.rename(method);
 
         // Should still add incoming values for renamed phi
-        assertTrue(phi.getIncomingValues().size() > 0);
+        assertFalse(phi.getIncomingValues().isEmpty());
     }
 
     // Edge Cases and Integration Tests
@@ -744,6 +743,6 @@ class VariableRenamerTest
 
         // Both parameter and local variable should be properly set up
         // after renaming, the instructions remain
-        assertTrue(entry.getInstructions().size() > 0);
+        assertFalse(entry.getInstructions().isEmpty());
     }
 }

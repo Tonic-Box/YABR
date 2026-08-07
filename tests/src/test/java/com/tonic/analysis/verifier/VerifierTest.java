@@ -1,16 +1,11 @@
 package com.tonic.analysis.verifier;
 
-import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Verifier Tests")

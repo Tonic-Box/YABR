@@ -114,13 +114,12 @@ class ObjectInstanceTest
     {
         ObjectInstance obj1 = new ObjectInstance(1, "java/lang/Object");
         ObjectInstance obj2 = new ObjectInstance(2, "java/lang/Object");
-        ObjectInstance obj1Ref = obj1;
 
-        assertTrue(obj1.equals(obj1));
-        assertTrue(obj1.equals(obj1Ref));
-        assertFalse(obj1.equals(obj2));
-        assertFalse(obj1.equals(null));
-        assertFalse(obj1.equals("string"));
+        assertEquals(obj1, obj1);
+        assertEquals(obj1, obj1);
+        assertNotEquals(obj1, obj2);
+        assertNotEquals(null, obj1);
+        assertNotEquals("string", obj1);
     }
 
     @Test
@@ -196,7 +195,8 @@ class ObjectInstanceTest
         ObjectInstance obj = new ObjectInstance(1, "com/example/Test");
         Object resolver = new Object();
 
-        obj.setClassResolver(resolver);
+        assertDoesNotThrow(() -> obj.setClassResolver(resolver),
+            "an instance must accept a class resolver after construction");
     }
 
     @Test

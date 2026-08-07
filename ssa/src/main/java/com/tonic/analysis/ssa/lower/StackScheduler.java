@@ -103,7 +103,7 @@ public class StackScheduler
         for (Value v : stack)
         {
             stackSlots++;
-            if (v instanceof SSAValue && ((SSAValue) v).getType().isTwoSlot())
+            if (v instanceof SSAValue && v.getType().isTwoSlot())
             {
                 stackSlots++;  // Long/double take 2 slots
             }

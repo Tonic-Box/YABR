@@ -91,11 +91,9 @@ public class VerificationTypeInfo
             case 6:
                 return new VerificationTypeInfo(tag, null);
             case 7:
+            case 8:
                 int cpoolIndex = classFile.readUnsignedShort();
                 return new VerificationTypeInfo(tag, cpoolIndex);
-            case 8:
-                int offset = classFile.readUnsignedShort();
-                return new VerificationTypeInfo(tag, offset);
             default:
                 throw new IllegalArgumentException("Unknown verification type info tag: " + tag);
         }

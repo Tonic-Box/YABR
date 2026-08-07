@@ -1,7 +1,6 @@
 package com.tonic.analysis.source.recovery;
 
 import com.tonic.analysis.source.ast.stmt.BlockStmt;
-import com.tonic.analysis.source.ast.stmt.Statement;
 import com.tonic.analysis.source.ast.stmt.TryCatchStmt;
 import com.tonic.analysis.ssa.analysis.DefUseChains;
 import com.tonic.analysis.ssa.analysis.DominatorTree;

@@ -499,11 +499,7 @@ class PhiEliminatorTest
         assertNotNull(branch, "Entry should have branch");
 
         // One of the targets should be the split block
-        boolean hasUpdatedTarget = false;
-        if (branch.getTrueTarget().getName().contains("split") || branch.getFalseTarget().getName().contains("split"))
-        {
-            hasUpdatedTarget = true;
-        }
+        boolean hasUpdatedTarget = branch.getTrueTarget().getName().contains("split") || branch.getFalseTarget().getName().contains("split");
         assertTrue(hasUpdatedTarget, "Branch should target split block");
     }
 

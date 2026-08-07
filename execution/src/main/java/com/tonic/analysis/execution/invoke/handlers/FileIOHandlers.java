@@ -1,15 +1,11 @@
 package com.tonic.analysis.execution.invoke.handlers;
 
 import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.analysis.execution.invoke.NativeException;
 import com.tonic.analysis.execution.invoke.NativeHandlerProvider;
 import com.tonic.analysis.execution.invoke.NativeRegistry;
 import com.tonic.analysis.execution.state.ConcreteValue;
 
 import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * Native handlers for the java.io file classes, standing in for real file
@@ -199,9 +195,9 @@ public final class FileIOHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 5) return null;
                 if (args[0].isNull() || args[2].isNull()) return null;
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcPos = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
                 for (int i = 0; i < count; i++)
@@ -220,9 +216,9 @@ public final class FileIOHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 5) return null;
                 if (args[0].isNull() || args[2].isNull()) return null;
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcPos = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
                 for (int i = 0; i < count; i++)
@@ -241,9 +237,9 @@ public final class FileIOHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 5) return null;
                 if (args[0].isNull() || args[2].isNull()) return null;
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcPos = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
                 for (int i = 0; i < count; i++)
@@ -264,9 +260,9 @@ public final class FileIOHandlers implements NativeHandlerProvider
             (receiver, args, ctx) -> {
                 if (args == null || args.length < 5) return null;
                 if (args[0].isNull() || args[2].isNull()) return null;
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int srcPos = args[1].asInt();
-                ArrayInstance dst = (ArrayInstance) args[2].asReference();
+                ArrayInstance dst = HandlerArgs.requireArray(args[2], "dst");
                 int dstPos = args[3].asInt();
                 int count = args[4].asInt();
                 for (int i = 0; i < count; i++)

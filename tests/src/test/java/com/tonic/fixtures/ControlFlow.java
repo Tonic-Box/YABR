@@ -23,20 +23,12 @@ public class ControlFlow
 
     public static int max(int a, int b)
     {
-        if (a > b)
-        {
-            return a;
-        }
-        return b;
+        return Math.max(a, b);
     }
 
     public static int min(int a, int b)
     {
-        if (a < b)
-        {
-            return a;
-        }
-        return b;
+        return Math.min(a, b);
     }
 
     public static int sign(int x)
@@ -63,24 +55,14 @@ public class ControlFlow
         {
             return min;
         }
-        else if (value > max)
-        {
-            return max;
-        }
-        else
-        {
-            return value;
-        }
+        else return Math.min(value, max);
     }
 
     public static boolean isInRange(int value, int low, int high)
     {
         if (value >= low)
         {
-            if (value <= high)
-            {
-                return true;
-            }
+            return value <= high;
         }
         return false;
     }
@@ -297,7 +279,7 @@ public class ControlFlow
 
     public static int ternaryMax(int a, int b)
     {
-        return a > b ? a : b;
+        return Math.max(a, b);
     }
 
     public static int ternaryAbs(int x)

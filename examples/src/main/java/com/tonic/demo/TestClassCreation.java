@@ -1,7 +1,5 @@
 package com.tonic.demo;
 import com.tonic.analysis.ClassFactory;
-
-import com.tonic.analysis.Bytecode;
 import com.tonic.parser.*;
 import com.tonic.util.*;
 import java.io.IOException;

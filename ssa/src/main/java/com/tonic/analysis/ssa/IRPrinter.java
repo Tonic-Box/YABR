@@ -185,13 +185,11 @@ public final class IRPrinter
      */
     public static String formatBlockHeader(IRBlock block)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Block: ").append(block.getName());
-        sb.append("\n  Predecessors: ").append(block.getPredecessors().stream()
-                .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
-        sb.append("\n  Successors: ").append(block.getSuccessors().stream()
-                .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()));
-        return sb.toString();
+        return "Block: " + block.getName() +
+                "\n  Predecessors: " + block.getPredecessors().stream()
+                .map(IRBlock::getName).collect(java.util.stream.Collectors.toList()) +
+                "\n  Successors: " + block.getSuccessors().stream()
+                .map(IRBlock::getName).collect(java.util.stream.Collectors.toList());
     }
 
     /**

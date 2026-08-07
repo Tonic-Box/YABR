@@ -55,18 +55,7 @@ public final class EscapeAnalyzer
         {
             return EscapeState.GLOBAL_ESCAPE;
         }
-
-        if (isStoredInStaticField(site))
-        {
-            return EscapeState.GLOBAL_ESCAPE;
-        }
-
-        if (isReachableFromEscaped(site))
-        {
-            return EscapeState.GLOBAL_ESCAPE;
-        }
-
-        return EscapeState.NO_ESCAPE;
+        return stateOf(site, escapedClosure(heap.getAllSites()));
     }
 
     /**
@@ -74,10 +63,13 @@ public final class EscapeAnalyzer
      */
     public Set<AllocationSite> getNonEscaping()
     {
+        Set<AllocationSite> allSites = heap.getAllSites();
+        Set<AllocationSite> closure = escapedClosure(allSites);
+
         Set<AllocationSite> nonEscaping = new HashSet<>();
-        for (AllocationSite site : heap.getAllSites())
+        for (AllocationSite site : allSites)
         {
-            if (analyze(site) == EscapeState.NO_ESCAPE)
+            if (!closure.contains(site))
             {
                 nonEscaping.add(site);
             }
@@ -90,10 +82,13 @@ public final class EscapeAnalyzer
      */
     public Set<AllocationSite> getEscaping()
     {
+        Set<AllocationSite> allSites = heap.getAllSites();
+        Set<AllocationSite> closure = escapedClosure(allSites);
+
         Set<AllocationSite> escaping = new HashSet<>();
-        for (AllocationSite site : heap.getAllSites())
+        for (AllocationSite site : allSites)
         {
-            if (analyze(site) != EscapeState.NO_ESCAPE)
+            if (closure.contains(site))
             {
                 escaping.add(site);
             }
@@ -119,33 +114,43 @@ public final class EscapeAnalyzer
         return analyze(site) == EscapeState.GLOBAL_ESCAPE;
     }
 
-    private boolean isStoredInStaticField(AllocationSite site)
+    /**
+     * Every site visible outside its allocating method: the escape-marked and statically held sites,
+     * plus everything reachable from them through fields and array elements. Escape marks and static
+     * fields are both global roots, and reachability from a union of roots is the union of their
+     * reachable sets, so a single walk from the combined roots answers every classification. The
+     * closure is rebuilt per query rather than cached because a MUTABLE heap is written in place and
+     * the analyzer is contracted to reflect the heap's state at each query.
+     * @param allSites every site the heap holds
+     * @return the escaping sites, empty if the heap has no global roots
+     */
+    private Set<AllocationSite> escapedClosure(Set<AllocationSite> allSites)
     {
-        SimObject obj = heap.getObject(site);
-        if (obj == null) return false;
-
-        return false;
-    }
-
-    private boolean isReachableFromEscaped(AllocationSite site)
-    {
-        Set<AllocationSite> escaped = new HashSet<>();
-        for (AllocationSite s : heap.getAllSites())
+        Set<AllocationSite> roots = new HashSet<>(heap.getStaticRoots());
+        for (AllocationSite site : allSites)
         {
-            if (heap.hasEscaped(s))
+            if (heap.hasEscaped(site))
             {
-                escaped.add(s);
+                roots.add(site);
             }
         }
 
-        Set<AllocationSite> reachable = computeReachable(escaped);
-        return reachable.contains(site);
+        if (roots.isEmpty())
+        {
+            return Collections.emptySet();
+        }
+        return computeReachable(roots);
+    }
+
+    private static EscapeState stateOf(AllocationSite site, Set<AllocationSite> closure)
+    {
+        return closure.contains(site) ? EscapeState.GLOBAL_ESCAPE : EscapeState.NO_ESCAPE;
     }
 
     private Set<AllocationSite> computeReachable(Set<AllocationSite> roots)
     {
         Set<AllocationSite> reachable = new HashSet<>(roots);
-        Queue<AllocationSite> worklist = new LinkedList<>(roots);
+        Deque<AllocationSite> worklist = new ArrayDeque<>(roots);
 
         while (!worklist.isEmpty())
         {

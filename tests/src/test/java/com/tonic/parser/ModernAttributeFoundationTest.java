@@ -1,7 +1,6 @@
 package com.tonic.parser;
 
 import com.tonic.analysis.source.decompile.ClassDecompiler;
-import com.tonic.parser.attribute.Attribute;
 import com.tonic.parser.attribute.PermittedSubclassesAttribute;
 import com.tonic.parser.attribute.RecordAttribute;
 import com.tonic.testutil.ModernJdk;
@@ -117,7 +116,7 @@ public class ModernAttributeFoundationTest
         assumeTrue(ModernJdk.available(17), "JDK 17 not installed");
         Map<String, ClassFile> classes = compileShapes();
         // Records/sealed are not reconstructed yet (later slices); decompilation must not crash.
-        assertTrue(ClassDecompiler.decompile(classes.get("Circle")).length() > 0);
-        assertTrue(ClassDecompiler.decompile(classes.get("Shape")).length() > 0);
+        assertFalse(ClassDecompiler.decompile(classes.get("Circle")).isEmpty());
+        assertFalse(ClassDecompiler.decompile(classes.get("Shape")).isEmpty());
     }
 }

@@ -486,7 +486,7 @@ class DescriptorParserTest
         @Test
         void getMethodDescriptorFromEmptyList()
         {
-            List<TypeInfo> params = Arrays.asList();
+            List<TypeInfo> params = List.of();
             String descriptor = DescriptorParser.getMethodDescriptor(TypeInfo.VOID, params);
             assertEquals("()V", descriptor);
         }
@@ -605,13 +605,8 @@ class DescriptorParserTest
         @Test
         void manyParameters()
         {
-            StringBuilder desc = new StringBuilder("(");
-            for (int i = 0; i < 50; i++)
-            {
-                desc.append("I");
-            }
-            desc.append(")V");
-            List<TypeInfo> args = DescriptorParser.getArgumentTypes(desc.toString());
+            String desc = "(" + "I".repeat(50) + ")V";
+            List<TypeInfo> args = DescriptorParser.getArgumentTypes(desc);
             assertEquals(50, args.size());
         }
     }

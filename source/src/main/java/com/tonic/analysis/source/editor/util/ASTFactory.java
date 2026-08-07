@@ -704,7 +704,7 @@ public class ASTFactory
         private Expression receiver;
         private String ownerClass;
         private boolean isStatic;
-        private List<Expression> arguments = new ArrayList<>();
+        private final List<Expression> arguments = new ArrayList<>();
         private SourceType returnType = VoidSourceType.INSTANCE;
 
         MethodCallBuilder(String methodName)
@@ -824,8 +824,8 @@ public class ASTFactory
     public static class NewExprBuilder
     {
         private final String className;
-        private List<Expression> arguments = new ArrayList<>();
-        private SourceType type;
+        private final List<Expression> arguments = new ArrayList<>();
+        private final SourceType type;
 
         NewExprBuilder(String className)
         {

@@ -341,8 +341,8 @@ class MethodSignatureTest
             MethodSignature sig1 = MethodSignature.fromMethod(method1, classFile.getClassName());
             MethodSignature sig2 = MethodSignature.fromMethod(method2, classFile.getClassName());
 
-            assertTrue(sig1.getCallCount() == 0);
-            assertTrue(sig2.getCallCount() == 0);
+            assertEquals(0, sig1.getCallCount());
+            assertEquals(0, sig2.getCallCount());
 
             double similarity = sig1.compareStructural(sig2);
             assertTrue(similarity >= 0.0);
@@ -588,8 +588,7 @@ class MethodSignatureTest
     private MethodEntry createMethodWithEmptyCode(String name) throws IOException
     {
         int access = new AccessBuilder().setPublic().setStatic().build();
-        MethodEntry method = classFile.createNewMethod(access, name, "V");
-        return method;
+        return classFile.createNewMethod(access, name, "V");
     }
 
     private MethodEntry createLargeMethod(String name) throws IOException

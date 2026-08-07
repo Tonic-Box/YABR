@@ -3,7 +3,6 @@ package com.tonic.analysis.source.editor;
 import com.tonic.analysis.source.ast.expr.*;
 import com.tonic.analysis.source.ast.stmt.*;
 import com.tonic.analysis.source.ast.type.PrimitiveSourceType;
-import com.tonic.analysis.source.ast.type.ReferenceSourceType;
 import com.tonic.analysis.source.editor.util.ASTFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

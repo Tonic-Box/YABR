@@ -90,72 +90,66 @@ class StringConcatHandlerTest
         @Test
         void shouldConcatIntegers()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
                 ConcreteValue.intValue(2)
             };
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertEquals("12", result);
         }
 
         @Test
         void shouldConcatLongs()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(JJ)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.longValue(100L),
                 ConcreteValue.longValue(200L)
             };
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertEquals("100200", result);
         }
 
         @Test
         void shouldConcatFloats()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(F)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.floatValue(3.14f)
             };
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertTrue(result.startsWith("3.14"));
         }
 
         @Test
         void shouldConcatDoubles()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(D)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.doubleValue(2.718)
             };
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertTrue(result.startsWith("2.718"));
         }
 
         @Test
         void shouldHandleNullValue()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "(Ljava/lang/Object;)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.nullRef()
             };
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertEquals("null", result);
         }
 
         @Test
         void shouldHandleEmptyArgs()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcat", "()Ljava/lang/String;", 1);
             ConcreteValue[] args = {};
 
-            String result = handler.executeConcat(info, args);
+            String result = handler.executeConcat(args);
             assertEquals("", result);
         }
     }
@@ -166,19 +160,17 @@ class StringConcatHandlerTest
         @Test
         void shouldConcatWithSimpleRecipe()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(42) };
             String recipe = "Value: \u0001";
             Object[] constants = {};
 
-            String result = handler.executeConcat(info, args, recipe, constants);
+            String result = handler.executeConcat(args, recipe, constants);
             assertEquals("Value: 42", result);
         }
 
         @Test
         void shouldConcatWithMultipleArgs()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
                 ConcreteValue.intValue(2)
@@ -186,54 +178,50 @@ class StringConcatHandlerTest
             String recipe = "\u0001 + \u0001 = 3";
             Object[] constants = {};
 
-            String result = handler.executeConcat(info, args, recipe, constants);
+            String result = handler.executeConcat(args, recipe, constants);
             assertEquals("1 + 2 = 3", result);
         }
 
         @Test
         void shouldConcatWithConstants()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(5) };
             String recipe = "\u0002\u0001\u0002";
             Object[] constants = { "<<", ">>" };
 
-            String result = handler.executeConcat(info, args, recipe, constants);
+            String result = handler.executeConcat(args, recipe, constants);
             assertEquals("<<5>>", result);
         }
 
         @Test
         void shouldHandleNullRecipe()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(II)Ljava/lang/String;", 1);
             ConcreteValue[] args = {
                 ConcreteValue.intValue(1),
                 ConcreteValue.intValue(2)
             };
 
-            String result = handler.executeConcat(info, args, null, null);
+            String result = handler.executeConcat(args, null, null);
             assertEquals("12", result);
         }
 
         @Test
         void shouldHandleEmptyRecipe()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "(I)Ljava/lang/String;", 1);
             ConcreteValue[] args = { ConcreteValue.intValue(42) };
 
-            String result = handler.executeConcat(info, args, "", null);
+            String result = handler.executeConcat(args, "", null);
             assertEquals("42", result);
         }
 
         @Test
         void shouldHandleLiteralOnlyRecipe()
         {
-            InvokeDynamicInfo info = new InvokeDynamicInfo(0, "makeConcatWithConstants", "()Ljava/lang/String;", 1);
             ConcreteValue[] args = {};
             String recipe = "Hello World";
             Object[] constants = {};
 
-            String result = handler.executeConcat(info, args, recipe, constants);
+            String result = handler.executeConcat(args, recipe, constants);
             assertEquals("Hello World", result);
         }
     }

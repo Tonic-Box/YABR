@@ -487,9 +487,6 @@ public class CPGBuilder
             case CONTROL_EXCEPTION:
             case CONTROL_SWITCH:
                 return CPGEdgeType.CONTROL_DEP;
-            case DATA_DEF_USE:
-            case DATA_PHI:
-                return CPGEdgeType.DATA_DEF;
             default:
                 return CPGEdgeType.DATA_DEF;
         }

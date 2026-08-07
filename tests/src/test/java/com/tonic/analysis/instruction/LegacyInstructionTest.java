@@ -1,7 +1,6 @@
 package com.tonic.analysis.instruction;
 
 import com.tonic.analysis.visitor.AbstractBytecodeVisitor;
-import com.tonic.parser.ConstPool;
 import com.tonic.util.Opcode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -382,9 +381,7 @@ class LegacyInstructionTest
         @Test
         void throwsExceptionForInvalidOpcode()
         {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new JsrInstruction(0xA7, 0, 100);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new JsrInstruction(0xA7, 0, 100));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for JsrInstruction"));
         }
@@ -482,9 +479,7 @@ class LegacyInstructionTest
         @Test
         void throwsExceptionForInvalidOpcode()
         {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-                new RetInstruction(0xA8, 0, 5);
-            });
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new RetInstruction(0xA8, 0, 5));
 
             assertTrue(exception.getMessage().contains("Invalid opcode for RetInstruction"));
         }

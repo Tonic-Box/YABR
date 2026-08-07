@@ -288,8 +288,6 @@ class TraceEventTest
         ConcreteValue v = ConcreteValue.intValue(42);
         TraceEvent event = TraceEvent.instruction(10, 0x60, Collections.singletonList(v));
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            event.getStackState().add(ConcreteValue.intValue(1));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> event.getStackState().add(ConcreteValue.intValue(1)));
     }
 }

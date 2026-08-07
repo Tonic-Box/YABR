@@ -2,10 +2,6 @@ package com.tonic.analysis.ssa.transform;
 
 import com.tonic.analysis.ssa.SSA;
 import com.tonic.analysis.ssa.cfg.IRBlock;
-import com.tonic.analysis.ssa.cfg.IRMethod;
-import com.tonic.analysis.ssa.ir.*;
-import com.tonic.analysis.ssa.type.PrimitiveType;
-import com.tonic.analysis.ssa.value.IntConstant;
 import com.tonic.analysis.ssa.value.SSAValue;
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
@@ -86,7 +82,7 @@ class DeadMethodEliminationTest
         boolean changed = transform.run(classFile, ssa);
 
         assertNotNull(classFile);
-        assertTrue(classFile.getMethods().size() > 0);
+        assertFalse(classFile.getMethods().isEmpty());
     }
 
     @Test
@@ -151,7 +147,7 @@ class DeadMethodEliminationTest
 
         transform.run(classFile, ssa);
 
-        assertTrue(classFile.getMethods().size() > 0);
+        assertFalse(classFile.getMethods().isEmpty());
         assertTrue(initialMethodCount > 0);
     }
 

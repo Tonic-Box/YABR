@@ -265,9 +265,7 @@ class CallStackStateTest
 
         List<CallStackState.CallFrame> frames = stack.getFrames();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            frames.add(new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> frames.add(new CallStackState.CallFrame(method2, invoke2, state, returnBlock, 1)));
     }
 
     @Test

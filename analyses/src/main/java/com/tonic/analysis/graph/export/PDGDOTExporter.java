@@ -120,8 +120,6 @@ public class PDGDOTExporter extends DOTExporter<PDG>
                 return "ellipse";
             case PHI:
                 return "octagon";
-            case CALL_SITE:
-                return "box";
             case BRANCH:
                 return "diamond";
             default:

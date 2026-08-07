@@ -154,15 +154,14 @@ public class DeclarationHoister implements ASTTransform
                 int insertPos = useIdx + offset;
                 Locations.copy(stmts.get(insertPos), newDecl);
                 stmts.set(insertPos, newDecl);
-                changed = true;
             }
             else
             {
                 int insertPos = useIdx + offset;
                 stmts.add(insertPos, decl);
                 offset++;
-                changed = true;
             }
+            changed = true;
         }
 
         changed |= transformNested(stmts);

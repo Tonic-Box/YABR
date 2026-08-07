@@ -1,11 +1,7 @@
 package com.tonic.analysis.execution.listener;
 
 import com.tonic.analysis.execution.frame.StackFrame;
-import com.tonic.analysis.execution.heap.ArrayInstance;
-import com.tonic.analysis.execution.heap.ObjectInstance;
-import com.tonic.analysis.execution.result.BytecodeResult;
 import com.tonic.analysis.execution.state.ConcreteValue;
-import com.tonic.analysis.instruction.Instruction;
 import com.tonic.parser.MethodEntry;
 import org.junit.jupiter.api.Test;
 

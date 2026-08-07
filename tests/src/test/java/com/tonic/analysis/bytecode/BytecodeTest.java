@@ -488,9 +488,12 @@ class BytecodeTest
 
         bc.addReturn(ReturnType.RETURN);
         bc.finalizeBytecode();
-        bc.computeFrames();
+        assertDoesNotThrow(bc::computeFrames);
 
-        assertTrue(true);
+        assertNotNull(method.getCodeAttribute(),
+            "computing frames must leave the method its code");
+        assertTrue(method.getCodeAttribute().getCode().length > 0,
+            "computing frames must not empty the code array");
     }
 
     @Test
@@ -502,9 +505,12 @@ class BytecodeTest
 
         bc.addReturn(ReturnType.RETURN);
         bc.finalizeBytecode();
-        bc.forceComputeFrames();
+        assertDoesNotThrow(bc::forceComputeFrames);
 
-        assertTrue(true);
+        assertNotNull(method.getCodeAttribute(),
+            "computing frames must leave the method its code");
+        assertTrue(method.getCodeAttribute().getCode().length > 0,
+            "computing frames must not empty the code array");
     }
 
     @Nested
@@ -704,16 +710,6 @@ class BytecodeTest
             assertTrue(bc.isModified());
         }
 
-        @Test
-        void addInvokeDynamic() throws IOException
-        {
-            int access = new AccessBuilder().setPublic().setStatic().build();
-            MethodEntry method = classFile.createNewMethod(access, "callDynamic", "V");
-
-            Bytecode bc = new Bytecode(method);
-
-            assertTrue(true);
-        }
     }
 
     @Nested

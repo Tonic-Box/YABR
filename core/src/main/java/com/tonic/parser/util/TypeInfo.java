@@ -86,13 +86,8 @@ public class TypeInfo
      */
     public static TypeInfo forArrayType(TypeInfo elementType, int dimensions)
     {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < dimensions; i++)
-        {
-            sb.append('[');
-        }
-        sb.append(elementType.descriptor);
-        return new TypeInfo(sb.toString(), 1, false, true);
+        String sb = "[".repeat(Math.max(0, dimensions)) + elementType.descriptor;
+        return new TypeInfo(sb, 1, false, true);
     }
 
     /**

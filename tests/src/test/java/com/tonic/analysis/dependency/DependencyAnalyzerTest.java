@@ -2,8 +2,6 @@ package com.tonic.analysis.dependency;
 
 import com.tonic.parser.ClassFile;
 import com.tonic.parser.ClassPool;
-import com.tonic.parser.FieldEntry;
-import com.tonic.parser.MethodEntry;
 import com.tonic.testutil.TestUtils;
 import com.tonic.util.AccessBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -357,7 +355,7 @@ class DependencyAnalyzerTest
 
         DependencyAnalyzer analyzer = new DependencyAnalyzer(pool);
 
-        Set<String> classes = analyzer.findClasses(node -> node.isInPool());
+        Set<String> classes = analyzer.findClasses(DependencyNode::isInPool);
 
         assertNotNull(classes);
         assertTrue(classes.size() >= 2);
@@ -1061,9 +1059,7 @@ class DependencyAnalyzerTest
             DependencyNode node = new DependencyNode("com/test/Unmod", null);
             Set<Dependency> outgoing = node.getOutgoingDependencies();
 
-            assertThrows(UnsupportedOperationException.class, () -> {
-                outgoing.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS));
-            });
+            assertThrows(UnsupportedOperationException.class, () -> outgoing.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS)));
         }
 
         @Test
@@ -1072,9 +1068,7 @@ class DependencyAnalyzerTest
             DependencyNode node = new DependencyNode("com/test/Unmod", null);
             Set<Dependency> incoming = node.getIncomingDependencies();
 
-            assertThrows(UnsupportedOperationException.class, () -> {
-                incoming.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS));
-            });
+            assertThrows(UnsupportedOperationException.class, () -> incoming.add(new Dependency("com/test/A", "com/test/B", DependencyType.EXTENDS)));
         }
 
         @Test

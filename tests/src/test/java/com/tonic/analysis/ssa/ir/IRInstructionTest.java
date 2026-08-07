@@ -7,13 +7,10 @@ import com.tonic.analysis.ssa.type.PrimitiveType;
 import com.tonic.analysis.ssa.type.ReferenceType;
 import com.tonic.analysis.ssa.value.*;
 import com.tonic.analysis.ssa.visitor.AbstractIRVisitor;
-import com.tonic.analysis.ssa.visitor.IRVisitor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -342,10 +339,9 @@ class IRInstructionTest
             SSAValue key = new SSAValue(PrimitiveType.INT, "key");
             SwitchInstruction sw = new SwitchInstruction(key, block2);
 
-            String result = sw.accept(new AbstractIRVisitor<String>() {
+            String result = sw.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSwitch(SwitchInstruction instr)
-                {
+                public String visitSwitch(SwitchInstruction instr) {
                     return "visited_switch";
                 }
             });
@@ -526,10 +522,9 @@ class IRInstructionTest
             SSAValue operand = new SSAValue(PrimitiveType.INT, "operand");
             BranchInstruction branch = new BranchInstruction(CompareOp.EQ, operand, block1, block2);
 
-            String result = branch.accept(new AbstractIRVisitor<String>() {
+            String result = branch.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitBranch(BranchInstruction instr)
-                {
+                public String visitBranch(BranchInstruction instr) {
                     return "visited_branch";
                 }
             });
@@ -938,10 +933,9 @@ class IRInstructionTest
                     InvokeType.STATIC, "A", "m", "()V", Collections.emptyList()
             );
 
-            String result = invoke.accept(new AbstractIRVisitor<String>() {
+            String result = invoke.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitInvoke(InvokeInstruction instr)
-                {
+                public String visitInvoke(InvokeInstruction instr) {
                     return "visited_invoke";
                 }
             });
@@ -1186,10 +1180,9 @@ class IRInstructionTest
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction put = FieldAccessInstruction.createStaticStore("A", "f", "I", value);
 
-            String result = put.accept(new AbstractIRVisitor<String>() {
+            String result = put.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitFieldAccess(FieldAccessInstruction i)
-                {
+                public String visitFieldAccess(FieldAccessInstruction i) {
                     return "visited_putfield";
                 }
             });
@@ -1436,10 +1429,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(PrimitiveType.INT, "val");
             FieldAccessInstruction get = FieldAccessInstruction.createStaticLoad(result, "A", "f", "I");
 
-            String visitResult = get.accept(new AbstractIRVisitor<String>() {
+            String visitResult = get.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitFieldAccess(FieldAccessInstruction i)
-                {
+                public String visitFieldAccess(FieldAccessInstruction i) {
                     return "visited_getfield";
                 }
             });
@@ -1694,10 +1686,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             NewArrayInstruction newArr = new NewArrayInstruction(result, PrimitiveType.INT, IntConstant.of(10));
 
-            String visitResult = newArr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = newArr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitNewArray(NewArrayInstruction i)
-                {
+                public String visitNewArray(NewArrayInstruction i) {
                     return "visited_newarray";
                 }
             });
@@ -1889,10 +1880,9 @@ class IRInstructionTest
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             ArrayAccessInstruction store = ArrayAccessInstruction.createStore(array, IntConstant.of(0), IntConstant.of(42));
 
-            String result = store.accept(new AbstractIRVisitor<String>() {
+            String result = store.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitArrayAccess(ArrayAccessInstruction i)
-                {
+                public String visitArrayAccess(ArrayAccessInstruction i) {
                     return "visited_arrstore";
                 }
             });
@@ -1958,10 +1948,9 @@ class IRInstructionTest
                     result, BinaryOp.ADD, IntConstant.of(1), IntConstant.of(2)
             );
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitBinaryOp(BinaryOpInstruction i)
-                {
+                public String visitBinaryOp(BinaryOpInstruction i) {
                     return "visited_binop";
                 }
             });
@@ -1994,10 +1983,9 @@ class IRInstructionTest
             SSAValue operand = new SSAValue(PrimitiveType.INT, "op");
             UnaryOpInstruction instr = new UnaryOpInstruction(result, UnaryOp.NEG, operand);
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitUnaryOp(UnaryOpInstruction i)
-                {
+                public String visitUnaryOp(UnaryOpInstruction i) {
                     return "visited_unop";
                 }
             });
@@ -2045,10 +2033,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(PrimitiveType.INT, "r");
             ConstantInstruction instr = new ConstantInstruction(result, IntConstant.of(1));
 
-            String visitResult = instr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitConstant(ConstantInstruction i)
-                {
+                public String visitConstant(ConstantInstruction i) {
                     return "visited_const";
                 }
             });
@@ -2102,10 +2089,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(PrimitiveType.INT, "phi");
             PhiInstruction phi = new PhiInstruction(result);
 
-            String visitResult = phi.accept(new AbstractIRVisitor<String>() {
+            String visitResult = phi.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitPhi(PhiInstruction i)
-                {
+                public String visitPhi(PhiInstruction i) {
                     return "visited_phi";
                 }
             });
@@ -2141,10 +2127,9 @@ class IRInstructionTest
         {
             ReturnInstruction ret = new ReturnInstruction(null);
 
-            String result = ret.accept(new AbstractIRVisitor<String>() {
+            String result = ret.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitReturn(ReturnInstruction i)
-                {
+                public String visitReturn(ReturnInstruction i) {
                     return "visited_return";
                 }
             });
@@ -2180,10 +2165,9 @@ class IRInstructionTest
         {
             SimpleInstruction gotoInstr = SimpleInstruction.createGoto(block1);
 
-            String result = gotoInstr.accept(new AbstractIRVisitor<String>() {
+            String result = gotoInstr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSimple(SimpleInstruction i)
-                {
+                public String visitSimple(SimpleInstruction i) {
                     return "visited_goto";
                 }
             });
@@ -2331,10 +2315,9 @@ class IRInstructionTest
             SSAValue exception = new SSAValue(new ReferenceType("java/lang/Exception"), "ex");
             SimpleInstruction throwInstr = SimpleInstruction.createThrow(exception);
 
-            String result = throwInstr.accept(new AbstractIRVisitor<String>() {
+            String result = throwInstr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSimple(SimpleInstruction i)
-                {
+                public String visitSimple(SimpleInstruction i) {
                     return "visited_throw";
                 }
             });
@@ -2374,10 +2357,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             NewInstruction newInstr = new NewInstruction(result, "java/lang/Object");
 
-            String visitResult = newInstr.accept(new AbstractIRVisitor<String>() {
+            String visitResult = newInstr.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitNew(NewInstruction i)
-                {
+                public String visitNew(NewInstruction i) {
                     return "visited_new";
                 }
             });
@@ -2410,10 +2392,9 @@ class IRInstructionTest
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             ArrayAccessInstruction load = ArrayAccessInstruction.createLoad(result, array, IntConstant.of(0));
 
-            String visitResult = load.accept(new AbstractIRVisitor<String>() {
+            String visitResult = load.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitArrayAccess(ArrayAccessInstruction i)
-                {
+                public String visitArrayAccess(ArrayAccessInstruction i) {
                     return "visited_arrload";
                 }
             });
@@ -2444,10 +2425,9 @@ class IRInstructionTest
             SSAValue array = new SSAValue(new ArrayType(PrimitiveType.INT, 1), "arr");
             SimpleInstruction len = SimpleInstruction.createArrayLength(result, array);
 
-            String visitResult = len.accept(new AbstractIRVisitor<String>() {
+            String visitResult = len.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSimple(SimpleInstruction i)
-                {
+                public String visitSimple(SimpleInstruction i) {
                     return "visited_arrlen";
                 }
             });
@@ -2598,10 +2578,9 @@ class IRInstructionTest
             SSAValue operand = new SSAValue(PrimitiveType.INT, "i");
             TypeCheckInstruction cast = TypeCheckInstruction.createCast(result, operand, PrimitiveType.LONG);
 
-            String visitResult = cast.accept(new AbstractIRVisitor<String>() {
+            String visitResult = cast.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitTypeCheck(TypeCheckInstruction i)
-                {
+                public String visitTypeCheck(TypeCheckInstruction i) {
                     return "visited_cast";
                 }
             });
@@ -2755,10 +2734,9 @@ class IRInstructionTest
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "obj");
             TypeCheckInstruction instOf = TypeCheckInstruction.createInstanceOf(result, object, new ReferenceType("java/lang/String"));
 
-            String visitResult = instOf.accept(new AbstractIRVisitor<String>() {
+            String visitResult = instOf.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitTypeCheck(TypeCheckInstruction i)
-                {
+                public String visitTypeCheck(TypeCheckInstruction i) {
                     return "visited_instanceof";
                 }
             });
@@ -2892,10 +2870,9 @@ class IRInstructionTest
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monEnter = SimpleInstruction.createMonitorEnter(object);
 
-            String result = monEnter.accept(new AbstractIRVisitor<String>() {
+            String result = monEnter.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSimple(SimpleInstruction i)
-                {
+                public String visitSimple(SimpleInstruction i) {
                     return "visited_monenter";
                 }
             });
@@ -3035,10 +3012,9 @@ class IRInstructionTest
             SSAValue object = new SSAValue(new ReferenceType("java/lang/Object"), "lock");
             SimpleInstruction monExit = SimpleInstruction.createMonitorExit(object);
 
-            String result = monExit.accept(new AbstractIRVisitor<String>() {
+            String result = monExit.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitSimple(SimpleInstruction i)
-                {
+                public String visitSimple(SimpleInstruction i) {
                     return "visited_monexit";
                 }
             });
@@ -3089,10 +3065,9 @@ class IRInstructionTest
             SSAValue source = new SSAValue(PrimitiveType.INT, "src");
             CopyInstruction copy = new CopyInstruction(result, source);
 
-            String visitResult = copy.accept(new AbstractIRVisitor<String>() {
+            String visitResult = copy.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitCopy(CopyInstruction i)
-                {
+                public String visitCopy(CopyInstruction i) {
                     return "visited_copy";
                 }
             });
@@ -3121,10 +3096,9 @@ class IRInstructionTest
             SSAValue result = new SSAValue(PrimitiveType.INT, "loaded");
             LoadLocalInstruction load = new LoadLocalInstruction(result, 1);
 
-            String visitResult = load.accept(new AbstractIRVisitor<String>() {
+            String visitResult = load.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitLoadLocal(LoadLocalInstruction i)
-                {
+                public String visitLoadLocal(LoadLocalInstruction i) {
                     return "visited_loadlocal";
                 }
             });
@@ -3153,10 +3127,9 @@ class IRInstructionTest
             SSAValue value = new SSAValue(PrimitiveType.INT, "val");
             StoreLocalInstruction store = new StoreLocalInstruction(1, value);
 
-            String result = store.accept(new AbstractIRVisitor<String>() {
+            String result = store.accept(new AbstractIRVisitor<>() {
                 @Override
-                public String visitStoreLocal(StoreLocalInstruction i)
-                {
+                public String visitStoreLocal(StoreLocalInstruction i) {
                     return "visited_storelocal";
                 }
             });

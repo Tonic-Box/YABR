@@ -182,7 +182,6 @@ public class ConditionalBranchInstruction extends Instruction
                 return -1;
             case IF_ACMPEQ:
             case IF_ACMPNE:
-                return -2;
             case IF_ICMPEQ:
             case IF_ICMPNE:
             case IF_ICMPLT:

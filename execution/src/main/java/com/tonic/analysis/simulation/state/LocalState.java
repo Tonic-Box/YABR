@@ -13,7 +13,7 @@ public final class LocalState
 
     private LocalState(Map<Integer, SimValue> locals, int maxLocal)
     {
-        this.locals = Collections.unmodifiableMap(new HashMap<>(locals));
+        this.locals = Map.copyOf(locals);
         this.maxLocal = maxLocal;
     }
 

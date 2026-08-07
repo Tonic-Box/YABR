@@ -27,14 +27,33 @@ public final class LambdaProxyFactory
     }
 
     /**
+     * Names a proxy after the functional interface its call site yields, so the object records which
+     * interface it stands in for, followed by a counter that keeps separate call sites distinct. A call
+     * site whose return type is not a class descriptor keeps the bare counter form.
+     * @param info the invokedynamic call site information, may be null
+     * @return the proxy's class name
+     */
+    private static String proxyClassName(InvokeDynamicInfo info)
+    {
+        long id = lambdaCounter.incrementAndGet();
+        String descriptor = info == null ? null : info.getReturnType();
+        if (descriptor == null || descriptor.length() < 3
+                || descriptor.charAt(0) != 'L' || !descriptor.endsWith(";"))
+        {
+            return "$Lambda$" + id;
+        }
+        return descriptor.substring(1, descriptor.length() - 1) + "$$Lambda$" + id;
+    }
+
+    /**
      * Allocates a fresh proxy object for a lambda call site and copies each captured argument into a capture$N field.
-     * @param info the invokedynamic call site information
+     * @param info the invokedynamic call site information, naming the functional interface the proxy implements
      * @param capturedArgs the values captured at the call site
      * @return the proxy instance
      */
     public ObjectInstance createProxy(InvokeDynamicInfo info, ConcreteValue[] capturedArgs)
     {
-        String proxyClassName = "$Lambda$" + lambdaCounter.incrementAndGet();
+        String proxyClassName = proxyClassName(info);
 
         ObjectInstance proxy = heapManager.newObject(proxyClassName);
 
@@ -209,8 +228,6 @@ public final class LambdaProxyFactory
                 return "F";
             case DOUBLE:
                 return "D";
-            case REFERENCE:
-                return "Ljava/lang/Object;";
             default:
                 return "Ljava/lang/Object;";
         }

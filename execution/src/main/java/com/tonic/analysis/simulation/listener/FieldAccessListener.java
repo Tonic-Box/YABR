@@ -1,6 +1,5 @@
 package com.tonic.analysis.simulation.listener;
 
-import com.tonic.analysis.simulation.core.SimulationResult;
 import com.tonic.analysis.simulation.core.SimulationState;
 import com.tonic.analysis.ssa.cfg.IRMethod;
 import com.tonic.analysis.ssa.ir.ArrayAccessInstruction;

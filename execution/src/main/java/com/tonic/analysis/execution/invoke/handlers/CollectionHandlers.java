@@ -29,7 +29,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "copyOf null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int newLen = args[1].asInt();
                 ArrayInstance result = ctx.getHeapManager().newArray("I", newLen);
                 int copyLen = Math.min(src.getLength(), newLen);
@@ -46,7 +46,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "copyOf null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int newLen = args[1].asInt();
                 ArrayInstance result = ctx.getHeapManager().newArray("B", newLen);
                 int copyLen = Math.min(src.getLength(), newLen);
@@ -63,7 +63,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "copyOf null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int newLen = args[1].asInt();
                 ArrayInstance result = ctx.getHeapManager().newArray("C", newLen);
                 int copyLen = Math.min(src.getLength(), newLen);
@@ -80,7 +80,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "copyOfRange null array");
                 }
-                ArrayInstance src = (ArrayInstance) args[0].asReference();
+                ArrayInstance src = HandlerArgs.requireArray(args[0], "src");
                 int from = args[1].asInt();
                 int to = args[2].asInt();
                 int newLen = to - from;
@@ -99,7 +99,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "fill null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 byte val = (byte) args[1].asInt();
                 for (int i = 0; i < arr.getLength(); i++)
                 {
@@ -114,7 +114,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "fill null array");
                 }
-                ArrayInstance arr = (ArrayInstance) args[0].asReference();
+                ArrayInstance arr = HandlerArgs.requireArray(args[0], "arr");
                 int val = args[1].asInt();
                 for (int i = 0; i < arr.getLength(); i++)
                 {
@@ -862,7 +862,7 @@ public class CollectionHandlers implements NativeHandlerProvider
                 {
                     throw new NativeException("java/lang/NullPointerException", "Array.multiNewArray with null");
                 }
-                ArrayInstance dims = (ArrayInstance) args[1].asReference();
+                ArrayInstance dims = HandlerArgs.requireArray(args[1], "dims");
                 if (dims.getLength() == 0)
                 {
                     throw new NativeException("java/lang/IllegalArgumentException", "Empty dimensions array");

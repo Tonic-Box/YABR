@@ -272,9 +272,7 @@ class FieldAccessListenerTest
 
         Map<FieldAccessListener.FieldReference, FieldAccessListener.AccessStats> accesses = listener.getFieldAccesses();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            accesses.put(new FieldAccessListener.FieldReference("Test", "field", "I"), new FieldAccessListener.AccessStats());
-        });
+        assertThrows(UnsupportedOperationException.class, () -> accesses.put(new FieldAccessListener.FieldReference("Test", "field", "I"), new FieldAccessListener.AccessStats()));
     }
 
     @Test

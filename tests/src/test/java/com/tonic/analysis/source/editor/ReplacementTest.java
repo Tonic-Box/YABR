@@ -282,9 +282,7 @@ class ReplacementTest
     @Test
     void withNullExpressionThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.with((Expression) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.with((Expression) null));
         assertEquals("Replacement expression cannot be null", e.getMessage());
     }
 
@@ -353,9 +351,7 @@ class ReplacementTest
     @Test
     void withNullStatementThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.with((Statement) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.with((Statement) null));
         assertEquals("Replacement statement cannot be null", e.getMessage());
     }
 
@@ -449,18 +445,14 @@ class ReplacementTest
     @Test
     void withBlockVarargsNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.withBlock((Statement[]) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.withBlock((Statement[]) null));
         assertEquals("Block replacement requires at least one statement", e.getMessage());
     }
 
     @Test
     void withBlockVarargsEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.withBlock(new Statement[0]);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.withBlock(new Statement[0]));
         assertEquals("Block replacement requires at least one statement", e.getMessage());
     }
 
@@ -507,18 +499,14 @@ class ReplacementTest
     @Test
     void withBlockListNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.withBlock((List<Statement>) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.withBlock((List<Statement>) null));
         assertEquals("Block replacement requires at least one statement", e.getMessage());
     }
 
     @Test
     void withBlockListEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.withBlock(Collections.emptyList());
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.withBlock(Collections.emptyList()));
         assertEquals("Block replacement requires at least one statement", e.getMessage());
     }
 
@@ -588,18 +576,14 @@ class ReplacementTest
     @Test
     void insertBeforeVarargsNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertBefore((Statement[]) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertBefore((Statement[]) null));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
     @Test
     void insertBeforeVarargsEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertBefore(new Statement[0]);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertBefore(new Statement[0]));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
@@ -625,7 +609,7 @@ class ReplacementTest
     @Test
     void insertBeforeListHasCorrectType()
     {
-        List<Statement> stmts = Arrays.asList(createTestStatement());
+        List<Statement> stmts = List.of(createTestStatement());
         Replacement r = Replacement.insertBefore(stmts);
         assertEquals(Replacement.Type.INSERT_BEFORE, r.getType());
     }
@@ -646,18 +630,14 @@ class ReplacementTest
     @Test
     void insertBeforeListNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertBefore((List<Statement>) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertBefore((List<Statement>) null));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
     @Test
     void insertBeforeListEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertBefore(Collections.emptyList());
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertBefore(Collections.emptyList()));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
@@ -727,18 +707,14 @@ class ReplacementTest
     @Test
     void insertAfterVarargsNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertAfter((Statement[]) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertAfter((Statement[]) null));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
     @Test
     void insertAfterVarargsEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertAfter(new Statement[0]);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertAfter(new Statement[0]));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
@@ -764,7 +740,7 @@ class ReplacementTest
     @Test
     void insertAfterListHasCorrectType()
     {
-        List<Statement> stmts = Arrays.asList(createTestStatement());
+        List<Statement> stmts = List.of(createTestStatement());
         Replacement r = Replacement.insertAfter(stmts);
         assertEquals(Replacement.Type.INSERT_AFTER, r.getType());
     }
@@ -785,18 +761,14 @@ class ReplacementTest
     @Test
     void insertAfterListNullThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertAfter((List<Statement>) null);
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertAfter((List<Statement>) null));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 
     @Test
     void insertAfterListEmptyThrowsException()
     {
-        Exception e = assertThrows(IllegalArgumentException.class, () -> {
-            Replacement.insertAfter(Collections.emptyList());
-        });
+        Exception e = assertThrows(IllegalArgumentException.class, () -> Replacement.insertAfter(Collections.emptyList()));
         assertEquals("Insert requires at least one statement", e.getMessage());
     }
 

@@ -118,9 +118,7 @@ class CompositeBytecodeListenerTest
     {
         List<BytecodeListener> listeners = composite.getListeners();
 
-        assertThrows(UnsupportedOperationException.class, () -> {
-            listeners.add(mock(BytecodeListener.class));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> listeners.add(mock(BytecodeListener.class)));
     }
 
     @Test

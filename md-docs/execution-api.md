@@ -1223,7 +1223,7 @@ if (handler.isStringConcat(invokeDynamicInfo))
     ConcreteValue[] args = { intVal1, intVal2, resultVal };
     Object[] constants = {};
 
-    String result = handler.executeConcat(info, args, recipe, constants);
+    String result = handler.executeConcat(args, recipe, constants);
     // Result: "1 + 2 = 3"
 }
 
@@ -1251,10 +1251,10 @@ if (factory.isLambdaFactory(invokeDynamicInfo))
     // Captured variables from stack
     ConcreteValue[] captured = { ConcreteValue.intValue(42) };
 
-    // Create proxy object
-    ObjectInstance proxy = factory.createProxy(info, captured);
-    // proxy.getClassName() = "$Lambda$1"
-    // proxy.getField("$Lambda$1", "capture$0", "I") = 42
+    // Create proxy object, named after the functional interface the call site yields
+    ObjectInstance proxy = factory.createProxy(invokeDynamicInfo, captured);
+    // proxy.getClassName() = "java/util/function/IntSupplier$$Lambda$1"
+    // proxy.getField(proxy.getClassName(), "capture$0", "I") = 42
 }
 
 // Descriptor analysis
