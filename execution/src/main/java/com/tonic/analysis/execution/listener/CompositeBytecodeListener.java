@@ -237,6 +237,24 @@ public final class CompositeBytecodeListener implements BytecodeListener
     }
 
     @Override
+    public void onFieldRead(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue value)
+    {
+        for (BytecodeListener listener : listeners)
+        {
+            listener.onFieldRead(instance, owner, fieldName, descriptor, value);
+        }
+    }
+
+    @Override
+    public void onFieldWrite(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue oldValue, ConcreteValue newValue)
+    {
+        for (BytecodeListener listener : listeners)
+        {
+            listener.onFieldWrite(instance, owner, fieldName, descriptor, oldValue, newValue);
+        }
+    }
+
+    @Override
     public void onArrayRead(ArrayInstance array, int index, ConcreteValue value)
     {
         for (BytecodeListener listener : listeners)

@@ -116,23 +116,52 @@ public interface BytecodeListener
     default void onArrayAllocation(ArrayInstance array) {}
 
     /**
-     * Called when a field is read.
+     * Called when an instance field is read; the owner-aware overload forwards here by default.
      *
-     * @param instance the instance read from, null for a static field
+     * @param instance the instance read from
      * @param fieldName the field name
      * @param value the value read
      */
     default void onFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value) {}
 
     /**
-     * Called when a field is written.
+     * Called when an instance field is read, with the field fully identified; forwards to the name-only overload by default.
      *
-     * @param instance the instance written to, null for a static field
+     * @param instance the instance read from
+     * @param owner the internal name of the class that declares the field
+     * @param fieldName the field name
+     * @param descriptor the field's type descriptor
+     * @param value the value read
+     */
+    default void onFieldRead(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue value)
+    {
+        onFieldRead(instance, fieldName, value);
+    }
+
+    /**
+     * Called when an instance field is written; the owner-aware overload forwards here by default.
+     *
+     * @param instance the instance written to
      * @param fieldName the field name
      * @param oldValue the value being replaced
      * @param newValue the value stored
      */
     default void onFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue) {}
+
+    /**
+     * Called when an instance field is written, with the field fully identified; forwards to the name-only overload by default.
+     *
+     * @param instance the instance written to
+     * @param owner the internal name of the class that declares the field
+     * @param fieldName the field name
+     * @param descriptor the field's type descriptor
+     * @param oldValue the value being replaced
+     * @param newValue the value stored
+     */
+    default void onFieldWrite(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue oldValue, ConcreteValue newValue)
+    {
+        onFieldWrite(instance, fieldName, oldValue, newValue);
+    }
 
     /**
      * Called when an array element is read.

@@ -25,6 +25,8 @@ import com.tonic.analysis.execution.listener.BytecodeListener;
 import com.tonic.analysis.execution.listener.CapableListener;
 import com.tonic.analysis.execution.listener.ListenerCapability;
 import com.tonic.analysis.execution.resolve.ClassResolver;
+import com.tonic.analysis.execution.resolve.ResolutionException;
+import com.tonic.analysis.execution.resolve.ResolvedField;
 import com.tonic.analysis.execution.resolve.ResolvedMethod;
 import com.tonic.analysis.execution.state.ConcreteValue;
 import com.tonic.analysis.instruction.Instruction;
@@ -1061,8 +1063,8 @@ public final class BytecodeEngine
     {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
-        String owner = fieldInfo.getOwnerClass();
         String name = fieldInfo.getFieldName();
+        String owner = declaringClass(fieldInfo.getOwnerClass(), name, descriptor);
 
         if (fieldInfo.isStatic())
         {
@@ -1088,7 +1090,7 @@ public final class BytecodeEngine
             {
                 Object value = obj.getField(owner, name, descriptor);
                 ConcreteValue wrappedValue = wrapStoredValue(value, descriptor);
-                notifyFieldRead(obj, name, wrappedValue);
+                notifyFieldRead(obj, owner, name, descriptor, wrappedValue);
                 pushFieldValue(frame, descriptor, value);
             }
         }
@@ -1100,8 +1102,8 @@ public final class BytecodeEngine
     {
         FieldInfo fieldInfo = ctx.getPendingFieldAccess();
         String descriptor = fieldInfo.getDescriptor();
-        String owner = fieldInfo.getOwnerClass();
         String name = fieldInfo.getFieldName();
+        String owner = declaringClass(fieldInfo.getOwnerClass(), name, descriptor);
 
         ConcreteValue value = frame.getStack().pop();
 
@@ -1119,11 +1121,29 @@ public final class BytecodeEngine
                 Object oldRaw = obj.getField(owner, name, descriptor);
                 ConcreteValue oldValue = wrapStoredValue(oldRaw, descriptor);
                 obj.setField(owner, name, descriptor, convertToStorable(value, descriptor));
-                notifyFieldWrite(obj, name, oldValue, value);
+                notifyFieldWrite(obj, owner, name, descriptor, oldValue, value);
             }
         }
 
         frame.advancePC(frame.getCurrentInstruction().getLength());
+    }
+
+    private String declaringClass(String owner, String name, String descriptor)
+    {
+        ClassResolver resolver = context.getClassResolver();
+        if (resolver == null || resolver.getClassPool() == null || resolver.getClassPool().get(owner) == null)
+        {
+            return owner;
+        }
+        try
+        {
+            ResolvedField field = resolver.resolveField(owner, name, descriptor);
+            return field != null ? field.getDeclaringClass().getClassName() : owner;
+        }
+        catch (ResolutionException e)
+        {
+            return owner;
+        }
     }
 
     private ConcreteValue wrapStoredValue(Object raw, String descriptor)
@@ -1507,11 +1527,11 @@ public final class BytecodeEngine
         }
     }
 
-    private void notifyFieldWrite(ObjectInstance instance, String fieldName, ConcreteValue oldValue, ConcreteValue newValue)
+    private void notifyFieldWrite(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue oldValue, ConcreteValue newValue)
     {
         for (BytecodeListener listener : listeners)
         {
-            listener.onFieldWrite(instance, fieldName, oldValue, newValue);
+            listener.onFieldWrite(instance, owner, fieldName, descriptor, oldValue, newValue);
         }
     }
 
@@ -1606,7 +1626,7 @@ public final class BytecodeEngine
         }
     }
 
-    private void notifyFieldRead(ObjectInstance instance, String fieldName, ConcreteValue value)
+    private void notifyFieldRead(ObjectInstance instance, String owner, String fieldName, String descriptor, ConcreteValue value)
     {
         if (!hasCapability(ListenerCapability.FIELD_OPERATIONS))
         {
@@ -1614,7 +1634,7 @@ public final class BytecodeEngine
         }
         for (BytecodeListener listener : listeners)
         {
-            listener.onFieldRead(instance, fieldName, value);
+            listener.onFieldRead(instance, owner, fieldName, descriptor, value);
         }
     }
 
