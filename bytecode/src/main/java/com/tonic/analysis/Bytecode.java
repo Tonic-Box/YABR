@@ -688,6 +688,28 @@ public class Bytecode
     }
 
     /**
+     * Inserts an LDC or LDC_W instruction that loads a class constant, the Class object for the named type.
+     *
+     * @param internalName the class's internal name, with slashes, or an array descriptor
+     */
+    public void addLdcClass(String internalName)
+    {
+        int offset = processOffset();
+        int classRefIndex = constPool.getIndexOf(constPool.findOrAddClass(internalName));
+
+        Instruction instruction;
+        if (classRefIndex <= 0xFF)
+        {
+            instruction = codeWriter.insertLDC(offset, classRefIndex);
+        }
+        else
+        {
+            instruction = codeWriter.insertLDCW(offset, classRefIndex);
+        }
+        insertBeforeOffset += instruction.getLength();
+    }
+
+    /**
      * Inserts an INVOKEVIRTUAL instruction into the bytecode.
      * @param className        The fully qualified class name (e.g., "java/io/PrintStream").
      * @param methodName       The name of the method to invoke (e.g., "println").

@@ -1706,6 +1706,16 @@ class CodeBuilderTest
         }
 
         @Test
+        void ldcClassInstruction()
+        {
+            ClassFile cf = buildMethodWithCode(cb -> cb.ldcClass("java/lang/String").areturn(), "()Ljava/lang/Class;");
+
+            List<Instruction> insns = getInstructions(cf, "test");
+            LdcInstruction ldc = (LdcInstruction) insns.stream().filter(i -> i instanceof LdcInstruction).findFirst().orElseThrow();
+            assertEquals(LdcInstruction.ConstantType.CLASS, ldc.getConstantType());
+        }
+
+        @Test
         void ldcDoubleInstruction()
         {
             ClassFile cf = buildMethodWithCode(cb -> cb .ldc(3.14159) .dreturn() , "()D");

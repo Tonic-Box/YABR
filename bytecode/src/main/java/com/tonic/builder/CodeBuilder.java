@@ -179,6 +179,18 @@ public class CodeBuilder
     }
 
     /**
+     * Appends a constant load of the Class object for a type.
+     *
+     * @param internalName the class's internal name, with slashes, or an array descriptor
+     * @return this builder
+     */
+    public CodeBuilder ldcClass(String internalName)
+    {
+        addOp((bc, cw) -> bc.addLdcClass(internalName), 2);
+        return this;
+    }
+
+    /**
      * Appends {@code bipush}, pushing a signed byte widened to int.
      * @param value the byte-ranged value to push
      * @return this builder
