@@ -456,7 +456,7 @@ public class InterProceduralEngine
         }
         else if (instr instanceof BranchInstruction)
         {
-            listeners.onBranch((BranchInstruction) instr, true, before);
+            listeners.onBranch((BranchInstruction) instr, BranchConditions.evaluate((BranchInstruction) instr), before);
         }
         else if (instr instanceof SwitchInstruction)
         {

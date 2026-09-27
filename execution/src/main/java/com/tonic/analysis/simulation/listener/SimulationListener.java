@@ -135,10 +135,10 @@ public interface SimulationListener
     /**
      * Called when a branch instruction is encountered.
      * @param instr the branch instruction
-     * @param taken true if the branch is taken (for conditional branches)
+     * @param outcome true or false when constant operands decide the condition, null when it depends on runtime values
      * @param state the current state
      */
-    default void onBranch(BranchInstruction instr, boolean taken, SimulationState state) {}
+    default void onBranch(BranchInstruction instr, Boolean outcome, SimulationState state) {}
 
     /**
      * Called when a switch instruction is encountered.

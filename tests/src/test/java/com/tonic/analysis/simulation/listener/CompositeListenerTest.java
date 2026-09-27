@@ -645,7 +645,7 @@ class CompositeListenerTest
         FieldAccessInstruction lastFieldAccessInstruction;
         ArrayAccessInstruction lastArrayAccessInstruction;
         BranchInstruction lastBranchInstruction;
-        boolean lastBranchTaken;
+        Boolean lastBranchTaken;
         SwitchInstruction lastSwitchInstruction;
         int lastTargetIndex;
         InvokeInstruction lastInvokeInstruction;
@@ -770,11 +770,11 @@ class CompositeListenerTest
         }
 
         @Override
-        public void onBranch(BranchInstruction instr, boolean taken, SimulationState state)
+        public void onBranch(BranchInstruction instr, Boolean outcome, SimulationState state)
         {
             branchCalls++;
             lastBranchInstruction = instr;
-            lastBranchTaken = taken;
+            lastBranchTaken = outcome;
             lastState = state;
         }
 

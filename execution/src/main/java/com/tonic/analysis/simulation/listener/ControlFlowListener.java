@@ -82,7 +82,7 @@ public class ControlFlowListener extends AbstractListener
     }
 
     @Override
-    public void onBranch(BranchInstruction instr, boolean taken, SimulationState state)
+    public void onBranch(BranchInstruction instr, Boolean outcome, SimulationState state)
     {
         branchCount++;
     }

@@ -230,11 +230,11 @@ public class CompositeListener implements SimulationListener
     }
 
     @Override
-    public void onBranch(BranchInstruction instr, boolean taken, SimulationState state)
+    public void onBranch(BranchInstruction instr, Boolean outcome, SimulationState state)
     {
         for (SimulationListener listener : listeners)
         {
-            listener.onBranch(instr, taken, state);
+            listener.onBranch(instr, outcome, state);
         }
     }
 

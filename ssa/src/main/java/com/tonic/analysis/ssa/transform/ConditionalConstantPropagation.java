@@ -29,7 +29,7 @@ public class ConditionalConstantPropagation implements IRTransform
             if (terminator instanceof BranchInstruction)
             {
                 BranchInstruction branch = (BranchInstruction) terminator;
-                Boolean constantResult = evaluateBranchCondition(branch);
+                Boolean constantResult = BranchConditions.evaluate(branch);
 
                 if (constantResult != null)
                 {
@@ -56,101 +56,6 @@ public class ConditionalConstantPropagation implements IRTransform
         }
 
         return changed;
-    }
-
-    private Boolean evaluateBranchCondition(BranchInstruction branch)
-    {
-        CompareOp cond = branch.getCondition();
-        Value left = branch.getLeft();
-        Value right = branch.getRight();
-
-        Constant leftConst = resolveConstant(left);
-        Constant rightConst = (right != null) ? resolveConstant(right) : null;
-
-        if (right == null && leftConst instanceof IntConstant)
-        {
-            IntConstant ic = (IntConstant) leftConst;
-            int value = ic.getValue();
-            switch (cond)
-            {
-                case IFEQ: return value == 0;
-                case IFNE: return value != 0;
-                case IFLT: return value < 0;
-                case IFGE: return value >= 0;
-                case IFGT: return value > 0;
-                case IFLE: return value <= 0;
-                default: break;
-            }
-        }
-
-        if (leftConst instanceof IntConstant && rightConst instanceof IntConstant)
-        {
-            IntConstant lc = (IntConstant) leftConst;
-            IntConstant rc = (IntConstant) rightConst;
-            int l = lc.getValue();
-            int r = rc.getValue();
-            switch (cond)
-            {
-                case EQ: return l == r;
-                case NE: return l != r;
-                case LT: return l < r;
-                case GE: return l >= r;
-                case GT: return l > r;
-                case LE: return l <= r;
-                default: break;
-            }
-        }
-
-        if (cond == CompareOp.IFNULL)
-        {
-            if (leftConst instanceof NullConstant)
-            {
-                return true;
-            }
-        }
-        else if (cond == CompareOp.IFNONNULL)
-        {
-            if (leftConst instanceof NullConstant)
-            {
-                return false;
-            }
-        }
-
-        if (cond == CompareOp.ACMPEQ)
-        {
-            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant)
-            {
-                return true;
-            }
-        }
-        else if (cond == CompareOp.ACMPNE)
-        {
-            if (leftConst instanceof NullConstant && rightConst instanceof NullConstant)
-            {
-                return false;
-            }
-        }
-
-        return null;
-    }
-
-    private Constant resolveConstant(Value value)
-    {
-        if (value instanceof Constant)
-        {
-            return (Constant) value;
-        }
-        if (value instanceof SSAValue)
-        {
-            SSAValue ssa = (SSAValue) value;
-            IRInstruction def = ssa.getDefinition();
-            if (def instanceof ConstantInstruction)
-            {
-                ConstantInstruction ci = (ConstantInstruction) def;
-                return ci.getConstant();
-            }
-        }
-        return null;
     }
 
     /**
