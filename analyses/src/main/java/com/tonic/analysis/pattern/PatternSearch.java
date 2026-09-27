@@ -577,13 +577,7 @@ public class PatternSearch
         }
 
         List<MethodEntry> methods = new ArrayList<>();
-        if (targetClasses.isEmpty())
-        {
-            // Would need to iterate all classes - placeholder
-            return methods;
-        }
-
-        for (ClassFile cf : targetClasses)
+        for (ClassFile cf : targetClasses.isEmpty() ? classPool.getClasses() : targetClasses)
         {
             methods.addAll(cf.getMethods());
         }
